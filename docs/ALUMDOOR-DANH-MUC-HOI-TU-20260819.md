@@ -173,14 +173,54 @@ hợp lý, chạy trên 587 mã thật mới lộ ra chỗ nó ăn nhầm.
 | Họ bị gộp | 52 | Gộp là ĐÍCH (§5 nêu ví dụ 5 mã `AL595` về một), nhưng phải cố ý |
 | Chưa suy được tiền tố | 0 | — |
 
-### Còn lại: bước đổi mã thật
+### Còn lại: bước đổi mã thật — đo lại 19/08, chặn ở chỗ KHÁC với dự đoán ban đầu
 
-Bộ chuẩn hoá và bảng ánh xạ đã xong; bước **thi hành** thì chưa, và cố ý chưa:
+Ghi chú cũ ở mục này nói bước thi hành chờ chủ xưởng duyệt. Đo trên D1 thật thì chỗ chặn nằm
+ở nơi khác, và cụ thể hơn nhiều.
 
-- mã đi vào Item Price, BOM, BOM Rule applicability, lô tồn và mọi chứng từ, nên đổi mã phải
-  là một adapter có bảo vệ riêng, không phải vài câu SQL;
-- và nó đóng cứng danh tính mặt hàng, nên phải chạy **sau khi** chủ xưởng duyệt 13 tên rút gọn
-  và 52 họ gộp ở trên.
+**Bề mặt tham chiếu — đã đếm, không ước lượng.** 1.934 dòng `documents` + 19 dòng
+`master_records` có nhắc tới mã hàng. Quan trọng: **mọi bảng giao dịch có cột `item_code` đều
+rỗng** (`stock_ledger_entries`, `sales_order_fulfillment_entries`, `stock_bundle_usage_entries`,
+`return_progress_entries`, `manufacturing_progress_entries`, …). Không có lô tồn nào phải sửa —
+lo ngại "mã đi vào lô tồn" ở bản ghi trước là **sai trên dữ liệu hiện tại**.
+
+Chỉ hai DocType có primary key nhúng mã hàng: `Item` (`name` == `item_code`, 587/587) và
+`Item Price` (`{price_list}:{item_code}:{uom}:{variant}`). `BOM Template` và `Bill of Materials`
+đặt tên theo số thứ tự nên không bị kéo theo.
+
+**Chặn thật: nền tảng CẤM đổi tên document đang được tham chiếu.** `renameDocument` ném
+`errors.reference(...)` chứ không đổi tên xếp tầng. Trong 372 mã đổi tên 1:1 (không gộp, không
+cần đặt tên mới):
+
+| | Số mã |
+|---|---:|
+| Guard của nền tảng **từ chối** | 296 |
+| Guard **cho qua** | 76 |
+| — trong đó guard **bắt hụt** (có tham chiếu lồng nhau) | 3 |
+| — thật sự không ai trỏ tới | 73 |
+
+Ba mã bắt hụt là lỗi thật của kernel, **đã vá** (`json_each` → `json_tree`, xem test
+`document-rename-reference-guard.test.mjs`). Nếu không vá mà cứ chạy migration thì ba dòng
+`Purchase Receipt.items[].item_code` sẽ trỏ vào mặt hàng không còn tồn tại, lặng lẽ.
+
+**Vậy câu hỏi cho chủ xưởng đã đổi.** Không còn là "duyệt 13 tên và 52 họ gộp" — đó vẫn cần,
+nhưng nó không phải chỗ chặn. Chỗ chặn là:
+
+> Đổi 296 mã đang bị tham chiếu đòi hoặc (a) **đổi tên xếp tầng** dựng thẳng vào kernel, hoặc
+> (b) một migration **SQL thô đi vòng qua chính guard** vừa vá. Chọn (b) là tự tay tắt cái
+> chuông báo vừa lắp.
+
+Khuyến nghị: dựng (a). Danh sách trường phải sửa đã đo đủ và đóng — `item_code`, `parent_item`,
+`component_item`, `source_item_code`, `component_key`, `template_code`, `Bill of Materials.item`
+— và **không** đụng `*_name` (đó là tên hiển thị, không phải khoá).
+
+**Không tự chạy 73 mã "tự do".** Chúng qua được cửa, nhưng đổi 73/587 mã để lại danh mục nửa
+theo quy ước nửa không — tệ hơn là chưa đổi. Đổi mã nên đi một lượt.
+
+**Một chỗ cố ý không đụng:** `Material Specification.spec_code` = `ĐM-{mã hàng}`. Mã hàng nằm
+NHÚNG trong khoá của chính nó, và đó là danh tính riêng của Material Specification chứ không
+phải trường trỏ Item — không có trường link thật nào ở đây, liên kết chỉ theo quy ước đặt tên.
+Đổi nó là đổi danh tính thứ hai, ngoài phạm vi bảng ánh xạ. 5 bản ghi, cần chủ xưởng xác nhận.
 
 Riêng `TRONBO` trong mã cần nói rõ: nhồi cách bán vào mã hàng chính là **dựng lại `Sales Option`
 qua cửa sau** — thứ đã bị xoá ở `46cff213` và audit 16/08 cấm đưa lại.
