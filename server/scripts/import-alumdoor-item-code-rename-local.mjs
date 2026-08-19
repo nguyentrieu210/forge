@@ -267,9 +267,30 @@ function cascadeWouldFix(value, code) {
 async function auditDerivedKeys(renames) {
   const codes = [...renames.keys()];
   const findings = new Map();
+  const ownIdentity = new Map();
+  let currentName = '';
   const inspect = (value, key) => {
     if (typeof value === 'string') {
       if (!value || /_name$/.test(key)) return; // nhãn hiển thị: cascade cố ý bỏ qua, đúng
+      // DANH TÍNH CỦA CHÍNH TÀI LIỆU không phải tham chiếu tới tài liệu khác.
+      //
+      // `Material Specification` đặt tên `ĐM-{mã}` và trông như dẫn xuất từ mã hàng — nhưng đo
+      // ra thì chỉ 5/17 bản ghi có phần sau `ĐM-` ứng với một Item; 12 cái còn lại (`ĐM-TD325`,
+      // `ĐM-A282`, `ĐM-RHM8`…) không ứng với mã hàng nào. Tức KHÔNG có luật "spec_code bám theo
+      // item_code" — nó là mã độc lập, đôi khi trùng chữ. Và Material Specification không có
+      // trường link nào trỏ Item cả.
+      //
+      // Đổi nó theo mã hàng mới là bịa ra một luật không tồn tại. Nên: ghi nhận để chủ xưởng
+      // xác nhận, KHÔNG chặn — chặn cả đợt 359 mã vì 3 bản ghi có lẽ vốn đã đúng là chặn nhầm.
+      if (value === currentName) {
+        for (const code of codes) {
+          if (value.includes(code) && !cascadeWouldFix(value, code)) {
+            ownIdentity.set(value, code);
+            break;
+          }
+        }
+        return;
+      }
       for (const code of codes) {
         if (!value.includes(code)) continue;
         if (cascadeWouldFix(value, code)) continue;
@@ -292,23 +313,29 @@ async function auditDerivedKeys(renames) {
     for (const row of listing?.data ?? []) {
       const doc = await request(`/api/resource/${encodeURIComponent(doctype)}/${encodeURIComponent(row.name)}`, { allow404: true });
       const data = doc?.data ?? doc?.message ?? doc;
+      currentName = row.name;
       if (data) inspect(data, '');
     }
   }
-  return findings;
+  return { findings, ownIdentity };
 }
 
 const renames = new Map(plan.map((entry) => [entry.from, entry.to]));
 
 await request('/api/method/login', { method: 'POST', body: { usr: user, pwd: password } });
 
-const derived = await auditDerivedKeys(renames);
+const { findings: derived, ownIdentity } = await auditDerivedKeys(renames);
 if (derived.size > 0 && process.env.ALUMDOOR_RENAME_ALLOW_STALE_DERIVED_KEYS !== '1') {
   const detail = [...derived.entries()].sort((a, b) => b[1] - a[1]).map(([key, count]) => `${key}=${count}`).join(' ');
   throw new Error(
     `Refusing rename: ${derived.size} derived key field(s) embed a planned item code and would keep pointing at a dead code — ${detail}. `
     + 'Mỗi khoá cần một luật tái sinh riêng; chạy tiếp chỉ tạo ra đồ thị link vá nửa vời.',
   );
+}
+if (ownIdentity.size > 0) {
+  // Không chặn — xem chú thích ở `auditDerivedKeys`. Nhưng phải in ra, vì "im lặng" và "đã cân
+  // nhắc rồi bỏ qua" nhìn giống hệt nhau ở lần đọc log sau.
+  console.log(`ALUMDOOR_RENAME_OWN_IDENTITY_UNTOUCHED count=${ownIdentity.size} names=${[...ownIdentity.keys()].join(', ')}`);
 }
 
 const first = await pass('LOCAL_RENAME_PASS_1', renames);
@@ -330,5 +357,6 @@ fs.writeFileSync(outputPath, `${JSON.stringify({
   pass2: second,
   verification: verified,
   verification_failure_count: verified.failures.length,
+  own_identity_untouched: [...ownIdentity.entries()].map(([name, code]) => ({ name, embeds_item_code: code })),
 }, null, 2)}\n`);
 console.log(`ALUMDOOR_LOCAL_ITEM_CODE_RENAME_IDEMPOTENCE_PASS renamed=${first.items_renamed} prices=${first.prices_renamed} items=${verified.item_count}`);
