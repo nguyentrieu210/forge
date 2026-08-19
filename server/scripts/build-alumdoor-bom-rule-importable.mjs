@@ -1,17 +1,28 @@
 #!/usr/bin/env node
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
-const [bomArg, outArg, auditArg] = process.argv.slice(2);
+const [bomArg, outArg, auditArg, overrideArg] = process.argv.slice(2);
 if (![bomArg, outArg, auditArg].every(Boolean)) {
-  throw new Error('Usage: build-alumdoor-bom-rule-importable.mjs <bom-importable.json> <bom-rules.json> <audit.json>');
+  throw new Error('Usage: build-alumdoor-bom-rule-importable.mjs <bom-importable.json> <bom-rules.json> <audit.json> [owner-overrides.json]');
 }
 
+const here = path.dirname(fileURLToPath(import.meta.url));
+const defaultOverridePath = path.resolve(here, '../../local-imports/alumdoor-bom-rules/owner-overrides.json');
+const overridePath = path.resolve(overrideArg || defaultOverridePath);
 const bomPath = path.resolve(bomArg);
 const source = JSON.parse(readFileSync(bomPath, 'utf8'));
 if (source?.format !== 'alumdoor-canonical-bom-importable/v2' || !Array.isArray(source.boms)) {
   throw new Error('Expected alumdoor-canonical-bom-importable/v2');
+}
+
+const ownerAuthority = existsSync(overridePath)
+  ? JSON.parse(readFileSync(overridePath, 'utf8'))
+  : { format: 'alumdoor-bom-rule-owner-overrides/v1', overrides: [] };
+if (ownerAuthority?.format !== 'alumdoor-bom-rule-owner-overrides/v1' || !Array.isArray(ownerAuthority.overrides)) {
+  throw new Error(`Expected alumdoor-bom-rule-owner-overrides/v1: ${overridePath}`);
 }
 
 const clean = (value) => String(value ?? '').normalize('NFC').trim();
@@ -26,10 +37,7 @@ function stable(value) {
   }
   return JSON.stringify(value) ?? 'null';
 }
-
-function hash(value) {
-  return createHash('sha1').update(value).digest('hex').slice(0, 12).toUpperCase();
-}
+function hash(value) { return createHash('sha1').update(value).digest('hex').slice(0, 12).toUpperCase(); }
 
 function parseFormula(value) {
   if (!clean(value)) return null;
@@ -51,7 +59,6 @@ function fieldFormula(field, multiply = 1, offset = undefined, rounding = undefi
     ...(precision === undefined ? {} : { precision }),
   };
 }
-
 function constantFormula(value, rounding = undefined, precision = undefined) {
   return {
     base: { kind: 'CONSTANT', value },
@@ -63,15 +70,15 @@ function constantFormula(value, rounding = undefined, precision = undefined) {
 function operandDisplay(operand) {
   if (operand && Object.hasOwn(operand, 'value')) return String(operand.value);
   const offset = number(operand?.offset, 0);
-  return `${clean(operand?.field)}${offset > 0 ? ` + ${offset}` : offset < 0 ? ` - ${Math.abs(offset)}` : ''}`;
+  const body = `${clean(operand?.field)}${offset > 0 ? ` + ${offset}` : offset < 0 ? ` - ${Math.abs(offset)}` : ''}`;
+  return offset ? `(${body})` : body;
 }
-
 function displayFormula(formula) {
   if (!formula?.base) return '';
   const base = formula.base;
   let output = '';
   if (base.kind === 'CONSTANT') output = String(base.value);
-  else if (base.kind === 'FIELD') output = operandDisplay(base);
+  else if (base.kind === 'FIELD') output = operandDisplay(base).replace(/^\((.*)\)$/, '$1');
   else if (base.kind === 'PRODUCT') output = `${operandDisplay(base.left)} × ${operandDisplay(base.right)}`;
   else if (base.kind === 'QUOTIENT') output = `${operandDisplay(base.numerator)} ÷ ${operandDisplay(base.denominator)}`;
   else return stable(formula);
@@ -103,50 +110,91 @@ function uiFields(formula) {
     final_add: number(formula?.add, 0),
   };
   if (base.kind === 'CONSTANT') {
-    return { ...common, operator: 'CONSTANT', operand: number(base.value, 0), source_field: '', source_field_2: '', source_field_2_offset: 0 };
+    return { ...common, operator: 'CONSTANT', operand: number(base.value, 0), source_field: '', source_field_offset: 0, source_field_2: '', source_field_2_offset: 0 };
   }
   if (base.kind === 'PRODUCT' || base.kind === 'QUOTIENT') {
     const left = base.kind === 'PRODUCT' ? base.left : base.numerator;
     const right = base.kind === 'PRODUCT' ? base.right : base.denominator;
-    if (Object.hasOwn(left ?? {}, 'value') || Object.hasOwn(right ?? {}, 'value')) {
-      return { ...common, operator: base.kind, operand: 0, source_field: clean(left?.field), source_field_2: clean(right?.field), source_field_2_offset: number(right?.offset, 0), source_field_offset: number(left?.offset, 0) };
-    }
-    return { ...common, operator: base.kind, operand: 0, source_field: clean(left?.field), source_field_2: clean(right?.field), source_field_2_offset: number(right?.offset, 0), source_field_offset: number(left?.offset, 0) };
+    return {
+      ...common,
+      operator: base.kind,
+      operand: 0,
+      source_field: clean(left?.field),
+      source_field_offset: number(left?.offset, 0),
+      source_field_2: clean(right?.field),
+      source_field_2_offset: number(right?.offset, 0),
+    };
   }
   if (base.kind === 'FIELD') {
     const offset = number(base.offset, 0);
     const formulaMultiply = number(formula?.multiply, 1);
-    if (offset > 0) return { ...common, operator: 'ADD', operand: offset, source_field: clean(base.field), source_field_2: '', source_field_2_offset: 0 };
-    if (offset < 0) return { ...common, operator: 'SUBTRACT', operand: Math.abs(offset), source_field: clean(base.field), source_field_2: '', source_field_2_offset: 0 };
+    if (offset > 0) return { ...common, operator: 'ADD', operand: offset, multiply: formulaMultiply, source_field: clean(base.field), source_field_offset: 0, source_field_2: '', source_field_2_offset: 0 };
+    if (offset < 0) return { ...common, operator: 'SUBTRACT', operand: Math.abs(offset), multiply: formulaMultiply, source_field: clean(base.field), source_field_offset: 0, source_field_2: '', source_field_2_offset: 0 };
     if (Math.abs(formulaMultiply - 1) > 1e-12) {
-      return { ...common, operator: 'MULTIPLY', operand: formulaMultiply, multiply: 1, source_field: clean(base.field), source_field_2: '', source_field_2_offset: 0 };
+      return { ...common, operator: 'MULTIPLY', operand: formulaMultiply, multiply: 1, source_field: clean(base.field), source_field_offset: 0, source_field_2: '', source_field_2_offset: 0 };
     }
-    return { ...common, operator: 'COPY', operand: 0, source_field: clean(base.field), source_field_2: '', source_field_2_offset: 0 };
+    return { ...common, operator: 'COPY', operand: 0, source_field: clean(base.field), source_field_offset: 0, source_field_2: '', source_field_2_offset: 0 };
   }
-  return { ...common, operator: 'COPY', operand: 0, source_field: '', source_field_2: '', source_field_2_offset: 0 };
+  return { ...common, operator: 'COPY', operand: 0, source_field: '', source_field_offset: 0, source_field_2: '', source_field_2_offset: 0 };
+}
+
+function ownerOverrideFor(line) {
+  const componentItem = clean(line.item_code);
+  const sourceSheet = clean(line.source_sheet || 'ĐM');
+  const sourceFormula = fold(line.source_formula_text);
+  return ownerAuthority.overrides.find((entry) => {
+    if (clean(entry.component_item) !== componentItem) return false;
+    const match = entry.match ?? {};
+    if (clean(match.source_sheet) && clean(match.source_sheet) !== sourceSheet) return false;
+    if (clean(match.source_formula_text) && fold(match.source_formula_text) !== sourceFormula) return false;
+    return true;
+  }) ?? null;
+}
+
+function ownerSplit(line, override) {
+  const effective = override?.effective ?? {};
+  const formula = parseFormula(effective.formula_json);
+  const resultUom = clean(effective.result_uom);
+  if (!formula || !resultUom) {
+    throw new Error(`Owner BOM Rule override invalid for ${clean(line.item_code)} source row ${line.source_row ?? '?'}`);
+  }
+  const conversion = override.conversion
+    ? {
+        item_code: clean(line.item_code),
+        from_uom: clean(override.conversion.from_uom),
+        to_uom: clean(override.conversion.to_uom),
+        factor: number(override.conversion.factor, null),
+        basis: clean(override.conversion.basis),
+      }
+    : null;
+  if (conversion && (!conversion.from_uom || !conversion.to_uom || !(conversion.factor > 0))) {
+    throw new Error(`Owner BOM Rule conversion invalid for ${clean(line.item_code)}`);
+  }
+  return {
+    formula,
+    resultUom,
+    authorityType: clean(override.authority_type) || 'OWNER_CONFIRMED',
+    sourceNote: clean(override.source_note),
+    confirmedBy: clean(override.confirmed_by),
+    confirmedAt: clean(override.confirmed_at),
+    conversion,
+  };
 }
 
 function decomposeRuntimeFormula(line, formula) {
+  const override = ownerOverrideFor(line);
+  if (override) return ownerSplit(line, override);
+
   const sourceText = fold(line.source_formula_text);
   const basis = fold(line.qty_basis);
   const item = clean(line.item_code);
   let resultUom = clean(line.uom) || clean(line.source_uom) || clean(line.stock_uom);
-  let authorityType = 'SOURCE';
-  let sourceNote = '';
+  const authorityType = 'SOURCE';
+  const sourceNote = '';
+  const confirmedBy = '';
+  const confirmedAt = '';
   let conversion = null;
 
-  // Owner-confirmed correction. Preserve the source evidence; only the effective rule changes.
-  if (item === 'NVL-TR114-1.8' && sourceText.includes('RPBRAY+20CM')) {
-    return {
-      formula: fieldFormula('PB_RAY_RONG', 1, 0.02),
-      resultUom: 'Mét',
-      authorityType: 'OWNER_CONFIRMED',
-      sourceNote: 'Nguồn ghi RPBRAY+20CM; chủ xưởng xác nhận quy cách thực tế là Rộng PB ray + 2cm ngày 19/08/2026.',
-      conversion: { item_code: item, from_uom: 'Mét', to_uom: clean(line.stock_uom) || 'Kg', factor: 4.4, basis: '4.4 kg/m from same-item source evidence' },
-    };
-  }
-
-  // Count density is a BOM rule in pieces. Weight per piece belongs to Item conversion.
   const countPerMetre = basis.match(/(\d+(?:[.,]\d+)?)\s*(?:CON|CAI)\s*\/\s*M/);
   if (countPerMetre && formula.base?.kind === 'FIELD') {
     const density = Number(countPerMetre[1].replace(',', '.'));
@@ -158,17 +206,16 @@ function decomposeRuntimeFormula(line, formula) {
       if (/64\s*(?:CON|CAI)\s*\/\s*M/.test(basis) && /49\s*(?:CON|CAI)\s*\/\s*KG/.test(basis)) {
         conversion = { item_code: item, from_uom: 'Cái', to_uom: clean(line.stock_uom) || 'Kg', factor: 1 / 49, basis: '49 cái/kg from source qty basis' };
       }
-      return { formula, resultUom, authorityType, sourceNote, conversion };
+      return { formula, resultUom, authorityType, sourceNote, confirmedBy, confirmedAt, conversion };
     }
   }
 
   const countPerArea = basis.match(/(\d+(?:[.,]\d+)?)\s*(?:CON|CAI)\s*\/\s*M(?:2|²)/);
   if (countPerArea) {
     const density = Number(countPerArea[1].replace(',', '.'));
-    return { formula: fieldFormula('billable_area_sqm', density), resultUom: 'Cái', authorityType, sourceNote, conversion };
+    return { formula: fieldFormula('billable_area_sqm', density), resultUom: 'Cái', authorityType, sourceNote, confirmedBy, confirmedAt, conversion };
   }
 
-  // Existing canonical linear conversion may have been multiplied into the old formula.
   const conversionFactor = number(line.conversion_factor, null);
   const sourceUom = fold(line.source_uom);
   if (conversionFactor && conversionFactor > 0 && sourceUom === 'M' && fold(line.stock_uom) === 'KG') {
@@ -181,11 +228,12 @@ function decomposeRuntimeFormula(line, formula) {
       resultUom: 'Mét',
       authorityType,
       sourceNote,
+      confirmedBy,
+      confirmedAt,
       conversion: { item_code: item, from_uom: 'Mét', to_uom: 'Kg', factor: conversionFactor, basis: 'canonical BOM conversion_factor' },
     };
   }
 
-  // Area weight annotation belongs to Item conversion, while the BOM rule returns area.
   const kgM2 = basis.match(/(\d+(?:[.,]\d+)?)\s*KG\s*\/\s*M(?:2|²)/)?.[1]
     ?? sourceText.match(/(\d+(?:[.,]\d+)?)\s*KG\s*\/\s*M(?:2|²)/)?.[1];
   if (kgM2 && formula.base?.kind === 'FIELD' && clean(formula.base.field) === 'billable_area_sqm') {
@@ -195,11 +243,13 @@ function decomposeRuntimeFormula(line, formula) {
       resultUom: 'm2',
       authorityType,
       sourceNote,
+      confirmedBy,
+      confirmedAt,
       conversion: { item_code: item, from_uom: 'm2', to_uom: clean(line.stock_uom) || 'Kg', factor, basis: 'kg/m² from source formula' },
     };
   }
 
-  return { formula, resultUom, authorityType, sourceNote, conversion };
+  return { formula, resultUom, authorityType, sourceNote, confirmedBy, confirmedAt, conversion };
 }
 
 function ruleInputForLine(line) {
@@ -207,11 +257,15 @@ function ruleInputForLine(line) {
   if (parsed) return decomposeRuntimeFormula(line, parsed);
   const qty = number(line.qty, null);
   if (qty !== null && qty > 0) {
+    const override = ownerOverrideFor(line);
+    if (override) return ownerSplit(line, override);
     return {
       formula: constantFormula(qty),
       resultUom: clean(line.uom) || clean(line.stock_uom) || clean(line.source_uom),
       authorityType: 'SOURCE',
       sourceNote: 'Fixed canonical BOM quantity retained as reusable CONSTANT rule.',
+      confirmedBy: '',
+      confirmedAt: '',
       conversion: null,
     };
   }
@@ -225,6 +279,7 @@ const pending = [];
 let sourceRuntimeFormulaRows = 0;
 let fixedQuantityRows = 0;
 let componentRows = 0;
+let ownerOverrideMatches = 0;
 
 for (const bom of source.boms) {
   for (const line of Array.isArray(bom.lines) ? bom.lines : []) {
@@ -244,6 +299,7 @@ for (const bom of source.boms) {
       });
       continue;
     }
+    if (split.authorityType === 'OWNER_CONFIRMED') ownerOverrideMatches += 1;
 
     const formula = split.formula;
     const signature = stable({ formula, result_uom: split.resultUom, qty_per_set: 1 });
@@ -258,7 +314,7 @@ for (const bom of source.boms) {
         result_kind: resultKind(split.resultUom, formula),
         result_uom: split.resultUom,
         source_field: ui.source_field,
-        source_field_offset: ui.source_field_offset ?? 0,
+        source_field_offset: ui.source_field_offset,
         source_field_2: ui.source_field_2,
         source_field_2_offset: ui.source_field_2_offset,
         operator: ui.operator,
@@ -279,8 +335,8 @@ for (const bom of source.boms) {
         source_formula_text: clean(line.source_formula_text),
         source_formula_code: clean(line.source_formula_code),
         source_note: split.sourceNote,
-        confirmed_by: split.authorityType === 'OWNER_CONFIRMED' ? 'Chủ xưởng' : '',
-        confirmed_at: split.authorityType === 'OWNER_CONFIRMED' ? '2026-08-19T12:50:00+07:00' : '',
+        confirmed_by: split.confirmedBy,
+        confirmed_at: split.confirmedAt,
         applicability: [],
         source_evidence: [],
       };
@@ -288,8 +344,8 @@ for (const bom of source.boms) {
     } else if (rule.authority_type !== 'OWNER_CONFIRMED' && split.authorityType === 'OWNER_CONFIRMED') {
       rule.authority_type = 'OWNER_CONFIRMED';
       rule.source_note = split.sourceNote;
-      rule.confirmed_by = 'Chủ xưởng';
-      rule.confirmed_at = '2026-08-19T12:50:00+07:00';
+      rule.confirmed_by = split.confirmedBy;
+      rule.confirmed_at = split.confirmedAt;
     }
 
     const applicability = {
@@ -335,6 +391,7 @@ mappings.sort((a, b) => clean(a.parent_item).localeCompare(clean(b.parent_item),
 const payload = {
   format: 'alumdoor-bom-rules/v1',
   source_payload: bomPath,
+  owner_override_source: overridePath,
   generated_at: new Date().toISOString(),
   rule_count: rules.length,
   applicability_count: rules.reduce((sum, rule) => sum + rule.applicability.length, 0),
@@ -346,6 +403,10 @@ const payload = {
 
 const audit = {
   format: 'alumdoor-bom-rules-audit/v1',
+  source_payload: bomPath,
+  owner_override_source: overridePath,
+  owner_override_records: ownerAuthority.overrides.length,
+  owner_override_matches: ownerOverrideMatches,
   component_rows: componentRows,
   source_runtime_formula_rows: sourceRuntimeFormulaRows,
   fixed_quantity_rows: fixedQuantityRows,
@@ -365,4 +426,4 @@ mkdirSync(path.dirname(path.resolve(outArg)), { recursive: true });
 mkdirSync(path.dirname(path.resolve(auditArg)), { recursive: true });
 writeFileSync(path.resolve(outArg), `${JSON.stringify(payload, null, 2)}\n`);
 writeFileSync(path.resolve(auditArg), `${JSON.stringify(audit, null, 2)}\n`);
-console.log(`ALUMDOOR_BOM_RULES_BUILT rules=${rules.length} applicability=${payload.applicability_count} mapped=${mappings.length}/${componentRows} pending=${pending.length} fixed=${fixedQuantityRows} owner_overrides=${audit.owner_overrides} conversions=${audit.conversions_separated}`);
+console.log(`ALUMDOOR_BOM_RULES_BUILT rules=${rules.length} applicability=${payload.applicability_count} mapped=${mappings.length}/${componentRows} pending=${pending.length} fixed=${fixedQuantityRows} owner_override_matches=${ownerOverrideMatches} conversions=${audit.conversions_separated}`);
