@@ -155,7 +155,18 @@ for (const name of itemNames) {
 const itemSet = new Set(itemNames);
 
 const bomFixes = [];
+const bomConflicts = [];
 const bomUnresolved = [];
+
+// Định mức của mặt hàng nào đã có rồi thì biết, để không tạo ra hai định mức cho một mặt hàng.
+const bomByItem = new Map();
+for (const row of await listAll('Bill of Materials', ['name', 'item'])) {
+  const key = String(row.item ?? '');
+  if (!key) continue;
+  if (!bomByItem.has(key)) bomByItem.set(key, []);
+  bomByItem.get(key).push(row.name);
+}
+
 for (const row of await listAll('Bill of Materials')) {
   const doc = await readDoc('Bill of Materials', row.name);
   const target = String(doc?.item ?? '');
@@ -165,13 +176,35 @@ for (const row of await listAll('Bill of Materials')) {
     bomUnresolved.push({ name: row.name, item: target, candidate_count: candidates.length });
     continue;
   }
-  bomFixes.push({ name: row.name, from: target, to: candidates[0], patch: { item: candidates[0], modified: doc?.modified } });
+  const resolved = candidates[0];
+  const existing = bomByItem.get(resolved) ?? [];
+  if (existing.length > 0) {
+    /**
+     * Mặt hàng đích ĐÃ CÓ định mức riêng, nên sửa trỏ sẽ thành hai định mức cho một mặt hàng —
+     * tệ hơn hiện trạng. Mà cũng không xoá được cái mồ côi: đo ra nó mang SỐ LƯỢNG THẬT
+     * (1.312, 11.64) trong khi cái đang gắn đúng mặt hàng để trống 3/4 dòng. Cái nào là bản
+     * chuẩn thì chỉ chủ xưởng trả lời được.
+     */
+    bomConflicts.push({
+      name: row.name,
+      dead_item: target,
+      resolves_to: resolved,
+      existing_bom: existing,
+      note: 'Mặt hàng đích đã có định mức; hai bản khác nhau về số lượng nên cần chủ xưởng chọn bản chuẩn.',
+    });
+    continue;
+  }
+  bomFixes.push({ name: row.name, from: target, to: resolved, patch: { item: resolved, modified: doc?.modified } });
 }
 if (bomUnresolved.length > 0) {
   throw new Error(`Refusing: ${bomUnresolved.length} định mức trỏ vào mã không tồn tại mà dò không ra đúng một ứng viên: ${JSON.stringify(bomUnresolved.slice(0, 5))}`);
 }
 
 // ── ghi ──────────────────────────────────────────────────────────────────────
+//
+// Mọi phép kiểm ở trên đã chạy xong TRƯỚC dòng này. Bản đầu gộp kiểm với ghi nên lần chạy
+// 15:53 đã sửa 3 quy tắc rồi mới dừng ở phiếu định mức — vẫn là trạng thái nửa vời, dù lần đó
+// phần đã ghi tình cờ đúng.
 for (const fix of ruleFixes) await saveDoc('BOM Rule', fix.name, fix.patch);
 for (const fix of bomFixes) await saveDoc('Bill of Materials', fix.name, fix.patch);
 
@@ -190,6 +223,7 @@ fs.writeFileSync(outputPath, `${JSON.stringify({
   format: 'alumdoor-catalog-link-repair/v1',
   bom_rule_uom_fixed: ruleFixes.length,
   bom_item_repointed: bomFixes.length,
+  bom_item_conflicts: bomConflicts,
   rule_fixes: ruleFixes.map(({ name, from, to }) => ({ name, from, to })),
   bom_fixes: bomFixes.map(({ name, from, to }) => ({ name, from, to })),
   verification_failure_count: failures.length,
@@ -197,4 +231,9 @@ fs.writeFileSync(outputPath, `${JSON.stringify({
 }, null, 2)}\n`);
 
 if (failures.length > 0) throw new Error(`Link repair verification failed: ${failures.join('; ')}`);
-console.log(`ALUMDOOR_LOCAL_LINK_REPAIR_PASS bom_rule_uom=${ruleFixes.length} bom_item=${bomFixes.length}`);
+if (bomConflicts.length > 0) {
+  // Không chặn: đây là câu hỏi dữ liệu cho chủ xưởng, không phải lỗi kỹ thuật. Nhưng phải in ra,
+  // vì "im lặng" và "đã cân nhắc rồi để lại" nhìn giống hệt nhau ở lần đọc log sau.
+  console.log(`ALUMDOOR_LINK_REPAIR_BOM_CONFLICT count=${bomConflicts.length} ${bomConflicts.map((row) => `${row.name}→${row.resolves_to}`).join(' ')}`);
+}
+console.log(`ALUMDOOR_LOCAL_LINK_REPAIR_PASS bom_rule_uom=${ruleFixes.length} bom_item=${bomFixes.length} conflicts=${bomConflicts.length}`);
