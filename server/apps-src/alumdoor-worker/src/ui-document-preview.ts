@@ -50,9 +50,6 @@ function totals(doc: Json): Json {
     return sum + number(row.qty) * number(row.rate);
   }, 0));
   const discount = roundMoney(rows.reduce((sum, row) => sum + Math.max(0, number(row.discount_amount)), 0));
-  // Commercial preview owns line-level policy adjustments. Rebuild the document
-  // surcharge from those canonical results; `doc.surcharge_amount` is only a
-  // compatibility fallback for older documents that do not carry the line field.
   const hasLineAdjustments = rows.some((row) => row.adjustment_amount !== undefined && row.adjustment_amount !== null && row.adjustment_amount !== "");
   const surcharge = roundMoney(hasLineAdjustments
     ? rows.reduce((sum, row) => sum + number(row.adjustment_amount), 0)
@@ -79,12 +76,6 @@ function totals(doc: Json): Json {
   };
 }
 
-/**
- * Những field này được nạp mặc định từ hồ sơ đối tác và phải thay sạch khi đổi khách.
- * Nhóm giá vẫn được phép chọn lại trên đơn sau khi đã nạp mặc định. Bảng giá KHÔNG nằm
- * ở đây: mọi Sales Order Alumdoor dùng duy nhất ALUMDOOR-SELLING; danh mục giá mua
- * không bao giờ được customer default kéo vào màn bán.
- */
 const CUSTOMER_DERIVED_FIELDS = [
   "customer_group",
   "contact_person",
@@ -102,8 +93,6 @@ async function customerDefaults(call: DocumentPreviewCall, doc: Json, changedFie
       ? { patch: {}, clear: [...CUSTOMER_DERIVED_FIELDS] }
       : { patch: {}, clear: [] };
   }
-  // Chỉ đổi khách mới được nạp lại Nhóm giá. Đổi ngày hoặc field khác phải giữ lựa
-  // chọn tay hiện tại, nếu không preview muộn sẽ âm thầm kéo đơn về nhóm trên master.
   if (changedField && changedField !== "customer") return { patch: {}, clear: [] };
   const customerDoc = await readDoc(call, "Customer", customer);
   if (!customerDoc) return { patch: {}, clear: changedField === "customer" ? [...CUSTOMER_DERIVED_FIELDS] : [] };
@@ -131,43 +120,38 @@ async function customerDefaults(call: DocumentPreviewCall, doc: Json, changedFie
   return { patch, clear: [...clear] };
 }
 
-function priceVariant(value: unknown): string {
-  return text(value).toUpperCase() || STANDARD_PRICE_VARIANT;
+function normalizePriceVariant(value: unknown): string {
+  const variant = text(value).toUpperCase() || STANDARD_PRICE_VARIANT;
+  if (!/^[A-Z0-9][A-Z0-9_-]{0,63}$/.test(variant)) {
+    throw new Error("Item Price variant phải dùng 1-64 ký tự A-Z, 0-9, _ hoặc -.");
+  }
+  return variant;
 }
 
-function itemPriceMatches(row: Json, priceList: string, itemCode: string, uom: string, variant: string): boolean {
-  return text(row.price_list) === priceList
-    && text(row.item_code) === itemCode
-    && priceVariant(row.price_variant) === variant
-    && text(row.uom) === uom;
+function itemPriceVariant(data: Json): string {
+  return normalizePriceVariant(data.price_variant);
 }
 
-function purchaseRuleScore(rule: Json): number {
-  return (Number.isFinite(Number(rule.priority)) ? Number(rule.priority) : 0) * 100
-    + (text(rule.party) ? 20 : 0)
-    + (text(rule.item_code) ? 10 : 0)
-    + (text(rule.supplier_group) ? 5 : 0);
+function fieldMatchedPrice(data: Json, priceList: string, itemCode: string, lineUom: string, variant: string): boolean {
+  return text(data.price_list) === priceList
+    && text(data.item_code) === itemCode
+    && itemPriceVariant(data) === variant
+    && (lineUom ? text(data.uom) === lineUom : !text(data.uom));
 }
 
-function purchaseRuleMatches(rule: Json, doc: Json, row: Json): boolean {
-  if (disabled(rule.disabled)) return false;
-  const priceList = text(doc.buying_price_list);
-  const itemCode = text(row.item_code);
-  const supplier = text(doc.supplier);
-  const supplierGroup = text(doc.supplier_group);
-  const postingDate = text(doc.transaction_date).slice(0, 10);
-  if (text(rule.price_list) && text(rule.price_list) !== priceList) return false;
-  if (text(rule.item_code) && text(rule.item_code) !== itemCode) return false;
-  if (text(rule.party_type) && text(rule.party_type) !== "Supplier") return false;
-  if (text(rule.party) && text(rule.party) !== supplier) return false;
-  if (text(rule.customer_group)) return false;
-  if (text(rule.supplier_group) && text(rule.supplier_group) !== supplierGroup) return false;
-  if (text(rule.valid_from) && postingDate < text(rule.valid_from).slice(0, 10)) return false;
-  if (text(rule.valid_upto) && postingDate > text(rule.valid_upto).slice(0, 10)) return false;
-  const qty = number(row.qty);
-  const min = rule.min_qty === undefined || rule.min_qty === null || rule.min_qty === "" ? 0 : number(rule.min_qty);
-  const max = rule.max_qty === undefined || rule.max_qty === null || rule.max_qty === "" ? Number.MAX_SAFE_INTEGER : number(rule.max_qty);
-  return qty >= min && qty <= max;
+function namedPriceCompatible(data: Json, priceList: string, itemCode: string, lineUom: string, variant: string): boolean {
+  const dataPriceList = text(data.price_list);
+  const dataItemCode = text(data.item_code);
+  if (dataPriceList && dataPriceList !== priceList) return false;
+  if (dataItemCode && dataItemCode !== itemCode) return false;
+  return itemPriceVariant(data) === variant
+    && (lineUom ? text(data.uom) === lineUom : !text(data.uom));
+}
+
+function preferredPriceRecordName(priceList: string, itemCode: string, uom: string, variant: string): string {
+  const base = `${priceList}:${itemCode}`;
+  if (variant === STANDARD_PRICE_VARIANT) return uom ? `${base}:${uom}` : base;
+  return uom ? `${base}:${uom}:${variant}` : `${base}:${variant}`;
 }
 
 async function currencyScale(call: DocumentPreviewCall, currency: string): Promise<number> {
@@ -176,107 +160,218 @@ async function currencyScale(call: DocumentPreviewCall, currency: string): Promi
   return Number.isSafeInteger(scale) && scale >= 0 && scale <= 6 ? scale : 2;
 }
 
-function roundScale(value: number, scale: number): number {
-  const factor = 10 ** scale;
-  return Math.round((value + Number.EPSILON) * factor) / factor;
+function toMinor(value: unknown, scale: number, label: string): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) throw new Error(`${label} phải là số.`);
+  const result = Math.round(parsed * 10 ** scale);
+  if (!Number.isSafeInteger(result)) throw new Error(`${label} vượt giới hạn số an toàn.`);
+  return result;
+}
+
+function fromMinor(value: number, scale: number): number {
+  return value / 10 ** scale;
+}
+
+function toMicros(value: unknown, label: string): number {
+  return toMinor(value, 6, label);
+}
+
+function uomFactorMicros(item: Json, uom: string): number {
+  const stockUom = text(item.stock_uom);
+  if (uom === stockUom) return 1_000_000;
+  const conversions = Array.isArray(item.uom_conversions) ? item.uom_conversions : [];
+  const match = conversions.find((entry) => Boolean(entry) && typeof entry === "object" && !Array.isArray(entry)
+    && text((entry as Json).uom) === uom) as Json | undefined;
+  if (!match) throw new Error(`ĐVT ${uom} chưa có hệ số quy đổi trên Item ${text(item.name) || text(item.item_code)}.`);
+  const factor = toMicros(match.conversion_factor, `Hệ số quy đổi ${uom}`);
+  if (factor <= 0) throw new Error(`Hệ số quy đổi ${uom} phải lớn hơn 0.`);
+  return factor;
+}
+
+function multiplyDivideRounded(value: number, multiplier: number, divisor: number): number {
+  if (![value, multiplier, divisor].every(Number.isSafeInteger) || divisor <= 0) throw new Error("Phép tính giá vượt giới hạn số an toàn.");
+  const numerator = BigInt(value) * BigInt(multiplier);
+  const denominator = BigInt(divisor);
+  const rounded = (numerator + denominator / 2n) / denominator;
+  const result = Number(rounded);
+  if (!Number.isSafeInteger(result)) throw new Error("Phép tính giá vượt giới hạn số an toàn.");
+  return result;
+}
+
+function matchesPurchaseRule(rule: Json, doc: Json, row: Json): boolean {
+  if (rule.disabled === true || rule.disabled === 1) return false;
+  const priceList = text(doc.buying_price_list);
+  const itemCode = text(row.item_code);
+  const supplier = text(doc.supplier);
+  const supplierGroup = text(doc.supplier_group);
+  const postingDate = text(doc.transaction_date);
+  const qtyMicros = toMicros(row.qty, `${itemCode}.qty`);
+  if (typeof rule.price_list === "string" && rule.price_list !== priceList) return false;
+  if (typeof rule.item_code === "string" && rule.item_code !== itemCode) return false;
+  if (typeof rule.party_type === "string" && rule.party_type !== "Supplier") return false;
+  if (typeof rule.party === "string" && rule.party !== supplier) return false;
+  if (typeof rule.customer_group === "string" && rule.customer_group !== undefined) return false;
+  if (typeof rule.supplier_group === "string" && rule.supplier_group !== supplierGroup) return false;
+  if (typeof rule.valid_from === "string" && postingDate.slice(0, 10) < rule.valid_from.slice(0, 10)) return false;
+  if (typeof rule.valid_upto === "string" && postingDate.slice(0, 10) > rule.valid_upto.slice(0, 10)) return false;
+  const min = rule.min_qty === undefined ? 0 : toMicros(rule.min_qty, "Số lượng tối thiểu Pricing Rule");
+  const max = rule.max_qty === undefined ? Number.MAX_SAFE_INTEGER : toMicros(rule.max_qty, "Số lượng tối đa Pricing Rule");
+  return qtyMicros >= min && qtyMicros <= max;
+}
+
+function purchaseRuleScore(rule: Json): number {
+  return (typeof rule.priority === "number" ? rule.priority : 0) * 100
+    + (rule.party ? 20 : 0)
+    + (rule.item_code ? 10 : 0)
+    + (rule.customer_group || rule.supplier_group ? 5 : 0);
 }
 
 async function resolvePurchasePrice(
   call: DocumentPreviewCall,
   doc: Json,
   row: Json,
+  listedPrices: Json[],
   rules: Json[],
   scale: number,
 ): Promise<Json> {
   const priceList = text(doc.buying_price_list);
   const itemCode = text(row.item_code);
-  const uom = text(row.uom);
+  const lineUom = text(row.uom);
+  const documentCurrency = text(doc.currency);
   if (!itemCode) return row;
   if (!priceList) {
     const rate = Number(row.rate);
     const qty = Number(row.qty);
     return Number.isFinite(rate) && rate >= 0 && Number.isFinite(qty) && qty > 0
-      ? { ...row, amount: roundScale(qty * rate, scale) }
+      ? { ...row, amount: fromMinor(toMinor(qty * rate, scale, `${itemCode}.amount`), scale), price_preview_source: "manual-rate" }
       : row;
   }
-  if (!uom) throw new Error(`${itemCode}: thiếu ĐVT mua để tra bảng giá ${priceList}.`);
 
-  const variant = priceVariant(row.price_variant);
-  const fields = ["name", "price_list", "item_code", "uom", "price_variant", "currency", "rate", "disabled"];
-  const listed = await listDocs(call, "Item Price", fields, [
-    ["price_list", "=", priceList],
-    ["item_code", "=", itemCode],
-  ], 100);
-  const active = listed.filter((candidate) => !disabled(candidate.disabled));
-  const exact = active.filter((candidate) => itemPriceMatches(candidate, priceList, itemCode, uom, variant));
-  if (exact.length > 1) {
-    throw new Error(`Có nhiều Item Price cùng khớp ${priceList} / ${itemCode} / ${uom} / ${variant}: ${exact.map((entry) => text(entry.name)).filter(Boolean).join(", ")}.`);
+  const variant = normalizePriceVariant(row.price_variant);
+  const legacyName = `${priceList}:${itemCode}`;
+  const preferredName = preferredPriceRecordName(priceList, itemCode, lineUom, variant);
+  const [legacy, preferred] = await Promise.all([
+    readDoc(call, "Item Price", legacyName).catch(() => null),
+    preferredName === legacyName ? readDoc(call, "Item Price", legacyName).catch(() => null) : readDoc(call, "Item Price", preferredName).catch(() => null),
+  ]);
+  const compatibleLegacy = variant === STANDARD_PRICE_VARIANT && legacy
+    && namedPriceCompatible(legacy, priceList, itemCode, lineUom, STANDARD_PRICE_VARIANT)
+    ? legacy
+    : null;
+  const compatiblePreferred = preferred
+    && namedPriceCompatible(preferred, priceList, itemCode, lineUom, variant)
+    ? preferred
+    : null;
+
+  const fieldMatches = listedPrices.filter((candidate) => fieldMatchedPrice(candidate, priceList, itemCode, lineUom, variant));
+  const activeFieldMatches = fieldMatches.filter((candidate) => !disabled(candidate.disabled));
+  const exactCandidates = new Map<string, Json>();
+  if (compatiblePreferred && !disabled(compatiblePreferred.disabled)) exactCandidates.set(preferredName, compatiblePreferred);
+  for (const candidate of activeFieldMatches) {
+    const candidateName = text(candidate.name);
+    if (candidateName === legacyName && preferredName !== legacyName) continue;
+    exactCandidates.set(candidateName || `field:${exactCandidates.size + 1}`, candidate);
+  }
+  if (exactCandidates.size > 1) {
+    throw new Error(`Có nhiều Item Price đang hoạt động cùng khớp ${priceList} / ${itemCode} / ${lineUom || "(không ĐVT)"} / ${variant}: ${[...exactCandidates.keys()].sort().join(", ")}.`);
   }
 
-  let itemPrice = exact[0];
-  if (!itemPrice) {
-    const preferredName = variant === STANDARD_PRICE_VARIANT
-      ? `${priceList}:${itemCode}:${uom}`
-      : `${priceList}:${itemCode}:${uom}:${variant}`;
-    const legacyName = `${priceList}:${itemCode}`;
-    for (const name of [preferredName, legacyName]) {
-      const candidate = await readDoc(call, "Item Price", name).catch(() => null);
-      if (!candidate || disabled(candidate.disabled)) continue;
-      const compatible = text(candidate.price_list) === priceList
-        && text(candidate.item_code) === itemCode
-        && priceVariant(candidate.price_variant) === variant
-        && (!text(candidate.uom) || text(candidate.uom) === uom);
-      if (compatible) {
-        itemPrice = { ...candidate, name };
-        break;
+  let itemPrice: Json | null = null;
+  let priceName = preferredName;
+  let convertedFromUom = "";
+  let item: Json | null = null;
+  if (exactCandidates.size === 1) {
+    const [candidateName, candidateData] = [...exactCandidates.entries()][0]!;
+    itemPrice = candidateData;
+    priceName = candidateName;
+  } else if (compatibleLegacy && !disabled(compatibleLegacy.disabled)) {
+    itemPrice = compatibleLegacy;
+    priceName = legacyName;
+  }
+
+  if (!itemPrice && lineUom) {
+    item = await readDoc(call, "Item", itemCode);
+    const baseUom = text(item?.default_sales_uom) || text(item?.stock_uom);
+    if (item && baseUom && baseUom !== lineUom) {
+      const activeBase = listedPrices
+        .filter((candidate) => fieldMatchedPrice(candidate, priceList, itemCode, baseUom, variant))
+        .filter((candidate) => !disabled(candidate.disabled));
+      if (activeBase.length > 1) {
+        throw new Error(`Có nhiều Item Price đang hoạt động cùng khớp ${priceList} / ${itemCode} / ${baseUom} / ${variant}: ${activeBase.map((entry) => text(entry.name)).sort().join(", ")}.`);
+      }
+      if (activeBase.length === 1) {
+        itemPrice = activeBase[0]!;
+        priceName = text(activeBase[0]!.name);
+        convertedFromUom = baseUom;
       }
     }
   }
-  if (!itemPrice) throw new Error(`Không có Item Price cho ${priceList} / ${itemCode} / ${uom}.`);
 
-  const documentCurrency = text(doc.currency);
-  const priceCurrency = text(itemPrice.currency);
-  if (!priceCurrency) throw new Error(`Item Price ${text(itemPrice.name) || itemCode} chưa có tiền tệ.`);
-  if (documentCurrency && priceCurrency !== documentCurrency) {
-    throw new Error(`Item Price ${text(itemPrice.name) || itemCode} dùng ${priceCurrency}, không khớp ${documentCurrency}.`);
+  if (!itemPrice) {
+    const disabledCandidate = compatiblePreferred ?? compatibleLegacy ?? fieldMatches[0] ?? null;
+    if (disabledCandidate) {
+      itemPrice = disabledCandidate;
+      priceName = text(disabledCandidate.name) || priceName;
+    }
   }
-  let rate = Number(itemPrice.rate);
-  if (!Number.isFinite(rate) || rate < 0) throw new Error(`Item Price ${text(itemPrice.name) || itemCode} có đơn giá không hợp lệ.`);
+
+  if (!itemPrice) throw new Error(`Không có Item Price ${preferredName} cho variant ${variant}.`);
+  if (disabled(itemPrice.disabled)) throw new Error(`Item Price ${priceName} đã ngừng dùng.`);
+  const priceCurrency = text(itemPrice.currency);
+  if (!priceCurrency) throw new Error(`Item Price ${priceName} chưa có tiền tệ.`);
+  if (priceCurrency !== documentCurrency) throw new Error(`Item Price ${priceName} dùng ${priceCurrency}, không khớp ${documentCurrency}.`);
+  const priceUom = text(itemPrice.uom);
+  if (priceUom && lineUom && priceUom !== lineUom && !convertedFromUom) {
+    throw new Error(`Item Price ${priceName} áp dụng cho ${priceUom}, nhưng dòng mua dùng ${lineUom}.`);
+  }
+
+  let rateMinor = toMinor(itemPrice.rate, scale, `Đơn giá Item Price ${priceName}`);
+  if (rateMinor < 0) throw new Error(`Item Price ${priceName} có đơn giá âm.`);
+  if (convertedFromUom) {
+    item ??= await readDoc(call, "Item", itemCode);
+    if (!item) throw new Error(`Item ${itemCode} không tồn tại.`);
+    const sourceFactor = uomFactorMicros(item, convertedFromUom);
+    const targetFactor = uomFactorMicros(item, lineUom);
+    rateMinor = multiplyDivideRounded(rateMinor, targetFactor, sourceFactor);
+  }
 
   const matches = rules
-    .filter((rule) => purchaseRuleMatches(rule, doc, row))
+    .filter((rule) => matchesPurchaseRule(rule, doc, row))
     .sort((left, right) => purchaseRuleScore(right) - purchaseRuleScore(left) || text(left.name).localeCompare(text(right.name), "vi"));
   if (matches.length > 1) {
     const topScore = purchaseRuleScore(matches[0]!);
     const tied = matches.filter((rule) => purchaseRuleScore(rule) === topScore);
-    if (tied.length > 1) throw new Error(`Pricing Rule mua hàng bị trùng ưu tiên: ${tied.map((rule) => text(rule.name)).filter(Boolean).join(", ")}.`);
+    if (tied.length > 1) throw new Error(`Pricing Rule mua hàng bị trùng ưu tiên: ${tied.map((rule) => text(rule.name)).sort().join(", ")}.`);
   }
   const selected = matches[0];
   let discountPercentage: number | undefined;
   if (selected) {
-    if (selected.rate !== undefined && selected.rate !== null && selected.rate !== "") {
-      const ruleRate = Number(selected.rate);
-      if (!Number.isFinite(ruleRate) || ruleRate < 0) throw new Error(`Pricing Rule ${text(selected.name)} có đơn giá không hợp lệ.`);
-      rate = ruleRate;
-    } else if (selected.discount_percentage !== undefined && selected.discount_percentage !== null && selected.discount_percentage !== "") {
-      const percent = Number(selected.discount_percentage);
-      if (!Number.isFinite(percent) || percent < 0 || percent > 100) throw new Error(`Pricing Rule ${text(selected.name)} có % chiết khấu không hợp lệ.`);
-      discountPercentage = percent;
-      rate = rate * (1 - percent / 100);
+    if (selected.rate !== undefined) {
+      rateMinor = toMinor(selected.rate, scale, `Đơn giá Pricing Rule ${text(selected.name)}`);
+    } else if (selected.discount_percentage !== undefined) {
+      const percentMicros = toMicros(selected.discount_percentage, `Chiết khấu Pricing Rule ${text(selected.name)}`);
+      if (percentMicros < 0 || percentMicros > 100_000_000) throw new Error("Chiết khấu Pricing Rule phải từ 0 đến 100%.");
+      const discountMinor = Math.round(rateMinor * (percentMicros / 100_000_000));
+      rateMinor = Math.max(0, rateMinor - discountMinor);
+      discountPercentage = percentMicros / 1_000_000;
     }
   }
+  if (rateMinor < 0) throw new Error("Đơn giá sau Pricing Rule không được âm.");
 
-  rate = roundScale(rate, scale);
+  const rate = fromMinor(rateMinor, scale);
   const qty = Number(row.qty);
-  const amount = Number.isFinite(qty) && qty > 0 ? roundScale(qty * rate, scale) : undefined;
+  const amount = Number.isFinite(qty) && qty > 0
+    ? fromMinor(toMinor(qty * rate, scale, `${itemCode}.amount`), scale)
+    : undefined;
   return {
     ...row,
     rate,
     ...(amount !== undefined ? { amount } : {}),
-    item_price: text(itemPrice.name),
+    item_price: priceName,
+    price_variant: variant,
     ...(selected ? { pricing_rule: text(selected.name) } : {}),
     ...(discountPercentage !== undefined ? { discount_percentage: discountPercentage } : {}),
-    price_preview_source: "purchase-price-list",
+    price_preview_source: "canonical-buying-price",
   };
 }
 
@@ -284,25 +379,34 @@ async function purchasePreview(call: DocumentPreviewCall, doc: Json): Promise<Js
   const rows = Array.isArray(doc.items)
     ? doc.items.filter((row): row is Json => Boolean(row) && typeof row === "object" && !Array.isArray(row))
     : [];
-  if (!rows.length) return { items: [], net_total: 0, grand_total: 0, rounded_total: 0 };
+  if (!rows.length) return { items: [], net_total: 0, grand_total: 0, rounded_total: 0, total_amount: 0 };
   const currency = text(doc.currency) || "VND";
   const scale = await currencyScale(call, currency);
-  const rules = text(doc.buying_price_list)
-    ? await listDocs(call, "Pricing Rule", [
-      "name", "disabled", "priority", "price_list", "item_code", "party_type", "party",
-      "customer_group", "supplier_group", "valid_from", "valid_upto", "min_qty", "max_qty",
-      "rate", "discount_percentage",
-    ], [], 500)
-    : [];
-  const items = await Promise.all(rows.map((row) => resolvePurchasePrice(call, doc, row, rules, scale)));
-  const total = roundScale(items.reduce((sum, row) => sum + (Number.isFinite(Number(row.amount)) ? Number(row.amount) : number(row.qty) * number(row.rate)), 0), scale);
+  const priceList = text(doc.buying_price_list);
+  const [listedPrices, rules] = priceList
+    ? await Promise.all([
+      listDocs(call, "Item Price", ["name", "price_list", "item_code", "uom", "price_variant", "currency", "rate", "disabled"], [], 2000),
+      listDocs(call, "Pricing Rule", [
+        "name", "disabled", "priority", "price_list", "item_code", "party_type", "party",
+        "customer_group", "supplier_group", "valid_from", "valid_upto", "min_qty", "max_qty",
+        "rate", "discount_percentage",
+      ], [], 1000),
+    ])
+    : [[], []];
+  const items = await Promise.all(rows.map((row) => resolvePurchasePrice(call, doc, row, listedPrices, rules, scale)));
+  const totalMinor = items.reduce((sum, row) => {
+    const amount = Number(row.amount);
+    if (Number.isFinite(amount)) return sum + toMinor(amount, scale, `${text(row.item_code)}.amount`);
+    return sum + toMinor(number(row.qty) * number(row.rate), scale, `${text(row.item_code)}.amount`);
+  }, 0);
+  const total = fromMinor(totalMinor, scale);
   return {
     items,
     net_total: total,
     grand_total: total,
     rounded_total: total,
     total_amount: total,
-    purchase_pricing_preview: text(doc.buying_price_list) ? "price-list-authority" : "manual-rate",
+    purchase_pricing_preview: priceList ? "canonical-buying-price" : "manual-rate",
   };
 }
 
