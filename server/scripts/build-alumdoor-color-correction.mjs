@@ -38,6 +38,8 @@ const searchRows = ALUMDOOR_COLOR_CATALOG.map((color) => {
   const content = [color.code, color.name, color.finish, ...color.groups].join(" ");
   return `(${sqlText(tenant)},'Item Color',${sqlText(color.code)},${sqlText(color.name)},${sqlText(content)},${sqlText(importedAt)})`;
 });
+const canonicalColorList = ALUMDOOR_COLOR_CATALOG.map((color) => sqlText(color.code)).join(",");
+const canonicalFinishList = ALUMDOOR_SURFACE_FINISH_CATALOG.map((finish) => sqlText(finish.code)).join(",");
 const aliases = [...ALUMDOOR_LEGACY_COLOR_MAP.entries()]
   .filter(([legacy]) => ["GS", "VK", "CF", "XF", "4004", "9512 ( TRẮNG )"].includes(legacy));
 const cases = aliases.map(([legacy, canonical]) => `WHEN ${sqlText(legacy)} THEN ${sqlText(canonical)}`).join(" ");
@@ -95,6 +97,26 @@ WHERE tenant_id=${sqlText(tenant)} AND doctype='Item Color' AND name IN (${legac
 
 DELETE FROM documents
 WHERE tenant_id=${sqlText(tenant)} AND doctype='Item Color' AND name IN (${legacyList});
+
+-- ── master_records: dọn mọi tên NGOÀI bảng màu chuẩn ──
+--
+-- Chỗ này trước đây bị bỏ sót, và nó là chỗ đau nhất. Ô chọn Link đọc HỢP của
+-- documents ∪ master_records (document-kernel/d1-store.ts → listMasterRecords, UNION là
+-- cố ý và đúng). Fixture của brief từng khai ĐỦ CẢ HAI dạng tên — 22 slug ASCII (TRANG,
+-- CAFE, XANH_NGOC) cạnh 25 tên đúng (TRẮNG, CAFÉ, XANH NGỌC) — nên người dùng chọn được
+-- HAI bản ghi cho cùng một màu. Đúng cái E07 cảnh báo với CUỐN/Cuộn: chẻ tồn kho làm hai
+-- vì một lần gõ nhầm, và không có gì báo.
+--
+-- Lọc theo DANH SÁCH MÃ CHUẨN, tuyệt đối không theo hình dạng tên. VAN_GO có dấu gạch
+-- dưới nhưng LÀ mã chuẩn (màu VÂN GỖ của hai phụ thu vân gỗ) — lọc theo "tên có gạch dưới"
+-- sẽ xoá đúng nó và làm chết hai chính sách phụ thu.
+DELETE FROM master_records
+WHERE tenant_id=${sqlText(tenant)} AND record_type='Item Color'
+  AND name NOT IN (${canonicalColorList});
+
+DELETE FROM master_records
+WHERE tenant_id=${sqlText(tenant)} AND record_type='Surface Finish'
+  AND name NOT IN (${canonicalFinishList});
 `;
 
 await writeFile(path.resolve(output), sql, "utf8");
