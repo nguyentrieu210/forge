@@ -106,5 +106,35 @@ for (const { name, mustBeWholeNumber } of ALUMDOOR_UOM_CATALOG) {
   (await ensureUom(name, mustBeWholeNumber) ? created : existing).push(name);
 }
 
+/**
+ * Đơn vị ngoài danh mục chuẩn: NGỪNG DÙNG, không xoá.
+ *
+ * Seed cho tới nay chỉ tạo cái còn thiếu, chưa bao giờ đụng cái thừa — nên `m²` vẫn nằm cạnh
+ * `m2`, `Chiếc` cạnh `Cái`. Đó đúng là thứ E07 gọi tên: "tạo CUỐN bên cạnh Cuộn là chẻ tồn
+ * kho làm hai vì một lần gõ nhầm". Đo trên D1 local 2026-08-19: `m2` dùng 533 lần và `m²`
+ * dùng 0; `Cái` 708 lần và `Chiếc` 0.
+ *
+ * `disabled` chứ không DELETE, theo BRD §2 "không xoá khi còn tham chiếu — chỉ disabled":
+ * `Thùng` đang được đúng một dòng trỏ tới, xoá là để lại tham chiếu treo. Ngừng dùng thì ô
+ * chọn không mời nữa mà dòng cũ vẫn đọc được.
+ */
+const canonicalNames = new Set(ALUMDOOR_UOM_CATALOG.map(({ name }) => name));
+const listed = await request("/api/resource/UOM?limit_page_length=500");
+const allNames = (listed.body?.data ?? []).map((row) => row?.name).filter(Boolean);
+const retired = [];
+for (const name of allNames) {
+  if (canonicalNames.has(name)) continue;
+  const current = await request(`/api/resource/UOM/${encodeURIComponent(name)}`);
+  if (!current.response.ok) continue;
+  const doc = current.body?.data ?? {};
+  if (doc.disabled === 1 || doc.disabled === true) continue;
+  await requireOk(`/api/resource/UOM/${encodeURIComponent(name)}`, {
+    method: "PUT",
+    body: { ...doc, disabled: 1 },
+  });
+  retired.push(name);
+}
+
 console.log(`ALUMDOOR_UOM_SEED_PASS created=${created.length} existing=${existing.length} total=${ALUMDOOR_UOM_CATALOG.length}`);
+console.log(`ALUMDOOR_UOM_RETIRED_PASS retired=${retired.length}${retired.length ? ` names=${retired.join(", ")}` : ""}`);
 console.log(`UOM=${ALUMDOOR_UOM_CATALOG.map(({ name }) => name).join(", ")}`);
