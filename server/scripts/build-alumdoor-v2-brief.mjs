@@ -91,7 +91,7 @@ const moveFieldsAfter = (dt, names, anchor) => {
  * `unchanged` khi manifest byte-identical, nên giữ nguyên số cũ là mọi sửa đổi metadata nằm im
  * trong file mà không bao giờ vào tenant.
  */
-brief.version = "2.6.0";
+brief.version = "2.7.0";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 for (const role of ["General Accountant", "Chief Accountant", "Director", "Kế toán tổng hợp", "Kế toán trưởng", "Giám đốc"]) {
   if (!brief.roles.includes(role)) brief.roles.push(role);
@@ -1859,6 +1859,17 @@ note("MASTER · Measurement Profile chỉ đo/tồn; Geometry Field/Profile sở
       link_filters: '{"disabled":0}',
     });
     note("DANH MỤC · +Pricing Scope (+child) — pricing_scope đổi Data → Link");
+  }
+
+  // Pricing Rule đặt tên bằng `format:{title}`, mà `title` là `ALUMDOOR-PR:{mã hàng}:{biến thể}`.
+  // Tức tên của nó NHÚNG mã hàng, y như Item Price. Đổi mã mà không đổi được tên chính sách giá
+  // thì tên còn ôm mã đã chết và lần chạy sau của importer giá sẽ tạo bản mới thay vì cập nhật.
+  {
+    const rule = doctype("Pricing Rule");
+    if (rule.allow_rename !== true) {
+      rule.allow_rename = true;
+      note("SALES · Pricing Rule cho phép đổi tên — tên nó nhúng mã hàng qua {title}");
+    }
   }
 
   // ── 2. Quy tắc BOM ──

@@ -55,10 +55,58 @@ const DISPLAY_LABEL_KEY = /_name$/;
  *
  * So nguyên giá trị, không so chuỗi con — đây là toàn bộ lằn ranh an toàn của cascade.
  */
+/**
+ * Mã hàng ẩn ở ba chỗ, không phải một.
+ *
+ * Ngoài giá trị lá nguyên vẹn, nó còn sống trong hai dạng nữa — cả hai đều đo được trên D1
+ * Alumdoor 19/08, và cả hai đều KHÔNG được sửa bằng thay chuỗi con:
+ *
+ *  1. KHOÁ NỐI BẰNG DẤU HAI CHẤM. Chính nền tảng đặt tên bằng `format:{a}:{b}:{c}`, nên đây là
+ *     dạng của nền tảng chứ không phải thói quen riêng của một app:
+ *       `Item Price.name`      558  `{bảng giá}:{mã}:{đvt}:{biến thể}`
+ *       `rule_code`            337  `{mã cha}:{mã con}:{số thứ tự}`
+ *       `Pricing Rule.name` / `.title` / `.exclusive_group`  56 mỗi loại
+ *     So theo ĐOẠN, không so chuỗi con: đã kiểm không mã hàng nào chứa dấu hai chấm, nên một
+ *     đoạn hoặc bằng đúng mã hoặc không liên quan. Nhờ vậy `TP-CUA` không đụng `TP-CUADL1LY`.
+ *
+ *  2. JSON SERIALIZE THÀNH CHUỖI. `deferred_components_json` (100 lần) là mảng JSON nằm trong
+ *     một ô text, `item_code` nằm bên trong. Parse ra, sửa, đóng gói lại — vẫn là so nguyên giá
+ *     trị lá, chỉ là sâu thêm một lớp.
+ */
+function rewriteColonSegments(input: string, from: string, to: string): { value: string; changed: boolean } {
+  if (!input.includes(":") || !input.includes(from)) return { value: input, changed: false };
+  const parts = input.split(":");
+  let changed = false;
+  const next = parts.map((part) => {
+    if (part !== from) return part;
+    changed = true;
+    return to;
+  });
+  return changed ? { value: next.join(":"), changed } : { value: input, changed: false };
+}
+
+function rewriteEmbeddedJson(input: string, from: string, to: string): { value: string; changed: boolean } {
+  const trimmed = input.trim();
+  if (!trimmed.startsWith("[") && !trimmed.startsWith("{")) return { value: input, changed: false };
+  if (!input.includes(from)) return { value: input, changed: false };
+  let parsed: unknown;
+  // Chuỗi trông giống JSON mà parse không ra thì để nguyên — đây là ô dữ liệu của người dùng,
+  // không phải chỗ để đoán.
+  try { parsed = JSON.parse(input); } catch { return { value: input, changed: false }; }
+  if (parsed === null || typeof parsed !== "object") return { value: input, changed: false };
+  const next = rewriteLeafMatches(parsed, from, to);
+  return next.changed ? { value: JSON.stringify(next.value), changed: true } : { value: input, changed: false };
+}
+
 export function rewriteLeafMatches(input: unknown, from: string, to: string, key = ""): { value: unknown; changed: boolean } {
   if (typeof input === "string") {
-    if (input !== from || DISPLAY_LABEL_KEY.test(key)) return { value: input, changed: false };
-    return { value: to, changed: true };
+    if (DISPLAY_LABEL_KEY.test(key)) return { value: input, changed: false };
+    if (input === from) return { value: to, changed: true };
+    const embedded = rewriteEmbeddedJson(input, from, to);
+    if (embedded.changed) return embedded;
+    const segmented = rewriteColonSegments(input, from, to);
+    if (segmented.changed) return segmented;
+    return { value: input, changed: false };
   }
   if (Array.isArray(input)) {
     let changed = false;

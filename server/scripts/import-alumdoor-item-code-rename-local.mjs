@@ -150,20 +150,41 @@ async function renameOnce(doctype, oldName, newName, cascade) {
 }
 
 /**
- * Tên dòng giá là bốn đoạn nối bằng dấu hai chấm, mã hàng ở đoạn thứ hai.
+ * Tên tài liệu nối bằng dấu hai chấm, mã hàng là MỘT ĐOẠN.
  *
- * Đã kiểm trên toàn bộ 558 dòng: 558 dòng đúng bốn đoạn, đoạn 1 đúng bằng `item_code`, và
- * không mã hàng nào chứa dấu hai chấm. Vì vậy cắt–ghép theo đoạn là phép biến đổi chứng minh
- * được, khác với dựng lại tên từ mẫu `format:` — dựng lại thì phải đoán cách nền tảng xử lý
- * đoạn rỗng ở đuôi, mà đoán sai là đổi tên hàng loạt sang tên sai.
+ * Hai chỗ dùng dạng này, và cả hai đều tự đặt tên từ mã hàng:
+ *   `Item Price`   `{bảng giá}:{mã}:{đvt}:{biến thể}`        — 558/558 dòng
+ *   `Pricing Rule` `ALUMDOOR-PR:{mã}:{biến thể}` qua {title} —  56 dòng
+ *
+ * Cắt theo đoạn chứ không dựng lại từ mẫu `format:`: đã kiểm không mã hàng nào chứa dấu hai
+ * chấm, nên phép này chứng minh được. Dựng lại thì phải đoán nền tảng xử lý đoạn rỗng ở đuôi
+ * thế nào, mà đoán sai là đổi hàng loạt sang tên sai.
  */
-function renamedPriceName(name, renames) {
+function renamedCompositeName(name, renames) {
+  if (!name.includes(':')) return null;
   const parts = name.split(':');
-  if (parts.length !== 4) return null;
-  const next = renames.get(parts[1]);
-  if (!next) return null;
-  parts[1] = next;
-  return parts.join(':');
+  let changed = false;
+  const next = parts.map((part) => {
+    const to = renames.get(part);
+    if (!to) return part;
+    changed = true;
+    return to;
+  });
+  return changed ? next.join(':') : null;
+}
+
+/** Đổi tên mọi tài liệu của một doctype mà tên có đoạn là mã hàng vừa đổi. */
+async function renameCompositeNamed(doctype, renames) {
+  const names = await listNames(doctype);
+  let renamed = 0;
+  for (const name of names) {
+    const next = renamedCompositeName(name, renames);
+    if (!next || next === name) continue;
+    if (names.has(next)) throw new Error(`Refusing: ${doctype} ${next} already exists`);
+    await renameOnce(doctype, name, next, false);
+    renamed += 1;
+  }
+  return renamed;
 }
 
 async function pass(label, renames) {
@@ -185,18 +206,13 @@ async function pass(label, renames) {
     throw new Error(`Refusing: ${missing.length} planned items are absent and their target is absent too (first: ${missing.slice(0, 5).join(', ')})`);
   }
 
-  const priceNames = await listNames('Item Price');
-  let renamedPrices = 0;
-  for (const name of priceNames) {
-    const next = renamedPriceName(name, renames);
-    if (!next || next === name) continue;
-    if (priceNames.has(next)) throw new Error(`Refusing: Item Price ${next} already exists`);
-    await renameOnce('Item Price', name, next, false);
-    renamedPrices += 1;
-  }
+  // Đổi tên Item xong thì cascade đã sửa payload; còn TÊN của hai doctype tự đặt tên từ mã hàng
+  // thì phải đổi riêng, vì tên không phải là payload.
+  const renamedPrices = await renameCompositeNamed('Item Price', renames);
+  const renamedRules = await renameCompositeNamed('Pricing Rule', renames);
 
-  console.log(`${label} items_renamed=${renamedItems} already=${alreadyDone} prices_renamed=${renamedPrices}`);
-  return { items_renamed: renamedItems, already_renamed: alreadyDone, prices_renamed: renamedPrices };
+  console.log(`${label} items_renamed=${renamedItems} already=${alreadyDone} prices_renamed=${renamedPrices} rules_renamed=${renamedRules}`);
+  return { items_renamed: renamedItems, already_renamed: alreadyDone, prices_renamed: renamedPrices, rules_renamed: renamedRules };
 }
 
 async function verify(renames) {
@@ -204,45 +220,65 @@ async function verify(renames) {
   const stale = [...renames.keys()].filter((from) => items.has(from));
   const arrived = [...renames.values()].filter((to) => items.has(to));
   const prices = await listNames('Item Price');
-  const stalePrices = [...prices].filter((name) => renamedPriceName(name, renames) !== null);
+  const rules = await listNames('Pricing Rule');
+  const stalePrices = [...prices, ...rules].filter((name) => renamedCompositeName(name, renames) !== null);
   const failures = [];
   if (stale.length > 0) failures.push(`${stale.length} old item codes still present (first: ${stale.slice(0, 5).join(', ')})`);
   if (arrived.length !== renames.size) failures.push(`only ${arrived.length}/${renames.size} new item codes present`);
-  if (stalePrices.length > 0) failures.push(`${stalePrices.length} Item Price names still carry an old code (first: ${stalePrices.slice(0, 3).join(', ')})`);
+  if (stalePrices.length > 0) failures.push(`${stalePrices.length} composite names still carry an old code (first: ${stalePrices.slice(0, 3).join(', ')})`);
   return { item_count: items.size, price_count: prices.size, failures };
 }
 
 /**
- * Mã hàng còn sống ở dạng thứ ba: NHÚNG bên trong một khoá dẫn xuất.
+ * Kiểm kê phần mã hàng mà cascade KHÔNG với tới.
  *
- * Cascade của kernel so nguyên giá trị lá nên cố ý không đụng những chuỗi này — và đúng là không
- * nên đụng, vì thay chuỗi con là cách chắc chắn nhất để phá dữ liệu. Nhưng hệ quả là đổi mã xong
- * thì các khoá ấy còn ôm mã đã chết, KHÔNG có gì báo.
+ * Cascade sửa được ba dạng: giá trị lá nguyên vẹn, đoạn trong khoá nối bằng dấu hai chấm, và
+ * lá nằm trong JSON serialize thành chuỗi. Hàm này soi đúng phần CÒN LẠI — mã bị nhúng bằng
+ * một dấu nối khác, ví dụ `Material Specification.spec_code` = `ĐM-{mã}`.
  *
- * Đo trên D1 demo 19/08 với 359 mã trong kế hoạch:
- *   rule_code                2.830  — `{mã cha}:{mã con}:{số thứ tự}`
- *   deferred_components_json   338  — mảng JSON serialize thành chuỗi, item_code nằm bên trong
- *   item_price / discount_basis_item_price  18+18 — trỏ tới TÊN Item Price, mà tên đó nhúng mã
- *   spec_code / material_specification       3+3  — `ĐM-{mã}`
+ * Phải soi phần còn lại chứ không soi tổng, vì nếu cứ thấy mã là chặn thì cổng này sẽ đỏ vĩnh
+ * viễn ngay cả khi cascade đã lo xong.
  *
- * Cả bốn đều sửa được, nhưng mỗi cái cần một luật tái sinh riêng và phải ghi lại 349 BOM Template
- * kèm dòng con qua API — lớn hơn hẳn phạm vi "đổi tên mặt hàng", và làm dở thì để lại đúng cái đồ
- * thị link vá nửa vời mà guard đổi tên sinh ra để ngăn.
- *
- * Nên: dừng TRƯỚC khi đổi bất cứ thứ gì, và nói rõ còn bao nhiêu.
+ * Chỗ nào cascade không với tới thì đổi mã xong sẽ để lại một khoá ôm mã đã chết, KHÔNG có gì
+ * báo — nên dừng trước khi đổi bất cứ thứ gì vẫn đúng hơn là chạy rồi sửa sau.
  */
+function cascadeWouldFix(value, code) {
+  if (value === code) return true;
+  if (value.includes(':') && value.split(':').includes(code)) return true;
+  const trimmed = value.trim();
+  if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(value);
+      if (parsed && typeof parsed === 'object') {
+        // Cascade sửa lá bên trong; ở đây chỉ cần biết mã có thật sự là một LÁ hay không.
+        const seen = [];
+        (function walk(node) {
+          if (typeof node === 'string') { seen.push(node); return; }
+          if (Array.isArray(node)) { for (const x of node) walk(x); return; }
+          if (node && typeof node === 'object') for (const v of Object.values(node)) walk(v);
+        })(parsed);
+        if (seen.includes(code)) return true;
+      }
+    } catch { /* không phải JSON thì cascade cũng để nguyên */ }
+  }
+  return false;
+}
+
 async function auditDerivedKeys(renames) {
   const codes = [...renames.keys()];
   const findings = new Map();
   const inspect = (value, key) => {
     if (typeof value === 'string') {
-      if (!value || renames.has(value)) return; // nguyên giá trị thì cascade lo được
-      if (!codes.some((code) => value.includes(code))) return;
-      // Chuỗi con của một mã DÀI HƠN không phải khoá dẫn xuất: `TP-CUA` nằm trong `TP-CUADL1LY`
-      // là hai mã khác nhau chứ không phải một mã bị nhúng.
-      const segments = new Set(value.split(':'));
-      const embedded = codes.some((code) => segments.has(code) || value.includes(`"${code}"`));
-      if (embedded) findings.set(key, (findings.get(key) ?? 0) + 1);
+      if (!value || /_name$/.test(key)) return; // nhãn hiển thị: cascade cố ý bỏ qua, đúng
+      for (const code of codes) {
+        if (!value.includes(code)) continue;
+        if (cascadeWouldFix(value, code)) continue;
+        // Chuỗi con của một mã DÀI HƠN không phải khoá dẫn xuất: `TP-CUA` nằm trong
+        // `TP-CUADL1LY` là hai mã khác nhau chứ không phải một mã bị nhúng.
+        if (codes.some((other) => other !== code && other.includes(code) && value.includes(other))) continue;
+        findings.set(key, (findings.get(key) ?? 0) + 1);
+        return;
+      }
       return;
     }
     if (Array.isArray(value)) { for (const entry of value) inspect(entry, key); return; }
@@ -284,7 +320,7 @@ if (verified.failures.length > 0) {
 // Lần hai phải KHÔNG đổi gì. Đây là chỗ bắt được cascade ghi nửa vời: nếu tham chiếu chưa theo
 // hết thì lần một để lại mã cũ đâu đó, và lần hai sẽ tìm thấy việc để làm.
 const second = await pass('LOCAL_RENAME_PASS_2', renames);
-if (second.items_renamed !== 0 || second.prices_renamed !== 0) {
+if (second.items_renamed !== 0 || second.prices_renamed !== 0 || second.rules_renamed !== 0) {
   throw new Error(`Local idempotence failed: ${JSON.stringify(second)}`);
 }
 

@@ -10,7 +10,7 @@ const read = (path) => readFile(new URL(path, root), "utf8");
 test("Alumdoor purchase proposals consume HR and warehouse-cash contracts", async () => {
   const integration = JSON.parse(await read("server/briefs/alumdoor-v2.integrations.json"));
   // Sidecar integrations chạy CUỐI trong readBriefSource nên version của nó là version thật của app.
-  assert.equal(integration.version, "2.6.0");
+  assert.equal(integration.version, "2.7.0");
   assert.deepEqual(integration.requires.map((entry) => entry.id), ["vn-accounting", "hrm"]);
   assert.ok(integration.externalDocTypes.some((entry) => entry.name === "Employee" && entry.app === "hrm"));
   assert.ok(integration.externalDocTypes.some((entry) => entry.name === "Warehouse Cash Voucher" && entry.app === "vn-accounting"));

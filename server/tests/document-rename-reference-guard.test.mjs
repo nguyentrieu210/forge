@@ -270,3 +270,64 @@ test("đổi tên kéo theo cả document_search và dòng con, không vi phạm
   assert.equal(a.db.prepare("SELECT COUNT(*) c FROM document_children WHERE parent_key='Item:VT-P'").get().c, 1, "dòng con phải đi theo");
   assert.equal(a.db.prepare("PRAGMA foreign_key_check").all().length, 0, "không được để lại vi phạm khoá ngoại");
 });
+
+/* ── khoá dẫn xuất ────────────────────────────────────────────────────────────
+ * Mã hàng còn ẩn ở hai dạng nữa ngoài giá trị lá nguyên vẹn.
+ */
+
+test("cascade sửa khoá nối bằng dấu hai chấm theo ĐOẠN", async () => {
+  // Ba dạng thật trên D1: tên Item Price, rule_code, và tên/nhóm của Pricing Rule.
+  const { a, s } = store();
+  seed(a, "Item", "NVL-TR114", { item_code: "NVL-TR114" });
+  seed(a, "BOM Template", "1", {
+    component_rules: [{ rule_code: "NVL-KEM124:NVL-TR114:1", item_code: "NVL-TR114" }],
+  });
+  seed(a, "Pricing Rule", "PR-1", {
+    title: "ALUMDOOR-PR:NVL-TR114:MOTOR_LAC36",
+    exclusive_group: "ALUMDOOR-PRICE-VARIANT:NVL-TR114",
+  });
+  await renameCascade(s, "NVL-TR114", "VT-TR114");
+  assert.equal(payloadOf(a, "BOM Template", "1").component_rules[0].rule_code, "NVL-KEM124:VT-TR114:1");
+  assert.equal(payloadOf(a, "Pricing Rule", "PR-1").title, "ALUMDOOR-PR:VT-TR114:MOTOR_LAC36");
+  assert.equal(payloadOf(a, "Pricing Rule", "PR-1").exclusive_group, "ALUMDOOR-PRICE-VARIANT:VT-TR114");
+});
+
+test("đoạn chỉ CHỨA mã thì không đụng — phải bằng đúng cả đoạn", async () => {
+  // Nếu so chuỗi con thì `TP-CUA` sẽ ăn vào đoạn `TP-CUADL1LY` và đổi nhầm một mã khác.
+  const { a, s } = store();
+  seed(a, "Item", "TP-CUA", { item_code: "TP-CUA" });
+  seed(a, "BOM Template", "1", { component_rules: [{ rule_code: "BANG-GIA:TP-CUADL1LY:1" }] });
+  await renameCascade(s, "TP-CUA", "CUA-MOI");
+  assert.equal(payloadOf(a, "BOM Template", "1").component_rules[0].rule_code, "BANG-GIA:TP-CUADL1LY:1");
+});
+
+test("cascade đi vào JSON được serialize thành chuỗi", async () => {
+  // `deferred_components_json` là mảng JSON nằm trong một ô text; item_code nằm bên trong.
+  const { a, s } = store();
+  seed(a, "Item", "NVL-AL595", { item_code: "NVL-AL595" });
+  seed(a, "BOM Template", "1", {
+    deferred_components_json: JSON.stringify([{ item_code: "NVL-AL595", qty: null, blank_reason: "missing_conversion" }]),
+  });
+  await renameCascade(s, "NVL-AL595", "VT-AL595");
+  const inner = JSON.parse(payloadOf(a, "BOM Template", "1").deferred_components_json);
+  assert.equal(inner[0].item_code, "VT-AL595");
+  assert.equal(inner[0].blank_reason, "missing_conversion", "phần còn lại giữ nguyên");
+});
+
+test("chuỗi trông giống JSON mà hỏng thì để nguyên, không đoán", async () => {
+  const { a, s } = store();
+  seed(a, "Item", "NVL-Q", { item_code: "NVL-Q" });
+  seed(a, "BOM Template", "1", { ghi_chu: '[{"item_code":"NVL-Q" thiếu ngoặc' });
+  await renameCascade(s, "NVL-Q", "VT-Q");
+  assert.equal(payloadOf(a, "BOM Template", "1").ghi_chu, '[{"item_code":"NVL-Q" thiếu ngoặc');
+});
+
+test("nhãn hiển thị vẫn miễn nhiễm kể cả khi nối bằng dấu hai chấm", async () => {
+  const { a, s } = store();
+  seed(a, "Item", "NVL-R", { item_code: "NVL-R" });
+  seed(a, "BOM Template", "1", { item_name: "Nhóm:NVL-R:loại 2", item_code: "NVL-R" });
+  await renameCascade(s, "NVL-R", "VT-R");
+  const p = payloadOf(a, "BOM Template", "1");
+  assert.equal(p.item_code, "VT-R");
+  assert.equal(p.item_name, "Nhóm:NVL-R:loại 2", "nhãn không đổi dù có dấu hai chấm");
+});

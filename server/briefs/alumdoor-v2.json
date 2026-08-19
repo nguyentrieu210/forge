@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -5592,7 +5592,8 @@
         "Chủ xưởng": "rwc",
         "Kinh doanh": "r",
         "Kế toán": "rwc"
-      }
+      },
+      "allow_rename": true
     },
     {
       "//": "MỘT DÒNG = toàn bộ công thức của MỘT loại cửa: cắt, dự toán mua và bán. Worker đọc đúng danh mục này, không giữ một bảng số riêng.",
