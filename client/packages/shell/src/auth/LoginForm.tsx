@@ -209,7 +209,10 @@ export function LoginForm({
       </form>
 
       <div className="mt-7 flex items-center justify-between gap-3 border-t pt-5 text-[11px] text-muted-foreground">
-        <span>Forge V3</span>
+        {/* Trước đây in "Forge V3" — số hiệu của một chương trình giao diện ĐÃ BỊ REVERT
+          * (`cf5dd0da5`), nằm ngay trên màn hình đầu tiên mọi khách nhìn thấy. Bỏ số hiệu
+          * thay vì sửa thành số khác: mặt đăng nhập không có lý do gì phải công bố phiên bản. */}
+        <span>Forge</span>
         <span className="text-right">Enterprise Operating Platform</span>
       </div>
     </div>
@@ -244,7 +247,9 @@ export function LoginForm({
         <div className="mf-auth-brand-reveal relative z-10 max-w-xl pb-8 xl:pb-14">
           <div className="mb-5 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/[0.48]">
             <span className="size-1.5 rounded-full" style={{ background: "var(--primary)" }} />
-            Forge Vben Next
+            {/* "Vben" là tên một template admin Vue mà chương trình UI V3 mô phỏng. V3 đã bị
+              * revert, còn dòng chữ thì vẫn nằm trên màn đăng nhập quảng cáo hộ nó. */}
+            Nền tảng vận hành
           </div>
           <h2 className="max-w-lg text-4xl font-semibold leading-[1.04] tracking-[-0.05em] xl:text-[3.35rem]">
             Một workspace cho dữ liệu, quy trình và vận hành doanh nghiệp.

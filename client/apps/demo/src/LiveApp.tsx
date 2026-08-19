@@ -11,6 +11,7 @@ import {
 import {
   AIPanel, AuthBoundary, I18nProvider, createExperienceRegistry, ExperienceRoute, resolveIcon,
   BusinessContextProvider, BusinessContextBar, useBusinessContext, ChangePasswordDialog,
+  ScopeGateBody, resolveScopeState, type ScopeGateState,
   type AwesomeRecord, type NavItem, type NotificationItem,
 } from "@metaforge/shell";
 import { APP_MANIFEST } from "./app-manifest.js";
@@ -218,18 +219,28 @@ function AuthedApp() {
 function BusinessContextRuntime({ boot, logout }: { boot: MetaForgeBootDTO; logout: () => Promise<void> }) {
   const business = useBusinessContext();
   const scopedKey = `${createScopeKey(boot)}|${business.cacheSuffix || "global"}`;
-  if (business.loading && !business.dimensions.length) return <div className="grid h-screen place-items-center text-muted-foreground">Đang xác định công ty, năm tài chính và kho theo quyền…</div>;
+  // Cả ba trạng thái trước khi app mở được đều render BÊN TRONG shell — xem
+  // packages/shell/src/scope-gate.tsx.
+  const scope = resolveScopeState(business);
   return (
     <MetaForgeProvider adapter={adapter} registry={registry} roles={boot.roles} scopeKey={scopedKey} locale={mergeLocale(boot.sysdefaults, MANIFEST.locale)} businessContext={business.selection} contextPolicies={business.policies}>
       <RuntimeNavigationProvider>
-        {!business.ready ? <ContextRequiredScreen boot={boot} logout={logout} /> : <RuntimeRoutes boot={boot} logout={logout} />}
+        {scope !== "ready"
+          ? <ScopeScreen boot={boot} logout={logout} state={scope} error={business.error} onRetry={() => { void business.reload(); }} />
+          : <RuntimeRoutes boot={boot} logout={logout} />}
       </RuntimeNavigationProvider>
     </MetaForgeProvider>
   );
 }
 
-function ContextRequiredScreen({ boot, logout }: { boot: MetaForgeBootDTO; logout: () => Promise<void> }) {
-  return <RuntimeShell boot={boot} logout={logout} activeKey="__overview" breadcrumbs={[{ label: "Chọn phạm vi" }]}><div className="grid h-full place-items-center p-8"><div className="max-w-lg rounded-xl border bg-card p-6 text-center shadow-sm"><h1 className="text-lg font-semibold">Cần chọn phạm vi dữ liệu</h1><p className="mt-2 text-sm text-muted-foreground">Chọn đầy đủ Công ty, Năm tài chính hoặc Kho trên thanh phía trên trước khi tải dữ liệu nghiệp vụ.</p><div className="mt-5 flex justify-center"><BusinessContextBar /></div></div></div></RuntimeShell>;
+function ScopeScreen({ boot, logout, state, error, onRetry }: {
+  boot: MetaForgeBootDTO;
+  logout: () => Promise<void>;
+  state: Exclude<ScopeGateState, "ready">;
+  error?: string;
+  onRetry?: () => void;
+}) {
+  return <RuntimeShell boot={boot} logout={logout} activeKey="__overview" breadcrumbs={[{ label: "Chọn phạm vi" }]}><ScopeGateBody state={state} error={error} onRetry={onRetry} chooser={<BusinessContextBar />} /></RuntimeShell>;
 }
 
 function RuntimeRoutes({ boot, logout }: { boot: MetaForgeBootDTO; logout: () => Promise<void> }) {

@@ -568,14 +568,6 @@ export function ListView(props: ListViewProps) {
         onGroupByChange={setGroupBy}
       />
 
-      <ListSummaryStrip
-        total={props.total ?? rows.length}
-        rows={rows}
-        columns={columns}
-        fmt={props.fmt}
-        loading={props.loading}
-      />
-
       {state.selected.length > 0 ? (
         <BulkActionBar
           count={state.selected.length}
@@ -1242,33 +1234,17 @@ function aggregateColumn(rows: Doc[], column: ListColumn): number {
   return column.fieldtype === "Percent" && rows.length ? total / rows.length : total;
 }
 
-function ListSummaryStrip({ total, rows, columns, fmt, loading }: {
-  total: number;
-  rows: Doc[];
-  columns: ListColumn[];
-  fmt?: BoundFormatters;
-  loading?: boolean;
-}) {
-  const numeric = columns.filter((column) => ["Currency", "Float", "Int", "Percent"].includes(column.fieldtype)).slice(0, 2);
-  return (
-    <div className={cn("grid shrink-0 grid-cols-2 border-y bg-muted/25", numeric.length === 0 ? "sm:grid-cols-2" : numeric.length === 1 ? "sm:grid-cols-3" : "sm:grid-cols-4")} aria-label="Tổng nhanh danh sách">
-      <div className="min-w-0 border-r px-3 py-2">
-        <div className="text-[11px] text-muted-foreground">Tổng bản ghi</div>
-        <div className="mt-0.5 font-semibold tabular-nums">{loading ? "…" : total.toLocaleString("vi-VN")}</div>
-      </div>
-      <div className="min-w-0 border-r px-3 py-2">
-        <div className="text-[11px] text-muted-foreground">Đang hiển thị</div>
-        <div className="mt-0.5 font-semibold tabular-nums">{loading ? "…" : rows.length.toLocaleString("vi-VN")}</div>
-      </div>
-      {numeric.map((column) => (
-        <div key={column.fieldname} className="min-w-0 border-r px-3 py-2">
-          <div className="truncate text-[11px] text-muted-foreground" title={`Tổng ${column.label} trên trang hiện tại`}>Tổng {column.label} · trang</div>
-          <div className="mt-0.5 truncate font-semibold tabular-nums">{loading ? "…" : formatValue(aggregateColumn(rows, column), column, fmt)}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
+/*
+ * `ListSummaryStrip` đã được gỡ.
+ *
+ * Nó là một dải hai-tới-bốn ô nằm ngay trên toolbar, in "Tổng bản ghi" và "Đang hiển thị"
+ * bằng cỡ chữ đậm — nhưng cả hai con số đó ĐÃ có sẵn ở thanh phân trang ("1–20 / 587"), còn
+ * phần tổng theo cột thì đã có ở hàng "Σ trang" dưới chân bảng, nơi con số nằm đúng dưới cột
+ * mà nó cộng. Dải này vì thế không mang thêm thông tin nào, chỉ lấy mất một băng chiều cao
+ * trên mọi màn danh sách của mọi app và đẩy dữ liệu thật xuống dưới.
+ *
+ * `aggregateColumn` được giữ lại: hàng tổng ở chân bảng vẫn dùng.
+ */
 
 /** Nhãn hiển thị của 1 nhóm — Link thì đổi sang title đã resolve, Check thì Có/Không, rỗng thì "(trống)". */
 function groupLabel(

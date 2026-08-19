@@ -148,8 +148,7 @@ import {
 } from "@metaforge/views";
 import {
   AppShell, AuthBoundary, BusinessContextBar, BusinessContextProvider, I18nProvider,
-  LoginForm, applyBrand, normalizeBrand, resolveIcon, useBusinessContext, useTheme, type NavItem,
-} from "@metaforge/shell";
+  LoginForm, applyBrand, normalizeBrand, resolveIcon, useBusinessContext, useTheme, type NavItem, ScopeGateBody, resolveScopeState } from "@metaforge/shell";
 import { Button } from "@metaforge/ui";
 import { APP_MANIFEST } from "./app-manifest.js";
 import "./styles.css";
@@ -228,9 +227,11 @@ function Runtime({ boot, logout }: { boot: MetaForgeBootDTO; logout: () => Promi
   useEffect(() => { let alive = true; adapter.getApplicationCatalog(APP_MANIFEST.catalogMode === "manifest" ? APP_MANIFEST.id : undefined).then((value) => { if (alive) setCatalog(value); }).catch((error) => { if (alive) setCatalogError(adapter.mapError(error).message); }); return () => { alive = false; }; }, [context.cacheSuffix]);
   const nav = useMemo(() => buildNavigation(catalog, boot.roles), [catalog, boot.roles]);
   const scopeKey = \`\${createScopeKey(boot)}|\${context.cacheSuffix || "global"}\`;
-  if (context.loading && !context.dimensions.length) return <div className="grid h-screen place-items-center text-muted-foreground">Đang xác định phạm vi dữ liệu…</div>;
+  // Cả ba trạng thái trước khi app mở được đều render BÊN TRONG Shell — xem
+  // packages/shell/src/scope-gate.tsx.
+  const scope = resolveScopeState(context);
   return <MetaForgeProvider adapter={adapter} registry={registry} roles={boot.roles} scopeKey={scopeKey} locale={mergeLocale(boot.sysdefaults, APP_MANIFEST.locale)} businessContext={context.selection} contextPolicies={context.policies}>
-    {!context.ready ? <Shell boot={boot} logout={logout} nav={nav} active="__overview"><div className="grid h-full place-items-center p-8"><div className="rounded-xl border bg-card p-6 text-center"><h1 className="font-semibold">Cần chọn phạm vi dữ liệu</h1><p className="mt-2 text-sm text-muted-foreground">Chọn Công ty, Năm tài chính hoặc Kho ở topnav.</p><div className="mt-4"><BusinessContextBar /></div></div></div></Shell> : <RuntimeRoutes boot={boot} logout={logout} nav={nav} catalogError={catalogError} />}
+    {scope !== "ready" ? <Shell boot={boot} logout={logout} nav={nav} active="__overview"><ScopeGateBody state={scope} error={context.error} onRetry={() => { void context.reload(); }} chooser={<BusinessContextBar />} /></Shell> : <RuntimeRoutes boot={boot} logout={logout} nav={nav} catalogError={catalogError} />}
   </MetaForgeProvider>;
 }
 

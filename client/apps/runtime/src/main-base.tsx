@@ -10,6 +10,7 @@ import type { UrlStateBridge } from "@metaforge/views/url-state";
 import {
   AppShell, AuthBoundary, BusinessContextBar, BusinessContextProvider, I18nProvider,
   CommandPalette, LoginForm, applyBrand, normalizeBrand, applyDesign, resolveIcon, useBusinessContext, useTheme,
+  ScopeGateBody, resolveScopeState,
   type AwesomeRecord, type NavItem,
 } from "@metaforge/shell";
 import { Button, Toaster } from "@metaforge/ui";
@@ -443,16 +444,20 @@ function Runtime({ manifest, boot, logout }: { manifest: AppManifest; boot: Meta
   const formProfiles = manifest.id === "alumdoor" || manifest.domain === "alumdoor"
     ? ALUMDOOR_FORM_PROFILES
     : undefined;
-  if (context.loading && !context.dimensions.length) return <Splash>Đang xác định phạm vi dữ liệu…</Splash>;
+  // Cả ba trạng thái trước khi app mở được đều render BÊN TRONG Shell. Trước đây nhánh "đang
+  // tải" `return` sớm ra ngoài, nên mỗi lần tải trang khung điều hướng biến mất và người dùng
+  // xem một dòng chữ trần giữa màn hình — xem `packages/shell/src/scope-gate.tsx`.
+  const scope = resolveScopeState(context);
 
   return <MetaForgeProvider adapter={adapter} registry={registry} roles={boot.roles} scopeKey={scopeKey} locale={mergeLocale(boot.sysdefaults, manifest.locale)} businessContext={context.selection} contextPolicies={context.policies} formProfiles={formProfiles}>
-    {!context.ready
+    {scope !== "ready"
       ? <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active="__overview">
-          <div className="grid h-full place-items-center p-8"><div className="rounded-xl border bg-card p-6 text-center">
-            <h1 className="font-semibold">Cần chọn phạm vi dữ liệu</h1>
-            <p className="mt-2 text-sm text-muted-foreground">Chọn phạm vi ở thanh trên để tiếp tục.</p>
-            <div className="mt-4"><BusinessContextBar /></div>
-          </div></div>
+          <ScopeGateBody
+            state={scope}
+            error={context.error}
+            onRetry={() => { void context.reload(); }}
+            chooser={<BusinessContextBar />}
+          />
         </Shell>
       : <RuntimeRoutes manifest={manifest} boot={boot} logout={logout} nav={nav} catalogError={catalogError} />}
   </MetaForgeProvider>;
