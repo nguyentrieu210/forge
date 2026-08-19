@@ -254,29 +254,38 @@ async function verify(renames) {
  * Chỗ nào cascade không với tới thì đổi mã xong sẽ để lại một khoá ôm mã đã chết, KHÔNG có gì
  * báo — nên dừng trước khi đổi bất cứ thứ gì vẫn đúng hơn là chạy rồi sửa sau.
  */
-function cascadeWouldFix(value, code) {
+/**
+ * Mã này có phải một THAM CHIẾU ở đây không, hay chỉ tình cờ trùng chữ?
+ *
+ * Trong dữ liệu có cấu trúc thì câu hỏi ấy trả lời được chính xác, không cần đoán:
+ *
+ *  · JSON serialize thành chuỗi → vị trí tham chiếu là các LÁ. Bằng đúng một lá thì cascade
+ *    sửa; không bằng lá nào thì mã chỉ là chuỗi con bên trong một giá trị khác, không có gì để
+ *    sửa. Ca thật: `"source_item_code":"NVL-RNINOX-DR"` có chứa `RNINOX-DR`, nhưng
+ *    `NVL-RNINOX-DR` là một mã KHÁC — mà lại còn treo, không Item nào tên vậy.
+ *
+ *  · Chuỗi nối bằng dấu hai chấm → vị trí tham chiếu là các ĐOẠN. Cùng lập luận.
+ *
+ *  · Chuỗi thường, mã nhúng bằng dấu nối khác → không phân giải được bằng cấu trúc nên phải
+ *    báo. Đây là vế duy nhất cổng này sinh ra để bắt, và nó bắt được `spec_code` = `ĐM-{mã}`.
+ *
+ * Trả về true nghĩa là "không cần ai để mắt": hoặc cascade lo được, hoặc vốn không có gì.
+ */
+function resolvedByStructure(value, code) {
   if (value === code) return true;
-  if (value.includes(':') && value.split(':').includes(code)) return true;
+
   const trimmed = value.trim();
   if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
     try {
       const parsed = JSON.parse(value);
-      if (parsed && typeof parsed === 'object') {
-        // Cascade sửa lá bên trong; ở đây chỉ cần biết mã có thật sự là một LÁ hay không.
-        const seen = [];
-        (function walk(node) {
-          if (typeof node === 'string') { seen.push(node); return; }
-          if (Array.isArray(node)) { for (const x of node) walk(x); return; }
-          if (node && typeof node === 'object') for (const v of Object.values(node)) walk(v);
-        })(parsed);
-        if (seen.includes(code)) return true;
-      }
-    } catch { /* không phải JSON thì cascade cũng để nguyên */ }
+      if (parsed && typeof parsed === 'object') return true; // lá thì cascade sửa, ngoài lá là chuỗi con
+    } catch { /* trông giống JSON mà hỏng thì rơi xuống dưới */ }
   }
+  if (value.includes(':')) return true; // đoạn thì cascade sửa, ngoài đoạn là chuỗi con
   return false;
 }
 
-async function auditDerivedKeys(renames) {
+async function auditDerivedKeys(renames, allKnownCodes) {
   const codes = [...renames.keys()];
   const findings = new Map();
   const ownIdentity = new Map();
@@ -296,7 +305,7 @@ async function auditDerivedKeys(renames) {
       // xác nhận, KHÔNG chặn — chặn cả đợt 359 mã vì 3 bản ghi có lẽ vốn đã đúng là chặn nhầm.
       if (value === currentName) {
         for (const code of codes) {
-          if (value.includes(code) && !cascadeWouldFix(value, code)) {
+          if (value.includes(code) && !resolvedByStructure(value, code)) {
             ownIdentity.set(value, code);
             break;
           }
@@ -305,10 +314,12 @@ async function auditDerivedKeys(renames) {
       }
       for (const code of codes) {
         if (!value.includes(code)) continue;
-        if (cascadeWouldFix(value, code)) continue;
+        if (resolvedByStructure(value, code)) continue;
         // Chuỗi con của một mã DÀI HƠN không phải khoá dẫn xuất: `TP-CUA` nằm trong
         // `TP-CUADL1LY` là hai mã khác nhau chứ không phải một mã bị nhúng.
-        if (codes.some((other) => other !== code && other.includes(code) && value.includes(other))) continue;
+        // Đối chiếu với TOÀN BỘ mã hàng, không chỉ 359 mã trong kế hoạch: mã bao ngoài có thể
+        // nằm ngoài đợt này, và khi đó soi trong kế hoạch sẽ báo nhầm thành khoá dẫn xuất.
+        if (allKnownCodes.some((other) => other !== code && other.includes(code) && value.includes(other))) continue;
         findings.set(key, (findings.get(key) ?? 0) + 1);
         return;
       }
@@ -334,7 +345,7 @@ const renames = new Map(plan.map((entry) => [entry.from, entry.to]));
 
 await request('/api/method/login', { method: 'POST', body: { usr: user, pwd: password } });
 
-const { findings: derived, ownIdentity } = await auditDerivedKeys(renames);
+const { findings: derived, ownIdentity } = await auditDerivedKeys(renames, mapping.mapping.map((row) => row.from));
 if (derived.size > 0 && process.env.ALUMDOOR_RENAME_ALLOW_STALE_DERIVED_KEYS !== '1') {
   const detail = [...derived.entries()].sort((a, b) => b[1] - a[1]).map(([key, count]) => `${key}=${count}`).join(' ');
   throw new Error(
