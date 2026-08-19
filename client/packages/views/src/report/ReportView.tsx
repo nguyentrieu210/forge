@@ -6,9 +6,10 @@
 import { useMemo, useState } from "react";
 import { Pin, FileSpreadsheet, ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
 import { sanitizeHtml, type BoundFormatters } from "@metaforge/core";
-import { Button, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, cn, toast, useT } from "@metaforge/ui";
+import { Button, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Skeleton, cn, toast, useT } from "@metaforge/ui";
 import { buildCsv, downloadCsv, downloadXlsx, stampedName, type ExportColumn } from "./export.js";
 import { useLocaleFormat } from "../container/provider.js";
+import { RuntimeEmptyState } from "../runtime/AsyncState.js";
 
 export interface ReportColumn {
   label?: string;
@@ -81,7 +82,9 @@ export function ReportView(props: ReportViewProps) {
       return compared * direction;
     });
   }, [columns, result, sort]);
-  if (loading) return <div className="space-y-2 p-4" aria-busy="true"><div className="h-9 animate-pulse rounded bg-muted" /><div className="h-52 animate-pulse rounded bg-muted" /><span className="sr-only">{t("report.running")}</span></div>;
+  // Dùng `Skeleton` dùng chung thay vì tự chế `animate-pulse bg-muted`: bản chép tay lấy
+  // `--muted`, gần như trùng màu nền vùng làm việc nên ô giữ chỗ không đọc ra là ô giữ chỗ.
+  if (loading) return <div className="space-y-2 p-4" aria-busy="true"><Skeleton className="h-9" /><Skeleton className="h-52" /><span className="sr-only">{t("report.running")}</span></div>;
   const numeric = (ft?: string) => ["currency", "float", "int", "percent"].includes((ft ?? "").toLowerCase());
 
   // Giữ index GỐC theo cột: result có thể là mảng-mảng, cellOf tra theo vị trí — đổi thứ tự hiển thị
@@ -210,8 +213,15 @@ export function ReportView(props: ReportViewProps) {
             ))}
             {result.length === 0 ? (
               <TableRow className="hover:bg-transparent">
-                <TableCell className="h-24 text-center text-muted-foreground" colSpan={columns.length || 1}>
-                  {t("common.no_data")}
+                {/* Trước đây chỗ này chỉ in một dòng chữ xám giữa ô. Cùng lúc đó màn danh sách
+                  * đã dùng `RuntimeEmptyState` (icon + tiêu đề + câu giải thích), nên hai mặt
+                  * cạnh nhau trong cùng một app nói "trống" theo hai kiểu khác hẳn. Dùng chung
+                  * một component để trạng thái rỗng đọc ra giống nhau ở mọi nơi. */}
+                <TableCell className="p-3" colSpan={columns.length || 1}>
+                  <RuntimeEmptyState
+                    description="Báo cáo chạy xong nhưng không có dòng nào khớp phạm vi và bộ lọc hiện tại."
+                    className="min-h-32"
+                  />
                 </TableCell>
               </TableRow>
             ) : null}
