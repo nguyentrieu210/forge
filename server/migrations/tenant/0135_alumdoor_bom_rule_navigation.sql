@@ -23,7 +23,7 @@ SET manifest_json = json_set(
       json_insert(
         COALESCE(json_extract(manifest_json, '$.nav'), json('[]')),
         '$[#]',
-        json('{"key":"BOM Rule","label":"Quy tắc BOM","kind":"doctype","icon":"list-tree","group":"Sản xuất"}')
+        json('{"key":"BOM Rule","label":"Quy tắc BOM","kind":"doctype","icon":"list-tree","group":"Danh mục"}')
       )
     ),
     modified_at = '2026-08-19T07:27:00.000Z'

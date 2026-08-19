@@ -91,6 +91,7 @@ const MASTER_GROUPS: MasterGroupDefinition[] = [
     title: "Bán hàng & sản xuất",
     entries: [
       { key: "Cutting Policy", label: "Công thức cửa" },
+      { key: "BOM Rule", label: "Quy tắc BOM" },
       { key: "Bill of Materials", label: "Định mức / BOM" },
       { key: "Production Standard", label: "Tiêu chuẩn sản xuất" },
     ],
