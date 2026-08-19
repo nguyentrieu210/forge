@@ -43,6 +43,11 @@ export function divideRoundedBig(numerator: bigint, denominator: bigint, message
   return negative ? -rounded : rounded;
 }
 
+/** Chặn một toán hạng nằm ngoài vùng số nguyên an toàn trước khi tính. */
+export function assertSafeInteger(value: number, message: string): void {
+  if (!Number.isSafeInteger(value)) throw errors.validation(message);
+}
+
 /** Cộng có chặn tràn khỏi vùng số nguyên an toàn. */
 export function safeAddInt(left: number, right: number, message = "Amount exceeds safe integer bounds"): number {
   const result = left + right;

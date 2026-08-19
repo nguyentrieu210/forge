@@ -1,3 +1,4 @@
+import { assertSafeInteger, safeAddInt } from "../../core/src/index.js";
 import type { CanonicalDocument, JsonObject } from "../../contracts/src/index.js";
 import { errors, sha256Hex } from "../../core/src/index.js";
 import type { ControllerContext } from "../../document-kernel/src/index.js";
@@ -294,10 +295,9 @@ function quantityMicros(micros: unknown, decimal: unknown, field: string): numbe
 }
 
 function safeAdd(left: number, right: number, field: string): number {
-  if (!Number.isSafeInteger(left) || !Number.isSafeInteger(right)) throw errors.validation(`${field} must use safe integers`);
-  const result = left + right;
-  if (!Number.isSafeInteger(result)) throw errors.validation(`${field} exceeds safe integer range`);
-  return result;
+  assertSafeInteger(left, `${field} must use safe integers`);
+  assertSafeInteger(right, `${field} must use safe integers`);
+  return safeAddInt(left, right, `${field} exceeds safe integer range`);
 }
 
 function text(value: unknown): string {

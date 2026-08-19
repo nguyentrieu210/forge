@@ -1,3 +1,4 @@
+import { safeAddInt } from "../../core/src/index.js";
 import type { CanonicalDocument, GeneralLedgerEntry, JsonObject } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
 import type { ControllerContext } from "../../document-kernel/src/index.js";
@@ -61,9 +62,7 @@ function checked(value: unknown): boolean {
 }
 
 function safeAdd(left: number, right: number, field = "POS amount"): number {
-  const value = left + right;
-  if (!Number.isSafeInteger(value)) throw errors.validation(`${field} exceeds safe integer bounds`);
-  return value;
+  return safeAddInt(left, right, `${field} exceeds safe integer bounds`);
 }
 
 function slug(value: string): string {

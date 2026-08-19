@@ -1,3 +1,4 @@
+import { safeAddInt } from "../../core/src/index.js";
 import type { CanonicalDocument, JsonObject } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
 import type { ControllerContext } from "../../document-kernel/src/index.js";
@@ -628,9 +629,7 @@ function percentMinor(amountMinor: number, pctMicros: number): number {
 }
 
 function safeAdd(left: number, right: number, field: string): number {
-  const value = left + right;
-  if (!Number.isSafeInteger(value)) throw errors.validation(`${field} exceeds safe integer range`);
-  return value;
+  return safeAddInt(left, right, `${field} exceeds safe integer range`);
 }
 
 function masterDisabled(value: unknown): boolean {

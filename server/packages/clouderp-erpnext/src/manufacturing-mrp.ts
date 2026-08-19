@@ -1,3 +1,4 @@
+import { safeAddInt } from "../../core/src/index.js";
 import type { CanonicalDocument, JsonObject } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
 import { fromScaledInt, toScaledInt } from "../../money/src/index.js";
@@ -400,9 +401,7 @@ function safeNumber(value: bigint): number {
 }
 
 function safeAdd(left: number, right: number): number {
-  const value = left + right;
-  if (!Number.isSafeInteger(value)) throw errors.validation("MRP arithmetic exceeds safe integer range");
-  return value;
+  return safeAddInt(left, right, "MRP arithmetic exceeds safe integer range");
 }
 
 function scaledOrDecimalMicros(microsValue: unknown, decimalValue: unknown, field: string): number {

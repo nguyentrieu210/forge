@@ -1,3 +1,4 @@
+import { safeAddInt } from "../../core/src/index.js";
 import type { CanonicalDocument, JsonObject } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
 import { toScaledInt } from "../../money/src/index.js";
@@ -137,9 +138,7 @@ function normalizeUom(value: string): string {
 }
 
 function safeAdd(left: number, right: number, field: string): number {
-  const result = left + right;
-  if (!Number.isSafeInteger(result)) throw errors.validation(`${field} exceeds safe integer range`);
-  return result;
+  return safeAddInt(left, right, `${field} exceeds safe integer range`);
 }
 
 function isoDate(value: string, field: string): string {

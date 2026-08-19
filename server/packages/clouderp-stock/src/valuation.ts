@@ -1,3 +1,4 @@
+import { safeAddInt } from "../../core/src/index.js";
 import type { StockLedgerEntry } from "../../contracts/src/index.js";
 import { divideRoundedInt, errors } from "../../core/src/index.js";
 import type { ControllerContext } from "../../document-kernel/src/index.js";
@@ -288,7 +289,5 @@ function divideRounded(numerator: number, denominator: number): number {
 }
 
 function safeAdd(left: number, right: number): number {
-  const result = left + right;
-  if (!Number.isSafeInteger(result)) throw errors.validation("Valuation total exceeds safe integer bounds");
-  return result;
+  return safeAddInt(left, right, "Valuation total exceeds safe integer bounds");
 }

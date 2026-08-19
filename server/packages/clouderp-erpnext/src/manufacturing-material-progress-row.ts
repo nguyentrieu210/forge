@@ -1,3 +1,4 @@
+import { safeAddInt } from "../../core/src/index.js";
 import type { CanonicalDocument, JsonObject } from "../../contracts/src/index.js";
 import type { StockEntryData, StockEntryItem } from "../../clouderp-core/src/types.js";
 import { errors } from "../../core/src/index.js";
@@ -93,8 +94,6 @@ function quantity(micros: unknown, decimal: unknown, field: string): number {
   return result;
 }
 function safeAdd(left: number, right: number, field: string): number {
-  const result = left + right;
-  if (!Number.isSafeInteger(result)) throw errors.validation(`${field} exceeds safe integer range`);
-  return result;
+  return safeAddInt(left, right, `${field} exceeds safe integer range`);
 }
 function text(value: unknown): string { return typeof value === "string" || typeof value === "number" ? String(value).normalize("NFC").trim() : ""; }

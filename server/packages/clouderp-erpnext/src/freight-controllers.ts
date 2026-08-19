@@ -1,3 +1,4 @@
+import { safeAddInt } from "../../core/src/index.js";
 import type { CanonicalDocument, JsonObject } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
 import type { ControllerContext } from "../../document-kernel/src/index.js";
@@ -51,9 +52,7 @@ function validDate(value: string, field: string): string {
 }
 
 function safeAdd(left: number, right: number, field: string): number {
-  const value = left + right;
-  if (!Number.isSafeInteger(value)) throw errors.validation(`${field} exceeds safe integer bounds`);
-  return value;
+  return safeAddInt(left, right, `${field} exceeds safe integer bounds`);
 }
 
 export class TransportContractController extends SuiteController<TransportContractData> {

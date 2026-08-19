@@ -1,3 +1,4 @@
+import { safeAddInt } from "../../core/src/index.js";
 import type { CanonicalDocument, JsonObject } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
 import { fromScaledInt, toScaledInt } from "../../money/src/index.js";
@@ -176,9 +177,7 @@ function integerMinor(value: unknown, field: string): number {
 }
 
 function safeAdd(left: number, right: number): number {
-  const value = left + right;
-  if (!Number.isSafeInteger(value)) throw errors.validation("Manufacturing cost arithmetic exceeds safe integer range");
-  return value;
+  return safeAddInt(left, right, "Manufacturing cost arithmetic exceeds safe integer range");
 }
 
 function safeSubtract(left: number, right: number): number {

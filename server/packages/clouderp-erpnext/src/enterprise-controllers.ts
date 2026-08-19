@@ -1,3 +1,4 @@
+import { safeAddInt } from "../../core/src/index.js";
 import type {
   BankReconciliationEntry, CanonicalDocument, GeneralLedgerEntry, JsonObject, PaymentLedgerEntry,
 } from "../../contracts/src/index.js";
@@ -316,9 +317,7 @@ function numberField(value: unknown, fallback: number, field: string): number {
 }
 
 function safeAdd(left: number, right: number): number {
-  const value = left + right;
-  if (!Number.isSafeInteger(value)) throw errors.validation("Arithmetic exceeds safe integer bounds");
-  return value;
+  return safeAddInt(left, right, "Arithmetic exceeds safe integer bounds");
 }
 
 function multiplyMinor(qtyMicros: number, rateMinor: number): number {

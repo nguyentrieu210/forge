@@ -1,3 +1,4 @@
+import { safeAddInt } from "../../core/src/index.js";
 import { errors } from "../../core/src/index.js";
 import { fromScaledInt, multiplyScaled, toScaledInt } from "../../money/src/index.js";
 import type { PurchaseItem, PurchaseOrderData } from "./types.js";
@@ -209,9 +210,7 @@ function integerScale(value: unknown, field: string, fallback: number): number {
 }
 
 function safeAdd(left: number, right: number, field: string): number {
-  const result = left + right;
-  if (!Number.isSafeInteger(result)) throw errors.validation(`${field} exceeds safe integer range`);
-  return result;
+  return safeAddInt(left, right, `${field} exceeds safe integer range`);
 }
 
 function requiredText(value: unknown, field: string): string {

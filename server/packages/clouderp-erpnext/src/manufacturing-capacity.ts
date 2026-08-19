@@ -1,3 +1,4 @@
+import { safeAddInt } from "../../core/src/index.js";
 import type { CanonicalDocument, JsonObject } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
 import type { ControllerContext } from "../../document-kernel/src/index.js";
@@ -505,9 +506,7 @@ function safeNumber(value: bigint): number {
 }
 
 function safeAdd(left: number, right: number): number {
-  const value = left + right;
-  if (!Number.isSafeInteger(value)) throw errors.validation("Capacity arithmetic exceeds safe integer range");
-  return value;
+  return safeAddInt(left, right, "Capacity arithmetic exceeds safe integer range");
 }
 
 function positiveInteger(value: unknown, field: string): number {

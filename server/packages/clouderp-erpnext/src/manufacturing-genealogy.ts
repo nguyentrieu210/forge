@@ -1,3 +1,4 @@
+import { safeAddInt } from "../../core/src/index.js";
 import type { CanonicalDocument, JsonObject, StockLedgerEntry } from "../../contracts/src/index.js";
 import type { StockEntryData, StockEntryItem } from "../../clouderp-core/src/types.js";
 import { errors } from "../../core/src/index.js";
@@ -270,9 +271,7 @@ function positiveScaledOrDecimal(micros: unknown, decimal: unknown, field: strin
 }
 
 function safeAdd(left: number, right: number): number {
-  const value = left + right;
-  if (!Number.isSafeInteger(value)) throw errors.validation("Genealogy quantity exceeds safe integer range");
-  return value;
+  return safeAddInt(left, right, "Genealogy quantity exceeds safe integer range");
 }
 
 function requiredText(value: unknown, field: string): string {
