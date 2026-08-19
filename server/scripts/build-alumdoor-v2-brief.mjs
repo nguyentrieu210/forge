@@ -20,6 +20,7 @@ import { bomSourceFixtureRows } from "./lib/alumdoor-bom-template-source-catalog
 import { MEASUREMENT_PROFILES, measurementProfilePayload } from "./lib/alumdoor-measurement-profile-catalog.mjs";
 import { ALUMDOOR_COLOR_CATALOG } from "./lib/alumdoor-color-catalog.mjs";
 import { ALUMDOOR_SLAT_CATALOG, slatCatalogFixtureData } from "./lib/alumdoor-slat-catalog.mjs";
+import { ALUMDOOR_ITEM_GROUP_CATALOG } from "./lib/alumdoor-item-group-catalog.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const SRC = resolve(here, "../briefs/alumdoor.json");
@@ -1981,6 +1982,28 @@ note("MASTER · Measurement Profile chỉ đo/tồn; Geometry Field/Profile sở
       retired += 1;
     }
     note(`DANH MỤC · Item Color: ngừng dùng ${retired} bản sao slug ASCII (giữ khai báo, bỏ khỏi ô chọn)`);
+  }
+
+  /**
+   * Cùng luật cho NHÓM HÀNG: ngừng dùng, không xoá khai báo.
+   *
+   * `seed-alumdoor-item-groups-local.sql` xoá 11 nhóm fixture ERP tổng quát (Cửa cuốn, Cửa nhôm
+   * kính, Thành phẩm, Nguyên vật liệu, Dịch vụ…) khỏi `master_records`. Nhưng mỗi lần CÀI LẠI
+   * APP chúng sống dậy, vì khai báo vẫn còn trong fixtures — dọn ở tầng dữ liệu không thắng
+   * được nguồn ở tầng khai báo.
+   *
+   * Chúng không thuộc phân loại thật của Alumdoor và không chính sách giá hay công thức nào bám
+   * vào, nhưng ô chọn Link vẫn mời chúng khi tạo mặt hàng — gán vào "Cửa cuốn" là gán vào hư không.
+   */
+  {
+    const canonicalGroups = new Set(ALUMDOOR_ITEM_GROUP_CATALOG.map((g) => (typeof g === "string" ? g : g.name)));
+    let retiredGroups = 0;
+    for (const fixture of brief.fixtures) {
+      if (fixture.type !== "Item Group" || canonicalGroups.has(fixture.name)) continue;
+      fixture.data = { ...fixture.data, disabled: true };
+      retiredGroups += 1;
+    }
+    note(`DANH MỤC · Item Group: ngừng dùng ${retiredGroups} nhóm ERP tổng quát ngoài cây chuẩn`);
   }
 
   // ── 4. Bốn doctype rỗng rời khỏi menu, KHÔNG bị xoá ──

@@ -940,7 +940,8 @@
       "data": {
         "item_group_name": "Thành phẩm",
         "parent_item_group": "Tất cả mặt hàng",
-        "is_group": true
+        "is_group": true,
+        "disabled": true
       }
     },
     {
@@ -949,7 +950,8 @@
       "data": {
         "item_group_name": "Nguyên vật liệu",
         "parent_item_group": "Tất cả mặt hàng",
-        "is_group": true
+        "is_group": true,
+        "disabled": true
       }
     },
     {
@@ -958,7 +960,8 @@
       "data": {
         "item_group_name": "Linh kiện & thiết bị",
         "parent_item_group": "Tất cả mặt hàng",
-        "is_group": true
+        "is_group": true,
+        "disabled": true
       }
     },
     {
@@ -966,7 +969,8 @@
       "name": "Dịch vụ",
       "data": {
         "item_group_name": "Dịch vụ",
-        "parent_item_group": "Tất cả mặt hàng"
+        "parent_item_group": "Tất cả mặt hàng",
+        "disabled": true
       }
     },
     {
@@ -974,7 +978,8 @@
       "name": "Cửa cuốn",
       "data": {
         "item_group_name": "Cửa cuốn",
-        "parent_item_group": "Thành phẩm"
+        "parent_item_group": "Thành phẩm",
+        "disabled": true
       }
     },
     {
@@ -982,7 +987,8 @@
       "name": "Cửa nhôm kính",
       "data": {
         "item_group_name": "Cửa nhôm kính",
-        "parent_item_group": "Thành phẩm"
+        "parent_item_group": "Thành phẩm",
+        "disabled": true
       }
     },
     {
@@ -990,7 +996,8 @@
       "name": "Phụ kiện",
       "data": {
         "item_group_name": "Phụ kiện",
-        "parent_item_group": "Linh kiện & thiết bị"
+        "parent_item_group": "Linh kiện & thiết bị",
+        "disabled": true
       }
     },
     {
@@ -998,7 +1005,8 @@
       "name": "Remote và điều khiển",
       "data": {
         "item_group_name": "Remote và điều khiển",
-        "parent_item_group": "Linh kiện & thiết bị"
+        "parent_item_group": "Linh kiện & thiết bị",
+        "disabled": true
       }
     },
     {
@@ -1016,7 +1024,8 @@
       "data": {
         "item_group_name": "Vật tư & phụ kiện",
         "parent_item_group": "Tất cả mặt hàng",
-        "is_group": true
+        "is_group": true,
+        "disabled": true
       }
     },
     {
@@ -1121,7 +1130,8 @@
       "name": "Mô tơ",
       "data": {
         "item_group_name": "Mô tơ",
-        "parent_item_group": "Motor & điện"
+        "parent_item_group": "Motor & điện",
+        "disabled": true
       }
     },
     {
@@ -1145,7 +1155,8 @@
       "name": "Bộ lưu điện",
       "data": {
         "item_group_name": "Bộ lưu điện",
-        "parent_item_group": "Motor & điện"
+        "parent_item_group": "Motor & điện",
+        "disabled": true
       }
     },
     {

@@ -301,7 +301,10 @@ export class AppInstaller {
         JSON.stringify(fixture.data),
         now,
       ]),
-      20,
+      // 16, không phải 20: thêm cột `disabled` làm mỗi dòng thành 6 tham số, và 20 × 6 = 120
+      // vượt trần 100 tham số mỗi câu lệnh của D1 — biểu hiện là HTTP 500 lúc cài, không phải
+      // lỗi validate nên không có thông báo nào chỉ đúng chỗ. 16 × 6 = 96.
+      16,
       "INSERT INTO master_records(tenant_id,record_type,name,disabled,data_json,modified_at) VALUES",
       ` ON CONFLICT(tenant_id,record_type,name) DO UPDATE SET
           data_json=excluded.data_json,disabled=excluded.disabled,modified_at=excluded.modified_at`,
