@@ -1,6 +1,7 @@
 /** @jsxImportSource react */
 import type { EChartsCoreOption } from "echarts/core";
 import { ForgeChartSurface, type ForgeOptionBuilder } from "./ChartSurface.js";
+import { ensureSpecializedCharts } from "./engine.js";
 import { buildWaterfallSegments } from "./model.js";
 import { compactMetric } from "./theme.js";
 import type {
@@ -61,7 +62,7 @@ export function ForgeScatterChart(props: ForgeScatterChartProps) {
     series: series.map((item, index) => ({ name: item.name, type: "scatter", symbolSize: 9, itemStyle: { color: item.color ?? tokens.palette[index % tokens.palette.length] }, data: item.points.map((point) => ({ name: point.label ?? `${point.x}`, value: [point.x, point.y] })) })),
   }) as EChartsCoreOption;
   const hasData = series.some((item) => item.points.length > 0);
-  return <ForgeChartSurface {...surfaceProps} hasData={hasData} dataKey={keyOf("scatter", series)} buildOption={buildOption} />;
+  return <ForgeChartSurface {...surfaceProps} hasData={hasData} dataKey={keyOf("scatter", series)} prepareEngine={ensureSpecializedCharts} buildOption={buildOption} />;
 }
 
 export function ForgeHeatmap(props: ForgeHeatmapProps) {
@@ -80,7 +81,7 @@ export function ForgeHeatmap(props: ForgeHeatmapProps) {
     visualMap: { min, max, calculable: true, orient: "horizontal", left: "center", bottom: 0, inRange: { color: [tokens.surface, tokens.primary] }, textStyle: { color: tokens.muted } },
     series: [{ name: props.title ?? "Mật độ", type: "heatmap", data: props.data.map((item) => [x.indexOf(item.x), y.indexOf(item.y), item.value]), label: { show: x.length * y.length <= 36, color: tokens.text, formatter: (params: { value?: unknown }) => compactMetric(Number(Array.isArray(params.value) ? params.value[2] : 0)) }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: tokens.primary } } }],
   }) as EChartsCoreOption;
-  return <ForgeChartSurface {...props} hasData={props.data.length > 0} dataKey={keyOf("heatmap", props.data, min, max)} buildOption={buildOption} />;
+  return <ForgeChartSurface {...props} hasData={props.data.length > 0} dataKey={keyOf("heatmap", props.data, min, max)} prepareEngine={ensureSpecializedCharts} buildOption={buildOption} />;
 }
 
 export function ForgeGauge(props: ForgeGaugeProps) {
@@ -107,7 +108,7 @@ export function ForgeGauge(props: ForgeGaugeProps) {
       data: [{ value: props.value, name: props.label ?? props.title ?? "" }],
     }],
   }) as EChartsCoreOption;
-  return <ForgeChartSurface {...props} hasData={Number.isFinite(props.value)} dataKey={keyOf("gauge", props.value, min, max, props.label)} buildOption={buildOption}><span className="sr-only">{props.label ?? props.title}: {fullFormatter(props.valueFormatter)(props.value)}</span></ForgeChartSurface>;
+  return <ForgeChartSurface {...props} hasData={Number.isFinite(props.value)} dataKey={keyOf("gauge", props.value, min, max, props.label)} prepareEngine={ensureSpecializedCharts} buildOption={buildOption}><span className="sr-only">{props.label ?? props.title}: {fullFormatter(props.valueFormatter)(props.value)}</span></ForgeChartSurface>;
 }
 
 export function ForgeTreemap(props: ForgeTreemapProps) {
@@ -118,7 +119,7 @@ export function ForgeTreemap(props: ForgeTreemapProps) {
     tooltip: { valueFormatter: (value: unknown) => fullFormatter(props.valueFormatter)(Number(value)), backgroundColor: tokens.background, borderColor: tokens.border, textStyle: { color: tokens.text } },
     series: [{ type: "treemap", roam: false, nodeClick: false, breadcrumb: { show: false }, label: { color: tokens.text, fontSize: 11 }, upperLabel: { show: true, height: 24, color: tokens.text }, itemStyle: { borderColor: tokens.background, borderWidth: 2, gapWidth: 2 }, data: props.data }],
   }) as EChartsCoreOption;
-  return <ForgeChartSurface {...props} hasData={props.data.length > 0} dataKey={keyOf("treemap", props.data)} buildOption={buildOption} />;
+  return <ForgeChartSurface {...props} hasData={props.data.length > 0} dataKey={keyOf("treemap", props.data)} prepareEngine={ensureSpecializedCharts} buildOption={buildOption} />;
 }
 
 export function ForgeFunnel(props: ForgeFunnelProps) {
@@ -131,7 +132,7 @@ export function ForgeFunnel(props: ForgeFunnelProps) {
   }) as EChartsCoreOption;
   const labels = props.data.map((item) => item.label);
   const series: ForgeChartSeries[] = [{ name: props.title ?? "Giá trị", values: props.data.map((item) => item.value) }];
-  return <ForgeChartSurface {...props} hasData={props.data.length > 0} dataKey={keyOf("funnel", props.data)} buildOption={buildOption} labels={labels} series={series} />;
+  return <ForgeChartSurface {...props} hasData={props.data.length > 0} dataKey={keyOf("funnel", props.data)} prepareEngine={ensureSpecializedCharts} buildOption={buildOption} labels={labels} series={series} />;
 }
 
 export function ForgeSankey(props: ForgeSankeyProps) {
@@ -142,7 +143,7 @@ export function ForgeSankey(props: ForgeSankeyProps) {
     tooltip: { trigger: "item", backgroundColor: tokens.background, borderColor: tokens.border, textStyle: { color: tokens.text } },
     series: [{ type: "sankey", left: 8, right: 8, top: 8, bottom: 8, nodeWidth: 14, nodeGap: 12, layoutIterations: 24, emphasis: { focus: "adjacency" }, lineStyle: { color: "gradient", curveness: 0.5, opacity: 0.42 }, label: { color: tokens.text, fontSize: 11 }, data: props.nodes, links: props.links }],
   }) as EChartsCoreOption;
-  return <ForgeChartSurface {...props} hasData={props.nodes.length > 0 && props.links.length > 0} dataKey={keyOf("sankey", props.nodes, props.links)} buildOption={buildOption} />;
+  return <ForgeChartSurface {...props} hasData={props.nodes.length > 0 && props.links.length > 0} dataKey={keyOf("sankey", props.nodes, props.links)} prepareEngine={ensureSpecializedCharts} buildOption={buildOption} />;
 }
 
 export function ForgeMap(props: ForgeMapProps) {
@@ -156,7 +157,10 @@ export function ForgeMap(props: ForgeMapProps) {
     visualMap: { min, max, left: 10, bottom: 10, calculable: true, inRange: { color: [tokens.surface, tokens.primary] }, textStyle: { color: tokens.muted } },
     series: [{ name: props.title ?? "Bản đồ", type: "map", map: props.mapName, roam: true, scaleLimit: { min: 1, max: 8 }, label: { show: false }, itemStyle: { areaColor: tokens.surface, borderColor: tokens.border }, emphasis: { label: { show: true, color: tokens.text }, itemStyle: { areaColor: tokens.primary } }, data: props.data }],
   }) as EChartsCoreOption;
-  const prepareEngine = (engine: { registerMap: (name: string, geoJson: object) => void }) => engine.registerMap(props.mapName, props.geoJson);
+  const prepareEngine = async (engine: { registerMap: (name: string, geoJson: object) => void }) => {
+    await ensureSpecializedCharts();
+    engine.registerMap(props.mapName, props.geoJson);
+  };
   return <ForgeChartSurface {...props} hasData={props.data.length > 0} dataKey={keyOf("map", props.mapName, props.data)} buildOption={buildOption} prepareEngine={prepareEngine as never} />;
 }
 

@@ -51,6 +51,9 @@ function EChartCanvas(props: CanvasProps) {
         const module = await import("./engine.js");
         if (cancelled) return;
         const engine = module.getForgeECharts();
+        // Bộ vẽ SVG nằm ngoài lõi: chỉ nạp khi người gọi xin đích danh.
+        if (props.renderer === "svg") await module.ensureSvgRenderer();
+        if (cancelled) return;
         await prepareRef.current?.(engine);
         if (cancelled) return;
         const chart = engine.init(host, undefined, { renderer: props.renderer });
