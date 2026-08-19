@@ -2016,3 +2016,51 @@
  * từng cái. Biến thể tường minh thì nơi dùng tự chọn, và lề âm nằm cạnh đúng con số đệm mà nó
  * phải khớp.
  */
+
+/* ── Thanh tiến trình đổi màn ─────────────────────────────────────────────────
+ * Dịch từ `@core/base/design/src/css/nprogress.css` (vben v5.7.0): dải 2px bám đỉnh màn
+ * hình, màu `--primary`, kèm một vệt sáng ở mép chạy trước.
+ *
+ * KHÁC bản gốc một điểm có chủ ý: vben dùng nprogress, tức là **bịa** phần trăm — nó nhích
+ * dần theo hàm giảm dần rồi nhảy lên 100% khi xong. Ở đây dùng một lượt quét vô định.
+ * Lý do: chuyển màn của Forge là tải một chunk JS, và trình duyệt KHÔNG cho biết còn bao
+ * nhiêu; vẽ một con số không có thật là nói dối người dùng về thứ mình không biết. Vệt quét
+ * trả lời đúng câu hỏi họ đang hỏi — "máy có đang chạy không" — mà không hứa gì thêm.
+ *
+ * Bám `position: fixed` nên gắn ở đâu trong cây cũng nổi lên đỉnh viewport. */
+.mf-route-progress {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: 1031;
+  height: 2px;
+  overflow: hidden;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+}
+
+.mf-route-progress::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inline-size: 40%;
+  background: var(--primary);
+  /* Vệt sáng ở mép phải, đúng ý `peg` của vben. */
+  box-shadow: 0 0 10px var(--primary), 0 0 5px var(--primary);
+  animation: mf-route-progress-sweep 1100ms var(--mf-ease-standard) infinite;
+}
+
+@keyframes mf-route-progress-sweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(250%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Không quét nữa, nhưng vẫn phải THẤY được là đang tải — giữ dải mờ, bỏ chuyển động. */
+  .mf-route-progress::before {
+    animation: none;
+    inline-size: 100%;
+    opacity: 0.45;
+    box-shadow: none;
+  }
+}
