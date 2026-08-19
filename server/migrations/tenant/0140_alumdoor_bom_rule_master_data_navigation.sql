@@ -1,8 +1,20 @@
--- Align BOM Rule navigation group with Alumdoor master data catalog.
+-- Align BOM Rule navigation group and standard permissions with Alumdoor master data catalog.
 --
 -- BOM Rule is an engineering master catalog entity (analogous to Cutting Policy).
--- Moving its navigation group to 'Danh mục' ensures it is routed to /master-data
--- and exposed in AlumdoorMasterDataScreen under "Bán hàng & sản xuất".
+-- 1. Grant standard read/write permissions so permittedNav and read gates expose the master.
+-- 2. Moving its navigation group to 'Danh mục' ensures it is routed to /master-data
+--    and exposed in AlumdoorMasterDataScreen under "Bán hàng & sản xuất".
+
+UPDATE doctype_definitions
+SET metadata_json = json_set(
+      metadata_json,
+      '$.permissions',
+      json('[{"role":"System Manager","read":true,"write":true,"create":true,"delete":false,"submit":true,"cancel":true,"amend":true,"print":true,"email":true,"report":true,"import":true,"export":true,"share":true,"permlevel":0},{"role":"Chủ xưởng","read":true,"write":true,"create":true,"delete":false,"submit":true,"cancel":true,"amend":true,"print":true,"email":true,"report":true,"import":false,"export":true,"share":false,"permlevel":0},{"role":"Sản xuất","read":true,"write":true,"create":true,"delete":false,"submit":false,"cancel":false,"amend":false,"print":true,"email":true,"report":true,"import":false,"export":true,"share":false,"permlevel":0},{"role":"Kế toán","read":true,"write":false,"create":false,"delete":false,"submit":false,"cancel":false,"amend":false,"print":true,"email":true,"report":true,"import":false,"export":true,"share":false,"permlevel":0},{"role":"Kinh doanh","read":true,"write":false,"create":false,"delete":false,"submit":false,"cancel":false,"amend":false,"print":true,"email":true,"report":true,"import":false,"export":true,"share":false,"permlevel":0},{"role":"Manufacturing Manager","read":true,"write":true,"create":true,"print":true,"email":true,"report":true,"import":true,"export":true,"share":true,"submit":true,"cancel":true,"permlevel":0},{"role":"Manufacturing User","read":true,"write":true,"create":true,"print":true,"email":true,"report":true,"import":true,"export":true,"share":true,"submit":false,"cancel":false,"permlevel":0}]')
+    ),
+    modified_by = 'migration-0140',
+    modified_at = '2026-08-19T08:35:00.000Z'
+WHERE doctype = 'BOM Rule'
+  AND json_valid(metadata_json);
 
 UPDATE installed_apps
 SET manifest_json = (
