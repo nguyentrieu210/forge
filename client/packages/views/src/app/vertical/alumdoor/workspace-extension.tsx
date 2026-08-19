@@ -7,6 +7,7 @@ const AlumdoorSalesOrderCreate = lazy(() => import("./AlumdoorSalesOrderCreate.j
 const AlumdoorProductionRequestDetail = lazy(() => import("./AlumdoorProductionRequestDetail.js").then((module) => ({ default: module.AlumdoorProductionRequestDetail })));
 const AlumdoorWorkOrderDetail = lazy(() => import("./AlumdoorWorkOrderDetail.js").then((module) => ({ default: module.AlumdoorWorkOrderDetail })));
 const AlumdoorManufacturingStockEntryCreate = lazy(() => import("./AlumdoorManufacturingStockEntryCreate.js").then((module) => ({ default: module.AlumdoorManufacturingStockEntryCreate })));
+const AlumdoorBomRuleEditor = lazy(() => import("./AlumdoorBomRuleEditor.js").then((module) => ({ default: module.AlumdoorBomRuleEditor })));
 
 type ManufacturingStockPurpose = "Material Transfer" | "Manufacture";
 
@@ -22,6 +23,41 @@ export const alumdoorWorkspaceExtension: DoctypeWorkspaceExtension = {
   id: "alumdoor",
   resolve(context) {
     const { doctype, isNew, decoded, bridge, base, printBase, listPath, closeRequest, onNavigate } = context;
+
+    if (isNew && doctype === "BOM Rule") {
+      return {
+        createSurface: "full",
+        createDataSurface: "alumdoor-bom-rule-create",
+        suppressBulk: true,
+        create: (
+          <Suspense fallback={<div className="grid h-full place-items-center text-sm text-muted-foreground">Đang mở danh mục Quy tắc BOM…</div>}>
+            <AlumdoorBomRuleEditor
+              onSaved={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
+              onCancel={() => onNavigate(listPath)}
+            />
+          </Suspense>
+        ),
+      };
+    }
+
+    if (decoded && doctype === "BOM Rule") {
+      return {
+        hasDetail: true,
+        suppressBulk: true,
+        detail: (
+          <Suspense fallback={<div className="grid h-full place-items-center text-sm text-muted-foreground">Đang mở Quy tắc BOM…</div>}>
+            <AlumdoorBomRuleEditor
+              key={`alumdoor-bom-rule/${decoded}`}
+              name={decoded}
+              onSaved={(savedName) => {
+                if (savedName && savedName !== decoded) onNavigate(`${listPath}/${encodeURIComponent(savedName)}`);
+              }}
+              onCancel={() => onNavigate(listPath)}
+            />
+          </Suspense>
+        ),
+      };
+    }
 
     if (isNew && doctype === "Sales Order") {
       return {
