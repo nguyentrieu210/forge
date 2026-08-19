@@ -1,5 +1,7 @@
-import type { CanonicalDocument } from "./router-platform.js";
-import { errors } from "./router-platform.js";
+import {
+  blocksSelfApproval, errors, permissionAllows,
+  type CanonicalDocument, type ExtendedPermissionAction, type JsonObject,
+} from "./router-platform.js";
 import type { FrappeRouterContext } from "./router.js";
 
 // Hai cách nạp tài liệu, khác nhau ở chỗ TỪ CHỐI ra sao.
@@ -37,4 +39,45 @@ export async function loadWritable(doctype: string, name: string, context: Frapp
     owner: document.owner, data: document.data, action,
   });
   return document;
+}
+
+export async function workflowTransitionAccess(
+  context: FrappeRouterContext,
+  role: string,
+  doctype: string,
+  action: string,
+  document: JsonObject,
+): Promise<{ allowed: boolean; delegation?: string; grantor?: string }> {
+  if (context.actor.roles.includes(role) || isPlatformAdmin(context)) return { allowed: true };
+  if (!context.organizationSecurity) return { allowed: false };
+  return context.organizationSecurity.canActThroughDelegation(
+    context.tenantId, context.actor, role, doctype, action, document,
+  );
+}
+
+/**
+ * Asserts that the caller may perform `action` on a specific document.
+ *
+ * Loads the document first because the permission layer decides on the ROW, not on the
+ * doctype alone: owner-only rules and field conditions cannot be evaluated without it,
+ * and a doctype-level check would quietly grant access to records the user's own
+ * permission rules exclude.
+ */
+export async function assertDocumentAction(
+  context: FrappeRouterContext,
+  doctype: string,
+  name: string,
+  action: "read" | "save",
+): Promise<void> {
+  const document = await context.documents.getDocument(context.tenantId, doctype, name);
+  if (!document) throw errors.notFound();
+  await context.permissions.assert({
+    actor: context.actor, tenantId: context.tenantId, doctype, name,
+    owner: document.owner, data: document.data, action,
+  });
+}
+
+export function isPlatformAdmin(context: FrappeRouterContext): boolean {
+  const { user_id: userId, roles } = context.actor;
+  return userId === "Administrator" || roles.includes("Administrator") || roles.includes("System Manager");
 }
