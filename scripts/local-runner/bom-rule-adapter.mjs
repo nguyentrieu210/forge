@@ -1,5 +1,4 @@
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import crypto from 'node:crypto';
 import os from 'node:os';
 import path from 'node:path';
@@ -10,6 +9,7 @@ import { ExecutionError, classifyExistingLock, normalizeSpawnInvocation } from '
 const DEFAULT_REPO_ROOT = 'C:\\alumdoor';
 const DEFAULT_ORIGIN = 'http://127.0.0.1:8799';
 const fail = (failureClass, message, cause) => new ExecutionError(failureClass, message, cause ? { cause } : {});
+const packageManagerCommand = () => process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
 
 function run(command, args, { cwd, env, capture = false, label = command, failureClass = 'OTHER', allowFailure = false } = {}) {
   const invocation = normalizeSpawnInvocation(command, args);
@@ -131,9 +131,9 @@ function authEnv(origin) {
 
 function applyLocalMigrations(root) {
   const server = path.join(root, 'server');
-  const wranglerEntry = path.join(path.dirname(createRequire(import.meta.url).resolve('wrangler/package.json')), 'bin', 'wrangler.js');
-  run(process.execPath, [
-    wranglerEntry,
+  run(packageManagerCommand(), [
+    'exec',
+    'wrangler',
     'd1',
     'migrations',
     'apply',
