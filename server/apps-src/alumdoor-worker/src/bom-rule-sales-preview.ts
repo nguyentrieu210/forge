@@ -1,4 +1,5 @@
 import {
+  bomRuleFormulaDisplay,
   evaluateBomRuleMaster,
   resolveBomRuleMaster,
   type BomRuleMaster,
@@ -77,7 +78,15 @@ async function loadBomRules(call: ProductionPlatformCall): Promise<BomRuleMaster
     if (!name) return null;
     return readDoc<BomRuleMaster & Json>(call, "BOM Rule", name);
   }));
-  return docs.filter((row): row is BomRuleMaster => Boolean(row && text(row.rule_code)));
+  return docs.filter((row): row is BomRuleMaster & Json => Boolean(row && text(row.rule_code)));
+}
+
+function safeFormulaDisplay(rule: BomRuleMaster): string {
+  try {
+    return bomRuleFormulaDisplay(rule);
+  } catch {
+    return text(rule.source_formula_text) || text(rule.rule_name) || text(rule.rule_code);
+  }
 }
 
 /**
@@ -235,13 +244,15 @@ export async function enrichSalesBomPreviewWithRules(
         ...(conversionWarning ? { uom_warning: conversionWarning } : {}),
       };
     } catch (error) {
+      const formulaDisplay = safeFormulaDisplay(rule);
+      const quantityError = error instanceof Error ? error.message : "Không tính được Quy tắc BOM.";
       return {
         ...component,
         bom_rule_code: text(rule.rule_code),
         bom_rule_version: Number(rule.version ?? 1),
-        formula_display: text(rule.formula_display),
-        quantity_error: error instanceof Error ? error.message : "Không tính được Quy tắc BOM.",
-        note: [text(rule.formula_display), error instanceof Error ? error.message : "Không tính được Quy tắc BOM."].filter(Boolean).join(" · "),
+        formula_display: formulaDisplay,
+        quantity_error: quantityError,
+        note: [formulaDisplay, quantityError].filter(Boolean).join(" · "),
       };
     }
   });
