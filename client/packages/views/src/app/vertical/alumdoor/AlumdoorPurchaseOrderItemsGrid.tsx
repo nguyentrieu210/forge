@@ -1,5 +1,5 @@
 /** @jsxImportSource react */
-import { useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Copy, Loader2, Plus, Trash2 } from "lucide-react";
 import type { Doc, DocField, DocTypeMeta } from "@metaforge/core";
 import type { ControlRegistry, FieldServices } from "@metaforge/controls";
@@ -242,6 +242,48 @@ function ReadOnlyCell(props: { children: ReactNode; strong?: boolean; title?: st
 
 export function AlumdoorPurchaseOrderItemsGrid(props: AlumdoorPurchaseOrderItemsGridProps) {
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const pendingEditValues = useRef<Map<string, unknown>>(new Map());
+  const commitTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  const editKey = useCallback((lineKey: string, fieldname: string) => `${lineKey}\u001f${fieldname}`, []);
+  const flushCommit = useCallback((lineKey: string, fieldname: string) => {
+    const key = editKey(lineKey, fieldname);
+    const timer = commitTimers.current.get(key);
+    if (timer) clearTimeout(timer);
+    commitTimers.current.delete(key);
+    if (!pendingEditValues.current.has(key)) return;
+    const value = pendingEditValues.current.get(key);
+    pendingEditValues.current.delete(key);
+    props.onCommit(lineKey, fieldname, value);
+  }, [editKey, props.onCommit]);
+  const scheduleCommit = useCallback((lineKey: string, fieldname: string) => {
+    const key = editKey(lineKey, fieldname);
+    const current = commitTimers.current.get(key);
+    if (current) clearTimeout(current);
+    commitTimers.current.set(key, setTimeout(() => flushCommit(lineKey, fieldname), 300));
+  }, [editKey, flushCommit]);
+  const patchAndBuffer = useCallback((lineKey: string, fieldname: string, field: DocField, rawValue: unknown) => {
+    const value = normalizeFieldValue(field, rawValue);
+    props.onPatch(lineKey, { [fieldname]: value } as Partial<PurchaseLine>);
+    const key = editKey(lineKey, fieldname);
+    if (["Select", "Link", "Dynamic Link", "Check"].includes(field.fieldtype)) {
+      const timer = commitTimers.current.get(key);
+      if (timer) clearTimeout(timer);
+      commitTimers.current.delete(key);
+      pendingEditValues.current.delete(key);
+      props.onCommit(lineKey, fieldname, value);
+      return;
+    }
+    pendingEditValues.current.set(key, value);
+    scheduleCommit(lineKey, fieldname);
+  }, [editKey, props.onCommit, props.onPatch, scheduleCommit]);
+
+  useEffect(() => () => {
+    for (const timer of commitTimers.current.values()) clearTimeout(timer);
+    commitTimers.current.clear();
+    pendingEditValues.current.clear();
+  }, []);
+
   const activeLines = useMemo(() => props.lines.filter((line) => text(line.item_code)), [props.lines]);
   const dynamicColumns = useMemo<DynamicFieldName[]>(() => {
     if (!activeLines.length) return ["qty"];
@@ -290,8 +332,8 @@ export function AlumdoorPurchaseOrderItemsGrid(props: AlumdoorPurchaseOrderItems
         id={`purchase-grid-${key}-${fieldname}`}
         field={field}
         value={line[fieldname]}
-        onChange={(value) => props.onPatch(key, { [fieldname]: normalizeFieldValue(field, value) } as Partial<PurchaseLine>)}
-        onCommit={() => props.onCommit(key, fieldname, line[fieldname])}
+        onChange={(value) => patchAndBuffer(key, fieldname, field, value)}
+        onCommit={() => flushCommit(key, fieldname)}
         registry={props.registry}
         services={props.services}
         parentDoctype={props.childMeta.name}
@@ -367,6 +409,7 @@ export function AlumdoorPurchaseOrderItemsGrid(props: AlumdoorPurchaseOrderItems
               const itemName = text(line._itemName ?? line.item_name);
               const itemGroup = text(line._itemGroup ?? line.item_group);
               const rowTone = text(line.item_code) ? "bg-primary/[0.035]" : (index % 2 === 0 ? "bg-card" : "bg-muted/20");
+              const rateField = fieldFromMeta(props.childMeta, "rate", "Đơn giá", "Currency");
               return [
                 <TableRow key={key} className={`${rowTone} border-b hover:bg-muted/20`} data-purchase-row-key={key}>
                   <TableCell className={`${rowTone} px-1 text-center`}>
@@ -406,10 +449,10 @@ export function AlumdoorPurchaseOrderItemsGrid(props: AlumdoorPurchaseOrderItems
                   <TableCell className={`${rowTone} px-1.5 py-1`}>
                     <AlumdoorSalesOrderField
                       id={`purchase-grid-${key}-rate`}
-                      field={fieldFromMeta(props.childMeta, "rate", "Đơn giá", "Currency")}
+                      field={rateField}
                       value={line.rate}
-                      onChange={(value) => props.onPatch(key, { rate: normalizeFieldValue(fieldFromMeta(props.childMeta, "rate", "Đơn giá", "Currency"), value) } as Partial<PurchaseLine>)}
-                      onCommit={() => props.onCommit(key, "rate", line.rate)}
+                      onChange={(value) => patchAndBuffer(key, "rate", rateField, value)}
+                      onCommit={() => flushCommit(key, "rate")}
                       registry={props.registry}
                       services={props.services}
                       parentDoctype={props.childMeta.name}
