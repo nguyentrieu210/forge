@@ -38,11 +38,51 @@ if (rows.some((row) => row.classification === "BLOCKED")) failures.push({ type: 
 if (prices.some((row) => !(Number(row.rate) > 0))) failures.push({ type: "non_positive_item_price" });
 if (prices.some((row) => clean(row.item_code).startsWith("TRU-") || clean(row.item_code).startsWith("PHUTHU"))) failures.push({ type: "pseudo_adjustment_leaked_into_item_price" });
 
+const ALL_AREA_TIER = "MOI-DIEN-TICH";
 const priceNames = new Set();
 for (const row of prices) {
   const name = clean(row.name);
   if (!name || priceNames.has(name)) failures.push({ type: "duplicate_item_price_identity", name });
   priceNames.add(name);
+  // Bậc phải có giá trị: `resolveAutoname` từ chối tạo bản ghi khi một khoá trong `format:` rỗng,
+  // nên dòng giá bỏ trống bậc là dòng giá KHÔNG TẠO ĐƯỢC — bắt ở đây, đừng để tới lượt ghi.
+  const tier = clean(row.area_tier);
+  if (!tier) failures.push({ type: "item_price_missing_area_tier", name });
+  // Tên và trường phải nói cùng một chuyện. Lệch nhau thì lần chạy sau tính ra tên khác rồi TẠO
+  // MỚI thay vì cập nhật — cùng một mặt hàng có hai dòng giá bật, và pricing ném "Multiple
+  // active Item Price records match" đúng lúc đang bán.
+  else if (!name.endsWith(`:${tier}`)) failures.push({ type: "item_price_name_tier_mismatch", name, area_tier: tier });
+}
+
+/**
+ * Một mặt hàng KHÔNG được vừa có giá phẳng vừa có thang bậc.
+ *
+ * `MOI-DIEN-TICH` khớp mọi diện tích, còn dòng có bậc khớp đúng bậc của nó. Để cả hai cùng bật
+ * trên một (bảng giá, mã hàng, ĐVT, biến thể) thì mọi đơn rơi vào bậc đó có HAI dòng giá khớp,
+ * và `resolveServerPrice` ném "Multiple active Item Price records match" — thang giá vừa dựng
+ * lại làm chết chính nó. Đây là cái bẫy của đợt gộp 88 mã: nếu payload vừa giữ dòng phẳng của mã
+ * cũ vừa phát 8 dòng bậc cho mã mới thì không lộ ra ở đâu khác ngoài lúc bán.
+ */
+const tierGroups = new Map();
+for (const row of prices) {
+  // Khoá gom bằng JSON chứ không nối chuỗi: mã hàng CÓ dấu cách (`TP-CUADL1LY XN-VK`,
+  // `TP-RAY HỘP TD U100`), nối bằng dấu cách rồi tách lại là gom nhầm nhóm.
+  const key = JSON.stringify([clean(row.price_list), clean(row.item_code), clean(row.uom), clean(row.price_variant)]);
+  if (!tierGroups.has(key)) tierGroups.set(key, []);
+  tierGroups.get(key).push(row);
+}
+for (const [key, group] of tierGroups) {
+  const flat = group.filter((row) => clean(row.area_tier) === ALL_AREA_TIER);
+  const tiered = group.filter((row) => clean(row.area_tier) && clean(row.area_tier) !== ALL_AREA_TIER);
+  if (flat.length > 0 && tiered.length > 0) {
+    const [price_list, item_code, uom, price_variant] = JSON.parse(key);
+    failures.push({
+      type: "item_price_flat_and_tiered_overlap",
+      price_list, item_code, uom, price_variant,
+      flat: flat.map((row) => row.name),
+      tiered: tiered.map((row) => row.name),
+    });
+  }
 }
 const ruleNames = new Set();
 for (const row of rules) {

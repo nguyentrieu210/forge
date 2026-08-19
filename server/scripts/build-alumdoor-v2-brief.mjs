@@ -919,7 +919,18 @@ brief.doctypes.push({
     "conditions_json:Code Điều kiện áp dụng JSON",
     "priority:Int=(0) Ưu tiên",
     "disabled:Check=(0) Ngừng dùng",
-    "source_status:Select(READY,READY_WITH_ACTUALS,DEFERRED)!=(DEFERRED) Trạng thái chuẩn hóa nguồn",
+    // `COMPOSITION` = danh sách cấu thành dùng trên ĐƠN BÁN, không phải định mức sản xuất.
+    //
+    // `scripts/lib/alumdoor-sales-bom-composition.mjs` ghi giá trị này từ trước, nhưng options
+    // chỉ có ba giá trị kia, và `generic-controller.ts:170` TỪ CHỐI giá trị Select ngoài
+    // options (kể cả Administrator — `normalizeValue` không có cửa admin). Hệ quả đo được:
+    // `import-alumdoor-sales-bom-composition-local.mjs` ném ở POST đầu tiên, 0 template cấu
+    // thành nào tồn tại trong D1, và `alumdoor.sales.preview_bom_requirements` không xổ được
+    // cấu thành cho BẤT KỲ mặt hàng nào. Bộ kiểm không thấy vì nó chỉ so chuỗi trong bộ nhớ.
+    //
+    // Phải là giá trị RIÊNG chứ không dùng lại `DEFERRED`: bộ nhập template sản xuất chỉ cho
+    // nghỉ hưu bản `source_status === 'DEFERRED'`, gộp hai loại là nó tắt nhầm template bán.
+    "source_status:Select(READY,READY_WITH_ACTUALS,DEFERRED,COMPOSITION)!=(DEFERRED) Trạng thái chuẩn hóa nguồn",
     "source_ref:Data Tham chiếu nguồn",
     "deferred_components_json:Code Thành phần chờ chuẩn hóa JSON",
     "required_context_fields_json:Code Ngữ cảnh bắt buộc JSON",
@@ -2442,22 +2453,65 @@ note("MASTER · Measurement Profile chỉ đo/tồn; Geometry Field/Profile sở
   // ── Item Price nhận bậc ──
   // Một mặt hàng, tám giá. Trước đây là tám mặt hàng, mỗi cái một giá.
   {
+    /**
+     * Bậc "mọi diện tích" — phải khớp `ALL_AREA_TIER` trong `packages/clouderp-pricing/src/index.ts`
+     * và trong `scripts/build-alumdoor-pricing-payload.mjs`.
+     *
+     * Đây là SENTINEL trong khoá đặt tên, không phải một bậc thật: nó cố tình KHÔNG có cận trên
+     * lẫn cận dưới, và đường tra giá nhận ra nó bằng MÃ chứ không bằng cận (`priceTierMatches`
+     * chặn trước `areaWithinTier`). Vì thế đừng gán cận cho nó — gán cũng không ai đọc.
+     */
+    const ALL_AREA_TIER = "MOI-DIEN-TICH";
     const price = doctype("Item Price");
     if (!price.fields.some((entry) => nameOf(entry) === "area_tier")) {
       addAfter(price, "uom", {
         "//": [
-          "Trống = đơn giá áp cho MỌI diện tích (đa số mặt hàng). Có giá trị = chỉ áp cho bậc đó.",
+          "MOI-DIEN-TICH = đơn giá áp cho MỌI diện tích (đa số mặt hàng). Bậc thật = chỉ áp cho bậc đó.",
           "Nhờ vậy một mặt hàng giữ được thang giá 8 bậc mà không cần 8 mã hàng.",
+          "BẮT BUỘC có giá trị, không được để trống: nó là một khoá trong `naming` bên dưới, mà",
+          "`resolveAutoname` (frappe-model/src/autoname.ts ~124) NÉM LỖI khi khoá trong format rỗng.",
+          "Đo trên D1: 558/558 dòng giá hiện không có bậc ⇒ để trống là 558/558 dòng không tạo được.",
+          "`default` chỉ cứu được lượt tạo không khai bậc SAU KHI router lấy tài liệu đã áp default",
+          "để đặt tên (frappe-api/src/router.ts → namingSource). Trước bản vá đó, createDocument áp",
+          "default vào `payload` nhưng gọi resolveNewName bằng `submitted` (thân yêu cầu thô), nên",
+          "mọi POST /api/resource/Item Price không tự khai area_tier vẫn bị TỪ CHỐI — đường importer",
+          "không dính vì payload luôn phát area_tier (558/558), lỗi chỉ lộ ở màn hình Danh mục.",
         ],
         fieldname: "area_tier",
         label: "Bậc diện tích",
         fieldtype: "Link",
         options: "Bậc diện tích",
+        required: true,
+        default: ALL_AREA_TIER,
         link_filters: '{"disabled":0}',
       });
       // Khoá đặt tên phải mang bậc, không thì tám dòng giá của cùng một mặt hàng đè lên nhau.
       price.naming = "format:{price_list}:{item_code}:{uom}:{price_variant}:{area_tier}";
       note("SALES · Item Price nhận area_tier — một mặt hàng giữ được thang giá 8 bậc");
+    }
+    /**
+     * Bản ghi sentinel phải TỒN TẠI, không chỉ là quy ước chuỗi.
+     *
+     * `area_tier` là `Link` tới `Bậc diện tích`, và `generic-controller.ts` ~249 kiểm mọi giá trị
+     * Link có bản ghi thật, nếu không thì ném "Bậc diện tích reference is invalid or unavailable".
+     * Thiếu bản ghi này thì mọi dòng `Item Price` đều bị từ chối — nặng hơn hẳn cái nó đi chữa.
+     *
+     * Để trống cả `min_area_sqm` lẫn `max_area_sqm` là CÓ CHỦ Ý: nó không phải một khoảng, và
+     * `areaWithinTier` (fail-closed với bậc không cận) không bao giờ được gọi cho nó.
+     */
+    if (!brief.fixtures.some((entry) => entry.type === "Bậc diện tích" && entry.name === ALL_AREA_TIER)) {
+      brief.fixtures.push({
+        type: "Bậc diện tích",
+        name: ALL_AREA_TIER,
+        data: {
+          tier_code: ALL_AREA_TIER,
+          tier_name: "Mọi diện tích",
+          sort_order: 0,
+          note: "Sentinel của khoá đặt tên Item Price, KHÔNG phải bậc thật. Đừng gán cận trên/dưới, đừng ngừng dùng: ngừng dùng nó là chặn tạo mọi dòng giá không theo bậc (558/558 dòng đang chạy).",
+          disabled: false,
+        },
+      });
+      note("DANH MỤC · +Bậc diện tích MOI-DIEN-TICH — sentinel giữ khoá đặt tên Item Price đủ 5 đoạn");
     }
     // Khoá đặt tên của Item Price NHÚNG mã hàng — 558/558 dòng trên D1 đều vậy. Đổi mã hàng mà
     // không đổi được tên dòng giá thì tên còn ôm mã đã chết, và lần chạy sau của importer giá sẽ
@@ -2727,8 +2781,27 @@ note(`UI Link · ${leafLinkFilterCount} ô Warehouse/Item Group chỉ chọn nú
    *
    * `Cutting Policy.dealer_split_sales_basis` có sẵn để tính đúng, nhưng không gì truyền cách
    * bán vào nên nhánh đó KHÔNG BAO GIỜ chạy. Và fact bị lấy khỏi dòng bán thì nó bò sang khoá
-   * bản ghi: 96 mã hàng đang nhồi `TRONBO` vào chính mã — đúng là dựng lại Sales Option qua
-   * cửa sau, ở tầng khó gỡ nhất.
+   * bản ghi — đúng là dựng lại Sales Option qua cửa sau, ở tầng khó gỡ nhất.
+   *
+   * ĐO LẠI trên NGUỒN GỐC `ms-lien/ĐM.md` bằng `scripts/lib/alumdoor-source-markdown.mjs`
+   * (2026-08-19). Cả bản "96 mã nhồi TRONBO" lẫn bản sửa lần trước ("86/355, 5 họ, 12→7") đều
+   * SAI; đây là số đếm lại được:
+   *
+   *  102 / 363   khối định mức có TÊN thành phẩm mang cách giao (698 lần "TRỌN BỘ", 33 "TÁCH MÓN")
+   *  100 / 363   khối có MÃ CHA nhồi cách giao
+   *  100 / 358   MÃ CHA phân biệt nhồi cách giao: 94 `TRONBO` + 2 `TACHMON` + 4 hậu tố ` - TM`
+   *    0 / 235   mã CẤU PHẦN nhồi cách giao — không có. 100 là mã cha, không phải "kể cả cấu phần".
+   *    6         họ mã có ĐỦ CẢ HAI biến thể — chỉ 6 họ này gộp mã là mất hẳn một bộ cấu phần
+   *
+   * Sáu họ đó là toàn bộ phần `sales_mode` mở khoá được, và `buildCodeMapping` tự đếm chúng
+   * (`unsafe_merges_unlocked_by_sales_mode`): chạy trên 358 mã cha thật cho 13 họ bị chặn →
+   * còn 7 khi mở trục cách giao; 7 họ còn lại bị chặn vì BẬC DIỆN TÍCH, không phải cách giao.
+   * Sáu họ: LUOI-MV, LUOI-SN, LUOI-SN13X26, LUOI-SN13X26-INOX, LUOI-SNPHI19-INOX,
+   * LUOI-LUOIMV-INOX. Bản trước liệt kê 5 và bỏ sót LUOI-SNPHI19-INOX — ai đọc danh sách đó rồi
+   * gộp `TP-LUOI-SNPHI19-INOX - TRONBO` (6 cấu phần) với `- TM` (1 cấu phần) là mất hẳn một bộ.
+   *
+   * Ba cách viết cho một fact (`TRONBO` / `TACHMON` / ` - TM`) cũng là lý do không được dò cách
+   * giao bằng cách bới chuỗi trong mã.
    *
    * `sales_mode` trả về là một Select hai giá trị, KHÔNG Link tới doctype nào, nên nó không
    * hồi sinh `Sales Option`/`Sales Package`. Chốt chặn cuối file vẫn ném lỗi nếu ai dựng lại

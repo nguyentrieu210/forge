@@ -49,6 +49,7 @@ import {
   finishColorContextForItem,
   normalizeColorUsage,
 } from "./color-scopes.js";
+import { catalogReadiness } from "./catalog-readiness.js";
 import { previewChildRow } from "./ui-child-preview.js";
 import { previewDocument } from "./ui-document-preview.js";
 import {
@@ -3598,6 +3599,15 @@ export default {
             return refuse(error instanceof Error ? error.message : "Không lấy được danh sách màu theo Nhóm hàng.");
           }
         }
+        /**
+         * Tình trạng SẴN SÀNG của từng danh mục, cho màn Danh mục. ĐỌC-CHỈ.
+         *
+         * Không nhận tham số nào: phạm vi đo là bảng khai cứng trong `catalog-readiness.ts`
+         * (đúng các khoá màn liệt kê), còn tenant và quyền đọc đi theo danh tính người gọi qua
+         * `call`. Cho client chọn doctype ở đây thì method biến thành một máy đếm vạn năng —
+         * một bề mặt rộng hơn hẳn thứ màn cần.
+         */
+        if (method === "alumdoor.catalog.readiness") return await catalogReadiness(call);
         // Luồng Item → Bề mặt hợp lệ → Màu hợp lệ (2 bước) — server vẫn là authority duy nhất,
         // client không tự join. `finish` optional: bỏ trống chỉ để dựng combobox Bề mặt.
         if (method === "alumdoor.catalog.finish_color_context") {

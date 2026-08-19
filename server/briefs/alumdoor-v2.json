@@ -4192,6 +4192,17 @@
         "nguon": "BANG-GIA-CHINH-THUC-31-07-2026 §6 (bảng có mộc, hiệu lực 31/07/2026)",
         "disabled": false
       }
+    },
+    {
+      "type": "Bậc diện tích",
+      "name": "MOI-DIEN-TICH",
+      "data": {
+        "tier_code": "MOI-DIEN-TICH",
+        "tier_name": "Mọi diện tích",
+        "sort_order": 0,
+        "note": "Sentinel của khoá đặt tên Item Price, KHÔNG phải bậc thật. Đừng gán cận trên/dưới, đừng ngừng dùng: ngừng dùng nó là chặn tạo mọi dòng giá không theo bậc (558/558 dòng đang chạy).",
+        "disabled": false
+      }
     }
   ],
   "doctypes": [
@@ -5563,13 +5574,23 @@
         },
         {
           "//": [
-            "Trống = đơn giá áp cho MỌI diện tích (đa số mặt hàng). Có giá trị = chỉ áp cho bậc đó.",
-            "Nhờ vậy một mặt hàng giữ được thang giá 8 bậc mà không cần 8 mã hàng."
+            "MOI-DIEN-TICH = đơn giá áp cho MỌI diện tích (đa số mặt hàng). Bậc thật = chỉ áp cho bậc đó.",
+            "Nhờ vậy một mặt hàng giữ được thang giá 8 bậc mà không cần 8 mã hàng.",
+            "BẮT BUỘC có giá trị, không được để trống: nó là một khoá trong `naming` bên dưới, mà",
+            "`resolveAutoname` (frappe-model/src/autoname.ts ~124) NÉM LỖI khi khoá trong format rỗng.",
+            "Đo trên D1: 558/558 dòng giá hiện không có bậc ⇒ để trống là 558/558 dòng không tạo được.",
+            "`default` chỉ cứu được lượt tạo không khai bậc SAU KHI router lấy tài liệu đã áp default",
+            "để đặt tên (frappe-api/src/router.ts → namingSource). Trước bản vá đó, createDocument áp",
+            "default vào `payload` nhưng gọi resolveNewName bằng `submitted` (thân yêu cầu thô), nên",
+            "mọi POST /api/resource/Item Price không tự khai area_tier vẫn bị TỪ CHỐI — đường importer",
+            "không dính vì payload luôn phát area_tier (558/558), lỗi chỉ lộ ở màn hình Danh mục."
           ],
           "fieldname": "area_tier",
           "label": "Bậc diện tích",
           "fieldtype": "Link",
           "options": "Bậc diện tích",
+          "required": true,
+          "default": "MOI-DIEN-TICH",
           "link_filters": "{\"disabled\":0}"
         },
         {
@@ -12513,7 +12534,7 @@
         "conditions_json:Code Điều kiện áp dụng JSON",
         "priority:Int=(0) Ưu tiên",
         "disabled:Check=(0) Ngừng dùng",
-        "source_status:Select(READY,READY_WITH_ACTUALS,DEFERRED)!=(DEFERRED) Trạng thái chuẩn hóa nguồn",
+        "source_status:Select(READY,READY_WITH_ACTUALS,DEFERRED,COMPOSITION)!=(DEFERRED) Trạng thái chuẩn hóa nguồn",
         "source_ref:Data Tham chiếu nguồn",
         "deferred_components_json:Code Thành phần chờ chuẩn hóa JSON",
         "required_context_fields_json:Code Ngữ cảnh bắt buộc JSON",

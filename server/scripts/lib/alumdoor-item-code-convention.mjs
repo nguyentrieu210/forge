@@ -120,6 +120,23 @@ const COLOR_TOKENS = [
 /** Token cách bán — nhồi vào mã là dựng lại Sales Option qua cửa sau. */
 const SALES_MODE_TOKENS = ['TRONBO', 'TRON-BO', 'TACHMON', 'TACH-MON', 'CHILA', 'CHI-LA'];
 
+/**
+ * `TM` = TÁCH MÓN, nhưng CHỈ khi nó đứng cuối mã.
+ *
+ * Nguồn viết cách giao ba kiểu. Đo trên 569 mã phân biệt của `ms-lien/ĐM.md` +
+ * `app-vat-tu/BaoCao.md`: 94 mã có `TRONBO`, 2 mã có `TACHMON`, và **4 mã chỉ có hậu tố ` - TM`**
+ * — `TP-LUOI-MV-STD - TM`, `TP-LUOI-SN-STD - TM`, `TP-LUOI-SNPHI19-INOX - TM`,
+ * `TP-LUOIMV-INOX- TM`. Thiếu luật này thì 4 mã tách món không bị đánh dấu, và chúng gộp lặng lẽ
+ * vào họ trọn bộ của mình mà không ai thấy cảnh báo.
+ *
+ * (569, không phải 570: bản đếm trước tính cả chuỗi tiêu đề "Mã hàng" của `BaoCao.md` như một
+ * mã hàng. Cùng phép đo này ghi ở `lib/alumdoor-sales-bom-composition.mjs`; hai file phải khớp.)
+ *
+ * Chỉ nhận ở CUỐI vì `TM` hai chữ quá ngắn để nhận ở giữa. Đo lại trên chính 569 mã đó: đúng 4
+ * mã kết thúc bằng `TM`, và cả 4 đều là tách món — không có mã nào trúng oan.
+ */
+const dropSplitModeSuffix = (text) => text.replace(/(^|-)TM$/, '').replace(/-$/, '');
+
 /** Tiền tố cũ vô nghĩa: 275/477 mã mang `TP-` trong khi chỉ 139 mã thật sự là thành phẩm. */
 const LEGACY_PREFIXES = ['TP', 'NVL', 'HH', 'LK', 'JG', 'RONNHUA'];
 
@@ -224,8 +241,8 @@ export function canonicalItemCode(item) {
   if (body !== beforeColor) warnings.push('bỏ token màu');
 
   const beforeMode = body;
-  body = dropTokens(body, SALES_MODE_TOKENS);
-  if (body !== beforeMode) warnings.push('bỏ cách bán');
+  body = dropSplitModeSuffix(dropTokens(body, SALES_MODE_TOKENS));
+  if (body !== beforeMode) warnings.push(SALES_MODE_DROP);
 
   const beforeTier = body;
   body = dropAreaTier(body);
@@ -310,25 +327,63 @@ export function violatesCodeConvention(code) {
  * thì KHÔNG: đo trên D1 19/08, `TP-LUOI-SN13x26-STD - TRONBO` có BOM Template **5 cấu phần**
  * còn bản `- TACHMON` chỉ có **1**. Hai bộ cấu phần khác nhau thật.
  *
+ * Chênh với nguồn đã TRUY RA nguyên nhân (19/08): khối `CỬA LƯỚI SN PHI 13x26 STĐ - TRỌN BỘ`
+ * (`ĐM.md` dòng 1184) có 7 dòng con, nhưng payload chỉ giữ 5 — hai dòng rụng là `CPSTD_V4`
+ * (1189) và `CPSTD_LADL` (1190), mã CHI PHÍ chứ không phải vật tư, bị `classifyAlumdoorItem
+ * SourceCode` loại. 5 đó khớp đúng con số trên D1. Bản `- TÁCH MÓN` là 1 ở cả hai nơi.
+ * Kết luận "hai bộ cấu phần khác nhau" đúng ở CẢ HAI phép đo.
+ *
+ * Cùng phép đo cho họ dễ bị bỏ sót nhất: `TP-LUOI-SNPHI19-INOX - TRONBO` có **6 cấu phần**,
+ * bản `- TM` có **1**.
+ *
  * Nguyên nhân gốc: khi `Sales Package` bị khai tử, fact "phạm vi cấu phần được giao" không có
  * chỗ nào trên dòng bán nên nó bò vào MÃ HÀNG. Bỏ token đó khỏi mã trước khi `sales_mode` và
- * BOM biết phân giải theo nó là làm mất luôn phần trọn bộ.
+ * BOM biết phân giải theo nó là làm mất luôn phần trọn bộ. Cửa mở nằm ở `structuralDrops()`,
+ * và nó ĐÓNG cho tới khi có số đo chứng minh BOM Template đã khai `sales_mode`.
  *
  * Cùng lý do với bậc diện tích: các biến thể `3-4m²` … `>10m²` của `TP-TOLEKEM124_6D` có
  * template 4 hoặc 8 cấu phần khác nhau.
  */
-const STRUCTURAL_DROPS = new Set(['bỏ cách bán', 'bỏ bậc diện tích']);
+export const SALES_MODE_DROP = 'bỏ cách bán';
+export const AREA_TIER_DROP = 'bỏ bậc diện tích';
+const STRUCTURAL_DROPS = new Set([SALES_MODE_DROP, AREA_TIER_DROP]);
 
-function mergeSafety(group) {
-  const structural = group.filter((row) => row.warnings.some((w) => STRUCTURAL_DROPS.has(w)));
-  if (!structural.length) return { safe: true, reason: 'chỉ khác màu hoặc nhà cung cấp' };
-  if (structural.length === group.length && group.length > 1) {
-    return { safe: false, reason: 'gộp nhiều biến thể cách giao/bậc diện tích — mỗi biến thể có thể có BOM riêng' };
-  }
-  return { safe: false, reason: 'gộp bản trọn bộ với bản thường — hai bộ cấu phần khác nhau' };
+/**
+ * Cửa mở cho trục CÁCH GIAO — mở bằng BẰNG CHỨNG, không bằng thiện chí.
+ *
+ * `bỏ cách bán` chỉ thôi là "chặn gộp" khi BOM Template thật sự phân giải theo `sales_mode`:
+ * cột đã có trên doctype, bộ nhập đã ghi giá trị, và `template_code` đã tách theo (mặt hàng,
+ * cách giao) để hai định mức cùng sống. Trước lúc đó, gộp mã là XOÁ hẳn một bộ cấu phần.
+ *
+ * MẶC ĐỊNH LÀ ĐÓNG. Người gọi phải khẳng định `salesModeOnBomTemplate: true`, và khẳng định đó
+ * phải đối chiếu được với số đo thật: `sales_mode_count` trong kết quả nhập BOM Template. Nó
+ * đang là **0/181** và ĐÚNG là 0 — mỗi cách giao vẫn là một mã hàng riêng nên không template
+ * nào cần khai cột. Cửa chỉ được mở khi số đó bằng số template của các họ vừa gộp.
+ *
+ * Ngoài số đó còn một điều kiện nữa, ở tầng BÁN HÀNG chứ không phải tầng BOM:
+ * `sales-production-core.ts` phải thôi dò chuỗi `TRONBO` trong mã hàng để quyết một dòng bán có
+ * xổ cấu thành hay không — gộp mã xong thì mã hết chuỗi đó, và cổng dò chuỗi từ chối 100% cửa
+ * lưới. Đã nới cổng đó để nó đọc CÁCH GIAO trên dòng bán, nhưng vẫn phải kiểm lại bằng một đơn
+ * thật trước khi mở cửa.
+ *
+ * `bỏ bậc diện tích` KHÔNG có cửa nào ở đây: đó là trục khác, do luật giá theo bậc lo.
+ */
+export function structuralDrops({ salesModeOnBomTemplate = false } = {}) {
+  return salesModeOnBomTemplate ? new Set([AREA_TIER_DROP]) : STRUCTURAL_DROPS;
 }
 
-export function buildCodeMapping(items) {
+function mergeSafety(group, drops = STRUCTURAL_DROPS) {
+  const axes = [...new Set(group.flatMap((row) => row.warnings.filter((w) => drops.has(w))))];
+  const structural = group.filter((row) => row.warnings.some((w) => drops.has(w)));
+  if (!structural.length) return { safe: true, reason: 'chỉ khác màu hoặc nhà cung cấp', axes };
+  if (structural.length === group.length && group.length > 1) {
+    return { safe: false, reason: 'gộp nhiều biến thể cách giao/bậc diện tích — mỗi biến thể có thể có BOM riêng', axes };
+  }
+  return { safe: false, reason: 'gộp bản trọn bộ với bản thường — hai bộ cấu phần khác nhau', axes };
+}
+
+export function buildCodeMapping(items, options = {}) {
+  const drops = structuralDrops(options);
   const rows = items.map((item) => ({ item, ...canonicalItemCode(item) }));
   const families = new Map();
   for (const row of rows) {
@@ -337,16 +392,34 @@ export function buildCodeMapping(items) {
     families.get(row.code).push(row);
   }
   const unresolved = rows.filter((row) => !row.code);
-  const merged = [...families.entries()]
-    .filter(([, group]) => group.length > 1)
-    .map(([code, group]) => [code, group, mergeSafety(group)]);
+  const groups = [...families.entries()].filter(([, group]) => group.length > 1);
+  const merged = groups.map(([code, group]) => [code, group, mergeSafety(group, drops)]);
   const unsafeMerges = merged.filter(([, , safety]) => !safety.safe);
+  /**
+   * Bao nhiêu họ được mở khoá NẾU BOM phân giải theo `sales_mode` — đo bằng cách chạy lại phép
+   * kiểm với trục cách giao đã gỡ, KHÔNG phải bằng cách đếm cảnh báo.
+   *
+   * So CỐ ĐỊNH giữa tập ĐÓNG và tập MỞ, độc lập với `options` của người gọi. Bản trước so
+   * `drops` (tập của người gọi) với tập mở, nên khi người gọi truyền
+   * `{salesModeOnBomTemplate:true}` thì hai vế là cùng một tập và vị từ thành `!p && p` = false
+   * với mọi họ — trường này LUÔN trả 0 đúng lúc cửa mở, tức đúng lúc cần đọc nó. Đo trên 358 mã
+   * cha thật: cửa đóng cho {unsafe_merges:13, unlocked:6}, cửa mở cho {unsafe_merges:7,
+   * unlocked:0 (SAI, phải là 6)}.
+   *
+   * Con số này là thước đo của cả việc gộp mã: nó nói rõ có bao nhiêu họ đang bị chặn CHỈ vì
+   * cách giao, và bao nhiêu họ vẫn bị chặn vì bậc diện tích — hai việc khác nhau, hai người lo.
+   */
+  const closedDrops = structuralDrops();
+  const openedDrops = structuralDrops({ salesModeOnBomTemplate: true });
+  const unlockedBySalesMode = groups.filter(([, group]) => !mergeSafety(group, closedDrops).safe
+    && mergeSafety(group, openedDrops).safe);
   return {
     rows,
     families,
     unresolved,
     merged,
     unsafeMerges,
+    unlockedBySalesMode,
     summary: {
       source_count: rows.length,
       canonical_count: families.size,
@@ -356,6 +429,14 @@ export function buildCodeMapping(items) {
       too_long: rows.filter((row) => row.code && row.code.length > ALUMDOOR_CODE_MAX_LENGTH).length,
       /** Số họ KHÔNG được gộp cho tới khi BOM phân giải theo `sales_mode` thay vì theo mã. */
       unsafe_merges: unsafeMerges.length,
+      /**
+       * Bao nhiêu họ chỉ còn chờ đúng `sales_mode` (phần còn lại chờ bậc diện tích).
+       *
+       * KHÔNG phụ thuộc `options`: nó luôn đếm trên tập ĐÓNG vs tập MỞ, nên đọc được ở cả hai
+       * trạng thái cửa. Trên 358 mã cha của `ĐM.md` con số này là 6 dù cửa đóng hay mở.
+       */
+      unsafe_merges_unlocked_by_sales_mode: unlockedBySalesMode.length,
+      sales_mode_on_bom_template: Boolean(options?.salesModeOnBomTemplate),
     },
   };
 }

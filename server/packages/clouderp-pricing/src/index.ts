@@ -8,6 +8,72 @@ export type { PricingContext, ResolvedPrice } from "./types.js";
 
 export const STANDARD_PRICE_VARIANT = "STANDARD";
 
+/**
+ * Bậc "mọi diện tích" — giá trị KHÔNG RỖNG đứng thay cho ô bậc bỏ trống.
+ *
+ * VÌ SAO phải có sentinel thay vì để trống: `Item Price` tự đặt tên bằng
+ * `format:{price_list}:{item_code}:{uom}:{price_variant}:{area_tier}`, mà `resolveAutoname`
+ * (`frappe-model/src/autoname.ts` ~124) NÉM LỖI khi một khoá trong format rỗng:
+ * "area_tier is required because it appears in the Item Price naming format". Đo trên bản chụp
+ * D1 `work/pricing-preimage.json`: 558/558 dòng giá đang chạy không có bậc ⇒ để trống nghĩa là
+ * 558/558 dòng bị TỪ CHỐI ngay khi tạo.
+ *
+ * VÌ SAO chọn sentinel chứ không phải "tên có điều kiện": tên có điều kiện đòi `resolveAutoname`
+ * biết bỏ qua khoá rỗng — mà đó là nhân đặt tên dùng chung cho MỌI doctype của MỌI app, sửa ở đó
+ * là đổi luật đặt tên toàn nền tảng để chiều một trường của một doctype. Sentinel giữ thay đổi
+ * nằm gọn trong đường giá.
+ *
+ * Sentinel được xử lý như CÚ PHÁP, không tra về danh mục: nếu phải tra thì một ngày ai đó bấm
+ * "ngừng dùng" bản ghi này là cả 558/558 dòng giá phẳng chết theo.
+ */
+export const ALL_AREA_TIER = "MOI-DIEN-TICH";
+
+/**
+ * Diện tích dùng để TRA BẬC là diện tích MỘT BỘ, không phải diện tích cả dòng.
+ *
+ * VÌ SAO phải có hàm riêng thay vì đưa thẳng `billable_area_sqm` xuống: hai con số này khác
+ * nhau đúng bằng số bộ. `apps-src/alumdoor-worker/src/door-formulas.ts:369` tính
+ * `billable = Math.max(rawArea, minimum) * sets` và ghi `area_per_set_sqm = rawArea`, còn cận
+ * bậc thì brief mô tả rõ là của MỘT bộ ("Diện tích tối thiểu tính tiền cho một bộ"). Đo trên
+ * thang TP-TOLEKEM124_8D_MSK: 2 bộ × 4,5 m² tra bằng diện tích cả dòng (9,0) rơi vào bậc 8-9
+ * @580.000 thay vì bậc 4-5 @640.000 — hụt 540.000đ/dòng; 3 bộ × 3,5 m² (10,5) rơi vào bậc
+ * >10 @560.000 thay vì bậc 3-4 @660.000 — hụt 1.050.000đ/dòng.
+ *
+ * Quy ước "per bộ" này đã được khoá ở chỗ khác nên đây không phải lựa chọn mới:
+ * `clouderp-selling/src/adjustment-policy.ts:278-287` dùng `area_per_set_sqm` cho ngưỡng
+ * >4/<7 và <8 m².
+ *
+ * ƯU TIÊN `area_per_set_sqm` chứ không tự chia: chia `billable/sets` cho ra
+ * `max(rawArea, minimum)` — bằng `area_per_set_sqm` với mọi bộ lớn hơn mức tối thiểu, nhưng
+ * LỆCH với bộ nhỏ hơn mức tối thiểu (bộ 3,2 m² khai tối thiểu 4 m² thì raw=3,2 còn
+ * billable/bộ=4,0, hai bậc khác nhau). Nguồn không nói bậc đọc theo số nào, nên KHÔNG ĐOÁN:
+ * dùng số mà dòng bán đã khai, chỉ chia khi không có. Chỗ này cần chủ xưởng chốt.
+ *
+ * FAIL-CLOSED: `set_count` có khai mà không đọc ra số dương thì trả `undefined` — không có
+ * diện tích thì `priceTierMatches` loại mọi dòng giá có bậc và người bán thấy lỗi, còn hơn
+ * lặng lẽ coi dòng nhiều bộ là một bộ.
+ */
+export function areaTierBasisSqm(line: {
+  area_per_set_sqm?: unknown;
+  billable_area_sqm?: unknown;
+  set_count?: unknown;
+}): number | undefined {
+  const perSet = finitePositiveNumber(line.area_per_set_sqm);
+  if (perSet !== undefined) return perSet;
+  const billable = finitePositiveNumber(line.billable_area_sqm);
+  if (billable === undefined) return undefined;
+  const declared = line.set_count;
+  if (declared === undefined || declared === null || normalizedText(declared) === "") return billable;
+  const sets = finitePositiveNumber(declared);
+  if (sets === undefined) return undefined;
+  return billable / sets;
+}
+
+function finitePositiveNumber(value: unknown): number | undefined {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
 function disabled(value: unknown): boolean {
   if (value === true || value === 1 || value === "1") return true;
   return ["true", "yes", "có", "co"].includes(String(value ?? "").trim().toLocaleLowerCase("vi"));
@@ -35,7 +101,10 @@ function itemPriceVariant(data: JsonObject): string {
  * `BRD §4.11` chốt đúng chiều này, và nêu luôn hệ quả: một cửa đúng 5,0 m² ăn bậc `4-5`, không
  * phải bậc `5-6`. Đảo chiều là lệch một bậc giá trên đúng những đơn nằm ở mép.
  *
- * Thiếu cả hai cận thì bậc không ràng buộc gì — coi như không khớp, thay vì khớp mọi thứ.
+ * Thiếu cả hai cận thì bậc không ràng buộc gì — coi như không khớp, thay vì khớp mọi thứ. Đây là
+ * lưới an toàn cho bậc khai thiếu, KHÔNG phải đường của `ALL_AREA_TIER`: sentinel đã được chặn
+ * trước ở `priceTierMatches` nên không bao giờ xuống tới đây, kể cả khi có người lỡ tạo một bản
+ * ghi `Bậc diện tích` trùng mã đó và gán cận cho nó.
  */
 function areaWithinTier(tier: JsonObject, areaSqm: number): boolean {
   const min = Number(tier.min_area_sqm);
@@ -53,6 +122,11 @@ function areaWithinTier(tier: JsonObject, areaSqm: number): boolean {
  *
  * Fail-closed hai chiều: dòng bán không khai diện tích thì KHÔNG khớp bất kỳ dòng giá có bậc
  * nào (thà không thấy giá còn hơn lấy nhầm bậc), và bậc không đọc được thì cũng không khớp.
+ *
+ * Hai giá trị nghĩa là "áp cho mọi diện tích": ô trống (dòng giá cũ, 558/558 dòng trên D1 hiện
+ * vậy) và `ALL_AREA_TIER` (dòng giá mới, buộc phải có giá trị để khoá đặt tên đủ năm đoạn). Cả
+ * hai phải khớp kể cả khi dòng bán KHÔNG khai diện tích — nếu không thì mọi đơn bán phụ kiện,
+ * motor, ray… đều mất giá.
  */
 async function priceTierMatches(
   context: ControllerContext<JsonObject>,
@@ -60,7 +134,7 @@ async function priceTierMatches(
   areaSqm: number | undefined,
 ): Promise<boolean> {
   const tierName = normalizedText(data.area_tier);
-  if (!tierName) return true;
+  if (!tierName || tierName === ALL_AREA_TIER) return true;
   if (!Number.isFinite(areaSqm) || !((areaSqm as number) > 0)) return false;
   const tier = await context.reader.getMasterRecordData(context.command.tenant_id, "Bậc diện tích", tierName);
   if (!tier || disabled(tier.disabled)) return false;
@@ -105,6 +179,103 @@ function preferredPriceRecordName(priceList: string, itemCode: string, uom: stri
   return uom ? `${base}:${uom}:${variant}` : `${base}:${variant}`;
 }
 
+/**
+ * Tên năm đoạn của dòng giá KHÔNG bậc, theo đúng khoá đặt tên hiện hành của `Item Price`
+ * (`format:{price_list}:{item_code}:{uom}:{price_variant}:{area_tier}`).
+ *
+ * VÌ SAO cần tra thêm tên này, chứ không sửa `preferredPriceRecordName`: `listMasterRecordData`
+ * lọc `disabled=0` (`document-kernel/src/d1-store.ts` ~841), nên dòng giá ĐÃ NGỪNG DÙNG chỉ còn
+ * đường tra theo TÊN. Mất đường đó thì một dòng giá ngừng dùng báo "does not exist" thay vì
+ * "is disabled" — đúng loại thông báo khiến người dùng đi tạo dòng giá thứ hai.
+ *
+ * Chỉ tra được dòng KHÔNG bậc: dòng CÓ bậc thì tên chứa mã bậc, mà lúc tra ta mới có diện tích
+ * chứ chưa có mã bậc. Hệ quả còn lại, ghi ra chứ không giấu: dòng giá CÓ bậc mà đang ngừng dùng
+ * vẫn báo "does not exist". Chữa nó phải quét cả danh mục bậc — 8 lượt đọc mỗi lần tra giá.
+ */
+function untieredPriceRecordName(priceList: string, itemCode: string, uom: string, variant: string): string {
+  return `${priceList}:${itemCode}:${uom}:${variant}:${ALL_AREA_TIER}`;
+}
+
+/** Đọc được cận của bậc: `undefined` nghĩa là KHÔNG CHỨNG MINH ĐƯỢC, không phải "không có cận". */
+interface TierBounds { min: number; max: number }
+
+async function tierBounds(
+  reader: PricingMasterReader,
+  tenantId: string,
+  tierCode: string,
+): Promise<TierBounds | undefined> {
+  // Sentinel và ô trống phủ toàn trục — đây là định nghĩa, không phải một bản ghi tra được.
+  if (!tierCode || tierCode === ALL_AREA_TIER) return { min: -Infinity, max: Infinity };
+  const tier = await reader.getMasterRecordData(tenantId, "Bậc diện tích", tierCode);
+  if (!tier || disabled(tier.disabled)) return undefined;
+  const min = Number(tier.min_area_sqm);
+  const max = Number(tier.max_area_sqm);
+  const hasMin = Number.isFinite(min);
+  const hasMax = Number.isFinite(max);
+  if (!hasMin && !hasMax) return undefined;
+  return { min: hasMin ? min : -Infinity, max: hasMax ? max : Infinity };
+}
+
+/**
+ * HAI DÒNG GIÁ CÙNG KHỚP MỘT KHOÁ LÀ LỖI PHẢI CHẶN LÚC LƯU, KHÔNG PHẢI LÚC BÁN.
+ *
+ * Trước khi bậc vào khoá đặt tên, nền tảng tự chặn việc này: dòng giá thứ hai cho cùng
+ * (bảng giá, mã, ĐVT, biến thể) sinh ĐÚNG một tên nên `lifecycle.ts:10` ném 409. Khoá đặt tên
+ * năm đoạn gỡ mất chốt đó — `…:STANDARD` và `…:STANDARD:MOI-DIEN-TICH` là hai tên khác nhau,
+ * cả hai cùng bật lọt vào D1 được. Đo trên dist: mọi lượt tra giá của mã đó (khai hay không
+ * khai diện tích) đều ném `Multiple active Item Price records match …:STANDARD,
+ * …:STANDARD:MOI-DIEN-TICH` ⇒ không dòng báo giá/đơn nào của mã đó lưu được nữa.
+ *
+ * Trường hợp thứ hai, khó lần hơn: dòng phẳng `MOI-DIEN-TICH` + một dòng CÓ BẬC do người dùng
+ * tự thêm trong Danh mục (ô `Bậc diện tích` HIỆN trên form, khác `price_variant` bị ẩn bằng
+ * `depends_on: eval:false`). Đo được: đơn 3,5 m² ném `Multiple active…`, còn đơn 6 m² vẫn ra
+ * giá bình thường — hỏng chập chờn theo diện tích.
+ *
+ * `validate-alumdoor-pricing-payload.mjs` có chốt `item_price_flat_and_tiered_overlap` nhưng nó
+ * chỉ soi payload ngoại tuyến, KHÔNG nhìn thấy dòng do người dùng tạo. Đây mới là chỗ chặn được.
+ *
+ * FAIL-CLOSED: bậc không đọc được cận (bản ghi thiếu, đã ngừng dùng, hoặc bỏ trống cả hai cận)
+ * thì coi như CHỒNG LẤN. Từ chối nhầm một dòng giá tốn một lần soát tay; cho qua nhầm thì mã đó
+ * mất khả năng bán mà chỉ lộ ra lúc đang lập đơn.
+ */
+export interface PricingMasterReader {
+  getMasterRecordData(tenantId: string, recordType: string, name: string): Promise<JsonObject | null>;
+  listMasterRecordData(tenantId: string, recordType: string): Promise<Array<{ name: string; data: JsonObject }>>;
+}
+
+export async function assertItemPriceTierIsUnambiguous(
+  reader: PricingMasterReader,
+  tenantId: string,
+  candidate: JsonObject,
+  candidateName: string,
+): Promise<void> {
+  // Dòng đã ngừng dùng không tham gia tra giá, nên nó không thể gây nhập nhằng.
+  if (disabled(candidate.disabled)) return;
+  const priceList = normalizedText(candidate.price_list);
+  const itemCode = normalizedText(candidate.item_code);
+  const uom = normalizedText(candidate.uom);
+  if (!priceList || !itemCode) return;
+  const variant = itemPriceVariant(candidate);
+  const self = normalizedText(candidateName);
+  const candidateBounds = await tierBounds(reader, tenantId, normalizedText(candidate.area_tier));
+
+  const rows = await reader.listMasterRecordData(tenantId, "Item Price");
+  for (const row of rows) {
+    if (normalizedText(row.name) === self) continue;
+    if (disabled(row.data.disabled)) continue;
+    if (!fieldMatchedPrice(row.data, priceList, itemCode, uom, variant)) continue;
+    const otherBounds = await tierBounds(reader, tenantId, normalizedText(row.data.area_tier));
+    // Cận trên ĐÓNG, cận dưới MỞ (`min < S ≤ max`), nên hai khoảng chồng nhau khi
+    // `min(A) < max(B)` VÀ `min(B) < max(A)`. Chạm mép (4-5 và 5-6) không phải chồng.
+    const overlaps = !candidateBounds || !otherBounds
+      || (candidateBounds.min < otherBounds.max && otherBounds.min < candidateBounds.max);
+    if (!overlaps) continue;
+    throw errors.validation(
+      `Item Price ${self || "(mới)"} trùng bậc với ${row.name}: ${priceList} / ${itemCode} / ${uom || "(no UOM)"} / ${variant} đã có một dòng đang bật phủ cùng khoảng diện tích. Ngừng dùng dòng cũ trước, hoặc chọn bậc không chồng lấn.`,
+    );
+  }
+}
+
 export async function resolveServerPrice(
   context: ControllerContext<JsonObject>,
   input: PricingContext,
@@ -117,9 +288,15 @@ export async function resolveServerPrice(
   const legacyPriceName = `${priceList}:${itemCode}`;
   const preferredPriceName = preferredPriceRecordName(priceList, itemCode, lineUom, priceVariant);
   const legacy = await context.reader.getMasterRecordData(context.command.tenant_id, "Item Price", legacyPriceName);
+  const untieredPriceName = untieredPriceRecordName(priceList, itemCode, lineUom, priceVariant);
   const preferred = preferredPriceName === legacyPriceName
     ? legacy
     : await context.reader.getMasterRecordData(context.command.tenant_id, "Item Price", preferredPriceName);
+  // Không ĐVT thì bỏ hẳn lượt tra này: `uom` là trường bắt buộc của `Item Price`, nên tên năm
+  // đoạn với đoạn ĐVT rỗng không thể trỏ vào bản ghi nào — tra chỉ tốn một lượt đọc.
+  const untiered = !lineUom || untieredPriceName === preferredPriceName || untieredPriceName === legacyPriceName
+    ? null
+    : await context.reader.getMasterRecordData(context.command.tenant_id, "Item Price", untieredPriceName);
   const legacyUom = normalizedText(legacy?.uom);
   const compatibleLegacy = priceVariant === STANDARD_PRICE_VARIANT
     && legacy
@@ -129,6 +306,10 @@ export async function resolveServerPrice(
   const compatiblePreferred = preferred
     && namedPriceCompatible(preferred, priceList, itemCode, lineUom, priceVariant)
     ? preferred
+    : null;
+  const compatibleUntiered = untiered
+    && namedPriceCompatible(untiered, priceList, itemCode, lineUom, priceVariant)
+    ? untiered
     : null;
 
   let priceName = preferredPriceName;
@@ -158,6 +339,13 @@ export async function resolveServerPrice(
     && await priceTierMatches(context, compatiblePreferred, areaSqm)
   ) {
     exactCandidates.set(preferredPriceName, compatiblePreferred);
+  }
+  if (
+    compatibleUntiered
+    && !disabled(compatibleUntiered.disabled)
+    && await priceTierMatches(context, compatibleUntiered, areaSqm)
+  ) {
+    exactCandidates.set(untieredPriceName, compatibleUntiered);
   }
   for (const candidate of activeFieldMatches) {
     if (candidate.name === legacyPriceName && preferredPriceName !== legacyPriceName) continue;
@@ -215,9 +403,11 @@ export async function resolveServerPrice(
   if (!itemPrice) {
     const disabledCandidate = compatiblePreferred && disabled(compatiblePreferred.disabled)
       ? { name: preferredPriceName, data: compatiblePreferred }
-      : compatibleLegacy && disabled(compatibleLegacy.disabled)
-        ? { name: legacyPriceName, data: compatibleLegacy }
-        : fieldMatches.find(({ data }) => disabled(data.disabled));
+      : compatibleUntiered && disabled(compatibleUntiered.disabled)
+        ? { name: untieredPriceName, data: compatibleUntiered }
+        : compatibleLegacy && disabled(compatibleLegacy.disabled)
+          ? { name: legacyPriceName, data: compatibleLegacy }
+          : fieldMatches.find(({ data }) => disabled(data.disabled));
     if (disabledCandidate) {
       itemPrice = disabledCandidate.data;
       priceName = disabledCandidate.name;

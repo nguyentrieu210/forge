@@ -9,6 +9,10 @@ export type {
   Actor, CanonicalDocument, JsonObject, JsonValue, MutationAction, MutationCommand, MutationReceipt,
 } from "../../contracts/src/index.js";
 export { errors, sha256Hex } from "../../core/src/index.js";
+// Chốt chặn lúc LƯU `Item Price`, không phải lúc bán: khoá đặt tên năm đoạn đã gỡ mất chốt
+// trùng tên của nền tảng, nên hai dòng giá cùng khớp một khoá lọt vào D1 được và chỉ lộ ra
+// bằng "Multiple active Item Price records match" giữa lúc lập đơn.
+export { areaTierBasisSqm, assertItemPriceTierIsUnambiguous } from "../../clouderp-pricing/src/index.js";
 export {
   alumdoorCommercialBenefits,
   defaultAlumdoorDiscountPercent,

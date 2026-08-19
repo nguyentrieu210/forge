@@ -34,14 +34,58 @@ const disabled = (value) => truthy(value) || ["true", "yes", "có", "co"].includ
 const condition = (field, operator, value) => ({ field, operator, value });
 const stableSort = (rows) => [...rows].sort((a, b) => clean(a.name) < clean(b.name) ? -1 : clean(a.name) > clean(b.name) ? 1 : 0);
 
-export function itemPriceName(priceList, itemCode, uom, variant = STANDARD_VARIANT) {
+/**
+ * Bậc "mọi diện tích" — phải khớp `ALL_AREA_TIER` trong `packages/clouderp-pricing/src/index.ts`.
+ *
+ * Chép hằng số thay vì import: script này chạy bằng node thuần trên file `.mjs`, không qua `tsc`,
+ * nên không với tới `packages/**\/*.ts`. Bù lại bằng test neo hai bên bằng nhau.
+ */
+export const ALL_AREA_TIER = "MOI-DIEN-TICH";
+
+/**
+ * LỆCH NGUỒN CHƯA GIẢI QUYẾT — thang giá theo bậc diện tích, họ TP-TOLEKEM124_8D.
+ *
+ * Đo trên hai nguồn, không đoán:
+ *   · `BANG-GIA-CHINH-THUC-31-07-2026 §3` — bảng 8 bậc × 7 cột, có mộc, hiệu lực 31/07/2026.
+ *   · `ms-lien/ĐM.md` — 88 mã có hậu tố bậc trong MÃ HÀNG, gộp còn 11 gốc mã / 7 thang giá.
+ *
+ * 6/7 thang khớp nguyên vẹn 8/8 bậc. Riêng `TP-TOLEKEM124_8D_MSK` (khớp cột "1LY STĐ") lệch ở
+ * ĐÚNG 4 bậc đắt nhất, ĐM.md luôn cao hơn:
+ *   3-4 m²: 660.000 vs 630.000  (+30.000)
+ *   4-5 m²: 640.000 vs 620.000  (+20.000)
+ *   5-6 m²: 620.000 vs 610.000  (+10.000)
+ *   6-7 m²: 610.000 vs 600.000  (+10.000)
+ *   7-8 / 8-9 / 9-10 / >10 m²: bằng nhau (590/580/570/560).
+ *
+ * Kèm một điểm lệch NHÃN nữa, ghi luôn: theo giá trị thì `TOLEKEM124_6D` khớp cột "8 DEM STĐ",
+ * `_8D` khớp "1LY STĐ", `_1LY` khớp "1.2LY STĐ" — tên mã lệch nhãn cột đúng một nấc.
+ *
+ * KHÔNG tự chọn bên nào. Luật "nguồn gốc thắng bản trích" nghiêng về BANG-GIA, nhưng ĐM.md mới
+ * là thứ đang chạy trên D1, và chênh 30.000đ/m² là tiền thật trên mỗi đơn. Chủ xưởng chốt.
+ */
+
+export function itemPriceName(priceList, itemCode, uom, variant = STANDARD_VARIANT, areaTier = ALL_AREA_TIER) {
   const base = `${clean(priceList)}:${clean(itemCode)}`;
   const canonicalVariant = clean(variant).toUpperCase() || STANDARD_VARIANT;
-  // The doctype names itself format:{price_list}:{item_code}:{uom}:{price_variant}, so the
-  // server appends the variant even when it is STANDARD. Dropping the suffix here made every
-  // base row's payload name disagree with the name the row actually gets, which surfaced as
-  // 331 extra_managed_item_price blockers on the next preflight.
-  return clean(uom) ? `${base}:${clean(uom)}:${canonicalVariant}` : `${base}:${canonicalVariant}`;
+  const canonicalTier = clean(areaTier) || ALL_AREA_TIER;
+  // The doctype names itself format:{price_list}:{item_code}:{uom}:{price_variant}:{area_tier},
+  // so the server appends the variant even when it is STANDARD. Dropping the suffix here made
+  // every base row's payload name disagree with the name the row actually gets, which surfaced
+  // as 331 extra_managed_item_price blockers on the next preflight.
+  //
+  // Đoạn bậc là BẮT BUỘC, không phải tuỳ chọn: `resolveAutoname` ném lỗi khi một khoá trong
+  // format rỗng, nên dòng giá không bậc vẫn phải mang `MOI-DIEN-TICH`. Bỏ đoạn này đi thì tên
+  // payload lệch tên D1 đúng một đoạn — và lệch tên nghĩa là importer TẠO MỚI thay vì cập nhật.
+  //
+  // 558/558 dòng đang chạy trên D1 vẫn mang tên BỐN đoạn, và chúng KHÔNG được đổi tên (tên
+  // `Item Price` nằm trên dòng bán nên guard tham chiếu của nền tảng từ chối). Chỗ nối hai dạng
+  // tên là `scripts/lib/alumdoor-item-price-alias.mjs`: nó ghép tên cũ làm bí danh của tên chuẩn
+  // để importer cập nhật TẠI CHỖ. Vì thế tên ở đây phải luôn là tên CHUẨN năm đoạn — phát tên
+  // bốn đoạn cho "gọn" là làm hỏng cả lượt tạo dòng giá mới (nền tảng đặt tên năm đoạn, payload
+  // chờ tên bốn đoạn, post-verify báo `missing_after_apply`).
+  return clean(uom)
+    ? `${base}:${clean(uom)}:${canonicalVariant}:${canonicalTier}`
+    : `${base}:${canonicalVariant}:${canonicalTier}`;
 }
 
 function sourceLineage(row) {
@@ -61,14 +105,24 @@ function sourceLineage(row) {
   };
 }
 
-function itemPriceDocument(item, rate, variant, lineage) {
+/**
+ * Một dòng `Item Price`.
+ *
+ * `areaTier` mặc định là `MOI-DIEN-TICH` vì đó là hình dạng của 558/558 dòng giá đang chạy: giá
+ * không phụ thuộc diện tích. Tham số này là chỗ để thang giá theo bậc đi vào đường ống — nguồn
+ * `BANG-GIA-CHINH-THUC-31-07-2026 §3` là bảng 8 bậc × 7 cột, và trên D1 nó đang bị nhồi vào MÃ
+ * HÀNG: 88 mã có hậu tố bậc (`…_TRONBO_4-5m²`), gộp lại chỉ còn 11 gốc mã / 7 thang giá khác
+ * nhau. Không có tham số này thì đường ống không có cách nào phát ra 8 dòng giá cho một mã.
+ */
+function itemPriceDocument(item, rate, variant, lineage, areaTier = ALL_AREA_TIER) {
   const uom = clean(item.default_sales_uom) || clean(item.stock_uom);
   return {
     doctype: "Item Price",
-    name: itemPriceName(ALUMDOOR_PRICE_LIST, item.item_code, uom, variant),
+    name: itemPriceName(ALUMDOOR_PRICE_LIST, item.item_code, uom, variant, areaTier),
     price_list: ALUMDOOR_PRICE_LIST,
     item_code: clean(item.item_code),
     uom,
+    area_tier: clean(areaTier) || ALL_AREA_TIER,
     price_variant: variant,
     rate,
     currency: "VND",

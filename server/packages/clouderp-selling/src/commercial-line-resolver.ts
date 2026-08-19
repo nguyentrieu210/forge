@@ -26,7 +26,10 @@ export interface ResolveCommercialLineInput {
   customerGroup?: string;
   supplierGroup?: string;
   facts: Record<string, unknown>;
+  /** Diện tích CẢ DÒNG (đã nhân số bộ). Dùng cho fact và cho Pricing Rule tính theo m². */
   areaSqm?: number;
+  /** Diện tích MỘT BỘ. Chỉ số này mới tra được bậc — xem `areaTierBasisSqm`. */
+  areaPerSetSqm?: number;
   lengthM?: number;
   setCount?: number;
   sellingRateOverride?: string | number;
@@ -88,6 +91,22 @@ export async function resolveCommercialLine(
     priceList: input.priceList,
     documentCurrency: input.documentCurrency,
     ...(input.uom ? { uom: input.uom } : {}),
+    /**
+     * Diện tích phải đi CÙNG yêu cầu tra giá, không chỉ vào `facts` của Pricing Rule.
+     *
+     * Trước khi vá, `resolveServerPrice` nhận `billableAreaSqm` = undefined nên
+     * `priceTierMatches` loại SẠCH mọi dòng giá có bậc. Hệ quả là `area_tier` có thể khai được
+     * mà không bao giờ khớp — đúng trạng thái đo được: 0/558 dòng giá trên D1 mang bậc.
+     *
+     * Dùng `areaPerSetSqm`, KHÔNG dùng `areaSqm`: cận bậc là diện tích một bộ, còn `areaSqm` là
+     * diện tích cả dòng (= một bộ × số bộ). Lấy nhầm số thì mọi dòng nhiều bộ ăn bậc rẻ hơn —
+     * đo được 2 bộ × 4,5 m² tra ra bậc 8-9 @580.000 thay vì bậc 4-5 @640.000, hụt
+     * 540.000đ/dòng. Chi tiết ở `clouderp-pricing/src/index.ts` → `areaTierBasisSqm`.
+     *
+     * Chỉ truyền khi có: bỏ trống thì thang bậc bị loại một cách CÓ Ý (fail-closed), còn hơn
+     * truyền 0 rồi rơi vào bậc nào đó.
+     */
+    ...(input.areaPerSetSqm === undefined ? {} : { billableAreaSqm: input.areaPerSetSqm }),
     applyPricingRules: false as const,
     ...(input.partyType ? { partyType: input.partyType } : {}),
     ...(input.party ? { party: input.party } : {}),

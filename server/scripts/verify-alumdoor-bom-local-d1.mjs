@@ -4,6 +4,7 @@ import { createRequire } from 'node:module';
 import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+import { salesModeTemplateKeys } from './lib/alumdoor-sales-bom-composition.mjs';
 
 const [payloadArg, resultArg] = process.argv.slice(2);
 if (!payloadArg || !resultArg) throw new Error('Usage: verify-alumdoor-bom-local-d1.mjs <bom-importable.json> <result.json>');
@@ -231,7 +232,24 @@ for (const row of templateRows) {
   list.push({name:row.name,data:doc});
   templateByCode.set(code,list);
 }
-const expectedTemplateCodes = payload.boms.filter((bom)=>(bom.pending_lines?.length??0)>0).map((bom)=>clean(bom.item));
+/**
+ * Khoá template phải tính GIỐNG HỆT bộ nhập, không được khoá cứng `bom.item`.
+ *
+ * `import-alumdoor-bom-template-local.mjs` ghi `salesModeTemplateKeys(...).templateCode(bom)`:
+ * bằng đúng mã hàng khi mặt hàng chỉ có một định mức, và `mã#TRONBO`/`mã#TACHMON` khi một mặt
+ * hàng giữ hai. Bộ kiểm này chạy NGAY sau bước ghi (bom-adapter.mjs: IMPORT_TEMPLATE →
+ * VERIFY_D1), nên chỉ cần hai bên tính khác nhau một chữ là mọi template có cách giao bị đếm
+ * là thiếu, dòng dưới ném `canonical BOM Template mismatch` và adapter `bom` chết ở VERIFY_D1 —
+ * không rollback, nên mọi lượt chạy sau chết lại đúng chỗ đó.
+ *
+ * Đo trên payload dựng từ nguồn hôm nay: 232 khối, 181 có `pending_lines`, 100 khối mang mã
+ * nhồi cách giao và cả 100 đều có `pending_lines`. Khoá cứng `bom.item` sẽ báo thiếu đúng 100.
+ * Dùng chung hàm với bộ nhập là cách duy nhất để hai bên không lệch lần nữa.
+ */
+const templateKeys = salesModeTemplateKeys(payload.boms);
+const expectedTemplateCodes = payload.boms
+  .filter((bom)=>(bom.pending_lines?.length??0)>0)
+  .map((bom)=>clean(templateKeys.templateCode(bom)));
 const templateDuplicateCount = expectedTemplateCodes.reduce((sum,code)=>sum+Math.max(0,(templateByCode.get(code)?.length??0)-1),0);
 const templateMissingCount = expectedTemplateCodes.filter((code)=>(templateByCode.get(code)?.length??0)===0).length;
 

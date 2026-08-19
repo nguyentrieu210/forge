@@ -387,6 +387,28 @@ function fnv1a(value: string): string {
   return (hash >>> 0).toString(16).padStart(8, "0");
 }
 
+/**
+ * Phần `template_code` đi vào vân tay phải BỎ hậu tố cách giao.
+ *
+ * `template_code` của một mặt hàng giữ HAI định mức là `mã#TRONBO` / `mã#TACHMON`
+ * (`scripts/lib/alumdoor-sales-bom-composition.mjs`). Khoá đó chỉ để hai bản ghi cùng sống —
+ * nó KHÔNG phải một phần danh tính của định mức đã phân giải: hai cách giao vốn đã cho hai
+ * danh sách `components` khác nhau, nên vân tay vẫn phân biệt được chúng mà không cần hậu tố.
+ *
+ * Vì sao phải bỏ: `bomFingerprint` là thứ `existingGeneratedBom` tra để biết "định mức này đã
+ * ghi sổ chưa". Đổi khoá của một template đang có Bill of Materials ghi sổ (docstatus=1) mà để
+ * hậu tố lọt vào hash thì vân tay đổi ⇒ tra ra rỗng ⇒ hệ thống ghi sổ THÊM một BOM trùng nội
+ * dung, còn bản cũ vẫn `is_active=1` và KHÔNG XOÁ ĐƯỢC (quyền `Bill of Materials` là `rwcsxa`,
+ * không có `delete`). Lịch sử truy vết sản xuất chẻ đôi đúng ngày chạy đợt nhập.
+ *
+ * Cắt ở `#` là an toàn: đo trên 569 mã phân biệt của `ĐM.md` + `app-vat-tu/BaoCao.md` thì 0 mã
+ * chứa `#`, nên không mã hàng thật nào bị cắt cụt.
+ */
+function fingerprintTemplateCode(templateCode: string): string {
+  const separator = templateCode.indexOf("#");
+  return separator === -1 ? templateCode : templateCode.slice(0, separator);
+}
+
 export function bomFingerprint(input: {
   company: string;
   source_warehouse: string;
@@ -397,7 +419,7 @@ export function bomFingerprint(input: {
     company: text(input.company),
     source_warehouse: text(input.source_warehouse),
     output_qty: input.output_qty,
-    template_code: input.resolved.template_code,
+    template_code: fingerprintTemplateCode(input.resolved.template_code),
     item_code: input.resolved.item_code,
     components: input.resolved.components.map((row) => ({
       component_key: row.component_key ?? "",

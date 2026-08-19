@@ -25,6 +25,11 @@ export interface PricingContext {
    * Bỏ trống thì chỉ những dòng giá không gắn bậc mới khớp — dòng có bậc bị loại. Như vậy một
    * caller cũ chưa biết truyền diện tích sẽ KHÔNG âm thầm lấy nhầm bậc; nó hoặc lấy đúng giá
    * chung, hoặc không tìm thấy giá và báo lỗi.
+   *
+   * ĐƠN VỊ: diện tích MỘT BỘ, không phải diện tích cả dòng. Tên trường giữ nguyên vì nó đã nằm
+   * trong hợp đồng của bốn chỗ gọi, nhưng cận bậc (`min_area_sqm`) là của một bộ — brief ghi
+   * thẳng "Diện tích tối thiểu tính tiền cho một bộ". Truyền diện tích cả dòng thì mọi dòng
+   * nhiều bộ tụt xuống bậc rẻ hơn; dùng `areaTierBasisSqm(line)` để lấy đúng số.
    */
   billableAreaSqm?: number;
 }

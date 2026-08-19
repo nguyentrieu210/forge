@@ -30,13 +30,14 @@
  * 0,02; khách lẻ đo phủ bì ray trừ 0,08 — `docs/ALUMDOOR-LUAT-DO-VA-GIA.md`). Đoán sai một
  * khách là cắt sai mọi đơn của khách đó.
  *
- * Nguồn có 332/449 dòng khai phân loại. 117 dòng để trống. Thứ tự thẩm quyền:
+ * Nguồn có 332/448 dòng khai phân loại. 116 dòng để trống. Thứ tự thẩm quyền:
  *
  *   1. cột `KH/NCC/KH LẺ` của chính dòng đó          — khai trực tiếp
  *   2. tên có mặt ở cột ĐẠI LÝ của sheet đơn hàng    — đã bán như đại lý thì là đại lý
  *   3. không có gì                                    → HOÃN, không đoán
+ *   4. hai dòng cùng khách khai NGƯỢC NHAU            → HOÃN CẢ HAI, không chọn dòng nào
  *
- * Bậc 3 KHÔNG chặn cả lượt nạp. Đối tác hoãn được liệt kê riêng để chủ xưởng điền; nạp 400
+ * Bậc 3 và 4 KHÔNG chặn cả lượt nạp. Đối tác hoãn được liệt kê riêng để chủ xưởng điền; nạp 403
  * khách đúng rồi bổ sung phần còn lại tốt hơn nạp 0 khách. Nhưng số hoãn phải được ĐẾM và
  * so với ngưỡng — hoãn im lặng thì lần sau cả nghìn dòng trôi qua mà không ai biết.
  */
@@ -49,7 +50,15 @@ import { parseAlumdoorIndexedMarkdownRows, readAlumdoorCell } from "./alumdoor-s
 
 const clean = (value) => String(value ?? "").normalize("NFC").replace(/\s+/gu, " ").trim();
 
-/** Khoá so trùng: bỏ dấu, bỏ ký tự không chữ-số. Cùng phép với `customer-import-core.mjs`. */
+/**
+ * Khoá ĐỐI CHIẾU LỎNG: bỏ dấu, bỏ ký tự không chữ-số.
+ *
+ * CHỈ dùng để dò tên ở cột ĐẠI LÝ của sheet tháng — chỗ đó người ta gõ tay, thiếu dấu là chuyện
+ * thường, và đối chiếu lỏng chỉ làm mất/thêm một bằng chứng "đã bán như đại lý" chứ không tạo ra
+ * hay xoá bản ghi nào.
+ *
+ * KHÔNG dùng làm khoá ĐỊNH DANH khách — xem `partnerIdentityKey`.
+ */
 export function partnerKey(value) {
   return clean(value)
     .normalize("NFD")
@@ -58,6 +67,66 @@ export function partnerKey(value) {
     .toLocaleLowerCase("vi")
     .replace(/[^a-z0-9]+/gu, " ")
     .trim();
+}
+
+/**
+ * Khoá ĐỊNH DANH khách: GIỮ NGUYÊN DẤU, chỉ hạ chữ thường theo lệ tiếng Việt.
+ *
+ * VÌ SAO KHÔNG DÙNG `partnerKey` Ở ĐÂY: bỏ dấu gộp 6 cặp tên KHÁC HẲN NHAU trong `DS-KH-NCC.md`
+ * thành một khách, và 3 trong 6 cặp có bằng chứng nguồn nói đây là hai người thật:
+ *
+ *   dòng 71  ANH BIỂN  0907 627 145 · THÁI SƠN      ┐ hai SĐT khác nhau
+ *   dòng 349 ANH BIÊN  0975937881   · THÁI SƠN      ┘
+ *   dòng 297 ANH HÙNG  (không SĐT)  · LƯ CHÍ CƯỜNG  ┐ hai người phụ trách khác nhau
+ *   dòng 364 ANH HƯNG  0978457567   · THÁI SƠN      ┘
+ *   dòng 5   ANH HOÁ   0979090953   · LƯ CHÍ CƯỜNG  ┐ hai người phụ trách khác nhau
+ *   dòng 183 ANH HOÀ   (không SĐT)  · THÁI SƠN      ┘
+ *
+ * Gộp im lặng thì một trong hai người KHÔNG BAO GIỜ có bản ghi Customer, và mọi đơn của người đó
+ * chạy vào công nợ + nhóm giá của người kia.
+ *
+ * Khoá này KHỚP với phép dò trùng của server (`customer-import.ts`: `text(customer_name)` rồi
+ * `.toLocaleLowerCase("vi")`) — nghĩa là lớp plan không còn nuốt cái mà server sẵn sàng nhận.
+ * Nó "chặt" hơn server đúng một chỗ: gom khoảng trắng thừa. Chặt hơn ở phía an toàn — hai dòng ta
+ * tách ra thì server cũng thấy tách.
+ */
+export function partnerIdentityKey(value) {
+  return clean(value).toLocaleLowerCase("vi");
+}
+
+/**
+ * Ô SĐT chứa HAI số → tách thành số chính + số phụ.
+ *
+ * VÌ SAO: `normalizedPhone` của server bỏ mọi ký tự không phải chữ số, nên ô hai số bị dán thành
+ * một chuỗi 20 chữ số đi thẳng vào `Customer.phone`. Đo được 4 ô như vậy trong 246 ô có SĐT
+ * (phân bố độ dài chữ số của nguồn chỉ có hai giá trị: 242 ô 10 chữ số, 4 ô 20 chữ số):
+ *
+ *   dòng 169 "0918 691 691 - 0966 336 139"   dòng 274 "0905 168 690/0974765728"
+ *   dòng 316 "0367 35 2572 _ 0916 964023"    dòng 450 "0932608860/0943608860"
+ *
+ * Số 20 chữ số không gọi được, và `phone` là 1 trong 4 khoá dò trùng của `dry_run` nên lượt nạp
+ * sau không bao giờ khớp lại được 4 khách này.
+ *
+ * Chỉ tách khi CẢ HAI mảnh đều đủ ≥ 8 chữ số. 6 ô khác trong nguồn cũng có dấu `-` nhưng vế sau
+ * là tên người ("0972 886 317 - ANH LÂM"), mảnh đó không đủ chữ số nên ô giữ nguyên văn — server
+ * vốn đã bỏ phần chữ khi chuẩn hoá.
+ */
+export function splitPhoneCell(raw) {
+  const value = clean(raw);
+  if (!value) return { phone: null, extra_phones: [] };
+  const parts = value
+    .split(/[\/;,_]|\s+[-–]\s+/u)
+    .map((part) => clean(part))
+    .filter((part) => part.replace(/[^0-9]/gu, "").length >= 8);
+  if (parts.length <= 1) return { phone: value, extra_phones: [] };
+  return { phone: parts[0], extra_phones: parts.slice(1) };
+}
+
+/** Số chữ số tối đa của một SĐT đơn. Vượt ngưỡng nghĩa là ô còn nhiều số mà chưa tách được. */
+const MAX_PHONE_DIGITS = 12;
+
+export function phoneDigitCount(value) {
+  return String(value ?? "").replace(/[^0-9]/gu, "").length;
 }
 
 /** Cột của sheet `DS KH-NCC`. Cột 6 tồn tại trong dữ liệu nhưng KHÔNG có tiêu đề — bỏ qua. */
@@ -113,7 +182,7 @@ export function canonicalAccountManager(raw) {
  * Phân loại thô → giá trị `Customer.price_group`, hoặc `SUPPLIER` để bỏ qua.
  *
  * `KH` trong nguồn nghĩa là "khách hàng" theo cách xưởng dùng, và bộ nhập hiện hành đã ánh xạ
- * nó thành `Đại lý` — giữ nguyên ánh xạ đó, đổi ở đây là đổi giá của 325 khách.
+ * nó thành `Đại lý` — giữ nguyên ánh xạ đó, đổi ở đây là đổi giá của 323 khách tự khai `KH`.
  */
 export function classifyPartnerKind(raw) {
   const key = partnerKey(raw);
@@ -151,15 +220,19 @@ export function parsePartnerSource(markdownText) {
       if (Object.keys(row.cells).length > 0) nameless.push(row.source_row);
       continue;
     }
+    const { phone, extra_phones } = splitPhoneCell(readAlumdoorCell(row, DS.PHONE));
     partners.push({
       source_row: row.source_row,
       partner_name: name,
+      // `key` = đối chiếu lỏng (cột ĐẠI LÝ sheet tháng); `identity` = định danh khách.
       key: partnerKey(name),
+      identity: partnerIdentityKey(name),
       kind_raw: clean(readAlumdoorCell(row, DS.KIND)) || null,
       kind: classifyPartnerKind(readAlumdoorCell(row, DS.KIND)),
-      phone: clean(readAlumdoorCell(row, DS.PHONE)) || null,
-      address: clean(readAlumdoorCell(row, DS.ADDRESS)) || null,
+      phone,
+      extra_phones,
       account_manager: canonicalAccountManager(readAlumdoorCell(row, DS.ACCOUNT_MANAGER)),
+      address: clean(readAlumdoorCell(row, DS.ADDRESS)) || null,
       note: clean(readAlumdoorCell(row, DS.NOTE)) || null,
     });
   }
@@ -221,12 +294,43 @@ export async function loadPartnerSource(repoRoot) {
   return { partners, nameless, dealerRefs, monthly_sheet_count: monthlyTexts.length };
 }
 
+/** Trường được phép hợp nhất từ dòng trùng sang dòng giữ, kèm nhãn để ghi vết vào `note`. */
+const MERGEABLE_FIELDS = Object.freeze([
+  ["kind", "Phân loại"],
+  ["phone", "SĐT"],
+  ["address", "Địa chỉ"],
+  ["note", "Ghi chú"],
+  ["account_manager", "Người phụ trách"],
+]);
+
 /**
- * Chia đối tác thành ba rổ: khách nạp được, nhà cung cấp, và khách phải hoãn vì chưa có
- * thẩm quyền nhóm giá.
+ * Chia đối tác thành bốn rổ: khách nạp được, nhà cung cấp, khách hoãn, và dòng trùng đã gộp.
  *
- * Trùng tên thì giữ dòng đầu — nguồn là danh sách người ta gõ tay, một người có thể xuất hiện
- * hai lần. Ghi lại số trùng chứ không nuốt.
+ * ─────────────────────────────────────────────────────────────────────────────
+ * VÌ SAO KHÔNG CÒN "GIỮ DÒNG ĐẦU, VỨT DÒNG SAU"
+ * ─────────────────────────────────────────────────────────────────────────────
+ *
+ * Bản trước gom theo khoá BỎ DẤU rồi giữ dòng đầu. Ba hậu quả đo được trên chính
+ * `DS-KH-NCC.md` (sha256 c008557f…, 448 đối tác có tên):
+ *
+ * 1. CHỐT NHÓM GIÁ BẰNG THỨ TỰ DÒNG. Dòng 86 `ANH HƯỞNG - KHÁCH LẺ` khai `KH` (→ Đại lý), dòng
+ *    236 cùng tên khai `KH LẺ` (→ Lẻ). Nguồn TỰ MÂU THUẪN, mà code lặng lẽ lấy dòng 86. Sai nhóm
+ *    giá là sai TIỀN và sai KÍCH THƯỚC CẮT: `alumdoor-cutting-policy-catalog.mjs` cho CP-CUA-DUC
+ *    có DUC-RCL-DL = PB_NHUA_RONG − 0,02 m (Đại lý) và DUC-RCL-LE = PB_RAY_RONG − 0,08 m (Lẻ) —
+ *    khác cả gốc đo lẫn 0,06 m = 60 mm số trừ. Đo được đúng 1 cặp mâu thuẫn → cả hai dòng vào rổ
+ *    HOÃN với `conflicting_declared_kind`, không đoán dòng nào đúng.
+ *
+ * 2. VỨT LUÔN SĐT/ĐỊA CHỈ CỦA DÒNG BỊ BỎ. Trong 14 dòng bị bỏ của bản cũ: 6 dòng có SĐT, 2 dòng
+ *    có địa chỉ, và evidence chỉ ghi `{source_row, partner_name}` nên không lấy lại được. Trái
+ *    luật "NGHỈ HƯU, KHÔNG XOÁ" mà chính lượt này đã áp cho SĐT dùng chung. Nay: hợp nhất mọi
+ *    trường mà dòng giữ đang TRỐNG, và chở đủ dữ liệu dòng bị bỏ ra `duplicates` để truy lại.
+ *
+ * 3. GỘP HAI CÁI TÊN KHÁC HẲN NHAU. Xem `partnerIdentityKey` — nay định danh bằng tên CÓ DẤU,
+ *    6 cặp lệch dấu tách trở lại thành 6 khách riêng và được liệt kê ở `near_duplicate_names`
+ *    để chủ xưởng chốt, thay vì biến mất.
+ *
+ * Rổ HOÃN không chặn cả lượt nạp — nạp 403 khách đúng rồi bổ sung phần còn lại tốt hơn nạp 0
+ * khách — nhưng mọi rổ đều được ĐẾM và so trần ở `customer-import-core.mjs`.
  */
 export function buildPartnerPlan({ partners, dealerRefs }) {
   const customers = [];
@@ -234,37 +338,96 @@ export function buildPartnerPlan({ partners, dealerRefs }) {
   const deferred = [];
   const unknownKind = [];
   const duplicates = [];
-  const seen = new Set();
+  const kindConflicts = [];
+  const multiPhones = [];
+  const unsplittablePhones = [];
 
+  /* Gom TOÀN BỘ dòng cùng định danh TRƯỚC khi phân rổ — bản cũ phân rổ trước nên không bao giờ
+     nhìn thấy hai dòng của cùng một khách khai ngược nhau. */
+  const groups = new Map();
   for (const partner of partners) {
-    if (seen.has(partner.key)) {
-      duplicates.push({ source_row: partner.source_row, partner_name: partner.partner_name });
-      continue;
-    }
-    seen.add(partner.key);
+    const identity = partner.identity ?? partnerIdentityKey(partner.partner_name);
+    if (!groups.has(identity)) groups.set(identity, []);
+    groups.get(identity).push(partner);
+  }
 
-    if (partner.kind === "SUPPLIER") {
-      suppliers.push(partner);
+  for (const rows of groups.values()) {
+    for (const row of rows) {
+      if (row.extra_phones?.length) {
+        multiPhones.push({
+          source_row: row.source_row,
+          partner_name: row.partner_name,
+          phone: row.phone,
+          extra_phones: row.extra_phones,
+        });
+      }
+      if (phoneDigitCount(row.phone) > MAX_PHONE_DIGITS) {
+        // Còn dính nhiều số mà không tách được theo dấu nào — ghi ra, KHÔNG cắt bừa chuỗi số.
+        unsplittablePhones.push({ source_row: row.source_row, partner_name: row.partner_name, phone: row.phone });
+      }
+    }
+
+    /* Hai dòng cùng khách khai phân loại NGƯỢC NHAU → không dòng nào thắng. */
+    const declaredKinds = new Set(rows.map((row) => row.kind).filter(Boolean));
+    if (declaredKinds.size > 1) {
+      kindConflicts.push({
+        partner_name: rows[0].partner_name,
+        rows: rows.map((row) => ({ source_row: row.source_row, kind_raw: row.kind_raw, kind: row.kind })),
+      });
+      for (const row of rows) deferred.push({ ...row, defer_reason: "conflicting_declared_kind" });
       continue;
     }
-    if (partner.kind === "UNKNOWN") {
+
+    /* Giữ dòng đầu làm chỗ đứng, nhưng KÉO mọi trường trống về từ các dòng sau. */
+    const kept = { ...rows[0], merged_from: [] };
+    for (const dropped of rows.slice(1)) {
+      const taken = [];
+      for (const [field, label] of MERGEABLE_FIELDS) {
+        if (kept[field] || !dropped[field]) continue;
+        kept[field] = dropped[field];
+        if (field === "kind") kept.kind_raw = dropped.kind_raw;
+        if (field === "phone") kept.extra_phones = dropped.extra_phones ?? [];
+        taken.push({ field, label });
+      }
+      if (taken.length > 0) kept.merged_from.push({ source_row: dropped.source_row, fields: taken });
+      duplicates.push({
+        source_row: dropped.source_row,
+        merged_into: kept.source_row,
+        partner_name: dropped.partner_name,
+        kind_raw: dropped.kind_raw ?? null,
+        phone: dropped.phone ?? null,
+        extra_phones: dropped.extra_phones ?? [],
+        address: dropped.address ?? null,
+        account_manager: dropped.account_manager ?? null,
+        note: dropped.note ?? null,
+        merged_fields: taken.map((item) => item.field),
+      });
+    }
+
+    if (kept.kind === "SUPPLIER") {
+      suppliers.push(kept);
+      continue;
+    }
+    if (kept.kind === "UNKNOWN") {
       // Có chữ trong ô phân loại nhưng không hiểu là gì — khác hẳn với ô trống.
-      unknownKind.push({ source_row: partner.source_row, kind_raw: partner.kind_raw });
-      deferred.push({ ...partner, defer_reason: "unrecognized_kind" });
+      unknownKind.push({ source_row: kept.source_row, kind_raw: kept.kind_raw });
+      deferred.push({ ...kept, defer_reason: "unrecognized_kind" });
       continue;
     }
 
-    const priceGroup = partner.kind ?? (dealerRefs.has(partner.key) ? "Đại lý" : null);
+    const priceGroup = kept.kind ?? (dealerRefs.has(kept.key) ? "Đại lý" : null);
     if (!priceGroup) {
-      deferred.push({ ...partner, defer_reason: "missing_price_group_authority" });
+      deferred.push({ ...kept, defer_reason: "missing_price_group_authority" });
       continue;
     }
     customers.push({
-      ...partner,
+      ...kept,
       price_group: priceGroup,
-      price_group_authority: partner.kind ? "declared" : "sales_history",
+      price_group_authority: kept.kind ? "declared" : "sales_history",
     });
   }
+
+  const nearDuplicateNames = collectNearDuplicateNames(groups);
 
   return {
     customers,
@@ -281,13 +444,66 @@ export function buildPartnerPlan({ partners, dealerRefs }) {
       deferred_count: deferred.length,
       duplicate_count: duplicates.length,
       unknown_kind_count: unknownKind.length,
+      kind_conflict_count: kindConflicts.length,
+      near_duplicate_name_count: nearDuplicateNames.length,
+      near_duplicate_conflicting_count: nearDuplicateNames.filter((entry) => entry.conflicting_evidence).length,
+      multi_phone_count: multiPhones.length,
+      unsplittable_phone_count: unsplittablePhones.length,
+      merged_field_row_count: duplicates.filter((row) => row.merged_fields.length > 0).length,
       with_phone: partners.filter((row) => row.phone).length,
       with_address: partners.filter((row) => row.address).length,
       account_manager_count: new Set(partners.map((row) => row.account_manager).filter(Boolean)).size,
     },
     duplicates,
     unknown_kind: unknownKind,
+    kind_conflicts: kindConflicts,
+    near_duplicate_names: nearDuplicateNames,
+    multi_phones: multiPhones,
+    unsplittable_phones: unsplittablePhones,
   };
+}
+
+/**
+ * Hai định danh KHÁC NHAU nhưng chung khoá bỏ dấu — nghi gõ nhầm dấu, KHÔNG tự gộp.
+ *
+ * Đo được 6 cặp; 3 cặp mang bằng chứng mâu thuẫn (SĐT khác nhau hoặc người phụ trách khác nhau)
+ * nên gần như chắc chắn là hai người thật. 3 cặp còn lại có thể là một người gõ hai kiểu, nhưng
+ * gộp nhầm thì mất trắng một khách còn tách nhầm thì chỉ dư một bản ghi — mà bản ghi dư vẫn
+ * `disabled` được, còn khách bị nuốt thì không lấy lại được. Nên tách hết, hỏi chủ xưởng sau.
+ *
+ * Danh sách này đi cùng danh sách SĐT dùng chung: cả hai đều là CÂU HỎI, không phải kết luận.
+ */
+function collectNearDuplicateNames(groups) {
+  /* Gom theo khoá BỎ DẤU; mỗi phần tử là một nhóm định danh (tên CÓ DẤU) hoàn chỉnh. */
+  const byLooseKey = new Map();
+  for (const rows of groups.values()) {
+    const loose = rows[0].key ?? partnerKey(rows[0].partner_name);
+    if (!loose) continue;
+    if (!byLooseKey.has(loose)) byLooseKey.set(loose, []);
+    byLooseKey.get(loose).push(rows);
+  }
+
+  const result = [];
+  for (const [loose, identityGroups] of byLooseKey) {
+    if (identityGroups.length < 2) continue;
+    /* So bằng chứng trên MỌI dòng của cả hai nhánh, không chỉ dòng đầu — dòng thứ hai của một
+       nhánh cũng có thể là chỗ duy nhất mang SĐT. */
+    const rows = identityGroups.flat();
+    const phones = new Set(rows.map((row) => row.phone).filter(Boolean));
+    const managers = new Set(rows.map((row) => row.account_manager).filter(Boolean));
+    result.push({
+      loose_key: loose,
+      conflicting_evidence: phones.size > 1 || managers.size > 1,
+      rows: rows.map((row) => ({
+        source_row: row.source_row,
+        partner_name: row.partner_name,
+        phone: row.phone ?? null,
+        account_manager: row.account_manager ?? null,
+        kind_raw: row.kind_raw ?? null,
+      })),
+    });
+  }
+  return result;
 }
 
 /**
@@ -301,6 +517,10 @@ export function buildPartnerPlan({ partners, dealerRefs }) {
  * không tách được ra Tỉnh/Phường mà doctype `Địa chỉ giao lắp` bắt buộc. Nạp vào
  * `install_address_line1` + `shipping_note` — hai trường Data/Small Text không Link — để địa chỉ
  * có mặt ngay, còn `Địa chỉ giao lắp` chờ chuẩn hoá hành chính.
+ *
+ * `note` còn chở hai loại vết KHÔNG ĐƯỢC MẤT, viết theo đúng khuôn đã dùng cho SĐT dùng chung:
+ *   - `SĐT phụ: …`        — số thứ hai của ô hai số, `Customer.phone` chỉ giữ được một số.
+ *   - `SĐT lấy từ dòng N` — trường kéo về từ dòng trùng, để truy ngược lại nguồn.
  */
 export function buildCustomerRecords(customers, knownEmployees = new Set()) {
   return customers.map((row) => {
@@ -318,9 +538,20 @@ export function buildCustomerRecords(customers, knownEmployees = new Set()) {
       notes.push(`Người phụ trách: ${row.account_manager}`);
     }
     if (row.note) notes.push(row.note);
+    if (row.extra_phones?.length) notes.push(`SĐT phụ: ${row.extra_phones.join(" · ")}`);
+    for (const merged of row.merged_from ?? []) {
+      for (const { label } of merged.fields) notes.push(`${label} lấy từ dòng ${merged.source_row}`);
+    }
     if (notes.length > 0) values.note = notes.join(" · ");
     return { row_number: row.source_row, values };
   });
 }
 
-export const __testing = { DS, EXPECTED_DS_HEADER, MIN_PARTNER_ROWS, ACCOUNT_MANAGER_ALIASES };
+export const __testing = {
+  DS,
+  EXPECTED_DS_HEADER,
+  MIN_PARTNER_ROWS,
+  MAX_PHONE_DIGITS,
+  ACCOUNT_MANAGER_ALIASES,
+  MERGEABLE_FIELDS,
+};

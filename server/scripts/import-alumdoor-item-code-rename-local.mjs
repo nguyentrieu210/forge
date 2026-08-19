@@ -180,8 +180,12 @@ async function renameOnce(doctype, oldName, newName, cascade) {
  * Tên tài liệu nối bằng dấu hai chấm, mã hàng là MỘT ĐOẠN.
  *
  * Hai chỗ dùng dạng này, và cả hai đều tự đặt tên từ mã hàng:
- *   `Item Price`   `{bảng giá}:{mã}:{đvt}:{biến thể}`        — 558/558 dòng
+ *   `Item Price`   `{bảng giá}:{mã}:{đvt}:{biến thể}`        — 558/558 dòng đang có trên D1
  *   `Pricing Rule` `ALUMDOOR-PR:{mã}:{biến thể}` qua {title} —  56 dòng
+ *
+ * `Item Price` tạo MỚI từ 2026-08-19 mang thêm đoạn thứ năm `{area_tier}`. Phép cắt theo đoạn
+ * không quan tâm có bao nhiêu đoạn, nên cả hai dạng tên đều đổi đúng — đó là lý do không dựng
+ * lại tên từ mẫu `format:`.
  *
  * Cắt theo đoạn chứ không dựng lại từ mẫu `format:`: đã kiểm không mã hàng nào chứa dấu hai
  * chấm, nên phép này chứng minh được. Dựng lại thì phải đoán nền tảng xử lý đoạn rỗng ở đuôi
@@ -200,7 +204,31 @@ function renamedCompositeName(name, renames) {
   return changed ? next.join(':') : null;
 }
 
-/** Đổi tên mọi tài liệu của một doctype mà tên có đoạn là mã hàng vừa đổi. */
+/**
+ * Đổi tên mọi tài liệu của một doctype mà tên có đoạn là mã hàng vừa đổi.
+ *
+ * `cascade=false` ở đây là CÓ CHỦ Ý, không phải sót — và nó mạnh hơn `cascade=true`.
+ *
+ * Lượt đổi tên `Item` ngay phía trên chạy với `cascade: true`, mà `rewriteLeafMatches`
+ * (`document-kernel/src/d1-store.ts` ~101) không chỉ thay lá bằng đúng mã: `rewriteColonSegments`
+ * thay luôn ĐOẠN trong khoá nối bằng dấu hai chấm. Chạy thử trên dist với một dòng bán thật:
+ *   item_price                 ALUMDOOR-SELLING:{mã cũ}:m2:STANDARD → …:{mã mới}:m2:STANDARD
+ *   discount_basis_item_price   (như trên)
+ *   pricing_rule               ALUMDOOR-PR:{mã cũ}:STANDARD        → ALUMDOOR-PR:{mã mới}:STANDARD
+ *   item_name                  GIỮ NGUYÊN (khoá tận cùng `_name` là nhãn, không phải con trỏ)
+ * Nghĩa là tới lượt này thì KHÔNG tài liệu nào còn trỏ vào tên cũ của Item Price/Pricing Rule.
+ *
+ * Vì thế guard tham chiếu (`d1-store.ts` ~692, đếm mọi lá text bằng đúng tên cũ) đếm được 0 và
+ * lượt đổi tên đi qua. Bật `cascade: 1` ở đây thì phép đếm ấy biến mất — ta đánh đổi một BẰNG
+ * CHỨNG "không còn ai trỏ tới" lấy một lượt ghi đè im lặng lên payload của cả chứng từ đã duyệt
+ * (`cascadeReferences` không lọc `docstatus`). Với thao tác đổi danh tính thì giữ bằng chứng.
+ *
+ * Hệ quả phải biết: lối này chỉ đúng cho đổi tên ĐI KÈM một lượt đổi mã hàng. Một lượt đổi tên
+ * ĐỘC LẬP của `Item Price` (ví dụ thêm đoạn bậc `…:MOI-DIEN-TICH` vào 558 dòng cũ) KHÔNG có
+ * cascade nào đi trước, nên guard sẽ đếm ra mọi báo giá/đơn/hoá đơn đang trỏ tới và từ chối ngay
+ * dòng đầu tiên. Đường ống giá vì thế KHÔNG đi bằng đổi tên: `import-alumdoor-pricing-local.mjs`
+ * ghép tên cũ làm bí danh và cập nhật tại chỗ.
+ */
 async function renameCompositeNamed(doctype, renames) {
   const names = await listNames(doctype);
   let renamed = 0;
