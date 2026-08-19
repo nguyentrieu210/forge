@@ -24,15 +24,16 @@ const KNOWN_MENTIONS = [
   "access/PermissionCenter.tsx",
   "action/FriendlyActionScreen.tsx",
   "action/SalesDeliveryWorkspace.tsx",
-  "app/RuntimeDoctypeWorkspace.tsx",
+  "app/vertical/registry.ts",
   "form/ChildGrid.tsx",
   "form/MetadataChildGrid.tsx",
   "system/CustomerImport.tsx",
   "system/ImportRouter.tsx",
 ];
 
-// Chỗ duy nhất mã dùng chung import thẳng vào thư mục vertical.
-const KNOWN_IMPORTS = ["app/RuntimeDoctypeWorkspace.tsx"];
+// Chỗ duy nhất import thẳng vào thư mục vertical: bảng đăng ký — đó là điểm ráp, đúng như
+// vertical-methods.ts bên server. Thành phần dùng chung khác thì tra bảng, không gọi tên.
+const KNOWN_IMPORTS = ["app/vertical/registry.ts"];
 
 function genericSources() {
   const files = [];
@@ -66,7 +67,9 @@ test("the shared views package does not grow new references to the AlumDoor vert
 
 test("only the runtime composition root reaches into the vertical folder", () => {
   const importers = genericSources()
-    .filter(([, text]) => text.includes(VERTICAL_DIR) || text.includes("./vertical/alumdoor"))
+    // Bắt cả đường dẫn tương đối bên trong app/vertical/ (`./alumdoor/...`), không chỉ
+    // đường dẫn đầy đủ — nếu không thì chính bảng đăng ký lọt lưới.
+    .filter(([, text]) => /vertical\/alumdoor|from "\.\/alumdoor\//.test(text))
     .map(([rel]) => rel)
     .sort();
   assert.deepEqual(

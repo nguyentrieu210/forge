@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 import { useMetaForge } from "../container/provider.js";
 import { DoctypeWorkspace as CanonicalDoctypeWorkspace, type DoctypeWorkspaceProps } from "./DoctypeWorkspace.js";
-import { alumdoorWorkspaceExtension } from "./vertical/alumdoor/workspace-extension.js";
+import { verticalWorkspaceExtension } from "./vertical/registry.js";
 
 function normalizeApp(value?: string | null): string | undefined { const normalized = value?.trim().toLowerCase(); return normalized || undefined; }
 function activeRuntimeApp(contextAppId?: string): string | undefined {
@@ -15,10 +15,10 @@ function activeRuntimeApp(contextAppId?: string): string | undefined {
   return undefined;
 }
 
-/** Runtime composition root that applies Alumdoor's TSX workbench only for the active Alumdoor app. */
+/** Điểm ráp runtime: gắn phần mở rộng của vertical đang chạy, tra qua bảng đăng ký. */
 export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
   const { appId } = useMetaForge();
   const runtimeApp = activeRuntimeApp(appId);
-  return <CanonicalDoctypeWorkspace {...props} extension={props.extension ?? (runtimeApp === "alumdoor" ? alumdoorWorkspaceExtension : undefined)} />;
+  return <CanonicalDoctypeWorkspace {...props} extension={props.extension ?? verticalWorkspaceExtension(runtimeApp)} />;
 }
 export type { DoctypeWorkspaceProps };
