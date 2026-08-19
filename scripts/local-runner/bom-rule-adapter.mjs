@@ -174,18 +174,32 @@ function buildRules(root, runDir) {
   exec('import-alumdoor-bom-rule-local.mjs', [rules, path.join(runDir, 'bom-rule-validate.json'), '--validate-only'], 'BOM Rule validate-only');
   const ruleAudit = JSON.parse(readFileSync(audit, 'utf8'));
   console.log(`ALUMDOOR_BOM_RULE_DATA_READY rules=${ruleAudit.rules_created} mapped=${ruleAudit.rows_mapped}/${ruleAudit.component_rows} pending=${ruleAudit.rows_pending} applicability=${ruleAudit.applicability_count} owner_overrides=${ruleAudit.owner_overrides}`);
-  return { rules, audit, bomPayload };
+  return { rules, audit };
 }
 
-function assertSecondPass(result) {
+function runProjection(root, runDir, env, pass) {
+  const resultPath = path.join(runDir, `bom-rule-template-projection-pass${pass}.json`);
+  const script = path.join(root, 'server', 'scripts', 'sync-alumdoor-bom-rule-template-fallback-local.mjs');
+  run(process.execPath, [script, resultPath], {
+    cwd: root,
+    env,
+    label: `BOM Rule production projection pass ${pass}`,
+    failureClass: pass === 1 ? 'IMPORTER' : 'VERIFY',
+  });
+  return JSON.parse(readFileSync(resultPath, 'utf8'));
+}
+
+function assertSecondPass(result, projection) {
   const notIdempotent = Number(result.created_count ?? 0) !== 0
     || Number(result.updated_count ?? 0) !== 0
     || Number(result.conversions_created_count ?? 0) !== 0
     || Number(result.templates_updated ?? 0) !== 0
     || Number(result.boms_updated ?? 0) !== 0
-    || Number(result.verification_failure_count ?? 0) !== 0;
+    || Number(result.verification_failure_count ?? 0) !== 0
+    || Number(projection.templates_updated ?? 0) !== 0
+    || Number(projection.component_rules_updated ?? 0) !== 0;
   if (notIdempotent) {
-    throw fail('VERIFY', `BOM Rule idempotency failed created=${result.created_count} updated=${result.updated_count} conversions=${result.conversions_created_count} templates=${result.templates_updated} boms=${result.boms_updated} verify=${result.verification_failure_count}`);
+    throw fail('VERIFY', `BOM Rule idempotency failed created=${result.created_count} updated=${result.updated_count} conversions=${result.conversions_created_count} templates=${result.templates_updated} boms=${result.boms_updated} projection_templates=${projection.templates_updated} projection_rules=${projection.component_rules_updated} verify=${result.verification_failure_count}`);
   }
 }
 
@@ -226,6 +240,7 @@ export async function mainBomRule() {
     });
     const first = JSON.parse(readFileSync(pass1Path, 'utf8'));
     if (Number(first.verification_failure_count ?? 0) !== 0) throw fail('VERIFY', `BOM Rule pass 1 verification failures=${first.verification_failure_count}`);
+    const projection1 = runProjection(root, runDir, env, 1);
 
     stage = 'IDEMPOTENCE';
     const pass2Path = path.join(runDir, 'bom-rule-pass2.json');
@@ -236,7 +251,8 @@ export async function mainBomRule() {
       failureClass: 'VERIFY',
     });
     const second = JSON.parse(readFileSync(pass2Path, 'utf8'));
-    assertSecondPass(second);
+    const projection2 = runProjection(root, runDir, env, 2);
+    assertSecondPass(second, projection2);
 
     const audit = JSON.parse(readFileSync(prepared.audit, 'utf8'));
     const finalReport = {
@@ -248,6 +264,8 @@ export async function mainBomRule() {
       TEMPLATE_ROWS_MAPPED: Number(first.template_rows_mapped ?? 0),
       BOM_ROWS_MAPPED: Number(first.bom_rows_mapped ?? 0),
       ITEM_CONVERSIONS_CREATED: Number(first.conversions_created_count ?? 0),
+      PRODUCTION_RULES_PROJECTED: Number(projection1.component_rules_updated ?? 0),
+      PRODUCTION_PROJECTION_PENDING: Number(projection1.pending_count ?? 0),
       HISTORICAL_BOM_PENDING: Number(first.historical_bom_pending_count ?? 0),
       OWNER_OVERRIDES: Number(audit.owner_overrides ?? 0),
       PENDING: Number(audit.rows_pending ?? 0),
@@ -260,7 +278,9 @@ export async function mainBomRule() {
       backup_path: backupPath,
       final_report: finalReport,
       pass1: first,
+      projection1,
       pass2: second,
+      projection2,
       audit,
     }, null, 2)}\n`);
     for (const [key, value] of Object.entries(finalReport)) console.log(`${key}=${value}`);
