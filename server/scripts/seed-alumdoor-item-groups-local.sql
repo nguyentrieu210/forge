@@ -150,4 +150,18 @@ WHERE tenant_id='demo' AND doctype='Item Group'
     'Cửa siêu trường'
   );
 
+-- ── master_records: dọn nhóm hàng NGOÀI cây chuẩn ──
+--
+-- Ở trên đã vô hiệu hoá các nhóm cũ trong `documents`, nhưng `master_records` thì chưa ai
+-- đụng tới — và đó mới là chỗ người dùng gặp. Ô chọn Link đọc HỢP documents ∪ master_records
+-- (document-kernel/d1-store.ts → listMasterRecords), nên 13 nhóm fixture ERP tổng quát
+-- (Cửa cuốn, Cửa nhôm kính, Thành phẩm, Nguyên vật liệu, Dịch vụ...) vẫn chọn được khi tạo
+-- mặt hàng, dù màn hình Danh mục không hiển thị chúng và không chính sách giá hay công thức
+-- nào bám vào. Gán một mặt hàng vào "Cửa cuốn" là gán vào hư không, lặng lẽ.
+--
+-- Dùng chính bảng tạm ở trên làm danh sách chuẩn: một nguồn, không chép tay lần thứ hai.
+DELETE FROM master_records
+WHERE tenant_id='demo' AND record_type='Item Group'
+  AND name NOT IN (SELECT name FROM _alumdoor_item_groups);
+
 DROP TABLE _alumdoor_item_groups;
