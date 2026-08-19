@@ -1,0 +1,33 @@
+{
+  "format": "alumdoor-bom-rule-owner-overrides/v1",
+  "updated_at": "2026-08-19T12:50:00+07:00",
+  "overrides": [
+    {
+      "component_item": "NVL-TR114-1.8",
+      "match": {
+        "source_sheet": "ĐM",
+        "source_formula_text": "RPBRAY+20CM"
+      },
+      "effective": {
+        "formula_json": {
+          "base": {
+            "kind": "FIELD",
+            "field": "PB_RAY_RONG",
+            "offset": 0.02
+          }
+        },
+        "result_uom": "Mét"
+      },
+      "conversion": {
+        "from_uom": "Mét",
+        "to_uom": "Kg",
+        "factor": 4.4,
+        "basis": "4.4 kg/m from same-item source evidence"
+      },
+      "authority_type": "OWNER_CONFIRMED",
+      "confirmed_by": "Chủ xưởng",
+      "confirmed_at": "2026-08-19T12:50:00+07:00",
+      "source_note": "Nguồn hiện có ghi RPBRAY+20CM; chủ xưởng xác nhận quy cách thực tế là Rộng PB ray + 2cm. Giữ nguyên source_formula_text để không mất provenance."
+    }
+  ]
+}
