@@ -2016,6 +2016,44 @@ note("MASTER · Measurement Profile chỉ đo/tồn; Geometry Field/Profile sở
       retiredGroups += 1;
     }
     note(`DANH MỤC · Item Group: ngừng dùng ${retiredGroups} nhóm ERP tổng quát ngoài cây chuẩn`);
+
+    /**
+     * Cho một nhóm ngừng dùng thì phải nhặt lại NHỮNG ĐỨA CON của nó.
+     *
+     * Đợt trước bỏ sót đúng chỗ này: 4 nhóm ĐANG DÙNG — Nan/lá cửa, Phụ kiện CN Đức, Phụ kiện
+     * chung, Ray và trục — vẫn lấy `Vật tư & phụ kiện` làm cha, mà nhóm cha đó vừa bị cho ngừng
+     * dùng. Cây danh mục gãy một nhánh và không có gì báo, vì link nằm trong JSON.
+     *
+     * Nhóm chuẩn thay thế là `Phụ kiện & vật tư` — cùng chữ, đảo thứ tự, nên đây là hai tên cho
+     * một khái niệm chứ không phải hai khái niệm.
+     *
+     * Khai tường minh và NÉM khi gặp mồ côi ngoài danh sách: đoán cha là đoán phân loại hàng, mà
+     * đoán sai thì mọi chính sách giá bám theo nhóm sẽ ăn nhầm mặt hàng.
+     */
+    const PARENT_REPLACEMENT = new Map([["Vật tư & phụ kiện", "Phụ kiện & vật tư"]]);
+    // Tập "đang dùng" phải là HỢP của hai nguồn: nhóm chuẩn trong catalog (chúng vào D1 qua
+    // `documents`) và fixture chưa bị cho ngừng dùng. Chỉ soi fixture thì `Phụ kiện & vật tư` —
+    // nhóm cha chuẩn — trông như đã chết, và bản vá này tự chặn chính nó.
+    const activeGroups = new Set([
+      ...canonicalGroups,
+      ...brief.fixtures.filter((f) => f.type === "Item Group" && f.data?.disabled !== true).map((f) => f.name),
+    ]);
+    let reparented = 0;
+    const orphans = [];
+    for (const fixture of brief.fixtures) {
+      if (fixture.type !== "Item Group" || fixture.data?.disabled === true) continue;
+      const parent = fixture.data?.parent_item_group;
+      if (!parent || activeGroups.has(parent)) continue;
+      const replacement = PARENT_REPLACEMENT.get(parent);
+      if (!replacement) { orphans.push(`${fixture.name} → ${parent}`); continue; }
+      if (!activeGroups.has(replacement)) throw new Error(`Nhóm thay thế ${replacement} cũng không còn dùng`);
+      fixture.data = { ...fixture.data, parent_item_group: replacement };
+      reparented += 1;
+    }
+    if (orphans.length > 0) {
+      throw new Error(`Item Group mồ côi cha, chưa khai nhóm thay thế: ${orphans.join(", ")}`);
+    }
+    if (reparented > 0) note(`DANH MỤC · Item Group: nhặt lại ${reparented} nhóm con mất cha sau khi cho cha ngừng dùng`);
   }
 
   // ── 4. Bốn doctype rỗng rời khỏi menu, KHÔNG bị xoá ──

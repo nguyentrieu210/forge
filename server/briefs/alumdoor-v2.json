@@ -1097,7 +1097,7 @@
       "name": "Nan/lá cửa",
       "data": {
         "item_group_name": "Nan/lá cửa",
-        "parent_item_group": "Vật tư & phụ kiện"
+        "parent_item_group": "Phụ kiện & vật tư"
       }
     },
     {
@@ -1105,7 +1105,7 @@
       "name": "Ray và trục",
       "data": {
         "item_group_name": "Ray và trục",
-        "parent_item_group": "Vật tư & phụ kiện"
+        "parent_item_group": "Phụ kiện & vật tư"
       }
     },
     {
@@ -1113,7 +1113,7 @@
       "name": "Phụ kiện CN Đức",
       "data": {
         "item_group_name": "Phụ kiện CN Đức",
-        "parent_item_group": "Vật tư & phụ kiện"
+        "parent_item_group": "Phụ kiện & vật tư"
       }
     },
     {
@@ -1121,7 +1121,7 @@
       "name": "Phụ kiện chung",
       "data": {
         "item_group_name": "Phụ kiện chung",
-        "parent_item_group": "Vật tư & phụ kiện"
+        "parent_item_group": "Phụ kiện & vật tư"
       }
     },
     {

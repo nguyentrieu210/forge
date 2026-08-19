@@ -12,6 +12,7 @@ import { mainBomTemplate } from './bom-template-adapter.mjs';
 import { mainCustomer } from './customer-adapter.mjs';
 import { mainItemCodeRename } from './item-code-rename-adapter.mjs';
 import { mainLinkRepair } from './link-repair-adapter.mjs';
+import { mainLayerConverge } from './layer-converge-adapter.mjs';
 
 export { ExecutionError };
 export {
@@ -24,7 +25,7 @@ export {
 } from './run-local-import-core.mjs';
 
 export function parseArgs(argv) {
-  if (['pricing', 'bom', 'bom-rule', 'bom-template', 'customer', 'item-code-rename', 'link-repair'].includes(argv?.[0])) {
+  if (['pricing', 'bom', 'bom-rule', 'bom-template', 'customer', 'item-code-rename', 'link-repair', 'layer-converge'].includes(argv?.[0])) {
     if (argv.length !== 1) {
       throw new ExecutionError('OTHER', `Usage: node scripts/local-runner/run-local-import.mjs ${argv[0]}`);
     }
@@ -42,6 +43,7 @@ export async function main(argv = process.argv.slice(2)) {
   if (parsed.adapter === 'customer') return mainCustomer();
   if (parsed.adapter === 'item-code-rename') return mainItemCodeRename();
   if (parsed.adapter === 'link-repair') return mainLinkRepair();
+  if (parsed.adapter === 'layer-converge') return mainLayerConverge();
   return coreMain(argv);
 }
 

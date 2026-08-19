@@ -22,6 +22,7 @@ const ALLOWED = new Set([
   'manufacturing-master',
   'item-code-rename',
   'link-repair',
+  'layer-converge',
 ]);
 
 function run(command, args, { cwd, capture = true, allowFailure = false, env } = {}) {
