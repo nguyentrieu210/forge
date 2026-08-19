@@ -6,10 +6,10 @@ import { compileBrief } from "../scripts/lib/compile-brief.mjs";
 import { readBriefSource } from "../scripts/lib/read-brief-source.mjs";
 import { validateBriefSchema } from "../scripts/lib/validate-brief-schema.mjs";
 
-test("Alumdoor 2.7.0 compiles Bulk Transaction action through canonical manifest parser", async () => {
+test("Alumdoor 2.8.0 compiles Bulk Transaction action through canonical manifest parser", async () => {
   const brief = await readBriefSource(new URL("../briefs/alumdoor-v2.json", import.meta.url));
   // 2.5.0 — hội tụ danh mục 19/08: thêm 8 DocType và 3 trường trên đường tính tiền.
-  assert.equal(brief.version, "2.7.0");
+  assert.equal(brief.version, "2.8.0");
 
   const schemaErrors = await validateBriefSchema(brief);
   assert.deepEqual(schemaErrors, []);

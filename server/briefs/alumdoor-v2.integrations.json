@@ -1,7 +1,7 @@
 {
   "//purpose": "Alumdoor consumes canonical Finance and HR contracts instead of duplicating their schemas. Warehouse Cash stays in vn-accounting; employee identity stays in HRM. DANH MỤC Cách bán/gói bán (Sales Option/Sales Package) đã bị loại bỏ 2026-08-14 — mọi mặt hàng bán theo giá STANDARD thẳng từ Item Price. Riêng `sales_mode` (Trọn bộ/Tách món) là FACT của dòng bán, không phải danh mục đó, và được giữ lại từ 2026-08-19.",
   "//version": "Sidecar này chạy CUỐI trong readBriefSource nên `version` của nó là version thực tế của app — brief chính khai gì cũng bị đè. 2.5.0: đợt hội tụ danh mục 2026-08-19 thêm 8 DocType và 3 trường trên đường tính tiền.",
-  "version": "2.7.0",
+  "version": "2.8.0",
   "requires": [
     { "id": "vn-accounting", "version": "1.1.0" },
     { "id": "hrm", "version": "1.5.0" }

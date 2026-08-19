@@ -51,7 +51,15 @@ test("Measurement Profile does not own door geometry or technical kg/m", () => {
 
 test("Geometry Field keeps ray cover and plastic cover as separate canonical dimensions", () => {
   assert.equal(assertGeometryCatalog(), true);
-  assert.equal(GEOMETRY_FIELDS.length, 8);
+  // 8 kích thước dài + 1 đại lượng dẫn xuất. Đếm suông thì lần thêm sau chỉ báo "9 != 8" mà không
+  // nói được gì, nên chốt luôn RANH GIỚI: trường có trục hình học thật thì phải là kích thước đo
+  // được trên cửa, còn `billable_area_sqm` là số máy tính ra nên đi trục OTHER.
+  assert.equal(GEOMETRY_FIELDS.length, 9);
+  const linear = GEOMETRY_FIELDS.filter((row) => row.axis !== "OTHER");
+  assert.equal(linear.length, 8, "kích thước dài phải giữ nguyên 8");
+  assert.ok(linear.every((row) => ["WIDTH", "HEIGHT", "LENGTH"].includes(row.axis)));
+  assert.equal(geometryFieldByCode("billable_area_sqm")?.axis, "OTHER");
+  assert.equal(geometryFieldByCode("billable_area_sqm")?.uom, "m2");
   assert.equal(geometryFieldByCode("PB_RAY_RONG")?.name, "Rộng phủ bì ray");
   assert.equal(geometryFieldByCode("PB_NHUA_RONG")?.name, "Rộng phủ bì nhựa");
   assert.notEqual(geometryFieldByCode("PB_RAY_RONG")?.code, geometryFieldByCode("PB_NHUA_RONG")?.code);
@@ -82,7 +90,10 @@ test("item import source is compatible with Cây stock / Kg purchase invariant",
 
 test("static V2 metadata contains Geometry masters and moved ownership", async () => {
   const brief = JSON.parse(await readFile(resolve(repoRoot, "server/briefs/alumdoor-v2.json"), "utf8"));
-  assert.equal(brief.version, "2.4.0");
+  // Chốt này mục từ lâu — brief đã đi qua 2.4.x → 2.8.0 mà nó vẫn ghi 2.4.0, nên test đỏ âm thầm
+  // trong nhóm lỗi nền. Điều test này thật sự cần là các DocType hình học CÓ MẶT, không phải app
+  // đứng ở phiên bản nào; giữ chốt version chỉ để nó đỏ đúng lúc metadata đổi.
+  assert.equal(brief.version, "2.8.0");
   const byName = new Map(brief.doctypes.map((row) => [row.name, row]));
   for (const name of ["Geometry Field", "Geometry Profile", "Geometry Profile Scope", "Geometry Profile Field"]) {
     assert.ok(byName.has(name), `thiếu ${name}`);
@@ -95,7 +106,7 @@ test("static V2 metadata contains Geometry masters and moved ownership", async (
   assert.ok(geometryProfile);
   assert.equal(typeof geometryProfile === "object" ? geometryProfile.options : "", "Geometry Profile");
   assert.equal(brief.fixtures.filter((row) => row.type === "Measurement Profile").length, 7);
-  assert.equal(brief.fixtures.filter((row) => row.type === "Geometry Field").length, 8);
+  assert.equal(brief.fixtures.filter((row) => row.type === "Geometry Field").length, 9, "8 kích thước dài + billable_area_sqm");
   assert.equal(brief.fixtures.filter((row) => row.type === "Geometry Profile").length, 5);
   const geometryField = byName.get("Geometry Field");
   const axis = (geometryField.fields ?? []).find((field) => typeof field === "object" && field.fieldname === "axis");

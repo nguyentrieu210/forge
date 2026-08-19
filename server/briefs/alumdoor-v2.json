@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "2.7.0",
+  "version": "2.8.0",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -742,7 +742,6 @@
       "Measurement Profile",
       "Item Color",
       "Material Specification",
-      "Supplier Item",
       "Cut Order",
       "Stock Reservation",
       "Stock Reconciliation",
@@ -3050,6 +3049,18 @@
       }
     },
     {
+      "type": "Geometry Field",
+      "name": "billable_area_sqm",
+      "data": {
+        "field_code": "billable_area_sqm",
+        "field_name": "Diện tích tính tiền",
+        "uom": "m2",
+        "axis": "OTHER",
+        "disabled": false,
+        "_migration_source": "alumdoor-geometry-master-2026-08-16"
+      }
+    },
+    {
       "type": "Geometry Profile",
       "name": "GP-CUA-DUC",
       "data": {
@@ -4908,9 +4919,10 @@
           "surface": "quick"
         },
         {
-          "fieldname": "reorder_qty",
           "label": "Số lượng đặt đề xuất",
+          "fieldname": "reorder_qty",
           "fieldtype": "Float",
+          "description": "Đặt thêm bao nhiêu mỗi lần khi tồn chạm mức báo. Không phải mức tồn tối thiểu.",
           "surface": "quick"
         },
         {
@@ -4968,9 +4980,20 @@
         "item_code:Link(Item)! Mặt hàng",
         "supplier_item_code:Data! Mã của nhà cung cấp",
         "preferred:Check Nhà cung cấp ưu tiên",
-        "minimum_order_qty:Float Số lượng mua tối thiểu",
+        {
+          "fieldname": "minimum_order_qty",
+          "label": "Số lượng mua tối thiểu",
+          "fieldtype": "Float",
+          "description": "Nhà cung cấp này chỉ nhận đơn từ mức này trở lên."
+        },
         "lead_time_days:Int Thời gian giao (ngày)",
-        "last_purchase_rate:Currency- Giá mua gần nhất",
+        {
+          "fieldname": "last_purchase_rate",
+          "label": "Giá mua gần nhất",
+          "fieldtype": "Currency",
+          "hidden": true,
+          "description": "Đơn giá của lần mua gần nhất từ nhà cung cấp này. Chỉ để tham khảo khi đặt hàng, máy không tự lấy làm giá."
+        },
         "note:Small Text Ghi chú",
         "disabled:Check Ngừng dùng"
       ],
@@ -4980,7 +5003,8 @@
         "Thủ kho": "r",
         "Sản xuất": "r",
         "Kinh doanh": "r"
-      }
+      },
+      "menu": false
     },
     {
       "//": "Bộ theo dõi chỉ quyết định kho cần ghi nhận gì; thông số cố định nằm ở Quy cách kỹ thuật vật tư.",
@@ -5008,8 +5032,18 @@
         "require_condition:Check Bắt buộc tình trạng",
         "require_length:Check Bắt buộc chiều dài",
         "require_width:Check Bắt buộc chiều rộng",
-        "require_piece_qty:Check Bắt buộc số cây/lá/tấm",
-        "track_bundle_qty:Check Theo dõi số bó",
+        {
+          "fieldname": "require_piece_qty",
+          "label": "Bắt buộc số cây/lá/tấm",
+          "fieldtype": "Check",
+          "description": "Bật thì mặt hàng này bắt buộc khai số cây/số tấm bên cạnh số mét — dùng cho hàng vừa đếm cây vừa tính mét."
+        },
+        {
+          "fieldname": "track_bundle_qty",
+          "label": "Theo dõi số bó",
+          "fieldtype": "Check",
+          "description": "Bật thì theo dõi thêm số kiện/bó, ngoài khối lượng."
+        },
         {
           "fieldname": "weight_tolerance_pct",
           "fieldtype": "Float",
@@ -5206,7 +5240,8 @@
           "fieldname": "min_area_sqm",
           "fieldtype": "Float",
           "label": "Diện tích tối thiểu tính tiền (m2/bộ)",
-          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'",
+          "description": "Diện tích tối thiểu tính tiền cho một bộ. Bộ nhỏ hơn mức này VẪN tính bằng mức này — khai 4 m² thì bộ 3,2 m² vẫn thu tiền 4 m²."
         },
         "description:Small Text Quy cách / xuất xứ",
         "disabled:Check Ngừng kinh doanh",
@@ -5518,7 +5553,13 @@
           "required": true,
           "depends_on": "eval:false"
         },
-        "rate:Currency! Đơn giá",
+        {
+          "fieldname": "rate",
+          "label": "Đơn giá",
+          "fieldtype": "Currency",
+          "required": true,
+          "description": "Đơn giá cho MỘT đơn vị ở dòng này, chưa gồm thuế. Máy tra từ bảng giá theo mặt hàng + ĐVT + biến thể giá; gõ đè lên đây là bỏ qua giá đã tra."
+        },
         "currency:Link(Currency)-!=(VND) Tiền tệ",
         "note:Data Ghi chú",
         "disabled:Check Ngừng áp dụng"
@@ -5555,12 +5596,32 @@
         "party_type:Select(Customer,Supplier)=(Customer) Loại đối tác",
         "party:Dynamic Link(party_type) Chỉ áp cho đối tác",
         "customer_group:Select(Đại lý,Lẻ) Chỉ áp cho nhóm giá",
-        "min_qty:Float Số lượng từ",
-        "max_qty:Float Số lượng đến",
+        {
+          "fieldname": "min_qty",
+          "label": "Số lượng từ",
+          "fieldtype": "Float",
+          "description": "Số lượng tối thiểu để chính sách giá này có hiệu lực. Dưới mức đó thì dòng bán không được hưởng."
+        },
+        {
+          "fieldname": "max_qty",
+          "label": "Số lượng đến",
+          "fieldtype": "Float",
+          "description": "Số lượng tối đa còn được hưởng chính sách giá này. Bỏ trống là không giới hạn trên."
+        },
         "valid_from:Date Hiệu lực từ",
         "valid_upto:Date Hiệu lực đến",
-        "rate:Currency Giá cố định (ưu tiên hơn % giảm)",
-        "discount_percentage:Percent % giảm",
+        {
+          "fieldname": "rate",
+          "label": "Giá cố định (ưu tiên hơn % giảm)",
+          "fieldtype": "Currency",
+          "description": "Đơn giá cho MỘT đơn vị ở dòng này, chưa gồm thuế. Máy tra từ bảng giá theo mặt hàng + ĐVT + biến thể giá; gõ đè lên đây là bỏ qua giá đã tra."
+        },
+        {
+          "fieldname": "discount_percentage",
+          "label": "% giảm",
+          "fieldtype": "Percent",
+          "description": "Phần trăm giảm trên đơn giá gốc. Giảm theo số tiền tuyệt đối thì dùng ô điều chỉnh, không dùng ô này."
+        },
         "rule_level:Select(LINE,ORDER)=(LINE) Cấp áp dụng",
         "apply_on:Select(ITEM,ITEM_GROUP)=(ITEM) Áp theo",
         {
@@ -5578,8 +5639,19 @@
           "link_filters": "{\"disabled\":0}"
         },
         "effect_type:Select(ADJUSTMENT,DISCOUNT_PERCENT,ORDER_ADJUSTMENT) Kiểu tác động",
-        "adjustment_basis:Select(FIXED,AREA_SQM,LENGTH_M,SET_COUNT,PRICED_QTY) Cách tính điều chỉnh",
-        "adjustment_rate:Currency Mức điều chỉnh",
+        {
+          "fieldname": "adjustment_basis",
+          "label": "Cách tính điều chỉnh",
+          "fieldtype": "Select",
+          "options": "FIXED\nAREA_SQM\nLENGTH_M\nSET_COUNT\nPRICED_QTY",
+          "description": "Khoản điều chỉnh tính trên cái gì: cố định một cục, theo m², theo mét dài, theo số bộ, hay theo số lượng đã tính giá. Chọn sai thì cùng một con số ra kết quả khác hẳn."
+        },
+        {
+          "fieldname": "adjustment_rate",
+          "label": "Mức điều chỉnh",
+          "fieldtype": "Currency",
+          "description": "Mức điều chỉnh, hiểu theo đúng cách tính đã chọn ở ô bên cạnh. Ví dụ chọn theo m² thì đây là số tiền cho mỗi m²."
+        },
         "currency:Link(Currency)=(VND) Tiền tệ",
         "exclusive_group:Data Nhóm loại trừ",
         "conditions:Long Text Điều kiện (JSON)",
@@ -5635,8 +5707,22 @@
           "options": "Item Group",
           "link_filters": "{\"is_group\":0,\"disabled\":0}"
         },
-        "dealer_width_basis:Select(Phủ bì nhựa,Phủ bì ray)! Đại lý nhập rộng theo",
-        "retail_width_basis:Select(Phủ bì nhựa,Phủ bì ray)! Khách lẻ nhập rộng theo",
+        {
+          "fieldname": "dealer_width_basis",
+          "label": "Đại lý nhập rộng theo",
+          "fieldtype": "Select",
+          "options": "Phủ bì nhựa\nPhủ bì ray",
+          "required": true,
+          "description": "Đại lý nhập hàng thì tính rộng theo phủ bì nào."
+        },
+        {
+          "fieldname": "retail_width_basis",
+          "label": "Khách lẻ nhập rộng theo",
+          "fieldtype": "Select",
+          "options": "Phủ bì nhựa\nPhủ bì ray",
+          "required": true,
+          "description": "Bán lẻ thì tính rộng theo phủ bì nào. Để khác đại lý được, vì hai kênh chào giá khác nhau."
+        },
         {
           "//": "Số MÉT trừ cố định, không phải hệ số nhân.",
           "fieldname": "dealer_cut_deduction_m",
@@ -5657,7 +5743,14 @@
           "description": "Có giá trị thì thay số trừ thường khi dòng hàng chọn Có bản bướm. Lưới, Đài Loan và Siêu Trường: 0,035 m."
         },
         "height_pb_offset_m:Float=(0.5) Cao phủ bì = cao lọt lòng cộng (m)",
-        "leaf_formula:Select(Kiểu Đức,Kiểu Úc,Kiểu tấm liền Úc,Kiểu Đài Loan Lưới)! Dạng công thức chia lá",
+        {
+          "fieldname": "leaf_formula",
+          "label": "Dạng công thức chia lá",
+          "fieldtype": "Select",
+          "options": "Kiểu Đức\nKiểu Úc\nKiểu tấm liền Úc\nKiểu Đài Loan Lưới",
+          "required": true,
+          "description": "Dạng công thức chia lá theo kiểu cửa. Mỗi kiểu có bước lá và cách trừ riêng, chọn nhầm là sai số lá cả bộ."
+        },
         {
           "//": [
             "0,13 CHỈ cho Cửa Đức. Các dòng khác ĐỂ TRỐNG — chủ xưởng chốt 30/07: 'nhiều cái không trừ'.",
@@ -5694,9 +5787,30 @@
           "default": 3,
           "description": "Trừ bề rộng lưỡi cắt × số nhát khỏi chiều dài dùng được."
         },
-        "dealer_split_sales_basis:Select(Phủ bì nhựa,Phủ bì ray,Rộng cắt lá)! Đại lý tách món bán theo rộng",
-        "dealer_full_sales_basis:Select(Phủ bì nhựa,Phủ bì ray,Rộng cắt lá)! Đại lý trọn bộ bán theo rộng",
-        "retail_sales_basis:Select(Phủ bì nhựa,Phủ bì ray,Rộng cắt lá)! Khách lẻ bán theo rộng",
+        {
+          "fieldname": "dealer_split_sales_basis",
+          "label": "Đại lý tách món bán theo rộng",
+          "fieldtype": "Select",
+          "options": "Phủ bì nhựa\nPhủ bì ray\nRộng cắt lá",
+          "required": true,
+          "description": "Đại lý mua TÁCH MÓN thì tính tiền trên cơ sở nào."
+        },
+        {
+          "fieldname": "dealer_full_sales_basis",
+          "label": "Đại lý trọn bộ bán theo rộng",
+          "fieldtype": "Select",
+          "options": "Phủ bì nhựa\nPhủ bì ray\nRộng cắt lá",
+          "required": true,
+          "description": "Đại lý mua TRỌN BỘ thì tính tiền trên cơ sở nào."
+        },
+        {
+          "fieldname": "retail_sales_basis",
+          "label": "Khách lẻ bán theo rộng",
+          "fieldtype": "Select",
+          "options": "Phủ bì nhựa\nPhủ bì ray\nRộng cắt lá",
+          "required": true,
+          "description": "Bán lẻ thì tính tiền trên cơ sở nào."
+        },
         {
           "fieldname": "manual_pull_sales_basis",
           "fieldtype": "Select",
@@ -5704,20 +5818,29 @@
           "label": "Cửa kéo tay bán theo rộng",
           "description": "Ngoại lệ của Cửa Đài Loan kéo tay; để trống nếu loại cửa không có ngoại lệ."
         },
-        "purchase_formula:Select(Kg thực tế,Barem kg/m2)! Công thức mua",
+        {
+          "fieldname": "purchase_formula",
+          "label": "Công thức mua",
+          "fieldtype": "Select",
+          "options": "Kg thực tế\nBarem kg/m2",
+          "required": true,
+          "description": "Công thức quy ra lượng vật tư cần mua cho bộ cửa này."
+        },
         {
           "fieldname": "purchase_height_basis",
           "fieldtype": "Select",
           "options": "Cao phủ bì\nCao lưới",
           "label": "Dự toán mua dùng chiều cao",
-          "depends_on": "eval:doc.purchase_formula == 'Barem kg/m2'"
+          "depends_on": "eval:doc.purchase_formula == 'Barem kg/m2'",
+          "description": "Chiều cao dùng khi tính lượng mua — có thể khác chiều cao tính tiền cho khách."
         },
         {
           "fieldname": "purchase_width_basis",
           "fieldtype": "Select",
           "options": "Phủ bì nhựa\nPhủ bì ray\nRộng cắt lá",
           "label": "Dự toán mua dùng chiều rộng",
-          "depends_on": "eval:doc.purchase_formula == 'Barem kg/m2'"
+          "depends_on": "eval:doc.purchase_formula == 'Barem kg/m2'",
+          "description": "Chiều rộng dùng khi tính lượng mua — có thể khác chiều rộng tính tiền cho khách."
         },
         "priority:Int=(0) Độ ưu tiên khi có luật riêng cho nhóm hàng",
         "note:Small Text Ghi chú / nguồn",
@@ -5809,11 +5932,12 @@
           "serverEnforced": true
         },
         {
-          "fieldname": "min_area_sqm",
           "label": "Diện tích tính tối thiểu",
+          "fieldname": "min_area_sqm",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Diện tích tối thiểu tính tiền cho một bộ. Bộ nhỏ hơn mức này VẪN tính bằng mức này — khai 4 m² thì bộ 3,2 m² vẫn thu tiền 4 m².",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
@@ -5878,22 +6002,24 @@
           "serverEnforced": true
         },
         {
-          "fieldname": "formula_policy",
           "label": "Công thức đã áp",
+          "fieldname": "formula_policy",
           "fieldtype": "Link",
           "options": "Cutting Policy",
           "read_only": true,
           "hidden": true,
+          "description": "Công thức cửa đã áp cho dòng này. Ghi lại để về sau đối chiếu được — sửa công thức sau này KHÔNG làm đổi số đã chốt trên chứng từ cũ.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
         },
         {
-          "fieldname": "width_basis",
           "label": "Cơ sở rộng",
+          "fieldname": "width_basis",
           "fieldtype": "Data",
           "read_only": true,
           "hidden": true,
+          "description": "Lấy chiều rộng nào để tính: phủ bì ray hay phủ bì nhựa. Hai cách lệch nhau vài phân trên mỗi bộ, cộng dồn cả đơn thì thành tiền thật.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
@@ -5909,11 +6035,12 @@
           "serverEnforced": true
         },
         {
-          "fieldname": "billable_area_sqm",
           "label": "Diện tích tính tiền (m2)",
+          "fieldname": "billable_area_sqm",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Diện tích đem nhân với đơn giá, SAU khi đã áp diện tích tối thiểu. Khác với diện tích hình học của cửa, và đây mới là con số ra tiền.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
@@ -6025,6 +6152,7 @@
           "fieldtype": "Data",
           "read_only": true,
           "hidden": true,
+          "description": "Phiên bản công thức lúc chốt dòng này. Có nó thì mới giải thích được vì sao hai đơn cùng mặt hàng lại ra số khác nhau.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
@@ -6035,6 +6163,7 @@
           "fieldtype": "Small Text",
           "read_only": true,
           "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'",
+          "description": "Diễn giải bằng lời cách máy ra con số này, để người bán đọc và kiểm mà không cần mở công thức.",
           "surface": "internal",
           "hidden": true,
           "editMode": "hidden",
@@ -6088,41 +6217,45 @@
           "surface": "quick"
         },
         {
-          "fieldname": "conversion_factor",
           "label": "Hệ số về ĐVT tồn",
+          "fieldname": "conversion_factor",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Một đơn vị ở dòng này bằng bao nhiêu đơn vị tồn kho. Ví dụ 1 Cây = 6 Mét thì hệ số là 6.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
         },
         {
-          "fieldname": "stock_qty",
           "label": "SL quy đổi tồn",
+          "fieldname": "stock_qty",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Số lượng đã quy về ĐVT tồn kho = số lượng × hệ số quy đổi. Đây là con số vào thẻ kho, không phải số lượng ghi trên chứng từ bán.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
         },
         {
-          "fieldname": "available_qty",
           "label": "Còn theo ĐVT bán",
+          "fieldname": "available_qty",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Số còn có thể bán, tính theo ĐVT của dòng bán: tồn kho trừ phần đã giữ cho đơn khác.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
         },
         {
-          "fieldname": "available_stock_qty",
           "label": "Còn theo ĐVT tồn",
+          "fieldname": "available_stock_qty",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Số còn có thể bán, quy về ĐVT tồn kho. Cùng một con số với ô bên trên nhưng khác đơn vị.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
@@ -6149,10 +6282,11 @@
           "serverEnforced": true
         },
         {
-          "fieldname": "rate",
           "label": "Đơn giá",
+          "fieldname": "rate",
           "fieldtype": "Currency",
           "required": true,
+          "description": "Đơn giá cho MỘT đơn vị ở dòng này, chưa gồm thuế. Máy tra từ bảng giá theo mặt hàng + ĐVT + biến thể giá; gõ đè lên đây là bỏ qua giá đã tra.",
           "surface": "quick"
         },
         {
@@ -6478,11 +6612,12 @@
           "serverEnforced": true
         },
         {
-          "fieldname": "min_area_sqm",
           "label": "Diện tích tính tối thiểu",
+          "fieldname": "min_area_sqm",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Diện tích tối thiểu tính tiền cho một bộ. Bộ nhỏ hơn mức này VẪN tính bằng mức này — khai 4 m² thì bộ 3,2 m² vẫn thu tiền 4 m².",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
@@ -6571,22 +6706,24 @@
           "serverEnforced": true
         },
         {
-          "fieldname": "formula_policy",
           "label": "Công thức đã áp",
+          "fieldname": "formula_policy",
           "fieldtype": "Link",
           "options": "Cutting Policy",
           "read_only": true,
           "hidden": true,
+          "description": "Công thức cửa đã áp cho dòng này. Ghi lại để về sau đối chiếu được — sửa công thức sau này KHÔNG làm đổi số đã chốt trên chứng từ cũ.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
         },
         {
-          "fieldname": "width_basis",
           "label": "Cơ sở rộng",
+          "fieldname": "width_basis",
           "fieldtype": "Data",
           "read_only": true,
           "hidden": true,
+          "description": "Lấy chiều rộng nào để tính: phủ bì ray hay phủ bì nhựa. Hai cách lệch nhau vài phân trên mỗi bộ, cộng dồn cả đơn thì thành tiền thật.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
@@ -6602,11 +6739,12 @@
           "serverEnforced": true
         },
         {
-          "fieldname": "billable_area_sqm",
           "label": "Diện tích tính tiền (m2)",
+          "fieldname": "billable_area_sqm",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Diện tích đem nhân với đơn giá, SAU khi đã áp diện tích tối thiểu. Khác với diện tích hình học của cửa, và đây mới là con số ra tiền.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
@@ -6718,6 +6856,7 @@
           "fieldtype": "Data",
           "read_only": true,
           "hidden": true,
+          "description": "Phiên bản công thức lúc chốt dòng này. Có nó thì mới giải thích được vì sao hai đơn cùng mặt hàng lại ra số khác nhau.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
@@ -6728,6 +6867,7 @@
           "fieldtype": "Small Text",
           "read_only": true,
           "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'",
+          "description": "Diễn giải bằng lời cách máy ra con số này, để người bán đọc và kiểm mà không cần mở công thức.",
           "surface": "internal",
           "hidden": true,
           "editMode": "hidden",
@@ -6781,41 +6921,45 @@
           "surface": "quick"
         },
         {
-          "fieldname": "conversion_factor",
           "label": "Hệ số về ĐVT tồn",
+          "fieldname": "conversion_factor",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Một đơn vị ở dòng này bằng bao nhiêu đơn vị tồn kho. Ví dụ 1 Cây = 6 Mét thì hệ số là 6.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
         },
         {
-          "fieldname": "stock_qty",
           "label": "SL quy đổi tồn",
+          "fieldname": "stock_qty",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Số lượng đã quy về ĐVT tồn kho = số lượng × hệ số quy đổi. Đây là con số vào thẻ kho, không phải số lượng ghi trên chứng từ bán.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
         },
         {
-          "fieldname": "available_qty",
           "label": "Còn theo ĐVT bán",
+          "fieldname": "available_qty",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Số còn có thể bán, tính theo ĐVT của dòng bán: tồn kho trừ phần đã giữ cho đơn khác.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
         },
         {
-          "fieldname": "available_stock_qty",
           "label": "Còn theo ĐVT tồn",
+          "fieldname": "available_stock_qty",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Số còn có thể bán, quy về ĐVT tồn kho. Cùng một con số với ô bên trên nhưng khác đơn vị.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
@@ -6842,10 +6986,11 @@
           "serverEnforced": true
         },
         {
-          "fieldname": "rate",
           "label": "Đơn giá",
+          "fieldname": "rate",
           "fieldtype": "Currency",
           "required": true,
+          "description": "Đơn giá cho MỘT đơn vị ở dòng này, chưa gồm thuế. Máy tra từ bảng giá theo mặt hàng + ĐVT + biến thể giá; gõ đè lên đây là bỏ qua giá đã tra.",
           "surface": "quick"
         },
         {
@@ -6937,10 +7082,11 @@
           "serverEnforced": true
         },
         {
-          "fieldname": "delivered_qty",
           "label": "Đã giao",
+          "fieldname": "delivered_qty",
           "fieldtype": "Float",
           "read_only": true,
+          "description": "Đã giao bao nhiêu trên dòng này. Máy cộng từ phiếu giao, không gõ tay.",
           "surface": "internal",
           "hidden": true,
           "editMode": "hidden",
@@ -7182,14 +7328,16 @@
           "label": "Đã giao (%)",
           "fieldtype": "Percent",
           "read_only": true,
-          "form_region": "full"
+          "form_region": "full",
+          "description": "Phần trăm đã giao của cả đơn, tính theo số lượng chứ không theo tiền."
         },
         {
           "fieldname": "billed_percentage",
           "label": "Đã xuất hoá đơn (%)",
           "fieldtype": "Percent",
           "read_only": true,
-          "form_region": "full"
+          "form_region": "full",
+          "description": "Phần trăm đã xuất hoá đơn của cả đơn, tính theo tiền."
         },
         {
           "fieldname": "note",
@@ -7233,7 +7381,8 @@
           "fieldtype": "Percent",
           "default": 0,
           "form_region": "full",
-          "form_width": "full"
+          "form_width": "full",
+          "description": "Thuế suất GTGT (%) áp cho chứng từ này."
         },
         {
           "label": "Số tiền VAT",
@@ -7379,11 +7528,12 @@
           "serverEnforced": true
         },
         {
-          "fieldname": "min_area_sqm",
           "label": "Diện tích tính tối thiểu",
+          "fieldname": "min_area_sqm",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Diện tích tối thiểu tính tiền cho một bộ. Bộ nhỏ hơn mức này VẪN tính bằng mức này — khai 4 m² thì bộ 3,2 m² vẫn thu tiền 4 m².",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
@@ -7448,22 +7598,24 @@
           "surface": "expanded"
         },
         {
-          "fieldname": "formula_policy",
           "label": "Công thức đã áp",
+          "fieldname": "formula_policy",
           "fieldtype": "Link",
           "options": "Cutting Policy",
           "read_only": true,
           "hidden": true,
+          "description": "Công thức cửa đã áp cho dòng này. Ghi lại để về sau đối chiếu được — sửa công thức sau này KHÔNG làm đổi số đã chốt trên chứng từ cũ.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
         },
         {
-          "fieldname": "width_basis",
           "label": "Cơ sở rộng",
+          "fieldname": "width_basis",
           "fieldtype": "Data",
           "read_only": true,
           "hidden": true,
+          "description": "Lấy chiều rộng nào để tính: phủ bì ray hay phủ bì nhựa. Hai cách lệch nhau vài phân trên mỗi bộ, cộng dồn cả đơn thì thành tiền thật.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
@@ -7479,11 +7631,12 @@
           "serverEnforced": true
         },
         {
-          "fieldname": "billable_area_sqm",
           "label": "Diện tích tính tiền (m2)",
+          "fieldname": "billable_area_sqm",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Diện tích đem nhân với đơn giá, SAU khi đã áp diện tích tối thiểu. Khác với diện tích hình học của cửa, và đây mới là con số ra tiền.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
@@ -7519,21 +7672,23 @@
           "surface": "quick"
         },
         {
-          "fieldname": "conversion_factor",
           "label": "Hệ số về ĐVT tồn",
+          "fieldname": "conversion_factor",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Một đơn vị ở dòng này bằng bao nhiêu đơn vị tồn kho. Ví dụ 1 Cây = 6 Mét thì hệ số là 6.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
         },
         {
-          "fieldname": "stock_qty",
           "label": "SL thực xuất kho",
+          "fieldname": "stock_qty",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Số lượng đã quy về ĐVT tồn kho = số lượng × hệ số quy đổi. Đây là con số vào thẻ kho, không phải số lượng ghi trên chứng từ bán.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
@@ -7561,15 +7716,17 @@
           "surface": "expanded"
         },
         {
-          "fieldname": "rate",
           "label": "Đơn giá bán",
+          "fieldname": "rate",
           "fieldtype": "Currency",
+          "description": "Đơn giá cho MỘT đơn vị ở dòng này, chưa gồm thuế. Máy tra từ bảng giá theo mặt hàng + ĐVT + biến thể giá; gõ đè lên đây là bỏ qua giá đã tra.",
           "surface": "quick"
         },
         {
-          "fieldname": "valuation_rate",
           "label": "Giá vốn",
+          "fieldname": "valuation_rate",
           "fieldtype": "Currency",
+          "description": "Giá VỐN một đơn vị tồn kho tại thời điểm ghi sổ — không phải giá bán. Đây là con số đi vào giá vốn hàng bán.",
           "surface": "expanded"
         },
         {
@@ -7788,9 +7945,10 @@
           "surface": "expanded"
         },
         {
-          "fieldname": "valuation_rate",
           "label": "Đơn giá vốn",
+          "fieldname": "valuation_rate",
           "fieldtype": "Currency",
+          "description": "Giá VỐN một đơn vị tồn kho tại thời điểm ghi sổ — không phải giá bán. Đây là con số đi vào giá vốn hàng bán.",
           "surface": "expanded"
         },
         {
@@ -7858,7 +8016,12 @@
         "posting_at:Datetime!=(Now) Thời điểm",
         "work_order:Link(Work Order) Theo lệnh sản xuất",
         "finished_good_item:Link(Item) Thành phẩm nhập kho",
-        "finished_good_qty:Float Số lượng thành phẩm",
+        {
+          "fieldname": "finished_good_qty",
+          "label": "Số lượng thành phẩm",
+          "fieldtype": "Float",
+          "description": "Số thành phẩm nhập kho từ phiếu này."
+        },
         {
           "fieldname": "source_warehouse",
           "label": "Kho xuất vật tư (phiếu sản xuất)",
@@ -7951,11 +8114,12 @@
           "serverEnforced": true
         },
         {
-          "fieldname": "min_area_sqm",
           "label": "Diện tích tính tối thiểu",
+          "fieldname": "min_area_sqm",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Diện tích tối thiểu tính tiền cho một bộ. Bộ nhỏ hơn mức này VẪN tính bằng mức này — khai 4 m² thì bộ 3,2 m² vẫn thu tiền 4 m².",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
@@ -8010,22 +8174,24 @@
           "surface": "expanded"
         },
         {
-          "fieldname": "formula_policy",
           "label": "Công thức đã áp",
+          "fieldname": "formula_policy",
           "fieldtype": "Link",
           "options": "Cutting Policy",
           "read_only": true,
           "hidden": true,
+          "description": "Công thức cửa đã áp cho dòng này. Ghi lại để về sau đối chiếu được — sửa công thức sau này KHÔNG làm đổi số đã chốt trên chứng từ cũ.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
         },
         {
-          "fieldname": "width_basis",
           "label": "Cơ sở rộng",
+          "fieldname": "width_basis",
           "fieldtype": "Data",
           "read_only": true,
           "hidden": true,
+          "description": "Lấy chiều rộng nào để tính: phủ bì ray hay phủ bì nhựa. Hai cách lệch nhau vài phân trên mỗi bộ, cộng dồn cả đơn thì thành tiền thật.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
@@ -8041,11 +8207,12 @@
           "serverEnforced": true
         },
         {
-          "fieldname": "billable_area_sqm",
           "label": "Diện tích tính tiền (m2)",
+          "fieldname": "billable_area_sqm",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Diện tích đem nhân với đơn giá, SAU khi đã áp diện tích tối thiểu. Khác với diện tích hình học của cửa, và đây mới là con số ra tiền.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
@@ -8066,30 +8233,33 @@
           "surface": "quick"
         },
         {
-          "fieldname": "conversion_factor",
           "label": "Hệ số về ĐVT tồn",
+          "fieldname": "conversion_factor",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Một đơn vị ở dòng này bằng bao nhiêu đơn vị tồn kho. Ví dụ 1 Cây = 6 Mét thì hệ số là 6.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
         },
         {
-          "fieldname": "stock_qty",
           "label": "SL quy đổi tồn",
+          "fieldname": "stock_qty",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Số lượng đã quy về ĐVT tồn kho = số lượng × hệ số quy đổi. Đây là con số vào thẻ kho, không phải số lượng ghi trên chứng từ bán.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
         },
         {
-          "fieldname": "rate",
           "label": "Đơn giá",
+          "fieldname": "rate",
           "fieldtype": "Currency",
           "required": true,
+          "description": "Đơn giá cho MỘT đơn vị ở dòng này, chưa gồm thuế. Máy tra từ bảng giá theo mặt hàng + ĐVT + biến thể giá; gõ đè lên đây là bỏ qua giá đã tra.",
           "surface": "quick"
         },
         {
@@ -8434,16 +8604,18 @@
           "surface": "quick"
         },
         {
-          "fieldname": "conversion_factor",
           "label": "Hệ số quy đổi",
+          "fieldname": "conversion_factor",
           "fieldtype": "Float",
+          "description": "Một đơn vị ở dòng này bằng bao nhiêu đơn vị tồn kho. Ví dụ 1 Cây = 6 Mét thì hệ số là 6.",
           "surface": "expanded"
         },
         {
-          "fieldname": "stock_qty",
           "label": "Quy ra đơn vị tồn",
+          "fieldname": "stock_qty",
           "fieldtype": "Float",
           "read_only": true,
+          "description": "Số lượng đã quy về ĐVT tồn kho = số lượng × hệ số quy đổi. Đây là con số vào thẻ kho, không phải số lượng ghi trên chứng từ bán.",
           "surface": "expanded"
         },
         {
@@ -8704,11 +8876,12 @@
           "serverEnforced": true
         },
         {
-          "fieldname": "min_area_sqm",
           "label": "Diện tích tính tối thiểu",
+          "fieldname": "min_area_sqm",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Diện tích tối thiểu tính tiền cho một bộ. Bộ nhỏ hơn mức này VẪN tính bằng mức này — khai 4 m² thì bộ 3,2 m² vẫn thu tiền 4 m².",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
@@ -8795,30 +8968,33 @@
           "surface": "quick"
         },
         {
-          "fieldname": "conversion_factor",
           "label": "Hệ số quy đổi",
+          "fieldname": "conversion_factor",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Một đơn vị ở dòng này bằng bao nhiêu đơn vị tồn kho. Ví dụ 1 Cây = 6 Mét thì hệ số là 6.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
         },
         {
-          "fieldname": "stock_qty",
           "label": "Quy ra đơn vị tồn",
+          "fieldname": "stock_qty",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Số lượng đã quy về ĐVT tồn kho = số lượng × hệ số quy đổi. Đây là con số vào thẻ kho, không phải số lượng ghi trên chứng từ bán.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
         },
         {
-          "fieldname": "rate",
           "label": "Đơn giá NCC chào",
+          "fieldname": "rate",
           "fieldtype": "Currency",
           "required": true,
+          "description": "Đơn giá cho MỘT đơn vị ở dòng này, chưa gồm thuế. Máy tra từ bảng giá theo mặt hàng + ĐVT + biến thể giá; gõ đè lên đây là bỏ qua giá đã tra.",
           "surface": "quick"
         },
         {
@@ -9018,11 +9194,12 @@
           "serverEnforced": true
         },
         {
-          "fieldname": "min_area_sqm",
           "label": "Diện tích tính tối thiểu",
+          "fieldname": "min_area_sqm",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Diện tích tối thiểu tính tiền cho một bộ. Bộ nhỏ hơn mức này VẪN tính bằng mức này — khai 4 m² thì bộ 3,2 m² vẫn thu tiền 4 m².",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
@@ -9166,10 +9343,11 @@
           "surface": "expanded"
         },
         {
-          "fieldname": "rate",
           "label": "Đơn giá",
+          "fieldname": "rate",
           "fieldtype": "Currency",
           "required": true,
+          "description": "Đơn giá cho MỘT đơn vị ở dòng này, chưa gồm thuế. Máy tra từ bảng giá theo mặt hàng + ĐVT + biến thể giá; gõ đè lên đây là bỏ qua giá đã tra.",
           "surface": "quick"
         },
         {
@@ -9194,21 +9372,23 @@
           "surface": "expanded"
         },
         {
-          "fieldname": "conversion_factor",
           "label": "Hệ số quy đổi về ĐVT tồn",
+          "fieldname": "conversion_factor",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Một đơn vị ở dòng này bằng bao nhiêu đơn vị tồn kho. Ví dụ 1 Cây = 6 Mét thì hệ số là 6.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
         },
         {
-          "fieldname": "stock_qty",
           "label": "Số lượng quy đổi tồn",
+          "fieldname": "stock_qty",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Số lượng đã quy về ĐVT tồn kho = số lượng × hệ số quy đổi. Đây là con số vào thẻ kho, không phải số lượng ghi trên chứng từ bán.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
@@ -9303,7 +9483,14 @@
         "company:Link(Company)-!=(ALUMDOOR) Công ty",
         "currency:Link(Currency)-!=(VND) Tiền tệ",
         "supplier_quotation:Link(Supplier Quotation)- Theo báo giá NCC",
-        "received_percentage:Percent~- Đã nhận (%)"
+        {
+          "fieldname": "received_percentage",
+          "label": "Đã nhận (%)",
+          "fieldtype": "Percent",
+          "read_only": true,
+          "hidden": true,
+          "description": "Phần trăm đã nhận của đơn mua, tính theo số lượng."
+        }
       ],
       "permissions": {
         "Chủ xưởng": "rwcsxa",
@@ -9400,11 +9587,12 @@
           "serverEnforced": true
         },
         {
-          "fieldname": "min_area_sqm",
           "label": "Diện tích tính tối thiểu",
+          "fieldname": "min_area_sqm",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Diện tích tối thiểu tính tiền cho một bộ. Bộ nhỏ hơn mức này VẪN tính bằng mức này — khai 4 m² thì bộ 3,2 m² vẫn thu tiền 4 m².",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
@@ -9532,17 +9720,19 @@
           "surface": "expanded"
         },
         {
-          "fieldname": "rate",
           "label": "Đơn giá",
+          "fieldname": "rate",
           "fieldtype": "Currency",
           "required": true,
+          "description": "Đơn giá cho MỘT đơn vị ở dòng này, chưa gồm thuế. Máy tra từ bảng giá theo mặt hàng + ĐVT + biến thể giá; gõ đè lên đây là bỏ qua giá đã tra.",
           "surface": "quick"
         },
         {
-          "fieldname": "rate_uom",
           "label": "ĐVT của đơn giá — mặc định theo ĐVT khối lượng nếu hàng cân theo kiện",
+          "fieldname": "rate_uom",
           "fieldtype": "Link",
           "options": "UOM",
+          "description": "Đơn giá đang tính theo đơn vị nào. Hàng cân theo kiện thì đơn giá đi theo ĐVT khối lượng, không theo số kiện.",
           "surface": "expanded"
         },
         {
@@ -9629,30 +9819,33 @@
           "surface": "expanded"
         },
         {
-          "fieldname": "conversion_factor",
           "label": "Hệ số quy đổi về ĐVT tồn",
+          "fieldname": "conversion_factor",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Một đơn vị ở dòng này bằng bao nhiêu đơn vị tồn kho. Ví dụ 1 Cây = 6 Mét thì hệ số là 6.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
         },
         {
-          "fieldname": "stock_qty",
           "label": "Thực vào kho",
+          "fieldname": "stock_qty",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Số lượng đã quy về ĐVT tồn kho = số lượng × hệ số quy đổi. Đây là con số vào thẻ kho, không phải số lượng ghi trên chứng từ bán.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
         },
         {
-          "fieldname": "valuation_rate",
           "label": "Giá vốn nhập kho",
+          "fieldname": "valuation_rate",
           "fieldtype": "Currency",
           "hidden": true,
+          "description": "Giá VỐN một đơn vị tồn kho tại thời điểm ghi sổ — không phải giá bán. Đây là con số đi vào giá vốn hàng bán.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
@@ -9780,7 +9973,8 @@
           "fieldname": "total_qty",
           "fieldtype": "Float",
           "label": "Tổng số lượng",
-          "read_only": true
+          "read_only": true,
+          "description": "Tổng số lượng của mọi dòng trên chứng từ, đã quy về cùng ĐVT tồn kho."
         },
         {
           "fieldname": "company",
@@ -9886,11 +10080,12 @@
           "serverEnforced": true
         },
         {
-          "fieldname": "min_area_sqm",
           "label": "Diện tích tính tối thiểu",
+          "fieldname": "min_area_sqm",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Diện tích tối thiểu tính tiền cho một bộ. Bộ nhỏ hơn mức này VẪN tính bằng mức này — khai 4 m² thì bộ 3,2 m² vẫn thu tiền 4 m².",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
@@ -9936,30 +10131,33 @@
           "surface": "quick"
         },
         {
-          "fieldname": "conversion_factor",
           "label": "Hệ số quy đổi",
+          "fieldname": "conversion_factor",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Một đơn vị ở dòng này bằng bao nhiêu đơn vị tồn kho. Ví dụ 1 Cây = 6 Mét thì hệ số là 6.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
         },
         {
-          "fieldname": "stock_qty",
           "label": "SL quy đổi tồn",
+          "fieldname": "stock_qty",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Số lượng đã quy về ĐVT tồn kho = số lượng × hệ số quy đổi. Đây là con số vào thẻ kho, không phải số lượng ghi trên chứng từ bán.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
         },
         {
-          "fieldname": "rate",
           "label": "Đơn giá",
+          "fieldname": "rate",
           "fieldtype": "Currency",
           "required": true,
+          "description": "Đơn giá cho MỘT đơn vị ở dòng này, chưa gồm thuế. Máy tra từ bảng giá theo mặt hàng + ĐVT + biến thể giá; gõ đè lên đây là bỏ qua giá đã tra.",
           "surface": "quick"
         },
         {
@@ -10113,10 +10311,11 @@
           "surface": "quick"
         },
         {
-          "fieldname": "rate",
           "label": "Đơn giá theo phiếu nhập",
+          "fieldname": "rate",
           "fieldtype": "Currency",
           "required": true,
+          "description": "Đơn giá cho MỘT đơn vị ở dòng này, chưa gồm thuế. Máy tra từ bảng giá theo mặt hàng + ĐVT + biến thể giá; gõ đè lên đây là bỏ qua giá đã tra.",
           "surface": "quick"
         },
         {
@@ -10180,10 +10379,11 @@
           "surface": "quick"
         },
         {
-          "fieldname": "rate",
           "label": "Đơn giá theo hoá đơn gốc",
+          "fieldname": "rate",
           "fieldtype": "Currency",
           "required": true,
+          "description": "Đơn giá cho MỘT đơn vị ở dòng này, chưa gồm thuế. Máy tra từ bảng giá theo mặt hàng + ĐVT + biến thể giá; gõ đè lên đây là bỏ qua giá đã tra.",
           "surface": "quick"
         },
         {
@@ -10313,7 +10513,13 @@
         "bom_template:Link(BOM Template) Mẫu BOM nguồn",
         "bom_template_code:Data Mã mẫu BOM",
         "bom_fingerprint:Data Dấu vân tay cấu hình",
-        "generated_by_configurator:Check=(0) BOM sinh từ cấu hình",
+        {
+          "fieldname": "generated_by_configurator",
+          "label": "BOM sinh từ cấu hình",
+          "fieldtype": "Check",
+          "default": false,
+          "description": "Định mức này do máy sinh từ cấu hình đơn hàng, không phải người lập. Sửa tay sẽ bị ghi đè ở lần sinh sau."
+        },
         "configuration_snapshot:Code Snapshot cấu hình"
       ],
       "permissions": {
@@ -10347,8 +10553,20 @@
         "bom_no:Link(Bill of Materials)! Định mức áp dụng",
         "company:Link(Company)-!=(ALUMDOOR) Công ty",
         "qty:Float!=(1) Số lượng cần sản xuất",
-        "produced_qty:Float~ Đã sản xuất",
-        "produced_percentage:Percent~ Tiến độ (%)",
+        {
+          "fieldname": "produced_qty",
+          "label": "Đã sản xuất",
+          "fieldtype": "Float",
+          "read_only": true,
+          "description": "Đã sản xuất xong bao nhiêu. Máy cộng từ phiếu ghi nhận sản xuất."
+        },
+        {
+          "fieldname": "produced_percentage",
+          "label": "Tiến độ (%)",
+          "fieldtype": "Percent",
+          "read_only": true,
+          "description": "Phần trăm đã sản xuất so với lệnh."
+        },
         "width_m:Float! Rộng (m)",
         "height_m:Float! Cao (m)",
         "set_count:Int=(1) Số bộ",
@@ -10415,20 +10633,23 @@
           "fieldtype": "Link",
           "options": "Cutting Policy",
           "label": "Công thức đã chụp",
-          "read_only": true
+          "read_only": true,
+          "description": "Công thức cửa đã áp cho dòng này. Ghi lại để về sau đối chiếu được — sửa công thức sau này KHÔNG làm đổi số đã chốt trên chứng từ cũ."
         },
         {
           "fieldname": "formula_version",
           "fieldtype": "Data",
           "label": "Phiên bản công thức",
-          "read_only": true
+          "read_only": true,
+          "description": "Phiên bản công thức lúc chốt dòng này. Có nó thì mới giải thích được vì sao hai đơn cùng mặt hàng lại ra số khác nhau."
         },
         {
           "fieldname": "formula_snapshot",
           "fieldtype": "Long Text",
           "label": "Snapshot công thức",
           "read_only": true,
-          "hidden": true
+          "hidden": true,
+          "description": "Bản chụp nguyên trạng công thức lúc chốt. Đây là bằng chứng, không phải ô để sửa."
         },
         {
           "fieldname": "paint_required",
@@ -10525,9 +10746,10 @@
           "surface": "quick"
         },
         {
-          "fieldname": "rate",
           "label": "Đơn giá",
+          "fieldname": "rate",
           "fieldtype": "Currency",
+          "description": "Đơn giá cho MỘT đơn vị ở dòng này, chưa gồm thuế. Máy tra từ bảng giá theo mặt hàng + ĐVT + biến thể giá; gõ đè lên đây là bỏ qua giá đã tra.",
           "surface": "quick"
         },
         {
@@ -10722,13 +10944,33 @@
         "purchase_document:Link(Purchase Invoice) Chứng từ mua liên quan",
         "order_date:Date Ngày đặt hàng",
         "received_fault_on:Date Ngày nhận lỗi",
-        "received_fault_qty:Float SL nhận lỗi",
+        {
+          "fieldname": "received_fault_qty",
+          "label": "SL nhận lỗi",
+          "fieldtype": "Float",
+          "description": "Số hàng lỗi đã nhận về từ khách."
+        },
         "replacement_sent_on:Date Ngày xuất đổi",
-        "replacement_qty:Float SL đã đổi",
+        {
+          "fieldname": "replacement_qty",
+          "label": "SL đã đổi",
+          "fieldtype": "Float",
+          "description": "Số hàng đã đổi trả cho khách."
+        },
         "warranty_sent_on:Date Ngày gửi bảo hành",
-        "warranty_sent_qty:Float SL gửi NCC",
+        {
+          "fieldname": "warranty_sent_qty",
+          "label": "SL gửi NCC",
+          "fieldtype": "Float",
+          "description": "Số đã gửi đi bảo hành cho nhà cung cấp."
+        },
         "warranty_received_on:Date Ngày nhận bảo hành",
-        "warranty_received_qty:Float SL nhận từ NCC",
+        {
+          "fieldname": "warranty_received_qty",
+          "label": "SL nhận từ NCC",
+          "fieldtype": "Float",
+          "description": "Số đã nhận lại sau bảo hành. Chênh với số gửi đi là còn đang nằm ngoài."
+        },
         "supplier:Link(Supplier) Nhà cung cấp",
         "customer:Link(Customer) Khách hàng",
         "item_description:Small Text! Hàng lỗi / nội dung",
@@ -10961,25 +11203,28 @@
           "surface": "quick"
         },
         {
-          "fieldname": "formula_policy",
           "label": "Công thức",
+          "fieldname": "formula_policy",
           "fieldtype": "Link",
           "options": "Cutting Policy",
           "required": true,
+          "description": "Công thức cửa đã áp cho dòng này. Ghi lại để về sau đối chiếu được — sửa công thức sau này KHÔNG làm đổi số đã chốt trên chứng từ cũ.",
           "surface": "quick"
         },
         {
-          "fieldname": "formula_version",
           "label": "Phiên bản công thức",
+          "fieldname": "formula_version",
           "fieldtype": "Data",
           "required": true,
+          "description": "Phiên bản công thức lúc chốt dòng này. Có nó thì mới giải thích được vì sao hai đơn cùng mặt hàng lại ra số khác nhau.",
           "surface": "quick"
         },
         {
-          "fieldname": "width_basis",
           "label": "Cơ sở rộng",
+          "fieldname": "width_basis",
           "fieldtype": "Data",
           "required": true,
+          "description": "Lấy chiều rộng nào để tính: phủ bì ray hay phủ bì nhựa. Hai cách lệch nhau vài phân trên mỗi bộ, cộng dồn cả đơn thì thành tiền thật.",
           "surface": "quick"
         },
         {
@@ -10990,10 +11235,11 @@
           "surface": "quick"
         },
         {
-          "fieldname": "billable_area_sqm",
           "label": "Diện tích tính tiền (m2)",
+          "fieldname": "billable_area_sqm",
           "fieldtype": "Float",
           "required": true,
+          "description": "Diện tích đem nhân với đơn giá, SAU khi đã áp diện tích tối thiểu. Khác với diện tích hình học của cửa, và đây mới là con số ra tiền.",
           "surface": "quick"
         },
         {
@@ -11060,10 +11306,11 @@
           "surface": "quick"
         },
         {
-          "fieldname": "output_qty",
           "label": "Số lượng đầu ra",
+          "fieldname": "output_qty",
           "fieldtype": "Float",
           "required": true,
+          "description": "Số lượng thành phẩm mà yêu cầu sản xuất này cần ra.",
           "surface": "quick"
         },
         {
@@ -11086,6 +11333,7 @@
           "fieldtype": "Long Text",
           "read_only": true,
           "hidden": true,
+          "description": "Bản chụp nguyên trạng công thức lúc chốt. Đây là bằng chứng, không phải ô để sửa.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
@@ -11601,7 +11849,8 @@
           "fieldname": "rate",
           "fieldtype": "Currency",
           "required": true,
-          "surface": "quick"
+          "surface": "quick",
+          "description": "Đơn giá cho MỘT đơn vị ở dòng này, chưa gồm thuế. Máy tra từ bảng giá theo mặt hàng + ĐVT + biến thể giá; gõ đè lên đây là bỏ qua giá đã tra."
         },
         {
           "label": "Thành tiền",
@@ -11814,10 +12063,11 @@
           "surface": "quick"
         },
         {
-          "fieldname": "rate",
           "label": "Đơn giá",
+          "fieldname": "rate",
           "fieldtype": "Currency",
           "required": true,
+          "description": "Đơn giá cho MỘT đơn vị ở dòng này, chưa gồm thuế. Máy tra từ bảng giá theo mặt hàng + ĐVT + biến thể giá; gõ đè lên đây là bỏ qua giá đã tra.",
           "surface": "quick"
         },
         {
@@ -12151,10 +12401,11 @@
           "surface": "expanded"
         },
         {
-          "fieldname": "quantity_formula_json",
           "label": "Công thức số lượng JSON",
+          "fieldname": "quantity_formula_json",
           "fieldtype": "Code",
           "required": true,
+          "description": "Công thức tính số lượng cấu phần, dạng máy đọc. Bỏ trống nghĩa là số lượng cố định.",
           "surface": "quick"
         },
         {
@@ -12170,9 +12421,10 @@
           "surface": "expanded"
         },
         {
-          "fieldname": "source_formula",
           "label": "Công thức nguồn",
+          "fieldname": "source_formula",
           "fieldtype": "Small Text",
+          "description": "Công thức gốc của cấu phần này, chép từ nguồn — không phải công thức máy đang chạy.",
           "surface": "expanded"
         },
         {
@@ -12716,11 +12968,12 @@
           "surface": "expanded"
         },
         {
-          "fieldname": "book_qty",
           "label": "Số sổ (chụp lúc chốt)",
+          "fieldname": "book_qty",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Số lượng theo sổ sách tại thời điểm kiểm — máy lấy, không gõ tay.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
@@ -12736,10 +12989,11 @@
           "serverEnforced": true
         },
         {
-          "fieldname": "counted_qty",
           "label": "Số đếm thực tế",
+          "fieldname": "counted_qty",
           "fieldtype": "Float",
           "required": true,
+          "description": "Số lượng đếm thực tế tại kho. Đây là ô người kiểm nhập.",
           "surface": "quick"
         },
         {
@@ -12749,11 +13003,12 @@
           "surface": "expanded"
         },
         {
-          "fieldname": "variance_qty",
           "label": "Chênh lệch",
+          "fieldname": "variance_qty",
           "fieldtype": "Float",
           "read_only": true,
           "hidden": true,
+          "description": "Chênh lệch = đếm thực tế trừ sổ sách. Dương là thừa, âm là thiếu.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
@@ -12819,9 +13074,10 @@
           "serverEnforced": true
         },
         {
-          "fieldname": "valuation_rate",
           "label": "Đơn giá điều chỉnh (khi lô chưa có giá)",
+          "fieldname": "valuation_rate",
           "fieldtype": "Currency",
+          "description": "Giá VỐN một đơn vị tồn kho tại thời điểm ghi sổ — không phải giá bán. Đây là con số đi vào giá vốn hàng bán.",
           "surface": "expanded"
         },
         {
@@ -13248,8 +13504,18 @@
         "qty_per_set:Float*! Số lượng mỗi bộ",
         "rounding:Select(NONE,ROUND,CEIL,FLOOR) Làm tròn",
         "precision:Int Số chữ số",
-        "formula_json:Long Text Công thức canonical JSON",
-        "formula_display:Data Công thức hiển thị",
+        {
+          "fieldname": "formula_json",
+          "label": "Công thức canonical JSON",
+          "fieldtype": "Long Text",
+          "description": "Công thức ở dạng máy đọc. Sửa ở đây là đổi cách tính của mọi dòng dùng quy tắc này."
+        },
+        {
+          "fieldname": "formula_display",
+          "label": "Công thức hiển thị",
+          "fieldtype": "Data",
+          "description": "Công thức viết cho người đọc. Phải khớp với công thức máy chạy — lệch nhau là một trong hai đang nói dối."
+        },
         "rule_version:Int*! Phiên bản",
         "applicability:Table(BOM Rule Applicability) Áp dụng cho",
         {
@@ -13263,8 +13529,18 @@
         },
         "source_sheet:Data Sheet nguồn",
         "source_row:Int Dòng nguồn",
-        "source_formula_text:Small Text Công thức nguồn gốc",
-        "source_formula_code:Data Mã công thức nguồn",
+        {
+          "fieldname": "source_formula_text",
+          "label": "Công thức nguồn gốc",
+          "fieldtype": "Small Text",
+          "description": "Công thức chép nguyên văn từ nguồn gốc (bảng tính, tài liệu giấy). Giữ để truy lại khi số máy tính khác số xưởng quen làm."
+        },
+        {
+          "fieldname": "source_formula_code",
+          "label": "Mã công thức nguồn",
+          "fieldtype": "Data",
+          "description": "Mã định danh công thức ở hệ nguồn, dùng để đối chiếu ngược khi rà soát."
+        },
         "source_note:Small Text Ghi chú nguồn / xác nhận",
         "confirmed_by:Data Người xác nhận",
         "confirmed_at:Datetime Thời điểm xác nhận",
@@ -13546,7 +13822,8 @@
           "//": "Cận dưới MỞ: diện tích phải LỚN HƠN số này. Bậc đầu tiên để trống = không có cận dưới.",
           "fieldname": "min_area_sqm",
           "label": "Trên (m²)",
-          "fieldtype": "Float"
+          "fieldtype": "Float",
+          "description": "Diện tích tối thiểu tính tiền cho một bộ. Bộ nhỏ hơn mức này VẪN tính bằng mức này — khai 4 m² thì bộ 3,2 m² vẫn thu tiền 4 m²."
         },
         {
           "//": "Cận trên ĐÓNG: diện tích nhỏ hơn hoặc BẰNG số này. Bậc cuối để trống = không có trần.",

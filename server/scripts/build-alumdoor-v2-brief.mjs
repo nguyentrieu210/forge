@@ -14,6 +14,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { applyAlumdoorChildPresentation } from "./lib/alumdoor-child-presentation.mjs";
 import { parseField } from "./lib/compile-brief.mjs";
+import { applyFieldDescriptions } from "./lib/alumdoor-field-descriptions.mjs";
 import { GEOMETRY_FIELDS, GEOMETRY_PROFILES } from "./lib/alumdoor-geometry-catalog.mjs";
 import { CUTTING_POLICIES, cuttingPolicyFixtureData } from "./lib/alumdoor-cutting-policy-catalog.mjs";
 import { bomSourceFixtureRows } from "./lib/alumdoor-bom-template-source-catalog.mjs";
@@ -91,7 +92,7 @@ const moveFieldsAfter = (dt, names, anchor) => {
  * `unchanged` khi manifest byte-identical, nên giữ nguyên số cũ là mọi sửa đổi metadata nằm im
  * trong file mà không bao giờ vào tenant.
  */
-brief.version = "2.7.0";
+brief.version = "2.8.0";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 for (const role of ["General Accountant", "Chief Accountant", "Director", "Kế toán tổng hợp", "Kế toán trưởng", "Giám đốc"]) {
   if (!brief.roles.includes(role)) brief.roles.push(role);
@@ -2714,6 +2715,29 @@ note(`UI Link · ${leafLinkFilterCount} ô Warehouse/Item Group chỉ chọn nú
   if (brief.doctypes.some((entry) => ["Sales Option", "Sales Package"].includes(entry.name)))
     throw new Error("Generator resurrected deprecated Sales Option/Sales Package DocType");
   note("REPRO · source-authoritative O2C/master contracts restored; deprecated sales option fields forbidden");
+}
+
+// Ô hiện ra con số mà không nói con số từ đâu thì người dùng không kiểm được. Audit 19/08 đếm
+// 118 ô như vậy trên 57 tên trường; mô tả khai theo TÊN TRƯỜNG nên sửa một chỗ là cả 118 ô nhận.
+const described = applyFieldDescriptions(brief.doctypes, parseField);
+note(`UI · mô tả tiếng Việt cho trường tính toán: ${described} ô`);
+
+// Rỗng và không nơi nào trỏ tới, nhưng vẫn chiếm một dòng trên menu Danh mục. Giữ DocType (mua
+// hàng sẽ cần) nhưng thôi bày ra cho tới khi có dữ liệu thật.
+{
+  // `menu: false` một mình là KHÔNG đủ: nó gỡ doctype khỏi tập ứng viên của nav, nên tên còn nằm
+  // trong `navigation.items` sẽ thành nav key lạ và brief không biên dịch được
+  // ("navigation.items names unknown nav key"). Phải gỡ ở CẢ HAI chỗ.
+  const supplierItem = brief.doctypes.find((entry) => entry.name === "Supplier Item");
+  if (supplierItem && supplierItem.menu !== false) {
+    supplierItem.menu = false;
+    const items = brief.navigation?.items;
+    if (Array.isArray(items)) {
+      const at = items.indexOf("Supplier Item");
+      if (at >= 0) items.splice(at, 1);
+    }
+    note("UI · Supplier Item rời menu — 0 bản ghi và không trường nào trỏ tới");
+  }
 }
 
 const childPresentation = applyAlumdoorChildPresentation(brief);
