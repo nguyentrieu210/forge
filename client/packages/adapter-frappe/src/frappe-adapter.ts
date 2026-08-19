@@ -6,6 +6,7 @@
  * nên phải tự bóc `.message`. Lỗi ném ra đã kèm `exc_type` + `httpStatus` → mapError §0.
  */
 import { FrappeApp } from "frappe-js-sdk";
+import { BOOT_METHOD, MANIFEST_METHOD, consumeBootPrefetch } from "./boot-prefetch.js";
 import {
   mapError as coreMapError,
   normalizeMeta,
@@ -183,7 +184,11 @@ export class FrappeAdapterImpl implements FrappeAdapter {
     this.metaCache.clear();
   }
   async getBoot(): Promise<MetaForgeBootDTO> {
-    const r = await this.app.call().get<Envelope<MetaForgeBootDTO>>("metaforge.api.get_boot");
+    // Lời gọi này có thể đã xuất phát từ `<head>` (xem boot-prefetch.ts). Không có thì
+    // đường cũ chạy nguyên vẹn.
+    const prefetched = await consumeBootPrefetch("boot");
+    if (prefetched !== undefined) return this.unwrap(prefetched as Envelope<MetaForgeBootDTO>);
+    const r = await this.app.call().get<Envelope<MetaForgeBootDTO>>(BOOT_METHOD);
     return this.unwrap(r);
   }
   async getBusinessContext(appId: string, dimensions?: BusinessContextKey[], selection?: BusinessContextSelection): Promise<BusinessContextState> {
@@ -199,7 +204,9 @@ export class FrappeAdapterImpl implements FrappeAdapter {
     return this.unwrap(r);
   }
   async getAppManifest(appId?: string): Promise<AppManifest> {
-    const r = await this.app.call().get<Envelope<AppManifest>>("metaforge.api.get_app_manifest", { app: appId });
+    const prefetched = await consumeBootPrefetch("manifest", appId);
+    if (prefetched !== undefined) return this.unwrap(prefetched as Envelope<AppManifest>);
+    const r = await this.app.call().get<Envelope<AppManifest>>(MANIFEST_METHOD, { app: appId });
     return this.unwrap(r);
   }
   async getOverview(domain: string, selection?: BusinessContextSelection): Promise<OverviewDashboard> {

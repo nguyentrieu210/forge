@@ -17,6 +17,7 @@ const runtimeDependency = (name: string) => fileURLToPath(
   new URL(`./node_modules/${name}`, import.meta.url),
 );
 const bootRoutePath = fileURLToPath(new URL("./src/boot-route.ts", import.meta.url));
+const bootPrefetchPath = fileURLToPath(new URL("../../packages/adapter-frappe/src/boot-prefetch.ts", import.meta.url));
 const attendanceIndex = fileURLToPath(new URL("../attendance-mobile/index.html", import.meta.url));
 const attendanceEntry = fileURLToPath(new URL("../attendance-mobile/src/main.tsx", import.meta.url));
 const attendancePublic = fileURLToPath(new URL("../attendance-mobile/public/", import.meta.url));
@@ -139,7 +140,7 @@ const viewSourceAliases = [
  * 8799 khớp cổng worker trong runbook.
  */
 export default defineConfig({
-  plugins: [attendanceMobileDev(), react(), tailwindcss(), bootPreload({ transformWithEsbuild, bootRoutePath })],
+  plugins: [attendanceMobileDev(), react(), tailwindcss(), bootPreload({ transformWithEsbuild, bootRoutePath, bootPrefetchPath })],
   resolve: {
     alias: viewSourceAliases,
     dedupe: ["react", "react-dom"],

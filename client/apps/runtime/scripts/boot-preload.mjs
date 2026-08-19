@@ -31,13 +31,14 @@ const laneKeys = ["website", "desk", "desk-workspace"];
  * Sinh script nội tuyến. Hàm thuần để `tests/boot-preload.test.mjs` chạy được nó trong `vm`
  * và so quyết định với chính module luật — cùng khuôn với `nav-path-contract.test.mjs`.
  */
-export function renderPreloadScript({ bootRouteIife, lanes, base = "/" }) {
+export function renderPreloadScript({ bootRouteIife, bootPrefetchIife, lanes, base = "/" }) {
   for (const key of laneKeys) {
     if (!lanes[key]) throw new Error(`boot-preload: thiếu làn ${key}`);
   }
   const table = JSON.stringify(lanes);
   return `(function(){
 ${bootRouteIife}
+${bootPrefetchIife}
 var BASE=${JSON.stringify(base)},LANES=${table},seen={};
 function preload(lane){
   var group=LANES[lane];if(!group)return;
@@ -50,13 +51,16 @@ function add(file,rel,as){
   if(as)link.as=as;
   document.head.appendChild(link);
 }
+// Hỏi API TRƯỚC khi xếp hàng tải file: hai lời gọi này ~185 ms mỗi lời, dài hơn bất kỳ
+// chunk nào, nên chúng phải là thứ khởi hành sớm nhất.
+if(__forgeBootRoute.shouldPrefetchSession(window.location))__forgeBootPrefetch.startBootPrefetch(window.location.search);
 var lane=__forgeBootRoute.resolvePreloadLane(window.location);
 preload(lane);
 if(lane==="website"){
   // Tenant không có website trả 404 — lúc đó mới biết chắc là Desk, và biết SỚM hơn nhiều
   // so với đợi chunk bootstrap tải xong rồi mới hỏi.
   __forgeBootRoute.startWebsiteProbe().then(function(response){
-    if(response.status===404)preload("desk");
+    if(response.status===404){preload("desk");__forgeBootPrefetch.startBootPrefetch(window.location.search);}
   }).catch(function(){});
 }
 })();`;
@@ -65,7 +69,7 @@ if(lane==="website"){
 /**
  * Plugin Vite: đọc bundle đã sinh, dựng bảng file cho từng làn, nhúng script vào `<head>`.
  */
-export function bootPreload({ transformWithEsbuild, bootRoutePath }) {
+export function bootPreload({ transformWithEsbuild, bootRoutePath, bootPrefetchPath }) {
   let base = "/";
   return {
     name: "forge-boot-preload",
@@ -124,21 +128,24 @@ export function bootPreload({ transformWithEsbuild, bootRoutePath }) {
           css: [...new Set([...left.css, ...right.css])],
         });
 
-        const source = await readSource(bootRoutePath);
-        const compiled = await transformWithEsbuild(source, bootRoutePath, {
-          format: "iife",
-          globalName: "__forgeBootRoute",
-          target: "es2018",
-          minify: true,
-          loader: "ts",
-        });
+        const compile = async (file, globalName) => {
+          const compiled = await transformWithEsbuild(await readSource(file), file, {
+            format: "iife",
+            globalName,
+            target: "es2018",
+            minify: true,
+            loader: "ts",
+          });
+          return compiled.code.trim();
+        };
 
         return {
           html,
           tags: [{
             tag: "script",
             children: renderPreloadScript({
-              bootRouteIife: compiled.code.trim(),
+              bootRouteIife: await compile(bootRoutePath, "__forgeBootRoute"),
+              bootPrefetchIife: await compile(bootPrefetchPath, "__forgeBootPrefetch"),
               lanes: { website, desk, "desk-workspace": merge(desk, workspace) },
               base,
             }),

@@ -27,16 +27,24 @@ const LANES = {
   "desk-workspace": { files: ["assets/main.js", "assets/main-base.js", "assets/workspace.js"], css: ["assets/desk.css"] },
 };
 
-async function inlineScript() {
-  const source = read("src/boot-route.ts");
-  const compiled = await transformWithEsbuild(source, "boot-route.ts", {
+const compileIife = async (relative, globalName) => {
+  const compiled = await transformWithEsbuild(read(relative), relative, {
     format: "iife",
-    globalName: "__forgeBootRoute",
+    globalName,
     target: "es2018",
     minify: true,
     loader: "ts",
   });
-  return renderPreloadScript({ bootRouteIife: compiled.code.trim(), lanes: LANES, base: "/" });
+  return compiled.code.trim();
+};
+
+async function inlineScript() {
+  return renderPreloadScript({
+    bootRouteIife: await compileIife("src/boot-route.ts", "__forgeBootRoute"),
+    bootPrefetchIife: await compileIife("../../packages/adapter-frappe/src/boot-prefetch.ts", "__forgeBootPrefetch"),
+    lanes: LANES,
+    base: "/",
+  });
 }
 
 function run(code, url, probeStatus = 200) {
@@ -90,6 +98,35 @@ test("làn website hỏi server ngay trong <head>, và tenant không có website
   ], "404 nghĩa là tenant này không có website — tải Desk ngay, đừng đợi vòng sau");
 });
 
+test("hỏi trước phiên + manifest ngay trong <head>, và chỉ ở mặt cần đăng nhập", async () => {
+  const code = await inlineScript();
+
+  const desk = run(code, "https://alu.kairo.vn/app/Item");
+  assert.deepEqual(desk.fetched, [
+    "/api/method/metaforge.api.get_boot",
+    "/api/method/metaforge.api.get_app_manifest",
+  ], "Desk phải hỏi trước cả hai, và hỏi TRƯỚC khi xếp hàng tải chunk");
+
+  const chosenApp = run(code, "https://alu.kairo.vn/app/Item?app=hrm");
+  assert.ok(chosenApp.fetched.includes("/api/method/metaforge.api.get_app_manifest?app=hrm"),
+    "app được chọn trên URL phải đi vào đúng lời hỏi trước");
+
+  const shop = run(code, "https://phanbon.kairo.vn/shop");
+  assert.deepEqual(shop.fetched, [], "khách xem hàng không có phiên — hỏi trước chỉ tổ nhận 401");
+
+  const social = run(code, "https://chotdon.kairo.vn/pricing");
+  assert.deepEqual(social.fetched, [], "trang marketing công khai cũng vậy");
+
+  const noSite = run(code, "https://alu.kairo.vn/", 404);
+  assert.deepEqual(noSite.fetched, ["/api/method/forge.website.page"]);
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.deepEqual(noSite.fetched.slice(1), [
+    "/api/method/metaforge.api.get_boot",
+    "/api/method/metaforge.api.get_app_manifest",
+  ], "biết là Desk rồi thì hỏi luôn, đừng đợi bundle chạy");
+});
+
 test("bản nội tuyến và bản module quyết định giống hệt nhau", async () => {
   const code = await inlineScript();
   // Bản thứ hai: cùng nguồn, nhưng dựng dưới dạng ESM không rút gọn — tức đúng thứ
@@ -106,7 +143,7 @@ test("bản nội tuyến và bản module quyết định giống hệt nhau", 
 
   for (const url of cases) {
     const inline = run(code, url);
-    const expectedWebsite = inline.fetched.length > 0;
+    const expectedWebsite = inline.fetched.some((request) => request.includes("forge.website.page"));
     assert.equal(module.resolveBootLane(new URL(url)) === "website", expectedWebsite,
       `${url}: hai bản chia làn khác nhau`);
     assert.ok(inline.lane().length > 0, `${url}: không tải trước gì cả`);

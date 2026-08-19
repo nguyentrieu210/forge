@@ -13,8 +13,8 @@ import {
   type AwesomeRecord, type NavItem,
 } from "@metaforge/shell";
 import { Button, Toaster } from "@metaforge/ui";
-import { SocialCommerceLanding, type PublicSocialPage } from "./landing/SocialCommerceLanding.js";
-import { Storefront, type StorefrontPage } from "./storefront/Storefront.js";
+import type { PublicSocialPage } from "./landing/SocialCommerceLanding.js";
+import { resolveStorefrontPage } from "./boot-route.js";
 import {
   ApprovalInbox,
   SocialCommerce,
@@ -31,6 +31,13 @@ import {
 import "./styles.css";
 
 const ApplicationCatalogContainer = lazy(() => import("@metaforge/views/catalog").then((module) => ({ default: module.ApplicationCatalogContainer })));
+/**
+ * Hai mặt CÔNG KHAI, không dính gì tới Desk: trang bán hàng của tenant và các trang
+ * marketing Social Commerce. Để tĩnh thì mỗi nhân viên mở Desk đều tải kèm chúng, còn mỗi
+ * khách xem hàng thì tải kèm cả Desk. Tách ra, mỗi bên chỉ trả tiền cho phần mình dùng.
+ */
+const Storefront = lazy(() => import("./storefront/Storefront.js").then((module) => ({ default: module.Storefront })));
+const SocialCommerceLanding = lazy(() => import("./landing/SocialCommerceLanding.js").then((module) => ({ default: module.SocialCommerceLanding })));
 /**
  * Cả hai phải nạp XONG trước lần render đầu tiên — nhưng không phải nạp lần lượt.
  *
@@ -289,21 +296,17 @@ function buildNavigation(manifest: AppManifest, catalog: ApplicationCatalog | un
  * domain, and whether it exists is decided by what is installed, not by which host the
  * bundle happens to be served from. If no storefront is installed the API answers 404 and
  * the page says so — which is the honest answer, and one that needs no configuration.
+ *
+ * Luật đường dẫn nằm ở `boot-route.ts`: script nội tuyến trong `<head>` cũng phải biết đây
+ * là mặt công khai, để không hỏi trước phiên đăng nhập cho khách xem hàng.
  */
-function resolveStorefrontPage(): StorefrontPage | undefined {
-  const path = (window.location.pathname.replace(/\/+$/, "") || "/");
-  if (path === "/shop") return "/shop";
-  if (path === "/shop/cart") return "/shop/cart";
-  if (path === "/shop/track") return "/shop/track";
-  return path.startsWith("/shop/") ? "/shop/product" : undefined;
-}
 
 function RootApp() {
-  const shopPage = resolveStorefrontPage();
-  if (shopPage) return <I18nProvider><Storefront page={shopPage} adapter={adapter} /></I18nProvider>;
+  const shopPage = resolveStorefrontPage(window.location);
+  if (shopPage) return <I18nProvider><Suspense fallback={<Splash>Đang tải…</Splash>}><Storefront page={shopPage} adapter={adapter} /></Suspense></I18nProvider>;
 
   const publicPage = resolvePublicSocialPage();
-  if (publicPage) return <I18nProvider><SocialCommerceLanding page={publicPage} adapter={adapter} /></I18nProvider>;
+  if (publicPage) return <I18nProvider><Suspense fallback={<Splash>Đang tải…</Splash>}><SocialCommerceLanding page={publicPage} adapter={adapter} /></Suspense></I18nProvider>;
   return <I18nProvider>
     <AuthBoundary
       adapter={adapter}

@@ -129,6 +129,7 @@ an toàn hay không phụ thuộc vào việc đã gom luật lại hay chưa.
 | **P5** ✅ | Cắt `router.ts` **4530 → 3244 dòng (−28%)** thành 5 module có ranh giới: `document-access.ts` (đọc/ghi + quyền), `router-helpers.ts`, `link-search.ts` (ô chọn + nhãn), `desk-surfaces.ts` (7 mặt bàn làm việc), `alumdoor-commercial.ts`. Còn lại trong router đúng phần định tuyến: `dispatchMethod` 362 dòng và REST resource | cao |
 | **P6** ✅ | `alumdoor-worker/src/index.ts` **3689 → 2815 dòng** (tách `document-validation.ts` 854 dòng + `responses.ts`); `ChildGrid.tsx` **2200 → 1907 dòng** (tách `child-grid-columns.ts` 313 dòng luật thuần) | cao |
 | **P7** ✅ | Hiệu năng: chuỗi tải lúc mở app đi từ 5 chặng nối đuôi xuống 2 (tải trước theo làn, phát ngay trong `<head>`); vòng lặp dựng-test của repo 19 s → 6 s. Xem mục 7 | trung bình |
+| **P8** ✅ | Hỏi trước phiên + manifest ngay trong `<head>` (sớm hơn ~300 ms); tách trang bán hàng và trang marketing khỏi `main-base` (378 → 325 kB). Xem mục 8 | trung bình |
 
 Mỗi pha là một commit riêng, chạy cổng mốc trước khi commit.
 
@@ -266,3 +267,57 @@ Nay giữ nguyên tính chất đó mà không phải xoá sạch: `tsc` bật `
 | `--build --only <chuỗi>` trọn vòng | không có (phải tự nhớ dựng) | **~6 s** |
 
 Cổng sau P7: server **75 rớt / 2414**, client **17 rớt / 140** — đúng mốc, không rớt mới.
+
+
+## 8. P8 — hai lời gọi API đi trước, và cắt tiếp `main-base` (19/08)
+
+### 8.1 `get_boot` + `get_app_manifest` xuất phát từ `<head>`
+
+Sau P7 chuỗi tải file đã song song, nhưng hai lời gọi API vẫn phải đợi `main-base` chạy mới
+khởi hành — mà mỗi lời gọi ~185 ms, dài hơn bất kỳ chunk nào. Nay script nội tuyến bắn chúng
+trước cả khi xếp hàng tải file.
+
+Chỗ dễ hỏng là địa chỉ hai lời gọi bị viết ở hai nơi. Vì thế
+`packages/adapter-frappe/src/boot-prefetch.ts` là **nơi duy nhất** biết chúng, và được dùng
+ở cả hai đầu: `vite.config.ts` biên dịch nó vào script nội tuyến (bên GỌI), `frappe-adapter.ts`
+import nó để NHẬN. Cùng một nguồn nên không có bản sao nào để trôi dạt — cùng khuôn với
+`boot-route.ts` ở P7.
+
+Ba tính chất được ghim bằng test (`apps/runtime/tests/boot-prefetch.test.mjs`):
+
+- **URL dựng giống hệt `frappe-js-sdk`** (bỏ tham số rỗng). Sai một ly thì lời hỏi trước
+  không bao giờ dùng được, mà cũng chẳng ai thấy vì bên nhận lặng lẽ gọi lại.
+- **Dùng đúng một lần.** Lần gọi thứ hai luôn nghĩa là trạng thái đã đổi (vừa đăng nhập,
+  vừa đổi app), mà kết quả cũ thì không biết chuyện đó.
+- **Hỏng thì nhường.** 401 lúc chưa đăng nhập, mạng chập, manifest của app khác — tất cả đều
+  trả về `undefined` để đường gọi thật chạy nguyên vẹn.
+
+Chỉ hỏi ở mặt CẦN đăng nhập: trang bán hàng `/shop*` và các trang marketing của Social
+Commerce là mặt công khai, hỏi trước chỉ tổ nhận 401. Luật đó nằm ở `shouldPrefetchSession`
+trong `boot-route.ts`, và `resolveStorefrontPage` dời từ `main-base.tsx` sang đó vì nay cả
+hai bên đều cần.
+
+### 8.2 Cắt `main-base`
+
+Trang bán hàng (`Storefront`) và trang marketing (`SocialCommerceLanding`) là hai mặt công
+khai không dính gì tới Desk, nhưng đang được import tĩnh: mỗi nhân viên mở Desk đều tải kèm
+chúng.
+
+| | trước | sau |
+|---|---|---|
+| `main-base` | 377,8 kB (108,0 kB gzip) | **324,9 kB (94,2 kB gzip)** |
+| `Storefront` | trong `main-base` | chunk riêng 17,1 kB |
+| `SocialCommerceLanding` | trong `main-base` | chunk riêng 36,6 kB |
+
+### 8.3 Đo lại toàn chuỗi (so với gốc P6, cùng khung đo ở mục 7.3)
+
+| | gốc | sau P7+P8 |
+|---|---|---|
+| `main-base` sẵn sàng | 527–541 ms | **335–360 ms** |
+| lời gọi API đầu tiên xuất phát | 544–557 ms | **236–257 ms** |
+| chuỗi tải xong | 531 ms (8 file) | 550–573 ms (**17 file**, gồm cả chunk màn làm việc 277 kB) |
+
+Nói cách khác: tải nhiều hơn gấp đôi số file mà vẫn xong gần như cùng lúc, còn dữ liệu boot
+— thứ quyết định lúc nào vẽ được màn hình — có sớm hơn khoảng **300 ms**.
+
+Cổng sau P8: server **75 rớt / 2414**, client **17 rớt / 146** — đúng mốc, không rớt mới.

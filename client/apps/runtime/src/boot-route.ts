@@ -71,6 +71,34 @@ export function resolvePreloadLane(location: BootLocation): PreloadLane {
   return trimmed === "app" || trimmed.startsWith("app/") ? "desk-workspace" : "desk";
 }
 
+/** Trang bán hàng công khai của tenant. Union này khớp `StorefrontPage` của `Storefront.tsx`. */
+export type ShopPage = "/shop" | "/shop/product" | "/shop/cart" | "/shop/track";
+
+/**
+ * Ở đây chứ không ở `main-base.tsx` vì script nội tuyến cũng cần biết: khách xem hàng không
+ * có phiên đăng nhập, nên hỏi trước `get_boot`/`get_app_manifest` cho họ là hai lời gọi chắc
+ * chắn trả 401.
+ */
+export function resolveStorefrontPage(location: Pick<BootLocation, "pathname">): ShopPage | undefined {
+  const path = location.pathname.replace(/\/+$/, "") || "/";
+  if (path === "/shop") return "/shop";
+  if (path === "/shop/cart") return "/shop/cart";
+  if (path === "/shop/track") return "/shop/track";
+  return path.startsWith("/shop/") ? "/shop/product" : undefined;
+}
+
+/**
+ * Có nên hỏi trước phiên + manifest ngay trong `<head>` không.
+ *
+ * Chỉ những mặt CẦN đăng nhập mới đáng: Desk. Trang bán hàng và các trang marketing của
+ * Social Commerce đều là mặt công khai.
+ */
+export function shouldPrefetchSession(location: BootLocation): boolean {
+  if (resolveBootLane(location) !== "desk") return false;
+  if (resolveStorefrontPage(location)) return false;
+  return location.hostname.toLowerCase() !== "chotdon.kairo.vn";
+}
+
 export function websiteProbeUrl(pathname: string): string {
   const trimmed = pathname.replace(/^\/+|\/+$/g, "");
   const slug = trimmed ? safeDecode(trimmed) : "";
