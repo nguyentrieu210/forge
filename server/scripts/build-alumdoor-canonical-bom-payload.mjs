@@ -78,7 +78,15 @@ for(const record of records){
   const item=itemMap.get(ref.item_code); if(!item){addBlock("missing_component_item",record,{canonical_item_code:ref.item_code});continue;}
   const parentRecord=parents.get(parentRow); const parentItem=parentRecord?itemMap.get(clean(parentRecord.item_code)):null;
   if(!parentRecord||!parentItem){addBlock("missing_parent_item",record,{canonical_item_code:ref.item_code});continue;}
-  if(ref.item_code===clean(parentItem.item_code)){
+  // So mã ĐANG DÙNG với mã ĐANG DÙNG.
+  //
+  // Trước đây so `ref.item_code` (mã của bộ dựng) với mã cha đang dùng — hai vế khác không gian
+  // mã nên phép kiểm hụt. Hệ quả không phải là báo sai mà là ghi hỏng: nền tảng từ chối với
+  // "BOM row 1 cannot consume its own output Item" ngay lúc ghi, sau khi đã dựng xong cả payload.
+  //
+  // Sau đợt gộp mã, hai mã nguồn KHÁC nhau có thể cùng quy về một mặt hàng — nên phép kiểm này
+  // giờ mới thật sự cần đúng.
+  if(clean(item.item_code)===clean(parentItem.item_code)){
     excluded.push({source_row:record.source_row,source_index:index,source_parent_row:parentRow,source_item_code:clean(record.item_code),canonical_item_code:ref.item_code,reason:"canonical_self_reference_non_bom"});
     continue;
   }
