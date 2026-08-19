@@ -15,6 +15,18 @@ export interface PricingContext {
   party?: string;
   customerGroup?: string;
   supplierGroup?: string;
+  /**
+   * Diện tích tính tiền của dòng, m². Chỉ cần khi mặt hàng có thang giá theo bậc.
+   *
+   * Có mặt hàng bán theo BẬC DIỆN TÍCH: cùng một cửa, 3–4 m² là 590.000/m² còn trên 10 m² là
+   * 520.000/m². Trước đây thang đó được biểu diễn bằng tám MÃ HÀNG khác nhau; nay là một mặt
+   * hàng với tám dòng `Item Price` gắn `area_tier`.
+   *
+   * Bỏ trống thì chỉ những dòng giá không gắn bậc mới khớp — dòng có bậc bị loại. Như vậy một
+   * caller cũ chưa biết truyền diện tích sẽ KHÔNG âm thầm lấy nhầm bậc; nó hoặc lấy đúng giá
+   * chung, hoặc không tìm thấy giá và báo lỗi.
+   */
+  billableAreaSqm?: number;
 }
 
 export interface ResolvedPrice extends JsonObject {
