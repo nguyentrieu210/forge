@@ -51,32 +51,43 @@ function sourceFiles() {
   return files;
 }
 
-test("each money style keeps the exact shape its screen shipped", () => {
-  assert.equal(formatMoney(1234567), "1.234.567");
-  assert.equal(formatMoney(1234567, { style: "dong" }), "1.234.567 ₫");
-  assert.equal(formatMoney(1234567, { style: "dong-tight" }), "1.234.567₫");
-  assert.equal(formatMoney(1234567, { style: "dong-lower" }), "1.234.567 đ");
+test("chỉ còn ba kiểu, mỗi kiểu một ngữ cảnh", () => {
+  assert.equal(formatMoney(1234567), "1.234.567", "mặc định plain — dùng trong bảng/lưới");
+  assert.equal(formatMoney(1234567, { style: "dong" }), "1.234.567 ₫", "đứng một mình thì có đơn vị");
   assert.match(formatMoney(1234567, { style: "currency" }), /1\.234\.567/);
-  assert.equal(formatMoney(-2500, { style: "dong-tight" }), "-2.500₫");
+  assert.equal(formatMoney(-2500, { style: "dong" }), "-2.500 ₫");
   assert.equal(formatMoney(1234.6), "1.235", "không giữ phần thập phân, làm tròn nửa-lên");
+});
+
+test("hai kiểu trôi dạt đã bỏ hẳn, không lặng lẽ rơi về plain", () => {
+  // `dong-tight` và `dong-lower` chỉ khác `dong` một dấu cách và một chữ cái. Nếu ai đó gọi
+  // lại tên cũ, TypeScript chặn ở compile — còn ở runtime chúng KHÔNG được âm thầm cho ra
+  // đúng chuỗi cũ, vì như thế thì kiểu đã bỏ vẫn sống tiếp mà không ai thấy.
+  assert.equal(formatMoney(1234567, { style: "dong-tight" }), "1.234.567");
+  assert.equal(formatMoney(1234567, { style: "dong-lower" }), "1.234.567");
 });
 
 test("invalid input follows the caller's fallback", () => {
   assert.equal(formatMoney("abc"), "—");
-  assert.equal(formatMoney(undefined), "—");
   assert.equal(formatMoney(Number.NaN), "—");
   assert.equal(formatMoney(Number.NaN, { invalid: "chưa có" }), "chưa có");
   assert.equal(formatMoney(0, { style: "dong" }), "0 ₫", "số 0 là giá trị hợp lệ, không phải lỗi");
 });
 
-test("null and empty string keep counting as zero, exactly as the ten copies did", () => {
-  // Bất đối xứng này có SẴN trong cả mười bản cũ: Number(null) và Number("") ra 0, còn
-  // Number(undefined) ra NaN. Gom luật không được lặng lẽ đổi màn hình, nên nó được giữ
-  // nguyên và ghim ở đây. Có nên coi cả ba là "chưa có số" hay không là quyết định giao
-  // diện — xem docs/REFACTOR-FORGE-20260819.md mục 5.
-  assert.equal(formatMoney(null), "0");
-  assert.equal(formatMoney(""), "0");
+test("chỗ trống không được dựng thành số 0", () => {
+  // ĐỔI HÀNH VI CÓ CHỦ Ý (xem docs/REFACTOR-FORGE-20260819.md mục 5 câu 3).
+  //
+  // Trước: Number(null) và Number("") ra 0 nên "chưa có số" hiện thành "0", còn undefined
+  // ra "—" — bất đối xứng thừa hưởng từ cả mười bản `money()` cũ.
+  //
+  // Nay cả ba đều là "chưa có số". Lý do là nghiệp vụ chứ không phải thẩm mỹ: trong ERP,
+  // 0 là một giá trị THẬT (đã trả đủ, số dư bằng không, chiết khấu bằng không). Dựng nó lên
+  // từ chỗ trống khiến người dùng đọc một con số mà hệ thống chưa từng có.
+  assert.equal(formatMoney(null), "—");
+  assert.equal(formatMoney(""), "—");
+  assert.equal(formatMoney("   "), "—");
   assert.equal(formatMoney(undefined), "—");
+  assert.equal(formatMoney(0), "0", "số 0 khai tường minh vẫn là 0");
 });
 
 test("an unknown currency code still renders instead of throwing", () => {

@@ -141,7 +141,7 @@ function quantity(value: unknown, digits = 3): string {
 }
 
 function money(value: unknown): string {
-  return formatMoney(numeric(value), { style: "dong-lower" });
+  return formatMoney(numeric(value), { style: "plain" });
 }
 
 export function purchaseLineKey(line: PurchaseLine, index = 0): string {
