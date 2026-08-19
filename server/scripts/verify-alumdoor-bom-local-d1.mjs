@@ -65,7 +65,25 @@ SELECT
   (SELECT COUNT(DISTINCT json_extract(d.payload_json,'$.item')) FROM documents d WHERE d.doctype='Bill of Materials' AND json_extract(d.payload_json,'$.company')='ALUMDOOR') AS bom_unique_finished_item,
   (SELECT COUNT(*) FROM document_children c JOIN documents d ON d.tenant_id=c.tenant_id AND d.doc_key=c.parent_key WHERE d.doctype='Bill of Materials' AND json_extract(d.payload_json,'$.company')='ALUMDOOR' AND c.fieldname='items') AS bom_component_total,
   (SELECT COUNT(*) FROM documents d WHERE d.doctype='Bill of Materials' AND json_extract(d.payload_json,'$.company')='ALUMDOOR' AND NOT EXISTS (SELECT 1 FROM document_children c WHERE c.tenant_id=d.tenant_id AND c.parent_key=d.doc_key AND c.fieldname='items')) AS bom_without_component,
-  (SELECT COUNT(*) FROM document_children c JOIN documents d ON d.tenant_id=c.tenant_id AND d.doc_key=c.parent_key LEFT JOIN master_records m ON m.tenant_id=c.tenant_id AND m.record_type='Item' AND m.name=json_extract(c.payload_json,'$.item_code') WHERE d.doctype='Bill of Materials' AND json_extract(d.payload_json,'$.company')='ALUMDOOR' AND c.fieldname='items' AND m.name IS NULL) AS bom_missing_item_reference;
+  -- Mặt hàng tra ở HỢP hai kho, giống hệt cách picker đọc.
+  --
+  -- Bản cũ chỉ tra 'master_records' — mà 'Item' nằm trong 'documents' (587 ở đó, 0 ở kia). Nghĩa
+  -- là phép kiểm này SAI TỪ ĐẦU: hễ có cấu phần là nó báo mồ côi hết. Nó chưa lộ chỉ vì trước
+  -- đây định mức nhập vào được đúng 5 cấu phần; đến khi nhập được 1.279 thì nó báo mồ côi cả 1.279.
+  (SELECT COUNT(*) FROM document_children c
+     JOIN documents d ON d.tenant_id=c.tenant_id AND d.doc_key=c.parent_key
+    WHERE d.doctype='Bill of Materials'
+      AND json_extract(d.payload_json,'$.company')='ALUMDOOR'
+      AND c.fieldname='items'
+      AND NOT EXISTS (
+        SELECT 1 FROM documents i
+         WHERE i.tenant_id=c.tenant_id AND i.doctype='Item'
+           AND i.name=json_extract(c.payload_json,'$.item_code')
+        UNION ALL
+        SELECT 1 FROM master_records m
+         WHERE m.tenant_id=c.tenant_id AND m.record_type='Item'
+           AND m.name=json_extract(c.payload_json,'$.item_code')
+      )) AS bom_missing_item_reference;
 `);
 const summary = summaryRows[0] ?? {};
 
