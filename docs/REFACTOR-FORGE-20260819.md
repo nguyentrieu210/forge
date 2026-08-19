@@ -33,10 +33,10 @@ Nhóm lỗi có sẵn (mẫu):
 
 ```
 # server (chạy trong thư mục server/)
-npm run build                                  # bắt buộc sau khi sửa .ts — test chạy trên dist/
+node scripts/refactor-baseline.mjs --build      # dựng lại dist/ rồi so mốc; RỚT MỚI => exit 1
 node scripts/refactor-baseline.mjs --record    # chốt mốc (chỉ khi CỐ Ý dời mốc)
-node scripts/refactor-baseline.mjs             # sau mỗi bước; RỚT MỚI => exit 1
-node scripts/refactor-baseline.mjs --only <chuỗi>   # vài giây thay vì ~4 phút
+node scripts/refactor-baseline.mjs --build --only <chuỗi>   # vài giây thay vì cả bộ
+npm run build:fast                             # chỉ dựng: dọn file mồ côi + tsc tăng dần
 
 # client (chạy trong thư mục client/)
 npx tsc -b
@@ -128,6 +128,7 @@ an toàn hay không phụ thuộc vào việc đã gom luật lại hay chưa.
 | **P4b** ✅ | 7325 dòng vertical thành package `@metaforge/vertical-alumdoor`, phụ thuộc NGƯỢC vào views. `vertical-registration.test.mjs` ghim hai vế: nạp package thì bảng có `alumdoor`, và `apps/runtime` nạp nó trước màn làm việc | trung bình |
 | **P5** ✅ | Cắt `router.ts` **4530 → 3244 dòng (−28%)** thành 5 module có ranh giới: `document-access.ts` (đọc/ghi + quyền), `router-helpers.ts`, `link-search.ts` (ô chọn + nhãn), `desk-surfaces.ts` (7 mặt bàn làm việc), `alumdoor-commercial.ts`. Còn lại trong router đúng phần định tuyến: `dispatchMethod` 362 dòng và REST resource | cao |
 | **P6** ✅ | `alumdoor-worker/src/index.ts` **3689 → 2815 dòng** (tách `document-validation.ts` 854 dòng + `responses.ts`); `ChildGrid.tsx` **2200 → 1907 dòng** (tách `child-grid-columns.ts` 313 dòng luật thuần) | cao |
+| **P7** ✅ | Hiệu năng: chuỗi tải lúc mở app đi từ 5 chặng nối đuôi xuống 2 (tải trước theo làn, phát ngay trong `<head>`); vòng lặp dựng-test của repo 19 s → 6 s. Xem mục 7 | trung bình |
 
 Mỗi pha là một commit riêng, chạy cổng mốc trước khi commit.
 
@@ -145,6 +146,8 @@ Mỗi pha là một commit riêng, chạy cổng mốc trước khi commit.
 | Nơi | Trước | Sau | Lý do |
 |---|---|---|---|
 | `frappe-api/src/storefront.ts` `round` | 2 chữ số, không `EPSILON` | `roundTo(value, 2)` dùng chung, có `EPSILON` | cùng một tên `round` mà hai luật; bản không `EPSILON` làm `1.005` thành `1.00` do sai số nhị phân |
+| `bootstrap.ts` giải mã đường dẫn | `decodeURIComponent` trần | `safeDecode` trong `boot-route.ts` | một URL có `%` hỏng (ví dụ `/%`) ném lỗi trước khi kịp nạp gì — màn hình trắng, không thông báo |
+| Lời gọi `forge.website.page` | xuất phát sau khi chunk bootstrap tải xong | xuất phát từ script nội tuyến trong `<head>` | cùng một lời gọi, chỉ sớm hơn ~2 chặng mạng; số lần gọi không đổi (nhớ theo `globalThis`) |
 
 ## 5. Câu hỏi cần chủ dự án quyết
 
@@ -191,3 +194,75 @@ dựng worktree riêng tại `agent-live` và chạy chính hai file test đó:
 Mốc được chụp lại theo trạng thái sau trộn: **server 75 rớt / 2413**, **client 17 rớt / 135**
 (server bớt một so mốc cũ vì 3 test của họ đã xanh trở lại).
 
+## 7. P7 — hiệu năng: mở app và vòng lặp dựng-test (19/08)
+
+### 7.1 Bệnh: bundle mở app theo kiểu nối đuôi
+
+Trình duyệt chỉ biết tên file tiếp theo sau khi đã đọc xong file trước, nên chuỗi khởi động
+là năm vòng mạng xếp hàng:
+
+```
+index.html → index-*.js (2,2 kB) → bootstrap-*.js (2,6 kB) → main-*.js (193 kB)
+           → main-base-*.js (378 kB) → [2 lời gọi API] → RuntimeDoctypeWorkspace-*.js (277 kB)
+```
+
+Hai chặng đầu tiêu tốn một vòng mạng đầy đủ chỉ để đọc chưa tới 5 kB. Đo thật trên
+`alu.kairo.vn` từ VN (biên SIN): asset đã cache biên `ttfb` ~65 ms, một lời gọi `/api/method`
+~185 ms, HTML ~190 ms. Nặng hơn cả độ trễ: các file lớn tải **nối đuôi** thay vì song song,
+nên trên 4G phần chênh còn lớn hơn nhiều.
+
+Còn hai chỗ nữa cùng một bệnh:
+
+- `DoctypeWorkspace` nạp package vertical rồi mới nạp màn làm việc — hai `await` liên tiếp,
+  trong khi `RuntimeDoctypeWorkspace` chỉ TRA bảng đăng ký lúc render, không phải lúc import.
+  Một vòng mạng trả cho một ràng buộc không tồn tại.
+- Trên đường `/`, `bootstrap.ts` hỏi `forge.website.page` rồi mới bắt đầu nạp Desk. Với tenant
+  không có website (Alumdoor), mỗi lần gõ tên miền trần là chờ hết một lời gọi API mới bắt
+  đầu tải app.
+
+### 7.2 Đã làm
+
+| Chỗ | Trước | Sau |
+|---|---|---|
+| `index.html` | `import("/src/bootstrap.ts")` động | import **tĩnh** — bootstrap nằm luôn trong chunk entry, bớt một chặng |
+| `scripts/boot-preload.mjs` (mới) | không có | plugin Vite nhúng danh sách file băm + script phát `modulepreload` **ngay trong `<head>`**, theo đúng làn |
+| `src/boot-route.ts` (mới) | luật chia làn nằm trong `bootstrap.ts` | một nguồn duy nhất, bản nội tuyến do build **biên dịch từ chính file này** |
+| `main-base.tsx` | `await` vertical rồi `await` màn làm việc | `Promise.all` |
+| `forge.website.page` | gọi sau khi bootstrap tải xong | gọi từ script nội tuyến; 404 thì phát tiếp bó Desk ngay |
+
+Tải trước **theo làn** là phần phải cẩn thận: khách vào trang bán hàng công khai không được
+gánh 108 kB gzip của Desk, và ngược lại người mở `/app/<DocType>` phải có sẵn cả chunk màn
+làm việc. Vì thế danh sách được sinh từ đồ thị bundle lúc build — ba làn `website`, `desk`,
+`desk-workspace` — và **build sẽ dừng** nếu không tìm thấy mắt xích nào trong đồ thị, thay vì
+im lặng bỏ tải trước.
+
+### 7.3 Đo được gì
+
+Bản build thật, phục vụ qua server tĩnh có bơm đúng độ trễ đã đo ở trên (asset 65 ms, API
+185 ms, HTML 130 ms), Chromium headless, 4 lượt xen kẽ:
+
+| | trước | sau |
+|---|---|---|
+| `main-base` sẵn sàng | 515–539 ms | **343–370 ms** |
+| lời gọi API đầu tiên xuất phát | ~545 ms | **~450 ms** |
+| chunk màn làm việc (277 kB) | chỉ bắt đầu tải SAU khi boot + manifest trả về | tải xong ở ~500 ms, trước cả khi API trả lời |
+
+FCP trong khung đo này dao động lớn (login screen chỉ vẽ sau khi API 401 trả về, mà API là
+phần chi phối) nên không lấy làm số công bố.
+
+### 7.4 Vòng lặp dựng-test của repo
+
+`test:unit` xoá sạch `dist/` rồi dựng lại 503 file mỗi lần chạy. Lý do có thật: bộ test chạy
+TRÊN `dist/`, nên một file `.js` còn sót lại khi nguồn đã xoá vẫn import được và vẫn xanh.
+
+Nay giữ nguyên tính chất đó mà không phải xoá sạch: `tsc` bật `incremental`, và
+`scripts/prune-stale-dist.mjs` đối chiếu từng sản phẩm với nguồn của nó rồi xoá cái mồ côi
+(`tests/prune-stale-dist.test.mjs` canh đúng tính chất này). Cờ `--build` của cổng mốc —
+được ghi trong hướng dẫn từ đầu nhưng **chưa bao giờ được cài** — nay gọi thẳng `build:fast`.
+
+| | trước | sau |
+|---|---|---|
+| dựng lại trước khi chạy test | ~19 s | **~6 s** |
+| `--build --only <chuỗi>` trọn vòng | không có (phải tự nhớ dựng) | **~6 s** |
+
+Cổng sau P7: server **75 rớt / 2414**, client **17 rớt / 140** — đúng mốc, không rớt mới.

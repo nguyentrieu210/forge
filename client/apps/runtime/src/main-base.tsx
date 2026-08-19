@@ -31,11 +31,19 @@ import {
 import "./styles.css";
 
 const ApplicationCatalogContainer = lazy(() => import("@metaforge/views/catalog").then((module) => ({ default: module.ApplicationCatalogContainer })));
-// Nạp vertical TRƯỚC khi dựng màn làm việc: package vertical tự đăng ký lúc được nạp, nên
-// thứ tự này là thứ giữ cho phần mở rộng có mặt ngay ở lần render đầu tiên.
+/**
+ * Cả hai phải nạp XONG trước lần render đầu tiên — nhưng không phải nạp lần lượt.
+ *
+ * Package vertical tự đăng ký vào bảng lúc được nạp, còn `RuntimeDoctypeWorkspace` chỉ TRA
+ * bảng đó lúc render (xem `app/vertical/registry.ts`), nên thứ tự giữa hai lời gọi không
+ * quan trọng, chỉ cần `lazy` chưa giải quyết xong thì chưa render. Viết nối đuôi nhau như
+ * trước là trả thêm một vòng mạng đầy đủ cho đúng một ràng buộc không tồn tại.
+ */
 const DoctypeWorkspace = lazy(async () => {
-  await import("@metaforge/vertical-alumdoor");
-  const module = await import("@metaforge/views/doctype-workspace");
+  const [, module] = await Promise.all([
+    import("@metaforge/vertical-alumdoor"),
+    import("@metaforge/views/doctype-workspace"),
+  ]);
   return { default: module.DoctypeWorkspace };
 });
 const OverviewContainer = lazy(() => import("@metaforge/views/overview").then((module) => ({ default: module.OverviewContainer })));

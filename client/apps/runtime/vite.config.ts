@@ -1,7 +1,8 @@
 import { existsSync, readdirSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath, URL } from "node:url";
-import { defineConfig, type Plugin } from "vite";
+import { defineConfig, transformWithEsbuild, type Plugin } from "vite";
+import { bootPreload } from "./scripts/boot-preload.mjs";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
@@ -15,6 +16,7 @@ const viewSource = (relativePath: string) => fileURLToPath(
 const runtimeDependency = (name: string) => fileURLToPath(
   new URL(`./node_modules/${name}`, import.meta.url),
 );
+const bootRoutePath = fileURLToPath(new URL("./src/boot-route.ts", import.meta.url));
 const attendanceIndex = fileURLToPath(new URL("../attendance-mobile/index.html", import.meta.url));
 const attendanceEntry = fileURLToPath(new URL("../attendance-mobile/src/main.tsx", import.meta.url));
 const attendancePublic = fileURLToPath(new URL("../attendance-mobile/public/", import.meta.url));
@@ -137,7 +139,7 @@ const viewSourceAliases = [
  * 8799 khớp cổng worker trong runbook.
  */
 export default defineConfig({
-  plugins: [attendanceMobileDev(), react(), tailwindcss()],
+  plugins: [attendanceMobileDev(), react(), tailwindcss(), bootPreload({ transformWithEsbuild, bootRoutePath })],
   resolve: {
     alias: viewSourceAliases,
     dedupe: ["react", "react-dom"],

@@ -30,6 +30,11 @@ const asJson = args.has("--json");
 // ~4 phút xuống vài giây; chạy full trước khi commit.
 const onlyIndex = argv.indexOf("--only");
 const only = onlyIndex >= 0 ? argv[onlyIndex + 1] : undefined;
+// `--build`: dựng lại dist/ trước khi chạy. Bộ test chạy TRÊN dist/, nên sửa .ts rồi chạy
+// thẳng là đang đo bản cũ — cờ này từng được ghi trong phần hướng dẫn ở đầu file mà chưa
+// bao giờ được cài. Dựng tăng dần kèm dọn file mồ côi nên tốn vài giây, không phải ~14 s
+// như xoá sạch rồi dựng lại.
+const rebuild = args.has("--build");
 
 function testFiles() {
   return readdirSync(path.join(SERVER_ROOT, "tests"))
@@ -72,6 +77,17 @@ async function collect() {
 
 function failuresOf(results) {
   return [...results].filter(([, ok]) => !ok).map(([key]) => key).sort();
+}
+
+if (rebuild) {
+  // Gọi qua script npm để các bước dựng chỉ được định nghĩa MỘT chỗ (package.json).
+  // Cả lệnh nằm trong một chuỗi, không tách args: `npm.cmd` trên Windows bắt buộc phải đi
+  // qua shell, mà truyền args kèm shell thì Node cảnh báo mỗi lần chạy.
+  const { code } = await run("npm run build:fast", [], { stdio: ["ignore", "pipe", "inherit"], shell: true });
+  if (code !== 0) {
+    console.error("refactor-baseline: build:fast thất bại — không chạy test trên dist/ cũ.");
+    process.exit(2);
+  }
 }
 
 const results = await collect();

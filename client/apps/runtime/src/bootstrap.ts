@@ -1,30 +1,26 @@
+import { resolveBootLane, startWebsiteProbe } from "./boot-route.js";
+
 interface MethodEnvelope<T> {
   message?: T;
 }
 
-const RESERVED_ROOTS = new Set([
-  "api", "app", "x", "overview", "process", "reports", "master-data", "catalog", "permissions",
-  "security", "organization", "companies", "branches", "departments", "workspace", "print", "report",
-  "import", "page", "dashboard", "login", "signup", "features", "pricing", "faq", "privacy", "terms",
-  "facebook", "shop", "files",
-]);
-
-async function boot(): Promise<void> {
-  if (!shouldTryWebsite()) {
+/**
+ * Điểm vào chung của bundle.
+ *
+ * Được gọi từ thẻ module trong `index.html` bằng import TĨNH, nên module này nằm cùng chunk
+ * với entry: trước đây nó là một `import()` động, tức thêm nguyên một chặng mạng chỉ để đọc
+ * 2,6 kB rồi mới bắt đầu tải thứ thật sự cần.
+ */
+export async function boot(): Promise<void> {
+  if (resolveBootLane(window.location) === "desk") {
     await import("./main.js");
     return;
   }
 
-  const path = window.location.pathname.replace(/^\/+|\/+$/g, "");
-  const slug = path ? decodeURIComponent(path) : "";
-  const query = slug ? `?slug=${encodeURIComponent(slug)}` : "";
-
   try {
-    const response = await fetch(`/api/method/forge.website.page${query}`, {
-      method: "GET",
-      credentials: "same-origin",
-      headers: { accept: "application/json" },
-    });
+    // Script nội tuyến trong <head> đã bắn lời gọi này từ lúc HTML còn đang đọc; ở đây
+    // thường chỉ là nhận lại promise đó.
+    const response = await startWebsiteProbe();
     if (response.status === 404) {
       await import("./main.js");
       return;
@@ -45,27 +41,6 @@ async function boot(): Promise<void> {
   }
 }
 
-function shouldTryWebsite(): boolean {
-  const host = window.location.hostname.toLowerCase();
-  const params = new URLSearchParams(window.location.search);
-
-  // Query-driven runtime modes are an existing public contract. In particular the
-  // Alumdoor login QA and tenant launcher use `?alumdoor=1`, while `?app=<id>` selects
-  // one installed app. A published Website must never steal those explicit requests.
-  if (params.get("alumdoor") === "1" || params.has("app")) return false;
-
-  // Preserve the dedicated Social Commerce marketing surface and its local visual fixture.
-  if (host === "chotdon.kairo.vn" || params.get("landing") === "1") return false;
-
-  const trimmed = window.location.pathname.replace(/^\/+|\/+$/g, "");
-  if (!trimmed) return true;
-  const segments = trimmed.split("/").filter(Boolean);
-  if (segments.length !== 1) return false;
-  const root = decodeURIComponent(segments[0]!).toLowerCase();
-  if (RESERVED_ROOTS.has(root)) return false;
-  return /^[a-z0-9][a-z0-9-]{0,79}$/.test(root);
-}
-
 function renderPublicFailure(): void {
   const root = document.getElementById("root");
   if (!root) return;
@@ -78,5 +53,3 @@ function renderPublicFailure(): void {
       </section>
     </main>`;
 }
-
-void boot();

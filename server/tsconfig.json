@@ -13,6 +13,11 @@
     "declaration": true,
     "sourceMap": true,
     "rootDir": ".",
+    // Biên dịch tăng dần: vòng lặp sửa-chạy-test không phải dựng lại 503 file mỗi lần.
+    // `scripts/prune-stale-dist.mjs` là vế còn lại — nó dọn .js mồ côi khi file nguồn bị xoá,
+    // thứ mà `--incremental` không tự làm và là lý do trước đây phải xoá sạch dist.
+    "incremental": true,
+    "tsBuildInfoFile": "dist/.tsbuildinfo",
     "outDir": "dist",
     "resolveJsonModule": true
   },
