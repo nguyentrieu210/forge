@@ -120,7 +120,14 @@ const saveDoc = (doctype, name, patch) => request(
 await request('/api/method/login', { method: 'POST', body: { usr: user, pwd: password } });
 
 // ── A. đơn vị kết quả mang tỉ số ────────────────────────────────────────────
-const uomNames = new Set((await listAll('UOM')).map((row) => row.name));
+// CHỈ đơn vị đang dùng. Lấy cả bản đã ngừng dùng thì `Thùng` trông vẫn hợp lệ — mà nó bị gỡ
+// đúng vì E07 cấm, nên ô chọn sẽ không mời nó ra và dòng bán vẫn kẹt. Audit đếm theo bản đang
+// dùng; importer phải đếm cùng một kiểu, không thì hai bên nói hai đằng.
+const uomNames = new Set(
+  (await listAll('UOM', ['name', 'disabled']))
+    .filter((row) => !(row.disabled === 1 || row.disabled === true))
+    .map((row) => row.name),
+);
 if (!uomNames.has(RESULT_UOM)) throw new Error(`Refusing: đơn vị ${RESULT_UOM} không có trong danh mục`);
 
 const ruleFixes = [];
