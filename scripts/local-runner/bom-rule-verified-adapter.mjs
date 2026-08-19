@@ -22,22 +22,39 @@ function run(command, args, { cwd, label }) {
   if (result.status !== 0) throw fail(`${label} failed with exit code ${result.status}`);
 }
 
-function resolvePinnedTypeScript(root) {
-  const candidates = [
+function pinnedTypeScriptCandidates(root) {
+  return [
     path.join(root, 'client', 'node_modules', 'typescript', 'bin', 'tsc'),
     path.join(root, 'node_modules', 'typescript', 'bin', 'tsc'),
   ];
-  const found = candidates.find(existsSync);
-  if (!found) {
-    throw fail(`Pinned TypeScript binary not found; checked: ${candidates.join(', ')}`);
+}
+
+function resolvePinnedTypeScript(root) {
+  return pinnedTypeScriptCandidates(root).find(existsSync) || '';
+}
+
+function ensurePinnedTypeScript(root, pnpm) {
+  let tsc = resolvePinnedTypeScript(root);
+  if (tsc) return tsc;
+
+  console.log('BOM_RULE_TYPESCRIPT_DEPENDENCY_MISSING action=pnpm_install');
+  run(pnpm, ['install', '--frozen-lockfile'], {
+    cwd: root,
+    label: 'BOM Rule dependency bootstrap',
+  });
+
+  tsc = resolvePinnedTypeScript(root);
+  if (!tsc) {
+    throw fail(`Pinned TypeScript binary still not found after pnpm install; checked: ${pinnedTypeScriptCandidates(root).join(', ')}`);
   }
-  return found;
+  console.log(`BOM_RULE_TYPESCRIPT_DEPENDENCY_READY path=${tsc}`);
+  return tsc;
 }
 
 export function runBomRuleTargetedVerification(root = path.win32.resolve(process.env.FORGE_LOCAL_REPO_ROOT || DEFAULT_REPO_ROOT)) {
   const server = path.join(root, 'server');
   const pnpm = packageManagerCommand();
-  const tsc = resolvePinnedTypeScript(root);
+  const tsc = ensurePinnedTypeScript(root, pnpm);
   const viewsTsconfig = path.join(root, 'client', 'packages', 'views', 'tsconfig.json');
   console.log('BOM_RULE_TARGETED_VERIFY_BEGIN');
   run(pnpm, ['run', 'build'], { cwd: server, label: 'BOM Rule server TypeScript build' });
