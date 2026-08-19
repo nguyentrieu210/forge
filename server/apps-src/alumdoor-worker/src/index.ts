@@ -2,6 +2,7 @@
  * Worker riêng của ALUMDOOR — những việc brief không nói được vì phải TÍNH rồi mới quyết.
  *
  *   POST /api/method/alumdoor.slats.compute   chiều cao phủ bì → số lá, theo mã và đời SP
+ *   POST /api/method/alumdoor.motor.suggest   diện tích cửa → motor nên lắp, kèm bình lưu điện
  *   POST /api/method/alumdoor.cut.propose     rộng cắt lá + số lá → đề xuất lô nhôm nên cắt
  *   POST /api/method/alumdoor.cut.apply       cắt thật: trừ lô, ghi phiếu cắt, ghi phế
  *   POST /api/method/alumdoor.cut.reverse     GHI NHẦM: trả lá nguyên khổ về đúng lô cũ
@@ -17,6 +18,7 @@
  * cùng một lô cùng lúc thì người thứ hai bị TỪ CHỐI vì bản ghi đã đổi — không phải cả hai
  * cùng lọt rồi kho âm. Đó là chốt của nền tảng, không phải của Worker này.
  */
+import { motorLoadKg, suggestMotor, suggestUps, type MotorThresholdRow } from "./motor-selection.js";
 import {
   australianSlatCount,
   slatCount,
@@ -266,6 +268,23 @@ async function warmMasters(call: PlatformCall, doc: Record<string, unknown>): Pr
  * hạt giống biên dịch sẵn — hai bên sinh ra từ cùng một nguồn và có chốt chặn trong máy sinh
  * brief giữ chúng khớp nhau, nên lùi về là an toàn chứ không phải đoán.
  */
+/**
+ * Bảng ngưỡng motor/UPS đọc từ tenant.
+ *
+ * Đọc cả hai loại dòng trong một lần: motor tra theo diện tích, bình lưu điện tra theo tải
+ * motor. Chúng ở chung một danh mục vì cùng là "bảng tra chọn thiết bị", nhưng luật khác nhau
+ * nên bên dưới lọc theo `selection_basis` chứ không trộn.
+ */
+async function readMotorThresholds(call: PlatformCall): Promise<MotorThresholdRow[]> {
+  const query = new URLSearchParams({
+    fields: JSON.stringify(["rule_code", "item_code", "selection_basis", "max_area_sqm", "max_motor_kg", "includes", "sort_order", "disabled"]),
+    limit_page_length: "200",
+  });
+  const response = await call(`resource/${encodeURIComponent("Ngưỡng chọn Motor")}?${query}`).catch(() => null);
+  if (!response?.ok) return [];
+  return ((await response.json()) as { data?: MotorThresholdRow[] }).data ?? [];
+}
+
 async function readSlatCatalog(call: PlatformCall): Promise<SlatProfileTable> {
   const query = new URLSearchParams({
     fields: JSON.stringify(["ma", "buoc_la_m", "tru_mot_la", "disabled"]),
@@ -3515,6 +3534,28 @@ export default {
          * Cửa Úc vẫn thuần số học: luật của nó là hệ số theo loại motor, nằm trong Cutting
          * Policy chứ không theo mã nhôm.
          */
+        /**
+         * Tra motor theo diện tích cửa, và bình lưu điện theo tải của chính motor vừa chọn.
+         *
+         * Danh mục `Ngưỡng chọn Motor` có dữ liệu từ 19/08 nhưng tới lúc đó chưa ai đọc — audit
+         * nền tảng bắt được đúng chỗ đó: dựng kho xong mà chưa nối dây thì người bán vẫn phải
+         * nhớ bảng trong đầu, tức là danh mục không đỡ được việc gì.
+         */
+        if (method === "alumdoor.motor.suggest") {
+          const rows = await readMotorThresholds(call);
+          if (rows.length === 0) return answer({ motor: null, ups: null, note: "Chưa có bảng ngưỡng chọn Motor" });
+          const motor = suggestMotor(rows, Number(args.area_sqm));
+          if (!motor) {
+            return answer({ motor: null, ups: null, note: `Không có motor nào cho cửa ${args.area_sqm} m² — bảng ngưỡng dừng ở mức thấp hơn` });
+          }
+          // `motor_kg` truyền vào thì ưu tiên; không truyền thì suy từ mã luật và TỪ CHỐI nếu
+          // không suy được, thay vì đoán rồi chọn nhầm bình.
+          const motorKg = args.motor_kg === undefined || args.motor_kg === null || args.motor_kg === ""
+            ? motorLoadKg(motor.rule_code)
+            : Number(args.motor_kg);
+          return answer({ motor, ups: suggestUps(rows, motorKg), motor_kg: motorKg });
+        }
+
         if (method === "alumdoor.slats.compute") {
           try {
             const kind = args.australian_kind ? String(args.australian_kind) as AustralianDoor : null;

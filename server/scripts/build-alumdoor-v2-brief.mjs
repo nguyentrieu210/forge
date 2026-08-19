@@ -92,7 +92,7 @@ const moveFieldsAfter = (dt, names, anchor) => {
  * `unchanged` khi manifest byte-identical, nên giữ nguyên số cũ là mọi sửa đổi metadata nằm im
  * trong file mà không bao giờ vào tenant.
  */
-brief.version = "2.8.0";
+brief.version = "2.9.0";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 for (const role of ["General Accountant", "Chief Accountant", "Director", "Kế toán tổng hợp", "Kế toán trưởng", "Giám đốc"]) {
   if (!brief.roles.includes(role)) brief.roles.push(role);
@@ -2715,6 +2715,34 @@ note(`UI Link · ${leafLinkFilterCount} ô Warehouse/Item Group chỉ chọn nú
   if (brief.doctypes.some((entry) => ["Sales Option", "Sales Package"].includes(entry.name)))
     throw new Error("Generator resurrected deprecated Sales Option/Sales Package DocType");
   note("REPRO · source-authoritative O2C/master contracts restored; deprecated sales option fields forbidden");
+}
+
+// ── Nguyên nhân cửa lỗi: nối dây ──
+//
+// Danh mục có 11 nguyên nhân thật của xưởng kèm bên chịu trách nhiệm, nhưng tới 19/08 KHÔNG ai
+// đọc — audit nền tảng bắt được đúng chỗ đó. Trong khi `Warranty Claim.issue_cause` lại là một
+// Select 4 nhóm thô khai riêng: hai bảng phân loại song song cho cùng một câu hỏi.
+//
+// GHI RÕ CHỖ HỤT, không tự lấp: Select cũ có nhóm "Vận chuyển/lắp đặt" mà danh mục KHÔNG có
+// nguyên nhân nào tương ứng, còn danh mục có bên chịu trách nhiệm "Sale" mà Select không có.
+// Đây là dữ liệu chủ xưởng phải bổ sung, không phải chỗ để tôi bịa thêm nguyên nhân.
+//
+// An toàn để đổi ngay: hiện có 0 bản ghi Warranty Claim, nên không có dữ liệu nào phải chuyển.
+{
+  const claim = brief.doctypes.find((entry) => entry.name === "Warranty Claim");
+  const at = (claim?.fields ?? []).findIndex((field) => nameOf(field) === "issue_cause");
+  if (claim && at >= 0 && (typeof claim.fields[at] === "string" || claim.fields[at].fieldtype !== "Link")) {
+    claim.fields[at] = {
+      fieldname: "issue_cause",
+      label: "Nguyên nhân",
+      fieldtype: "Link",
+      options: "Nguyên nhân cửa lỗi",
+      required: true,
+      link_filters: '{"disabled":0}',
+      description: "Chọn nguyên nhân cụ thể từ danh mục. Bên chịu trách nhiệm đi theo nguyên nhân, không khai lại ở đây.",
+    };
+    note("BẢO HÀNH · issue_cause đổi Select → Link(Nguyên nhân cửa lỗi) — thôi hai bảng phân loại song song");
+  }
 }
 
 // Ô hiện ra con số mà không nói con số từ đâu thì người dùng không kiểm được. Audit 19/08 đếm

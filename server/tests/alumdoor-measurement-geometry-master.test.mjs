@@ -93,7 +93,7 @@ test("static V2 metadata contains Geometry masters and moved ownership", async (
   // Chốt này mục từ lâu — brief đã đi qua 2.4.x → 2.8.0 mà nó vẫn ghi 2.4.0, nên test đỏ âm thầm
   // trong nhóm lỗi nền. Điều test này thật sự cần là các DocType hình học CÓ MẶT, không phải app
   // đứng ở phiên bản nào; giữ chốt version chỉ để nó đỏ đúng lúc metadata đổi.
-  assert.equal(brief.version, "2.8.0");
+  assert.equal(brief.version, "2.9.0");
   const byName = new Map(brief.doctypes.map((row) => [row.name, row]));
   for (const name of ["Geometry Field", "Geometry Profile", "Geometry Profile Scope", "Geometry Profile Field"]) {
     assert.ok(byName.has(name), `thiếu ${name}`);

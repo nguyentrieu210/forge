@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "2.8.0",
+  "version": "2.9.0",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -10976,10 +10976,12 @@
         "item_description:Small Text! Hàng lỗi / nội dung",
         {
           "fieldname": "issue_cause",
-          "fieldtype": "Select",
-          "options": "Sản xuất\nNhà cung cấp\nKhách hàng sử dụng\nVận chuyển/lắp đặt",
           "label": "Nguyên nhân",
-          "required": true
+          "fieldtype": "Link",
+          "options": "Nguyên nhân cửa lỗi",
+          "required": true,
+          "link_filters": "{\"disabled\":0}",
+          "description": "Chọn nguyên nhân cụ thể từ danh mục. Bên chịu trách nhiệm đi theo nguyên nhân, không khai lại ở đây."
         },
         "responsible_person:Data Người chịu trách nhiệm",
         "production_conclusion:Small Text Kết luận sản xuất",

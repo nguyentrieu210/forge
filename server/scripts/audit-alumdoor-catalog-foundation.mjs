@@ -155,6 +155,33 @@ for (const dt of doctypes) {
     referencedBy.get(field.options).add(`${dt.name}.${field.fieldname}`);
   }
 }
+/**
+ * "Không trường Link nào trỏ tới" KHÔNG có nghĩa là không ai dùng.
+ *
+ * Bản đầu của kiểm tra này báo `Item Price` (558 dòng), `Pricing Rule` (83) và `BOM Rule` (110)
+ * là danh mục vô chủ — trong khi chúng là đầu vào chính của máy tính giá và máy định mức. Chúng
+ * được ĐỌC THẲNG bằng tên doctype trong mã nguồn, không qua trường Link, nên soi Link là soi
+ * nhầm chỗ.
+ *
+ * Tín hiệu thứ hai vì thế phải là: tên doctype có xuất hiện trong mã nguồn máy chạy không.
+ * Thô, nhưng kiểm được và không bịa.
+ */
+function collectSourceText(dir, acc = []) {
+  if (!fs.existsSync(dir)) return acc;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name === 'node_modules' || entry.name === 'dist') continue;
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) collectSourceText(full, acc);
+    else if (/\.(ts|tsx|mjs)$/.test(entry.name)) acc.push(fs.readFileSync(full, 'utf8'));
+  }
+  return acc;
+}
+const engineSources = [
+  ...collectSourceText(path.join(process.cwd(), 'apps-src')),
+  ...collectSourceText(path.join(process.cwd(), 'packages')),
+].join('\n');
+const usedByEngine = (name) => engineSources.includes(`"${name}"`) || engineSources.includes(`'${name}'`);
+
 const screenFindings = [];
 for (const dt of doctypes) {
   if (dt.is_child) continue;
@@ -162,12 +189,16 @@ for (const dt of doctypes) {
   const rows = namesOf(dt.name).size;
   const refs = referencedBy.get(dt.name) ?? new Set();
   const onMenu = navItems.has(dt.name) && dt.menu !== false;
+  const engine = usedByEngine(dt.name);
   let verdict = 'ok';
-  if (rows === 0 && refs.size === 0) verdict = 'rong_va_khong_ai_dung';
-  else if (rows === 0) verdict = 'rong_nhung_co_noi_tro_toi';
-  else if (refs.size === 0) verdict = 'co_du_lieu_nhung_khong_ai_tro_toi';
+  if (rows === 0 && refs.size === 0 && !engine) verdict = 'rong_va_khong_ai_dung';
+  else if (rows === 0 && (refs.size > 0 || engine)) verdict = 'rong_nhung_co_noi_dung_toi';
+  else if (refs.size === 0 && !engine) verdict = 'co_du_lieu_nhung_khong_ai_dung';
   if (verdict === 'ok') continue;
-  screenFindings.push({ doctype: dt.name, rows, referenced_by: [...refs].slice(0, 6), on_menu: onMenu, verdict });
+  screenFindings.push({
+    doctype: dt.name, rows, referenced_by: [...refs].slice(0, 6),
+    used_by_engine: engine, on_menu: onMenu, verdict,
+  });
 }
 
 // ── D. mã có đơn giản không ───────────────────────────────────────────────────
