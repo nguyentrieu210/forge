@@ -21,7 +21,27 @@ function git(root,args,capture=true){return run('git',['-C',root,...args],{captu
 function assertLoopback(origin){const u=new URL(origin);if(!['127.0.0.1','localhost','::1'].includes(u.hostname))throw fail('REMOTE_MUTATION_GUARD',`origin must be loopback, got ${u.hostname}`);}
 async function requireApi(origin){assertLoopback(origin);const c=new AbortController();const t=setTimeout(()=>c.abort(),5000);try{const r=await fetch(`${origin.replace(/\/$/,'')}/api/method/metaforge.api.get_boot`,{signal:c.signal});if(![200,401,403].includes(r.status))throw fail('ENV',`Local API unhealthy: HTTP ${r.status}`);}finally{clearTimeout(t);}}
 function assertRepo(root){if(process.platform!=='win32'&&process.env.FORGE_LOCAL_RUNNER_ALLOW_NON_WINDOWS!=='1')throw fail('ENV',`Windows self-hosted runner required; got ${process.platform}`);if(Number(process.versions.node.split('.')[0])<22)throw fail('DEPENDENCY',`Node >=22 required; got ${process.version}`);if(!existsSync(path.join(root,'.git')))throw fail('PATH',`${root} is not a Git workspace`);const branch=git(root,['rev-parse','--abbrev-ref','HEAD']);if(branch!=='main')throw fail('STALE_WORKTREE',`Local runtime authority must be on main; got ${branch}`);const dirty=git(root,['status','--porcelain=v1']);if(dirty)throw fail('STALE_WORKTREE',`Local runtime authority is dirty:\n${dirty}`);git(root,['fetch','origin','main','--prune'],false);const local=git(root,['rev-parse','HEAD']);const remote=git(root,['rev-parse','origin/main']);if(local!==remote)throw fail('STALE_WORKTREE',`Local source is not exact origin/main: local=${local} remote=${remote}`);const expected=process.env.FORGE_LOCAL_EXPECTED_SHA?.trim();if(expected&&expected!==local)throw fail('STALE_WORKTREE',`Expected runtime SHA mismatch: expected=${expected} actual=${local}`);return{local,remote};}
-function authEnv(origin){return{FORGE_ORIGIN:origin,FORGE_ADMIN_USER:process.env.FORGE_ADMIN_USER||'dev@example.com',FORGE_ADMIN_PASSWORD:process.env.FORGE_ADMIN_PASSWORD||'local-dev-password-1'};}
+/**
+ * Nạp shim làm tươi `modified` trước mỗi PUT.
+ *
+ * Nền tảng bắt người ghi phải gửi kèm `modified` mới nhất (khoá lạc quan). Bộ nhập ở đây đọc
+ * danh sách MỘT LẦN ở đầu rồi ghi dần, nên bản ghi nào bị chính lượt chạy này đụng trước đó sẽ
+ * hỏng với `TimestampMismatchError: The document changed after it was loaded` — gặp thật ở
+ * `BOM Template/23` ngay sau khi bước BOM cập nhật 139 định mức.
+ *
+ * `bom-rule` và `bom-source-complete` đã nạp shim này từ trước; `bom` thì chưa, và chỉ lộ ra khi
+ * bước BOM bắt đầu thật sự ghi được.
+ */
+function authEnv(origin){
+  const previousNodeOptions = process.env.NODE_OPTIONS ?? '';
+  const modifiedShimUrl = new URL('./bom-put-modified-shim.mjs', import.meta.url).href;
+  return {
+    FORGE_ORIGIN: origin,
+    FORGE_ADMIN_USER: process.env.FORGE_ADMIN_USER || 'dev@example.com',
+    FORGE_ADMIN_PASSWORD: process.env.FORGE_ADMIN_PASSWORD || 'local-dev-password-1',
+    NODE_OPTIONS: [previousNodeOptions, `--import=${modifiedShimUrl}`].filter(Boolean).join(' '),
+  };
+}
 function acquireLock(root,runId,sha){const dir=path.join(root,'local-locks');mkdirSync(dir,{recursive:true});const lockPath=path.join(dir,'local-d1-mutation.lock');const payload={format:'forge-local-d1-lock/v2',run_id:runId,adapter:'bom',pid:process.pid,hostname:os.hostname(),started_at:new Date().toISOString(),workflow:process.env.GITHUB_WORKFLOW||'manual',github_run_id:process.env.GITHUB_RUN_ID||'',github_run_attempt:process.env.GITHUB_RUN_ATTEMPT||'',command:process.argv.join(' '),repo_sha:sha};for(let a=0;a<2;a+=1){try{const fd=openSync(lockPath,'wx');try{writeFileSync(fd,`${JSON.stringify(payload,null,2)}\n`,'utf8');}finally{closeSync(fd);}console.log(`GLOBAL_D1_LOCK=ACQUIRED path=${lockPath} run_id=${runId}`);return lockPath;}catch(e){if(e?.code!=='EEXIST')throw fail('FILE_LOCK',`Cannot create global D1 lock: ${e.message}`,e);let existing;try{existing=JSON.parse(readFileSync(lockPath,'utf8'));}catch(pe){throw fail('FILE_LOCK',`Global D1 lock exists but is unreadable: ${lockPath}`,pe);}const verdict=classifyExistingLock(existing);if(verdict.action!=='reap')throw fail('FILE_LOCK',`Global D1 lock ownership is unproven: ${JSON.stringify({...existing,verdict})}`);renameSync(lockPath,`${lockPath}.stale-${Date.now()}`);}}throw fail('FILE_LOCK','Unable to acquire global D1 lock');}
 function releaseLock(p,runId){if(!p||!existsSync(p))return;const e=JSON.parse(readFileSync(p,'utf8'));if(e.run_id!==runId)throw fail('FILE_LOCK',`Refusing to release lock owned by ${e.run_id}`);unlinkSync(p);console.log(`GLOBAL_D1_LOCK=RELEASED path=${p} run_id=${runId}`);}
 function backup(root){const r=run(process.execPath,[path.join(root,'server','scripts','backup-local-state.mjs')],{cwd:root,capture:true,label:'backup-local-state',failureClass:'D1_STATE'}).stdout;const m=r.match(/LOCAL_STATE_BACKUP_OK path=(.+) bytes=(\d+)/);if(!m||!existsSync(m[1].trim())||Number(m[2])<=0)throw fail('D1_STATE','Backup evidence invalid');console.log(`BACKUP_STATUS=PASS path=${m[1].trim()} bytes=${m[2]}`);return m[1].trim();}
