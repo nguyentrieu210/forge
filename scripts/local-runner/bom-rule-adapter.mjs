@@ -5,7 +5,6 @@ import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import { spawnSync } from 'node:child_process';
-import { mainBom } from './bom-adapter.mjs';
 import { ExecutionError, classifyExistingLock, normalizeSpawnInvocation } from './run-local-import-core.mjs';
 
 const DEFAULT_REPO_ROOT = 'C:\\alumdoor';
@@ -204,9 +203,9 @@ function assertSecondPass(result, projection) {
 }
 
 export async function mainBomRule() {
-  // One explicit command first converges BOM/BOM Template, then links reusable BOM Rules.
-  await mainBom();
-
+  // BOM Rule is an overlay/reconciliation over the BOMs already present in local D1.
+  // Do not nest the legacy BOM adapter here: that adapter owns a second lock/backup and
+  // can fail in its legacy BOM Template convergence before BOM Rule migrations are applied.
   const root = path.win32.resolve(process.env.FORGE_LOCAL_REPO_ROOT || DEFAULT_REPO_ROOT);
   const origin = process.env.FORGE_ORIGIN || DEFAULT_ORIGIN;
   const runId = `${new Date().toISOString().replace(/[:.]/g, '-')}-${crypto.randomBytes(4).toString('hex')}`;
