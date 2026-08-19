@@ -64,8 +64,28 @@ export const DialogContent = React.forwardRef<
 });
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
-export function DialogHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("flex flex-col space-y-1.5 text-center sm:text-left", className)} {...props} />;
+/**
+ * `bordered`: phần đầu tách khỏi thân bằng một viền dưới, theo vben
+ * (`popup-ui/src/modal/modal.vue` — đệm 20/16px kèm `border-b`).
+ *
+ * Dùng cho hộp thoại DÀI có vùng cuộn: khi cuộn, tiêu đề và nội dung dính vào nhau và người
+ * dùng mất mốc "đang đọc phần nào" — cùng lý do `--mf-sticky-edge` tồn tại cho bảng.
+ *
+ * Là biến thể CHỌN chứ không mặc định: hộp thoại ngắn (xác nhận một câu) mà kẻ thêm một
+ * đường thì chỉ thêm nhiễu. Lề âm khớp `p-6` của `DialogContent`; đổi đệm đó thì phải đổi ở
+ * đây — nêu rõ vì hai số này buộc phải đi cùng nhau.
+ */
+export function DialogHeader({ className, bordered, ...props }: React.HTMLAttributes<HTMLDivElement> & { bordered?: boolean }) {
+  return (
+    <div
+      className={cn(
+        "flex flex-col space-y-1.5 text-center sm:text-left",
+        bordered && "-mx-6 -mt-6 mb-1 border-b px-5 py-4",
+        className,
+      )}
+      {...props}
+    />
+  );
 }
 export const DialogTitle = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Title>,

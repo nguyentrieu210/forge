@@ -2261,16 +2261,12 @@
 .mf-shell .mf-shell-topbar { height: var(--mf-topbar-height); }
 .mf-shell-sidebar { flex-shrink: 0; }
 
-/* ── Lớp nổi: CHƯA hội tụ, và ghi rõ vì sao ──────────────────────────────────
- * vben cho phần đầu hộp thoại đệm 20/16px kèm viền dưới tách khỏi thân
- * (`popup-ui/src/modal/modal.vue`). Đáng lấy: hộp thoại dài (xác nhận huỷ chứng từ kèm danh
- * sách ảnh hưởng) khi cuộn thì tiêu đề dính vào nội dung, không thấy ranh giới.
+/* ── Lớp nổi ─────────────────────────────────────────────────────────────────
+ * Phần đầu hộp thoại có viền tách khỏi thân (theo vben `popup-ui/src/modal/modal.vue`) được
+ * làm TRONG `dialog.tsx` như một biến thể `bordered`, không vá từ đây.
  *
- * ĐÃ THỬ BẰNG CSS RỒI BỎ: cách duy nhất để với tới phần đầu từ ngoài là selector `:has()` đoán
- * cấu trúc, cộng lề âm để bù đệm của `DialogContent`. Mà đệm đó không cố định — trong
- * `dialog.tsx` có cả `p-4` lẫn `p-6` — nên lề âm đúng ở nhánh này thì tràn ở nhánh kia, và
- * `:has()` có thể trúng cả những hộp thoại không định nhắm tới.
- *
- * Việc này phải sửa TRONG `dialog.tsx` (thêm phần đầu có viền như một biến thể), không phải
- * vá từ stylesheet. Để lại đây làm ghi chú thay vì ship một luật không kiểm chứng được.
+ * Đã thử vá bằng CSS rồi bỏ: từ stylesheet chỉ với tới phần đầu bằng selector `:has()` đoán
+ * cấu trúc cộng lề âm bù đệm — một luật như thế đè lên MỌI hộp thoại mà không kiểm chứng được
+ * từng cái. Biến thể tường minh thì nơi dùng tự chọn, và lề âm nằm cạnh đúng con số đệm mà nó
+ * phải khớp.
  */
