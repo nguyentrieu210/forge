@@ -53,7 +53,13 @@ const tooLong = [];
 const plan = [];
 for (const row of mapping.mapping) {
   if (sourcesByTarget.get(row.to).length > 1) { merged.push(row); continue; }
-  if (row.to.length > MAX_CODE_LENGTH) { tooLong.push(row); continue; }
+  // Chặn vì DÀI chỉ đúng khi bản đổi tên LÀM cho nó dài: luật 24 ký tự sinh ra để cản đặt tên
+  // mới dài dòng, không phải để giữ lại một khiếm khuyết trên mã vốn đã dài.
+  //
+  // Ca thật: kế hoạch rút gọn chỉ bỏ dấu cách nên độ dài không tăng, vậy mà lượt chạy đầu bỏ
+  // qua 70/117 mã — tức là để lại dấu cách ở đúng những mã dài nhất, những mã dễ bị gõ tay sai
+  // nhất. Đó là đọc luật theo chữ mà quên vì sao có luật.
+  if (row.to.length > MAX_CODE_LENGTH && row.to.length > row.from.length) { tooLong.push(row); continue; }
   if (row.from === row.to) continue;
   plan.push({ from: row.from, to: row.to, prefix: row.prefix, why: row.why });
 }
