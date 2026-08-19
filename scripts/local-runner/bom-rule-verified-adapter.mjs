@@ -6,6 +6,7 @@ import { ExecutionError, normalizeSpawnInvocation } from './run-local-import-cor
 
 const DEFAULT_REPO_ROOT = 'C:\\alumdoor';
 const fail = (message, cause) => new ExecutionError('VERIFY', message, cause ? { cause } : {});
+const packageManagerCommand = () => process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
 
 function run(command, args, { cwd, label }) {
   const invocation = normalizeSpawnInvocation(command, args);
@@ -22,14 +23,15 @@ function run(command, args, { cwd, label }) {
 
 export function runBomRuleTargetedVerification(root = path.win32.resolve(process.env.FORGE_LOCAL_REPO_ROOT || DEFAULT_REPO_ROOT)) {
   const server = path.join(root, 'server');
+  const pnpm = packageManagerCommand();
   console.log('BOM_RULE_TARGETED_VERIFY_BEGIN');
-  run('npm', ['run', 'build'], { cwd: server, label: 'BOM Rule server TypeScript build' });
+  run(pnpm, ['run', 'build'], { cwd: server, label: 'BOM Rule server TypeScript build' });
   run(process.execPath, [
     '--test',
     'tests/alumdoor-bom-rule-core.test.mjs',
     'tests/alumdoor-bom-rule-sales-preview.test.mjs',
   ], { cwd: server, label: 'BOM Rule targeted unit tests' });
-  run('pnpm', ['--filter', '@metaforge/views', 'run', 'build'], { cwd: root, label: 'BOM Rule catalog TSX build' });
+  run(pnpm, ['--filter', '@metaforge/views', 'run', 'build'], { cwd: root, label: 'BOM Rule catalog TSX build' });
   console.log('BOM_RULE_TARGETED_VERIFY_PASS server_build=PASS unit_tests=PASS views_build=PASS');
 }
 
