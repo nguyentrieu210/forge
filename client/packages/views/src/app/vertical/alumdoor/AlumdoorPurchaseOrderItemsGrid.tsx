@@ -98,6 +98,15 @@ const DYNAMIC_WIDTHS: Record<DynamicFieldName, string> = {
   qty: "w-24",
 };
 
+const ALUMINUM_DYNAMIC_FIELDS = new Set<string>([
+  "material_specification",
+  "length_m",
+  "theoretical_kg_per_m",
+  "qty_bar",
+  "theoretical_kg",
+  "is_stamped",
+]);
+
 export interface AlumdoorPurchaseOrderItemsGridProps {
   lines: PurchaseLine[];
   childMeta: DocTypeMeta;
@@ -144,6 +153,10 @@ export function isAluminumPurchaseLine(line: PurchaseLine): boolean {
   return text(line._inventoryMode ?? line.inventory_mode) === "Nhôm cây/lá";
 }
 
+function isTubeProfile(line: PurchaseLine): boolean {
+  return text(line.measurement_profile).toLocaleLowerCase("vi") === "ống/trục";
+}
+
 export function purchaseFieldOverride(line: PurchaseLine, fieldname: string): PurchaseFieldOverride | undefined {
   return line._overrides?.[fieldname];
 }
@@ -152,17 +165,34 @@ export function purchaseFieldVisible(line: PurchaseLine, fieldname: string): boo
   const override = purchaseFieldOverride(line, fieldname);
   if (override?.hidden === true || override?.hidden === 1) return false;
   if (override && (override.hidden === false || override.hidden === 0 || override.reqd !== undefined || override.read_only !== undefined || text(override.label))) return true;
+
+  if (isAluminumPurchaseLine(line)) {
+    if (fieldname === "qty") return false;
+    if (fieldname === "color") return !isTubeProfile(line);
+    if (fieldname === "qty_bundle") return false;
+    if (ALUMINUM_DYNAMIC_FIELDS.has(fieldname)) return true;
+  } else if (fieldname === "qty") {
+    return true;
+  }
+
   return line[fieldname] !== undefined && line[fieldname] !== null && line[fieldname] !== "";
 }
 
 export function purchaseFieldRequired(line: PurchaseLine, fieldname: string): boolean {
   const override = purchaseFieldOverride(line, fieldname);
-  return override?.reqd === true || override?.reqd === 1;
+  if (override?.reqd === true || override?.reqd === 1) return true;
+  if (override?.reqd === false || override?.reqd === 0) return false;
+  if (!isAluminumPurchaseLine(line)) return fieldname === "qty";
+  if (fieldname === "color") return !isTubeProfile(line);
+  return ["length_m", "qty_bar", "is_stamped"].includes(fieldname);
 }
 
 function purchaseFieldReadonly(line: PurchaseLine, fieldname: string): boolean {
   const override = purchaseFieldOverride(line, fieldname);
-  return override?.read_only === true || override?.read_only === 1;
+  if (override?.read_only === true || override?.read_only === 1) return true;
+  if (override?.read_only === false || override?.read_only === 0) return false;
+  return ["material_specification", "theoretical_kg_per_m", "theoretical_kg"].includes(fieldname)
+    || (isAluminumPurchaseLine(line) && fieldname === "qty");
 }
 
 function purchaseFieldLabel(line: PurchaseLine, meta: DocTypeMeta, fieldname: DynamicFieldName): string {
