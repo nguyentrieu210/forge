@@ -785,6 +785,9 @@ async function renameDocument(args: FrappeArgs, context: FrappeRouterContext): P
   if (await context.documents.getDocument(context.tenantId, doctype, newName)) throw errors.exists();
 
   const namingField = meta.autoname?.startsWith("field:") ? meta.autoname.slice("field:".length) : undefined;
+  // `cascade` phải xin rõ ràng. Mặc định vẫn là hành vi cũ — từ chối khi còn thứ trỏ vào tên
+  // cũ — nên không lệnh đổi tên nào đang chạy bỗng dưng bắt đầu ghi vào chứng từ khác.
+  const cascade = args.bool("cascade");
   await context.documents.renameDocument(
     context.tenantId,
     doctype,
@@ -793,8 +796,9 @@ async function renameDocument(args: FrappeArgs, context: FrappeRouterContext): P
     context.actor.user_id,
     context.now(),
     namingField,
+    { cascade },
   );
-  return { doctype, name: newName, renamed: true };
+  return { doctype, name: newName, renamed: true, cascaded: cascade };
 }
 
 async function saveDocument(doctype: string, name: string, args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {

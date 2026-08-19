@@ -141,3 +141,100 @@ test("bảng con document_children cũng được soi tới đáy", async () => 
   ).run(JSON.stringify({ detail: { item_code: "NVL-Y" } }));
   await assert.rejects(() => rename(s, "NVL-Y", "VT-Y"), /referenced elsewhere/);
 });
+
+/* ── cascade ──────────────────────────────────────────────────────────────────
+ * Đổi tên xếp tầng: thay tham chiếu rồi mới đổi tên. Guard KHÔNG bị tắt — nó vẫn chạy sau
+ * cascade và phải đếm được 0, nên "cascade bỏ sót" là ném lỗi chứ không phải ghi bừa.
+ */
+
+const renameCascade = (s, from, to) =>
+  s.renameDocument("t", "Item", from, to, "u", "2026-08-19T00:00:00Z", "item_code", { cascade: true });
+
+const payloadOf = (a, doctype, name) =>
+  JSON.parse(a.db.prepare("SELECT payload_json FROM documents WHERE doctype=? AND name=?").get(doctype, name).payload_json);
+
+test("cascade thay tham chiếu trong mảng con rồi mới đổi tên", async () => {
+  const { a, s } = store();
+  seed(a, "Item", "TẨY NHÔM", { item_code: "TẨY NHÔM" });
+  seed(a, "Purchase Receipt", "PR-1", { items: [{ item_code: "TẨY NHÔM", qty: 3 }] });
+  await renameCascade(s, "TẨY NHÔM", "VT-TAY-NHOM");
+  assert.equal(payloadOf(a, "Purchase Receipt", "PR-1").items[0].item_code, "VT-TAY-NHOM");
+  assert.equal(payloadOf(a, "Purchase Receipt", "PR-1").items[0].qty, 3, "phần còn lại không được đụng vào");
+  assert.equal(a.db.prepare("SELECT name FROM documents WHERE doctype='Item'").get().name, "VT-TAY-NHOM");
+});
+
+test("cascade KHÔNG đụng khoá vị trí của trường đa hình", async () => {
+  // `component_key` lúc là mã hàng, lúc là khoá vị trí (LEAF_SHEET, T_BRACKET…). So nguyên giá
+  // trị nên khoá vị trí không bao giờ khớp — đây là lý do cascade so giá trị chứ không so trường.
+  const { a, s } = store();
+  seed(a, "Item", "NVL-TR114", { item_code: "NVL-TR114" });
+  seed(a, "BOM Template", "1", {
+    component_rules: [
+      { component_key: "NVL-TR114", item_code: "NVL-TR114" },
+      { component_key: "LEAF_SHEET", item_code: "NVL-TR114" },
+      { component_key: "BOTTOM_SEAL", item_code: "KHAC" },
+    ],
+  });
+  await renameCascade(s, "NVL-TR114", "VT-TR114");
+  const rules = payloadOf(a, "BOM Template", "1").component_rules;
+  assert.equal(rules[0].component_key, "VT-TR114");
+  assert.equal(rules[1].component_key, "LEAF_SHEET", "khoá vị trí phải nguyên vẹn");
+  assert.equal(rules[1].item_code, "VT-TR114");
+  assert.equal(rules[2].item_code, "KHAC", "mã khác không được đụng");
+});
+
+test("cascade KHÔNG đổi nhãn hiển thị", async () => {
+  // Đổi item_name "TẨY NHÔM" thành "VT-TAY-NHOM" là làm giao diện xấu đi mà không sửa liên kết nào.
+  const { a, s } = store();
+  seed(a, "Item", "TẨY NHÔM", { item_code: "TẨY NHÔM" });
+  seed(a, "Purchase Receipt", "PR-1", { items: [{ item_code: "TẨY NHÔM", item_name: "TẨY NHÔM" }] });
+  await renameCascade(s, "TẨY NHÔM", "VT-TAY-NHOM");
+  const row = payloadOf(a, "Purchase Receipt", "PR-1").items[0];
+  assert.equal(row.item_code, "VT-TAY-NHOM");
+  assert.equal(row.item_name, "TẨY NHÔM", "nhãn giữ nguyên");
+});
+
+test("cascade KHÔNG ăn vào chuỗi con", async () => {
+  const { a, s } = store();
+  seed(a, "Item", "TP-CUA", { item_code: "TP-CUA" });
+  seed(a, "Purchase Receipt", "PR-1", { items: [{ item_code: "TP-CUADL1LY" }], ghi_chu: "thay cho TP-CUA nếu hết" });
+  await renameCascade(s, "TP-CUA", "CUA-MOI");
+  const p = payloadOf(a, "Purchase Receipt", "PR-1");
+  assert.equal(p.items[0].item_code, "TP-CUADL1LY", "mã dài hơn phải nguyên vẹn");
+  assert.equal(p.ghi_chu, "thay cho TP-CUA nếu hết", "văn bản tự do không phải tham chiếu");
+});
+
+test("cascade đi vào cả bảng document_children", async () => {
+  // Dòng con nằm ở HAI nơi và không nhất quán: Purchase Receipt để trong payload, còn BOM để ở
+  // document_children. Sót một nơi là hai bản lệch nhau.
+  const { a, s } = store();
+  seed(a, "Item", "NVL-Y", { item_code: "NVL-Y" });
+  seed(a, "Sales Order", "SO-1", { customer: "KH-1" });
+  a.db.prepare(
+    `INSERT INTO document_children (tenant_id,parent_key,fieldname,child_doctype,row_id,idx,payload_json)
+     VALUES ('t','Sales Order:SO-1','items','Sales Order Item','r1',1,?)`,
+  ).run(JSON.stringify({ item_code: "NVL-Y", item_name: "NVL-Y" }));
+  await renameCascade(s, "NVL-Y", "VT-Y");
+  const child = JSON.parse(a.db.prepare("SELECT payload_json FROM document_children WHERE row_id='r1'").get().payload_json);
+  assert.equal(child.item_code, "VT-Y");
+  assert.equal(child.item_name, "NVL-Y", "nhãn trong dòng con cũng giữ nguyên");
+});
+
+test("không bật cascade thì vẫn từ chối y như cũ", async () => {
+  const { a, s } = store();
+  seed(a, "Item", "NVL-Z", { item_code: "NVL-Z" });
+  seed(a, "Purchase Receipt", "PR-1", { items: [{ item_code: "NVL-Z" }] });
+  await assert.rejects(() => rename(s, "NVL-Z", "VT-Z"), /referenced elsewhere/);
+  assert.equal(payloadOf(a, "Purchase Receipt", "PR-1").items[0].item_code, "NVL-Z", "từ chối thì không được ghi gì");
+});
+
+test("cascade không vá được cột amended_from thì guard chặn, không ghi nửa vời", async () => {
+  // Bất biến của thiết kế: cascade chỉ chạm JSON, còn `amended_from` là CỘT. Đây là chỗ duy nhất
+  // hai bên lệch nhau, và nó phải kết thúc bằng lỗi to — không phải bằng một đồ thị link vá dở.
+  const { a, s } = store();
+  seed(a, "Item", "NVL-A", { item_code: "NVL-A" });
+  seed(a, "Item", "NVL-B", { item_code: "NVL-B" });
+  a.db.prepare("UPDATE documents SET amended_from='NVL-A' WHERE doctype='Item' AND name='NVL-B'").run();
+  await assert.rejects(() => renameCascade(s, "NVL-A", "VT-A"), /referenced elsewhere/);
+  assert.equal(a.db.prepare("SELECT name FROM documents WHERE doctype='Item' AND name='NVL-A'").get().name, "NVL-A");
+});
