@@ -20,7 +20,7 @@ import {
   toast,
 } from "@metaforge/ui";
 import type { Doc } from "@metaforge/core";
-import { useMetaForge } from "../../../container/provider.js";
+import { useMetaForge } from "@metaforge/views/provider";
 
 type Json = Record<string, unknown>;
 

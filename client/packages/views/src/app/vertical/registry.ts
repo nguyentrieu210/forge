@@ -1,23 +1,27 @@
 import type { DoctypeWorkspaceExtension } from "../workspace-extension.js";
-import { alumdoorWorkspaceExtension } from "./alumdoor/workspace-extension.js";
 
 /**
- * Điểm ráp vertical cho màn làm việc.
+ * Bảng vertical cho màn làm việc.
  *
- * `RuntimeDoctypeWorkspace` là thành phần dùng chung, không được biết app nào tên gì. Trước
- * đây nó import thẳng `alumdoorWorkspaceExtension` rồi so `runtimeApp === "alumdoor"` —
- * nghĩa là thêm vertical thứ hai phải sửa đúng file dùng chung đó.
+ * `RuntimeDoctypeWorkspace` là thành phần dùng chung, không được biết app nào tên gì —
+ * và giờ cũng không được import code của vertical nữa, vì vertical đã là package riêng
+ * phụ thuộc ngược lại vào package này.
  *
- * Ráp bằng import TĨNH chứ không để từng vertical tự gọi hàm đăng ký: kiểu tự đăng ký chỉ
- * chạy khi có ai đó nhớ import module vertical, quên một dòng là màn làm việc lặng lẽ mất
- * phần mở rộng mà không cổng nào đỏ. Bảng ở đây thì thiếu là hỏng lúc biên dịch.
+ * Nạp package vertical CHÍNH LÀ hành động đăng ký nó. Chỗ dễ hỏng của kiểu này là quên
+ * import: app sẽ chạy mà không có phần mở rộng, im lặng. Hai test canh đúng chỗ đó —
+ * `vertical-registration.test.mjs` (nạp package thì bảng phải có) và một kiểm tra tĩnh rằng
+ * app runtime có nạp package vertical.
  */
-const VERTICAL_WORKSPACES: Record<string, DoctypeWorkspaceExtension> = {
-  alumdoor: alumdoorWorkspaceExtension,
-};
+const VERTICAL_WORKSPACES = new Map<string, DoctypeWorkspaceExtension>();
 
-export function verticalWorkspaceExtension(appId?: string): DoctypeWorkspaceExtension | undefined {
-  return appId ? VERTICAL_WORKSPACES[appId] : undefined;
+export function registerVerticalWorkspace(appId: string, extension: DoctypeWorkspaceExtension): void {
+  VERTICAL_WORKSPACES.set(appId.trim().toLowerCase(), extension);
 }
 
-export const verticalWorkspaceAppIds = Object.keys(VERTICAL_WORKSPACES);
+export function verticalWorkspaceExtension(appId?: string): DoctypeWorkspaceExtension | undefined {
+  return appId ? VERTICAL_WORKSPACES.get(appId.trim().toLowerCase()) : undefined;
+}
+
+export function registeredVerticalAppIds(): string[] {
+  return [...VERTICAL_WORKSPACES.keys()].sort();
+}

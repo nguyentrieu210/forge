@@ -19,7 +19,7 @@ import {
   TableRow,
   toast,
 } from "@metaforge/ui";
-import { useMetaForge } from "../../../container/provider.js";
+import { useMetaForge } from "@metaforge/views/provider";
 
 type Json = Record<string, unknown>;
 type Purpose = "Material Transfer" | "Manufacture";

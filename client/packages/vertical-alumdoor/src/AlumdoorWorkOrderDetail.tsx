@@ -14,8 +14,8 @@ import {
   TableRow,
   toast,
 } from "@metaforge/ui";
-import { useMetaForge } from "../../../container/provider.js";
-import { RuntimeLoadingState } from "../../../runtime/AsyncState.js";
+import { useMetaForge } from "@metaforge/views/provider";
+import { RuntimeLoadingState } from "@metaforge/views";
 
 type Json = Record<string, unknown>;
 interface MaterialRow extends Json { bom_row_id: string; item_code: string; source_warehouse: string; required_qty: string; issued_qty: string; consumed_qty: string; remaining_to_issue: string; remaining_to_consume: string; }

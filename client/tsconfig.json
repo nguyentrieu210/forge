@@ -6,6 +6,7 @@
     { "path": "packages/ui" },
     { "path": "packages/controls" },
     { "path": "packages/views" },
+    { "path": "packages/vertical-alumdoor" },
     { "path": "packages/builder" },
     { "path": "packages/shell" },
     { "path": "packages/stock-vn" },

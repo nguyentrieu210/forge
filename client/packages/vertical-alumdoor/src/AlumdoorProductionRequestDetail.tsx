@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, CheckCircle2, ExternalLink, Factory, Loader2, RefreshCw, Wrench } from "lucide-react";
 import { Badge, Button, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, toast } from "@metaforge/ui";
-import { useMetaForge } from "../../../container/provider.js";
+import { useMetaForge } from "@metaforge/views/provider";
 
 type Json = Record<string, unknown>;
 type LineHealth = "MISSING_WORK_ORDER" | "READY" | "IN_PROCESS" | "COMPLETED" | "CANCELLED" | "DUPLICATE_WORK_ORDER";

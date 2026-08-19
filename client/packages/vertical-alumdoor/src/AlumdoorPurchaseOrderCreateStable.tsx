@@ -5,7 +5,7 @@ import { CheckCircle2, Loader2, RefreshCw, Save, Send } from "lucide-react";
 import { applyContextPolicy, formatMoney, mapError, serializeCreateDocument, type Doc, type DocField, type DocTypeMeta } from "@metaforge/core";
 import type { FieldServices } from "@metaforge/controls";
 import { Button, toast } from "@metaforge/ui";
-import { useMetaForge } from "../../../container/provider.js";
+import { useMetaForge } from "@metaforge/views/provider";
 import { salesItemSearchTerms } from "./sales-item-search.js";
 import {
   AlumdoorPurchaseOrderItemsGrid,

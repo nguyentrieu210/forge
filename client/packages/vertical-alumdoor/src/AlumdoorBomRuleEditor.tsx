@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ArrowLeft, Calculator, Loader2, Plus, Save, Trash2 } from "lucide-react";
 import { Badge, Button, toast } from "@metaforge/ui";
-import { useMetaForge } from "../../../container/provider.js";
+import { useMetaForge } from "@metaforge/views/provider";
 
 type Json = Record<string, unknown>;
 

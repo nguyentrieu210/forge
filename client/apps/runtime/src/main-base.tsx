@@ -31,7 +31,13 @@ import {
 import "./styles.css";
 
 const ApplicationCatalogContainer = lazy(() => import("@metaforge/views/catalog").then((module) => ({ default: module.ApplicationCatalogContainer })));
-const DoctypeWorkspace = lazy(() => import("@metaforge/views/doctype-workspace").then((module) => ({ default: module.DoctypeWorkspace })));
+// Nạp vertical TRƯỚC khi dựng màn làm việc: package vertical tự đăng ký lúc được nạp, nên
+// thứ tự này là thứ giữ cho phần mở rộng có mặt ngay ở lần render đầu tiên.
+const DoctypeWorkspace = lazy(async () => {
+  await import("@metaforge/vertical-alumdoor");
+  const module = await import("@metaforge/views/doctype-workspace");
+  return { default: module.DoctypeWorkspace };
+});
 const OverviewContainer = lazy(() => import("@metaforge/views/overview").then((module) => ({ default: module.OverviewContainer })));
 const PermissionCenter = lazy(() => import("@metaforge/views/permissions").then((module) => ({ default: module.PermissionCenter })));
 const ProcessContainer = lazy(() => import("@metaforge/views/process").then((module) => ({ default: module.ProcessContainer })));

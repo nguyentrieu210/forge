@@ -1,51 +1,42 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 
 /**
  * `@metaforge/views` là package dùng chung, không phải app của một khách hàng.
  *
- * Thực tế đang ngược lại: `src/app/` có 7656 dòng thì 7336 dòng nằm trong
- * `src/app/vertical/alumdoor` — nghĩa là dựng app thứ hai từ package này vẫn kéo theo cả
- * xưởng nhôm. Dời hẳn thư mục vertical ra package riêng là việc lớn (P4 trong
- * docs/REFACTOR-FORGE-20260819.md), chưa làm trong đợt này.
+ * Trước đây `src/app/` có 7656 dòng thì 7325 dòng là `app/vertical/alumdoor` — dựng app thứ
+ * hai từ package này vẫn kéo theo cả xưởng nhôm. Nay phần đó là package riêng
+ * `@metaforge/vertical-alumdoor`, phụ thuộc NGƯỢC vào views chứ không nằm trong nó.
  *
- * Test này giữ cho vết loang KHÔNG rộng thêm trong lúc chờ: mã dùng chung chỉ được nhắc
- * tới vertical đúng ở những chỗ đã biết. Thêm một chỗ nữa là đỏ ở đây trước, và người thêm
- * phải quyết định có ý thức chứ không lỡ tay.
+ * Test giữ ranh giới vừa dựng: code vertical không quay lại, chiều phụ thuộc không đảo, và
+ * những chỗ dùng chung còn nhắc tên khách hàng chỉ được ngắn đi chứ không dài ra.
  */
 
 const VIEWS_SRC = path.resolve(import.meta.dirname, "..", "src");
-const VERTICAL_DIR = "app/vertical/alumdoor";
 
-// Tám file dùng chung còn nhắc tên vertical. Danh sách chỉ được ngắn đi, không được dài ra.
+// Bảy file dùng chung còn nhắc tên vertical — nợ cũ, danh sách chỉ được ngắn đi.
 const KNOWN_MENTIONS = [
   "access/PermissionCenter.tsx",
   "action/FriendlyActionScreen.tsx",
   "action/SalesDeliveryWorkspace.tsx",
-  "app/vertical/registry.ts",
   "form/ChildGrid.tsx",
   "form/MetadataChildGrid.tsx",
   "system/CustomerImport.tsx",
   "system/ImportRouter.tsx",
 ];
 
-// Chỗ duy nhất import thẳng vào thư mục vertical: bảng đăng ký — đó là điểm ráp, đúng như
-// vertical-methods.ts bên server. Thành phần dùng chung khác thì tra bảng, không gọi tên.
-const KNOWN_IMPORTS = ["app/vertical/registry.ts"];
-
-function genericSources() {
+function sources() {
   const files = [];
   const walk = (dir) => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const full = path.join(dir, entry.name);
-      const rel = path.relative(VIEWS_SRC, full).split(path.sep).join("/");
       if (entry.isDirectory()) {
-        if (rel === VERTICAL_DIR || entry.name === "node_modules") continue;
+        if (entry.name === "node_modules") continue;
         walk(full);
       } else if (entry.name.endsWith(".ts") || entry.name.endsWith(".tsx")) {
-        files.push([rel, readFileSync(full, "utf8")]);
+        files.push([path.relative(VIEWS_SRC, full).split(path.sep).join("/"), readFileSync(full, "utf8")]);
       }
     }
   };
@@ -53,28 +44,32 @@ function genericSources() {
   return files;
 }
 
-test("the shared views package does not grow new references to the AlumDoor vertical", () => {
-  const mentions = genericSources()
+test("no vertical implementation lives inside the shared views package", () => {
+  assert.ok(
+    !existsSync(path.join(VIEWS_SRC, "app", "vertical", "alumdoor")),
+    "code vertical đã chuyển sang @metaforge/vertical-alumdoor — đừng dựng lại nó trong views.",
+  );
+});
+
+test("the shared views package does not grow new references to a vertical", () => {
+  const mentions = sources()
     .filter(([, text]) => /alumdoor/i.test(text))
     .map(([rel]) => rel)
     .sort();
   assert.deepEqual(
     mentions,
     [...KNOWN_MENTIONS].sort(),
-    "mã dùng chung nhắc tới vertical ở chỗ mới — đưa phần đó vào src/app/vertical/alumdoor thay vì viết trong package chung.",
+    "mã dùng chung nhắc tới vertical ở chỗ mới — đưa phần đó sang package vertical thay vì viết trong views.",
   );
 });
 
-test("only the runtime composition root reaches into the vertical folder", () => {
-  const importers = genericSources()
-    // Bắt cả đường dẫn tương đối bên trong app/vertical/ (`./alumdoor/...`), không chỉ
-    // đường dẫn đầy đủ — nếu không thì chính bảng đăng ký lọt lưới.
-    .filter(([, text]) => /vertical\/alumdoor|from "\.\/alumdoor\//.test(text))
-    .map(([rel]) => rel)
-    .sort();
+test("views never imports a vertical package, so the dependency stays one-way", () => {
+  const importers = sources()
+    .filter(([, text]) => text.includes("@metaforge/vertical-"))
+    .map(([rel]) => rel);
   assert.deepEqual(
     importers,
-    [...KNOWN_IMPORTS].sort(),
-    "chỉ điểm ráp runtime được import vào vertical; chỗ khác cần thì nhận qua tham số.",
+    [],
+    "views mà import ngược vào vertical là tạo vòng phụ thuộc; vertical tự đăng ký qua registerVerticalWorkspace.",
   );
 });

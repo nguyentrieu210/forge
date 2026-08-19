@@ -78,6 +78,9 @@ export { buildCsv, downloadCsv, downloadXlsx, printTablePdf, stampedName, type E
 export { PrintView, type PrintViewProps } from "./print/PrintView.js";
 export { PrintContainer, type PrintContainerProps } from "./print/PrintContainer.js";
 export { buildPrintPath } from "./print/printRoute.js";
+export { RuntimeLoadingState } from "./runtime/AsyncState.js";
+export type { DoctypeWorkspaceExtension } from "./app/workspace-extension.js";
+export { registerVerticalWorkspace, verticalWorkspaceExtension, registeredVerticalAppIds } from "./app/vertical/registry.js";
 export { DashboardView, type DashboardViewProps, type DashboardCard, type DashboardChartData } from "./dashboard/DashboardView.js";
 export { CommandCenterView, type CommandCenterViewProps, type CommandCenterAlert } from "./dashboard/CommandCenterView.js";
 export { CalendarView, type CalendarViewProps } from "./calendar/CalendarView.js";

@@ -21,7 +21,7 @@ import {
   DialogTitle,
   toast,
 } from "@metaforge/ui";
-import { useMetaForge } from "../../../../container/provider.js";
+import { useMetaForge } from "@metaforge/views/provider";
 import { salesItemSearchTerms } from "../sales-item-search.js";
 import type { BomActualComponentRow } from "../AlumdoorBomActualEditor.js";
 import { AlumdoorSalesOrderField, fallbackField } from "./AlumdoorSalesOrderField.js";

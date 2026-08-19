@@ -6,11 +6,11 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("../../../../", import.meta.url));
 const read = (path) => readFileSync(`${root}/${path}`, "utf8");
 
-const entry = read("client/packages/views/src/app/vertical/alumdoor/AlumdoorSalesOrderCreate.tsx");
-const workbench = read("client/packages/views/src/app/vertical/alumdoor/sales-order-v2/AlumdoorSalesOrderWorkbenchComplete.tsx");
-const grid = read("client/packages/views/src/app/vertical/alumdoor/sales-order-v2/AlumdoorSalesOrderLineTableComplete.tsx");
-const model = read("client/packages/views/src/app/vertical/alumdoor/sales-order-v2/model.ts");
-const coordinator = read("client/packages/views/src/app/vertical/alumdoor/sales-order-v2/preview-coordinator.ts");
+const entry = read("client/packages/vertical-alumdoor/src/AlumdoorSalesOrderCreate.tsx");
+const workbench = read("client/packages/vertical-alumdoor/src/sales-order-v2/AlumdoorSalesOrderWorkbenchComplete.tsx");
+const grid = read("client/packages/vertical-alumdoor/src/sales-order-v2/AlumdoorSalesOrderLineTableComplete.tsx");
+const model = read("client/packages/vertical-alumdoor/src/sales-order-v2/model.ts");
+const coordinator = read("client/packages/vertical-alumdoor/src/sales-order-v2/preview-coordinator.ts");
 const documentPreview = read("server/apps-src/alumdoor-worker/src/ui-document-preview.ts");
 const childPreview = read("server/apps-src/alumdoor-worker/src/ui-child-preview.ts");
 const production = read("server/apps-src/alumdoor-worker/src/sales-production-core.ts");
@@ -211,7 +211,7 @@ test("compact grid wraps headers, clips controls and centers check fields", () =
   assert.match(grid, /flex min-w-0 shrink items-center justify-end/);
   assert.match(grid, /max-w-full overflow-hidden text-center/);
   assert.match(grid, /bg-primary px-1\.5 text-center font-semibold/);
-  const field = read("client/packages/views/src/app/vertical/alumdoor/sales-order-v2/AlumdoorSalesOrderField.tsx");
+  const field = read("client/packages/vertical-alumdoor/src/sales-order-v2/AlumdoorSalesOrderField.tsx");
   assert.match(field, /props\.hideLabel \? "justify-center" : "gap-2"/);
 });
 
@@ -254,7 +254,7 @@ test("item-code selector and administrative links hide duplicate display identif
   assert.match(workbench, /return \{ value: option\.value, label: option\.value/);
   assert.match(workbench, /description: itemName/);
   assert.match(workbench, /doctype === "Item"[\s\S]{0,80}\{ label: name \}/);
-  const field = read("client/packages/views/src/app/vertical/alumdoor/sales-order-v2/AlumdoorSalesOrderField.tsx");
+  const field = read("client/packages/vertical-alumdoor/src/sales-order-v2/AlumdoorSalesOrderField.tsx");
   assert.match(field, /isAdministrativeLink/);
   assert.match(field, /\["install_province", "install_ward"\]/);
 });
@@ -263,7 +263,7 @@ test("bank account link bypasses the incompatible legacy disabled filter", () =>
   assert.match(workbench, /doctype === "Tài khoản ngân hàng"/);
   assert.match(workbench, /filters: undefined/);
   assert.match(workbench, /fieldname === "bank_account" \? salesServices : services/);
-  const field = read("client/packages/views/src/app/vertical/alumdoor/sales-order-v2/AlumdoorSalesOrderField.tsx");
+  const field = read("client/packages/vertical-alumdoor/src/sales-order-v2/AlumdoorSalesOrderField.tsx");
   assert.match(field, /isCompositeBankLink/);
   assert.match(field, /isAdministrativeLink \|\| isCompositeBankLink/);
 });

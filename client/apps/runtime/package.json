@@ -19,6 +19,7 @@
     "@metaforge/core": "workspace:*",
     "@metaforge/shell": "workspace:*",
     "@metaforge/ui": "workspace:*",
+    "@metaforge/vertical-alumdoor": "workspace:*",
     "@metaforge/views": "workspace:*",
     "jsqr": "1.4.0",
     "lucide-react": "^0.460.0",

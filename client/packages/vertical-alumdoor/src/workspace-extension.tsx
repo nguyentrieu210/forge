@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 import { lazy, Suspense } from "react";
-import { buildPrintPath } from "../../../print/printRoute.js";
-import type { DoctypeWorkspaceExtension } from "../../workspace-extension.js";
+import { buildPrintPath } from "@metaforge/views";
+import type { DoctypeWorkspaceExtension } from "@metaforge/views";
 
 const AlumdoorSalesOrderCreate = lazy(() => import("./AlumdoorSalesOrderCreate.js").then((module) => ({ default: module.AlumdoorSalesOrderCreate })));
 const AlumdoorPurchaseOrderCreate = lazy(() => import("./AlumdoorPurchaseOrderCreate.js").then((module) => ({ default: module.AlumdoorPurchaseOrderCreate })));
