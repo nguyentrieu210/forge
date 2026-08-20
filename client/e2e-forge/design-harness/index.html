@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="vi" data-brand="orange">
+<head>
+<meta charset="utf-8">
+<title>Forge — kiểm tầng thiết kế vben</title>
+<link rel="stylesheet" href="./forge.css"><!-- copy từ apps/runtime/dist/assets/index-*.css, xem README -->
+<style>
+  body { margin: 0; }
+  .wrap { padding: 0; }
+  .note { font: 12px/1.5 "Geist Mono", monospace; color: var(--muted-foreground); padding: 6px 12px; }
+</style>
+</head>
+<body class="mf-shell">
+  <div class="note">Thanh tiến trình đổi màn (mf-route-progress) — 2px bám đỉnh, vệt sáng quét</div>
+  <div style="position:relative;height:26px;background:var(--background);">
+    <div class="mf-route-progress" style="position:absolute;"></div>
+  </div>
+
+  <div class="note">Đầu trang (mf-page-header) — đệm 24/16px, tiêu đề 18px</div>
+  <div class="mf-page-header">
+    <div style="flex:1 1 auto;min-width:0;">
+      <div class="mf-page-title">Hàng hoá / Vật tư</div>
+      <div class="mf-page-subtitle" style="font-size:.8125rem;">Danh mục nền dùng cho đơn bán, đơn mua và định mức sản xuất.</div>
+    </div>
+    <button style="height:32px;padding:0 12px;border-radius:8px;background:var(--primary);color:var(--primary-foreground);border:0;font-size:13px;">+ Tạo mới</button>
+  </div>
+
+  <div class="note">Bảng danh sách (mf-list-view) — header --accent, hàng xen kẽ, hàng chọn có vạch trái</div>
+  <div style="padding:12px; background: var(--background);">
+    <div class="mf-list-view" style="border:1px solid var(--border); border-radius: var(--mf-panel-radius); overflow:hidden; background: var(--card);">
+      <table style="width:100%; border-collapse:collapse;">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding:.5rem .75rem;">Mã hàng</th>
+            <th style="text-align:left;padding:.5rem .75rem;">Tên hàng</th>
+            <th style="text-align:left;padding:.5rem .75rem;">Nhóm hàng</th>
+            <th style="text-align:right;padding:.5rem .75rem;">Tồn</th>
+            <th style="text-align:right;padding:.5rem .75rem;">Đơn giá</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td style="padding:.5rem .75rem;">NH-4200</td><td style="padding:.5rem .75rem;">Nhôm hệ 4200 cây 6m</td><td style="padding:.5rem .75rem;">Nhôm thanh</td><td style="padding:.5rem .75rem;text-align:right;font-variant-numeric:tabular-nums;">124</td><td style="padding:.5rem .75rem;text-align:right;font-variant-numeric:tabular-nums;">1.240.000</td></tr>
+          <tr><td style="padding:.5rem .75rem;">NH-5500</td><td style="padding:.5rem .75rem;">Nhôm hệ 5500 cây 6m</td><td style="padding:.5rem .75rem;">Nhôm thanh</td><td style="padding:.5rem .75rem;text-align:right;font-variant-numeric:tabular-nums;">86</td><td style="padding:.5rem .75rem;text-align:right;font-variant-numeric:tabular-nums;">1.685.000</td></tr>
+          <tr data-state="selected"><td style="padding:.5rem .75rem;">PK-BLE-01</td><td style="padding:.5rem .75rem;">Bản lề 3D inox</td><td style="padding:.5rem .75rem;">Phụ kiện</td><td style="padding:.5rem .75rem;text-align:right;font-variant-numeric:tabular-nums;">1.430</td><td style="padding:.5rem .75rem;text-align:right;font-variant-numeric:tabular-nums;">92.000</td></tr>
+          <tr><td style="padding:.5rem .75rem;">PK-RAY-02</td><td style="padding:.5rem .75rem;">Ray trượt tải nặng</td><td style="padding:.5rem .75rem;">Phụ kiện</td><td style="padding:.5rem .75rem;text-align:right;font-variant-numeric:tabular-nums;">612</td><td style="padding:.5rem .75rem;text-align:right;font-variant-numeric:tabular-nums;">148.000</td></tr>
+          <tr><td style="padding:.5rem .75rem;">KI-8MM</td><td style="padding:.5rem .75rem;">Kính cường lực 8mm</td><td style="padding:.5rem .75rem;">Kính</td><td style="padding:.5rem .75rem;text-align:right;font-variant-numeric:tabular-nums;">58</td><td style="padding:.5rem .75rem;text-align:right;font-variant-numeric:tabular-nums;">560.000</td></tr>
+          <tr><td style="padding:.5rem .75rem;">KI-10MM</td><td style="padding:.5rem .75rem;">Kính cường lực 10mm</td><td style="padding:.5rem .75rem;">Kính</td><td style="padding:.5rem .75rem;text-align:right;font-variant-numeric:tabular-nums;">37</td><td style="padding:.5rem .75rem;text-align:right;font-variant-numeric:tabular-nums;">720.000</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="note">Mục menu (mf-shell-nav-item) — cỡ chữ theo thang vben 14px</div>
+  <div class="mf-shell-sidebar" style="width:224px;padding:8px;background:var(--sidebar);">
+    <div class="mf-shell-nav-item" style="padding:.4rem .6rem;color:var(--sidebar-item);">Bán hàng</div>
+    <div class="mf-shell-nav-item" data-active="true" style="padding:.4rem .6rem;">Mua hàng</div>
+    <div class="mf-shell-nav-item" style="padding:.4rem .6rem;color:var(--sidebar-item);">Kho</div>
+  </div>
+</body>
+</html>

@@ -29,10 +29,10 @@ export function CommandDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* `!translate-y-0` phải có `!`: DialogContent đặt `-translate-y-1/2` (căn giữa dọc) và cả hai
-          class cùng thuộc tính `transform` — không có `!` thì thứ tự trong file CSS quyết định ai
-          thắng, tức là hộp lệnh có thể bị đẩy lên nửa chiều cao chính nó tuỳ lần build. */}
-      <DialogContent hideClose className="mf-awesomebar overflow-hidden p-0 max-w-xl top-[12%] !translate-y-0">
+      {/* Không còn cần khử `-translate-y-1/2`: `DialogContent` nay neo đỉnh (10vh) chứ không
+          căn giữa dọc nữa. Hộp lệnh vẫn giữ 12% riêng vì nó cố ý cao hơn hộp thoại thường —
+          đây là thứ người dùng gọi bằng Ctrl+K rồi gõ ngay, không phải đọc. */}
+      <DialogContent hideClose className="mf-awesomebar overflow-hidden p-0 max-w-xl top-[12%]">
         <Command shouldFilter={shouldFilter} className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground">
           {children}
         </Command>

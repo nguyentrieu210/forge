@@ -1405,8 +1405,10 @@ export function ChildGrid(props: ChildGridProps) {
                   onDrop={() => dropColumn(c.fieldname)}
                   title={readOnly ? undefined : "Kéo tiêu đề để đổi chỗ cột · kéo mép phải để giãn"}
                 >
+                  {/* Dấu bắt buộc đứng TRƯỚC nhãn (theo vben). Ở tiêu đề cột còn một lợi ích
+                      riêng: nhãn cột bị cắt khi cột hẹp, dấu đứng sau sẽ bị cắt mất cùng. */}
+                  {dynamicallyRequired ? <span className="mf-required mr-0.5 text-destructive">*</span> : null}
                   {headerLabel}
-                  {dynamicallyRequired ? <span className="mf-required ml-0.5 text-destructive">*</span> : null}
                   {!readOnly ? (
                     /* Tay kéo nằm ĐÈ lên mép phải của ô tiêu đề, rộng 6px để bấm trúng được
                        bằng chuột mà không cần ngắm. Mờ đi cho tới khi rê vào cột. */
@@ -1635,8 +1637,8 @@ export function ChildGrid(props: ChildGridProps) {
           return (
             <div key={f.fieldname} className={`grid min-w-0 gap-1.5 ${columns.includes("grid-cols-1") ? "" : detailFieldSpan(f)}`}>
               <label className="text-sm font-medium" htmlFor={`detail-${f.fieldname}`}>
+                {rf.required ? <span className="mf-required mr-0.5 text-destructive">*</span> : null}
                 {rowField.label ?? f.fieldname}
-                {rf.required ? <span className="mf-required ml-0.5 text-destructive">*</span> : null}
               </label>
               <Control
                 field={rowField}

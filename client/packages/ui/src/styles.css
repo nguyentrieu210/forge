@@ -1672,3 +1672,395 @@
   color: var(--sidebar-muted);
   opacity: 1;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * NGÔN NGỮ THIẾT KẾ VBEN
+ *
+ * Nguồn: vbenjs/vue-vben-admin @ v5.7.0 (commit a4dd9d30ce1e51879e937d4fad4ec5b1d794fa50),
+ * giấy phép MIT. Xem `docs/design/FORGE_UI_V3_UPSTREAM_SOURCE_LOCK_20260804.md`.
+ *
+ * Lấy: số đo layout, thang chữ, hình học, thang chuyển động, hình dạng tab kiểu Chrome.
+ * KHÔNG lấy: bảng màu. vben khai màu bằng bộ ba HSL (`212 100% 45%`) còn Forge khai HEX và
+ * `@theme` map thẳng `var()` — chép màu sang sẽ vỡ toàn bộ tầng Tailwind. Quan trọng hơn:
+ * diện mạo Graphite/Enterprise Blue và brand cam của Alumdoor là thứ khách đã quen, giữ nguyên.
+ *
+ * Vben là Vue; ở đây không có một dòng Vue nào — chỉ hợp đồng thị giác được dịch sang CSS
+ * và React của Forge.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Số đo layout — lấy đúng `packages/@core/preferences/src/config.ts` của vben.
+   * Forge trước đây: topbar 3rem (48px), sidebar 13.75rem (220px), thu gọn 3.5rem (56px),
+   * và KHÔNG có thanh tab. */
+  --mf-topbar-height: 50px;
+  /* vben để 224px, Forge KHÔNG lấy con số đó.
+   *
+   * Nhãn menu tiếng Việt ("Trung tâm phân quyền", "Danh mục ứng dụng") cộng icon, chevron và
+   * chỗ dành cho nút ghim không vừa 224px — chúng bị cắt thành thứ người dùng phải đoán. Đây
+   * là lỗi đã gặp và đã sửa một lần, ghi trong AppShellV2; chép lại số của vben là tái hiện
+   * đúng nó. Bề rộng sidebar phụ thuộc ĐỘ DÀI TỪ của ngôn ngữ, không phải phong cách. */
+  --mf-sidebar-width: 17rem;
+  /* Còn bề rộng thu gọn thì lấy đúng vben: chỉ chứa icon nên không dính chuyện ngôn ngữ. */
+  --mf-sidebar-collapsed: 60px;
+  --mf-sidebar-mixed: 80px;
+  --mf-footer-height: 32px;
+
+  /* Thang chữ. vben đặt gốc 16px rồi lấy 0.875× cho menu — nghĩa là menu 14px, không phải
+   * cỡ mặc định của trình duyệt. Đây là lý do menu của nó đọc chắc tay hơn. */
+  --mf-font-base: 16px;
+  --mf-font-menu: calc(var(--mf-font-base) * 0.875);
+
+
+  /* Thang chuyển động của vben. Forge đã có `--mf-motion-*`; hai dòng này là bậc riêng của
+   * vben cho trượt và mờ, giữ đúng số gốc để hiệu ứng cảm giác giống bản thật. */
+  --mf-vben-slide: 250ms;
+  --mf-vben-fade: 200ms;
+  --mf-vben-ease-slide: cubic-bezier(0.25, 0.8, 0.5, 1);
+  --mf-vben-ease-panel: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Hiệu ứng của vben ────────────────────────────────────────────────────────
+ * Dịch từ `@core/base/design/src/css/transition.css`. Vue dùng cặp lớp
+ * `-enter-from`/`-enter-active`; React ở đây chỉ cần một keyframe chạy lúc gắn vào cây. */
+@keyframes mf-slide-left {
+  from { opacity: 0; transform: translateX(-15px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes mf-slide-up {
+  from { opacity: 0; transform: translateY(-15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes mf-fade-slide {
+  from { opacity: 0; transform: translateX(-30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes mf-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.mf-anim-slide-left { animation: mf-slide-left var(--mf-vben-slide) var(--mf-vben-ease-slide) both; }
+.mf-anim-slide-up { animation: mf-slide-up var(--mf-vben-slide) var(--mf-vben-ease-slide) both; }
+.mf-anim-fade-slide { animation: mf-fade-slide 300ms var(--mf-vben-ease-slide) both; }
+.mf-anim-fade { animation: mf-fade-in var(--mf-vben-fade) ease-in-out both; }
+
+/* Đường dẫn: vben cho từng mắt xích trượt vào kèm nghiêng nhẹ rồi thẳng lại. */
+@keyframes mf-breadcrumb-in {
+  from { opacity: 0; transform: translateX(30px) skewX(-30deg); }
+  to { opacity: 1; transform: translateX(0) skewX(0); }
+}
+.mf-anim-breadcrumb { animation: mf-breadcrumb-in 400ms cubic-bezier(0.76, 0, 0.24, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mf-anim-slide-left,
+  .mf-anim-slide-up,
+  .mf-anim-fade-slide,
+  .mf-anim-fade,
+  .mf-anim-breadcrumb { animation: none !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * NGÔN NGỮ THIẾT KẾ VBEN
+ *
+ * Nguồn: vbenjs/vue-vben-admin @ v5.7.0 (commit a4dd9d30ce1e51879e937d4fad4ec5b1d794fa50),
+ * giấy phép MIT. Xem `docs/design/FORGE_UI_V3_UPSTREAM_SOURCE_LOCK_20260804.md`.
+ *
+ * Lấy: số đo layout, thang chữ, hình học, thang chuyển động, hình dạng tab kiểu Chrome.
+ * KHÔNG lấy: bảng màu. vben khai màu bằng bộ ba HSL (`212 100% 45%`) còn Forge khai HEX và
+ * `@theme` map thẳng `var()` — chép màu sang sẽ vỡ toàn bộ tầng Tailwind. Quan trọng hơn:
+ * diện mạo Graphite/Enterprise Blue và brand cam của Alumdoor là thứ khách đã quen, giữ nguyên.
+ *
+ * Vben là Vue; ở đây không có một dòng Vue nào — chỉ hợp đồng thị giác được dịch sang CSS
+ * và React của Forge.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Số đo layout — lấy đúng `packages/@core/preferences/src/config.ts` của vben.
+   * Forge trước đây: topbar 3rem (48px), sidebar 13.75rem (220px), thu gọn 3.5rem (56px),
+   * và KHÔNG có thanh tab. */
+  --mf-topbar-height: 50px;
+  /* vben để 224px, Forge KHÔNG lấy con số đó.
+   *
+   * Nhãn menu tiếng Việt ("Trung tâm phân quyền", "Danh mục ứng dụng") cộng icon, chevron và
+   * chỗ dành cho nút ghim không vừa 224px — chúng bị cắt thành thứ người dùng phải đoán. Đây
+   * là lỗi đã gặp và đã sửa một lần, ghi trong AppShellV2; chép lại số của vben là tái hiện
+   * đúng nó. Bề rộng sidebar phụ thuộc ĐỘ DÀI TỪ của ngôn ngữ, không phải phong cách. */
+  --mf-sidebar-width: 17rem;
+  /* Còn bề rộng thu gọn thì lấy đúng vben: chỉ chứa icon nên không dính chuyện ngôn ngữ. */
+  --mf-sidebar-collapsed: 60px;
+  --mf-sidebar-mixed: 80px;
+  --mf-footer-height: 32px;
+
+  /* Thang chữ. vben đặt gốc 16px rồi lấy 0.875× cho menu — nghĩa là menu 14px, không phải
+   * cỡ mặc định của trình duyệt. Đây là lý do menu của nó đọc chắc tay hơn. */
+  --mf-font-base: 16px;
+  --mf-font-menu: calc(var(--mf-font-base) * 0.875);
+
+
+  /* Thang chuyển động của vben. Forge đã có `--mf-motion-*`; hai dòng này là bậc riêng của
+   * vben cho trượt và mờ, giữ đúng số gốc để hiệu ứng cảm giác giống bản thật. */
+  --mf-vben-slide: 250ms;
+  --mf-vben-fade: 200ms;
+  --mf-vben-ease-slide: cubic-bezier(0.25, 0.8, 0.5, 1);
+  --mf-vben-ease-panel: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Hiệu ứng của vben ────────────────────────────────────────────────────────
+ * Dịch từ `@core/base/design/src/css/transition.css`. Vue dùng cặp lớp
+ * `-enter-from`/`-enter-active`; React ở đây chỉ cần một keyframe chạy lúc gắn vào cây. */
+@keyframes mf-slide-left {
+  from { opacity: 0; transform: translateX(-15px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes mf-slide-up {
+  from { opacity: 0; transform: translateY(-15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes mf-fade-slide {
+  from { opacity: 0; transform: translateX(-30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes mf-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.mf-anim-slide-left { animation: mf-slide-left var(--mf-vben-slide) var(--mf-vben-ease-slide) both; }
+.mf-anim-slide-up { animation: mf-slide-up var(--mf-vben-slide) var(--mf-vben-ease-slide) both; }
+.mf-anim-fade-slide { animation: mf-fade-slide 300ms var(--mf-vben-ease-slide) both; }
+.mf-anim-fade { animation: mf-fade-in var(--mf-vben-fade) ease-in-out both; }
+
+/* Đường dẫn: vben cho từng mắt xích trượt vào kèm nghiêng nhẹ rồi thẳng lại. */
+@keyframes mf-breadcrumb-in {
+  from { opacity: 0; transform: translateX(30px) skewX(-30deg); }
+  to { opacity: 1; transform: translateX(0) skewX(0); }
+}
+.mf-anim-breadcrumb { animation: mf-breadcrumb-in 400ms cubic-bezier(0.76, 0, 0.24, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mf-anim-slide-left,
+  .mf-anim-slide-up,
+  .mf-anim-fade-slide,
+  .mf-anim-fade,
+  .mf-anim-breadcrumb { animation: none !important; }
+}
+
+/* ── Bảng theo vben ───────────────────────────────────────────────────────────
+ * Dịch từ `packages/effects/plugins/src/vxe-table/style.css` (vben v5.7.0).
+ *
+ * Khác biệt cấu trúc so với bản Forge trước:
+ *
+ *   |                | Forge trước            | vben                     |
+ *   | header         | --secondary (trung tính)| --accent (wash theo brand)|
+ *   | rê chuột hàng  | --secondary            | --accent-hover           |
+ *   | hàng xen kẽ    | KHÔNG CÓ               | --accent 60%             |
+ *   | hàng đang chọn | primary 7% trộn card   | --accent                 |
+ *
+ * Giá trị vẫn là token của Forge — chỉ đổi TOKEN NÀO được dùng ở đâu, không đổi màu.
+ *
+ * `--accent-hover` là token vben có mà Forge thiếu. Không hardcode cho từng brand × theme
+ * (8 khối) mà dẫn xuất bằng `color-mix` từ chính `--accent`: thêm một chút `--foreground` là
+ * đậm hơn đúng một bậc ở cả light lẫn dark, và tự đúng cho mọi brand.
+ */
+:root {
+  --accent-hover: color-mix(in srgb, var(--foreground) 7%, var(--accent));
+}
+
+/* Hàng xen kẽ: vben bật mặc định. Trên bảng ERP nhiều cột, sọc là thứ giữ mắt đi đúng hàng khi
+ * cuộn ngang — đúng vấn đề mà `--mf-sticky-edge` giải cho chiều dọc.
+ * Dùng `:nth-child(even)` chứ không phải `odd`: hàng đầu giữ nền `--card` để liền với header. */
+.mf-shell .mf-list-view tbody tr:nth-child(even),
+.mf-shell .mf-report tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.mf-shell .mf-list-view thead th,
+.mf-shell .mf-report thead th {
+  background: var(--accent);
+}
+
+.mf-shell .mf-list-view tbody tr:hover,
+.mf-shell .mf-report tbody tr:hover {
+  background: var(--accent-hover);
+}
+
+/* Hàng đang chọn phải thắng cả sọc lẫn hover, nên đặt sau và nêu đủ hai trạng thái. */
+.mf-shell .mf-list-view tbody tr[data-state="selected"],
+.mf-shell .mf-list-view tbody tr[data-state="selected"]:hover {
+  background: var(--accent);
+  box-shadow: inset 2px 0 0 var(--primary);
+}
+
+/* ── Form theo vben ───────────────────────────────────────────────────────────
+ * vben đặt chữ nền 16px và cỡ điều khiển theo đó. Forge trước để trình duyệt quyết, nên ô
+ * nhập và nhãn nhỏ hơn một bậc so với bản vben.
+ *
+ * Chỉ chỉnh CỠ và NHỊP, không đụng cách Forge dựng form (metadata-driven) — đó là kiến trúc,
+ * không phải diện mạo. */
+.mf-shell .mf-field label,
+.mf-shell .mf-form-view label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+
+.mf-shell .mf-field :is(input, textarea, [role="combobox"]),
+.mf-shell .mf-form-view :is(input, textarea, [role="combobox"]) {
+  font-size: 0.875rem;
+}
+
+/* ── Menu theo vben ───────────────────────────────────────────────────────────
+ * vben: chữ menu = 0.875 × cỡ nền (14px), mục bo góc, mục đang mở tô nền chứ không chỉ đổi chữ.
+ * Forge đã bo góc sẵn; phần thiếu là CỠ CHỮ đúng thang và nhịp dọc gọn hơn. */
+.mf-shell .mf-shell-nav-item {
+  font-size: var(--mf-font-menu);
+}
+
+/* ── Popup theo vben ──────────────────────────────────────────────────────────
+ * vben dùng một bóng sâu cho lớp nổi (dialog/drawer/popover) để tách hẳn khỏi nội dung.
+ * Forge đã có `--mf-overlay-shadow`; ở đây chỉ nối các lớp nổi vào đúng token đó, vì trước
+ * mỗi lớp tự khai bóng riêng. */
+.mf-shell [role="dialog"],
+.mf-shell [data-radix-popper-content-wrapper] > * {
+  box-shadow: var(--mf-overlay-shadow);
+}
+
+/* ── Mục menu theo vben ───────────────────────────────────────────────────────
+ * Số lấy đúng `@core/ui-kit/menu-ui/src/components/menu.vue`:
+ *
+ *   mặc định   cao 38px · bo 0 · tràn hết ngang · cách nhau 2px · đệm ngang 12px
+ *   is-rounded lề ngang 8px · bo 8px
+ *
+ * Forge đang ở dạng bo nên lấy đúng biến thể `is-rounded`, chỉ nâng chiều cao 32 → 38px
+ * cho khớp thang. Màu vẫn là bộ `--sidebar-*` của Forge — sidebar graphite tối là quy ước
+ * ERP đã có, không đổi theo vben.
+ *
+ * Danh sách transition cũng của vben: nó animate cả `padding` vì mục menu đổi đệm khi
+ * sidebar thu gọn — thiếu nó thì lúc thu/mở chữ nhảy giật. */
+/* Phải nêu đủ `.mf-shell-sidebar` vì luật màu của sidebar graphite ở trên có độ ưu tiên
+ * (0,3,0); viết ngắn hơn thì min-height không bao giờ ăn. */
+.mf-shell .mf-shell-sidebar .mf-shell-nav-item,
+.mf-shell .mf-shell-nav-item {
+  min-height: 38px;
+  margin-inline: 8px;
+  margin-block-end: 2px;
+  padding-inline: 12px;
+  border-radius: 8px;
+  font-size: var(--mf-font-menu);
+  transition:
+    background 150ms ease,
+    color 150ms ease,
+    padding 150ms ease,
+    border-color 150ms ease;
+}
+
+/* Mật độ gọn vẫn phải gọn hơn: vben không có chế độ này, giữ tỉ lệ của Forge. */
+[data-density="compact"] .mf-shell .mf-shell-sidebar .mf-shell-nav-item,
+[data-density="compact"] .mf-shell .mf-shell-nav-item { min-height: 32px; }
+
+/* ── Đầu trang theo vben ──────────────────────────────────────────────────────
+ * Dịch từ `effects/common-ui/src/components/page/page.vue`:
+ *
+ *   header   nền --card · viền dưới · đệm ngang 24px, dọc 16px
+ *   tiêu đề  18px (text-lg) semibold
+ *   nội dung đệm 16px
+ *
+ * Đệm ngang của header (24px) CỐ Ý rộng hơn nội dung (16px) — vben cũng vậy. Không phải lệch:
+ * header là một dải riêng, thụt vào nhiều hơn thì mắt tách được "tên màn" khỏi "dữ liệu màn"
+ * mà không cần thêm đường kẻ nào.
+ *
+ * Phải nêu `.mf-shell` vì luật ở trên đã dùng phạm vi đó (0,2,0). */
+.mf-shell .mf-page-header {
+  padding-inline: 1.5rem;
+  padding-block: 1rem;
+}
+.mf-shell .mf-page-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+/* Mật độ gọn giữ tỉ lệ riêng của Forge — vben không có chế độ này. */
+[data-density="compact"] .mf-shell .mf-page-header { padding-inline: 1rem; padding-block: 0.625rem; }
+
+/* ── Khôi phục biến thể mật độ ────────────────────────────────────────────────
+ * Khối `:root` của tầng vben nằm CUỐI file nên nó đè mất các override
+ * `[data-density="…"]` khai ở trên — cả hai cùng độ ưu tiên (0,1,0), ai sau thắng.
+ * Đo được: bật `touch` mà topbar vẫn 50px và mục menu vẫn 38px, tức là chế độ mật độ rộng
+ * (dành cho máy cảm ứng ở xưởng) im lặng ngừng hoạt động.
+ *
+ * Nêu lại sau tầng vben. Giá trị nền vẫn của vben; hai đầu thang là tỉ lệ của Forge. */
+[data-density="compact"] { --mf-topbar-height: 44px; }
+[data-density="touch"] { --mf-topbar-height: 60px; }
+
+/* Mục menu cũng vậy: luật mới của tôi là (0,3,0) nên phải nêu đủ phạm vi mới thắng lại được. */
+[data-density="touch"] .mf-shell .mf-shell-sidebar .mf-shell-nav-item,
+[data-density="touch"] .mf-shell .mf-shell-nav-item { min-height: 44px; }
+
+/* ── Hai chỗ chép cứng còn sót, đo trên app thật mới lộ ──────────────────────
+ * Cùng đúng kiểu trôi dạt "một giá trị hai nơi" mà P1–P13 đã dọn:
+ *
+ * - Header khai `h-12` (48px) bằng class Tailwind, đè token `--mf-topbar-height` (50px).
+ *   Đã bỏ class; chiều cao nay lấy từ token ở đây.
+ * - Sidebar bỏ class `w-[17rem]` để token làm nguồn duy nhất, nhưng `width` trong flex row
+ *   vẫn co được (`flex-shrink` mặc định là 1) — đo trên app thật ra 252px thay vì 272px.
+ *   Class Tailwind cũ vô tình che lỗi này. */
+.mf-shell .mf-shell-topbar { height: var(--mf-topbar-height); }
+.mf-shell-sidebar { flex-shrink: 0; }
+
+/* ── Lớp nổi ─────────────────────────────────────────────────────────────────
+ * Phần đầu hộp thoại có viền tách khỏi thân (theo vben `popup-ui/src/modal/modal.vue`) được
+ * làm TRONG `dialog.tsx` như một biến thể `bordered`, không vá từ đây.
+ *
+ * Đã thử vá bằng CSS rồi bỏ: từ stylesheet chỉ với tới phần đầu bằng selector `:has()` đoán
+ * cấu trúc cộng lề âm bù đệm — một luật như thế đè lên MỌI hộp thoại mà không kiểm chứng được
+ * từng cái. Biến thể tường minh thì nơi dùng tự chọn, và lề âm nằm cạnh đúng con số đệm mà nó
+ * phải khớp.
+ */
+
+/* ── Thanh tiến trình đổi màn ─────────────────────────────────────────────────
+ * Dịch từ `@core/base/design/src/css/nprogress.css` (vben v5.7.0): dải 2px bám đỉnh màn
+ * hình, màu `--primary`, kèm một vệt sáng ở mép chạy trước.
+ *
+ * KHÁC bản gốc một điểm có chủ ý: vben dùng nprogress, tức là **bịa** phần trăm — nó nhích
+ * dần theo hàm giảm dần rồi nhảy lên 100% khi xong. Ở đây dùng một lượt quét vô định.
+ * Lý do: chuyển màn của Forge là tải một chunk JS, và trình duyệt KHÔNG cho biết còn bao
+ * nhiêu; vẽ một con số không có thật là nói dối người dùng về thứ mình không biết. Vệt quét
+ * trả lời đúng câu hỏi họ đang hỏi — "máy có đang chạy không" — mà không hứa gì thêm.
+ *
+ * Bám `position: fixed` nên gắn ở đâu trong cây cũng nổi lên đỉnh viewport. */
+.mf-route-progress {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: 1031;
+  height: 2px;
+  overflow: hidden;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+}
+
+.mf-route-progress::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inline-size: 40%;
+  background: var(--primary);
+  /* Vệt sáng ở mép phải, đúng ý `peg` của vben. */
+  box-shadow: 0 0 10px var(--primary), 0 0 5px var(--primary);
+  animation: mf-route-progress-sweep 1100ms var(--mf-ease-standard) infinite;
+}
+
+@keyframes mf-route-progress-sweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(250%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Không quét nữa, nhưng vẫn phải THẤY được là đang tải — giữ dải mờ, bỏ chuyển động. */
+  .mf-route-progress::before {
+    animation: none;
+    inline-size: 100%;
+    opacity: 0.45;
+    box-shadow: none;
+  }
+}

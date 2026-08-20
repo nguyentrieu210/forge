@@ -33,6 +33,7 @@ export {
 } from "./components/ui/dropdown-menu.js";
 export { Tabs, TabsList, TabsTrigger, TabsContent } from "./components/ui/tabs.js";
 export { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "./components/ui/tooltip.js";
+export { EllipsisText } from "./components/ui/ellipsis-text.js";
 export { ScrollArea } from "./components/ui/scroll-area.js";
 export {
   Sheet, SheetTrigger, SheetClose, SheetContent, SheetHeader, SheetTitle,

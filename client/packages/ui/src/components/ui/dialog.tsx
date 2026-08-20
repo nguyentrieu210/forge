@@ -33,7 +33,19 @@ export const DialogContent = React.forwardRef<
       <DialogPrimitive.Content
         ref={ref}
         className={cn(
-          "fixed left-1/2 top-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto border bg-popover text-popover-foreground p-6 shadow-lg rounded-lg outline-none focus:outline-none focus-visible:outline-none",
+          /**
+           * Neo ĐỈNH ở 10vh, không căn giữa dọc — theo vben (`popup-ui/src/modal/modal.vue`:
+           * `top-[10vh] ... max-h-[80%]`).
+           *
+           * Căn giữa dọc thì hộp thoại ngắn và hộp thoại dài hiện ở hai độ cao khác nhau, nên
+           * tiêu đề nhảy chỗ mỗi lần mở. Trên ERP mở hàng chục hộp thoại một buổi, mắt phải
+           * đi tìm lại tiêu đề mỗi lần. Neo đỉnh thì tiêu đề luôn ở đúng một chỗ, và hộp thoại
+           * cao chỉ dài xuống dưới chứ không tràn hai đầu.
+           *
+           * `max-h-[80dvh]` thay cho gần-hết-màn: chừa khoảng thở để hộp thoại đọc ra là một
+           * lớp NỔI trên nội dung, không phải một trang mới.
+           */
+          "fixed left-1/2 top-[10vh] z-50 grid max-h-[80dvh] w-full max-w-lg -translate-x-1/2 gap-4 overflow-y-auto border bg-popover text-popover-foreground p-6 shadow-lg rounded-lg outline-none focus:outline-none focus-visible:outline-none",
           "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
           "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
           // Dialog close is absolutely positioned. Reserve a small right gutter in every dialog
@@ -64,8 +76,28 @@ export const DialogContent = React.forwardRef<
 });
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
-export function DialogHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("flex flex-col space-y-1.5 text-center sm:text-left", className)} {...props} />;
+/**
+ * `bordered`: phần đầu tách khỏi thân bằng một viền dưới, theo vben
+ * (`popup-ui/src/modal/modal.vue` — đệm 20/16px kèm `border-b`).
+ *
+ * Dùng cho hộp thoại DÀI có vùng cuộn: khi cuộn, tiêu đề và nội dung dính vào nhau và người
+ * dùng mất mốc "đang đọc phần nào" — cùng lý do `--mf-sticky-edge` tồn tại cho bảng.
+ *
+ * Là biến thể CHỌN chứ không mặc định: hộp thoại ngắn (xác nhận một câu) mà kẻ thêm một
+ * đường thì chỉ thêm nhiễu. Lề âm khớp `p-6` của `DialogContent`; đổi đệm đó thì phải đổi ở
+ * đây — nêu rõ vì hai số này buộc phải đi cùng nhau.
+ */
+export function DialogHeader({ className, bordered, ...props }: React.HTMLAttributes<HTMLDivElement> & { bordered?: boolean }) {
+  return (
+    <div
+      className={cn(
+        "flex flex-col space-y-1.5 text-center sm:text-left",
+        bordered && "-mx-6 -mt-6 mb-1 border-b px-5 py-4",
+        className,
+      )}
+      {...props}
+    />
+  );
 }
 export const DialogTitle = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Title>,

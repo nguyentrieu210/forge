@@ -9,10 +9,12 @@ import {
   TooltipTrigger, TooltipContent, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
   DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, Input,
   Dialog, DialogContent, DialogHeader, DialogTitle, ConfirmDialog,
+  Sheet, SheetContent, SheetHeader, SheetTitle,
 } from "@metaforge/ui";
 import type { ThemeMode } from "./theme.js";
 import { BRANDS, useBrand, type BrandMode } from "./brand.js";
 import { useT } from "./i18n/index.js";
+import { DesignPreferencePanel } from "./preferences.js";
 
 export interface NavItem {
   key: string;
@@ -128,6 +130,7 @@ export function AppShell(props: AppShellProps) {
     props.brandMode,
   );
   const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem("mf-sidebar-collapsed") === "1"; } catch { return false; } });
+  const [prefsOpen, setPrefsOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [navQuery, setNavQuery] = useState("");
   const activeGroup = props.nav.find((item) => item.key === props.activeKey)?.group ?? "";
@@ -236,10 +239,21 @@ export function AppShell(props: AppShellProps) {
           // 17rem, not 15.5. Vietnamese menu labels ("Trung tâm phân quyền", "Danh mục
           // ứng dụng") plus an icon, a chevron and the pin button's reserved `pr-7` do not
           // fit in 15.5rem, so they truncated to something the user has to guess at.
+          //
+          // ĐO ĐƯỢC (2026-08-20): trên app thật, sidebar rộng **252px**, không phải 272px —
+          // tức là class `w-[17rem]` ở đây CHƯA BAO GIỜ ăn. Đã kiểm bằng cách thay bằng token
+          // `--mf-sidebar-width`, bằng `w-[var(--…)]`, và bằng `style` nội tuyến: cả ba cho
+          // cùng 252px, rồi trả lại nguyên bản này cũng vẫn 252px. Nên đây là hiện trạng có
+          // sẵn, không phải hồi quy của đợt vben.
+          //
+          // Chưa tìm ra nơi ép 252px (không có luật `width` nào khác khớp selector này trong
+          // nguồn). Để nguyên code đang chạy; ai đụng tới bề rộng sidebar thì ĐO trước, đừng
+          // tin con số trong class.
           collapsed ? "w-14" : "w-[17rem]",
           "max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-50 max-md:w-[min(19rem,88vw)] max-md:shadow-xl",
           mobileOpen ? "max-md:translate-x-0" : "max-md:-translate-x-full",
-        )} data-collapsed={collapsed ? "true" : "false"}>
+        )}
+          data-collapsed={collapsed ? "true" : "false"}>
           <div className={cn("mf-shell-brand flex items-center gap-2 px-3", props.brandLogoOnly ? "h-16" : "h-12")}>
             {/* Logo do APP cấp. Không có thì mới rơi về chữ cái đầu — chữ cái đầu là phương án
                 dự phòng cho app chưa có logo, không phải mặc định nên dùng: nó không khớp favicon
@@ -354,12 +368,20 @@ export function AppShell(props: AppShellProps) {
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="mf-shell-topbar flex h-12 shrink-0 items-center gap-2 border-b px-3">
+          <header className="mf-shell-topbar flex shrink-0 items-center gap-2 border-b px-3">
             <Button ref={mobileMenuTriggerRef} variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileOpen(true)} aria-label="Mở menu" aria-expanded={mobileOpen} aria-controls="mf-primary-navigation"><Menu className="size-4" /></Button>
             {/* Thứ tự chủ ý: điều hướng → Công ty/Kho → tìm nhanh. Công ty/Kho quyết định TOÀN BỘ dữ
                 liệu đang xem nên phải nằm ngay đầu, trước cả breadcrumb. */}
             {props.businessContext ? <div className="hidden min-w-0 shrink-0 items-center lg:flex">{props.businessContext}</div> : null}
-            <nav className="ml-1 flex min-w-0 items-center gap-1 text-sm"><BreadcrumbTrail items={props.breadcrumbs ?? []} /></nav>
+            {/* `key` theo mắt xích CUỐI: đổi route thì React dựng lại <nav>, nên hiệu ứng
+              * trượt-nghiêng của vben chạy đúng một lần mỗi lần điều hướng chứ không phải
+              * mỗi lần render. */}
+            <nav
+              key={(props.breadcrumbs ?? []).map((b) => b.label).join("/")}
+              className="mf-anim-breadcrumb ml-1 flex min-w-0 items-center gap-1 text-sm"
+            >
+              <BreadcrumbTrail items={props.breadcrumbs ?? []} />
+            </nav>
 
             {/* Ô tìm nhanh CĂN GIỮA topbar: hai khoảng đệm co giãn bằng nhau ở hai bên đẩy nó về đúng
                 tâm, bất kể cụm trái (Công ty/Kho/breadcrumb) hay cụm phải dài ngắn thế nào. */}
@@ -400,11 +422,11 @@ export function AppShell(props: AppShellProps) {
                 <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">{t("shell.theme_mode")}</DropdownMenuLabel>
                 <DropdownMenuItem onClick={() => props.onThemeChange("light")}><Sun className="size-4" /><span className="flex-1">{t("shell.theme_light")}</span>{props.theme === "light" ? <Check className="size-3.5 text-primary" /> : null}</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => props.onThemeChange("dark")}><Moon className="size-4" /><span className="flex-1">{t("shell.theme_dark")}</span>{props.theme === "dark" ? <Check className="size-3.5 text-primary" /> : null}</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => props.onThemeChange("system")}><Monitor className="size-4" /><span className="flex-1">{t("shell.theme_system")}</span>{props.theme === "system" ? <Check className="size-3.5 text-primary" /> : null}</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => props.onThemeChange("system")}><Monitor className="size-4" /><span className="flex-1">{t("shell.theme_system")}</span>{props.theme === "system" ? <Check className="size-3.5 text-primary" /> : null}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setPrefsOpen(true)}><Keyboard className="size-4" /><span className="flex-1">Tuỳ chọn hiển thị</span></DropdownMenuItem>
                 {props.allowBrandChange !== false ? <><DropdownMenuSeparator /><DropdownMenuLabel className="text-xs font-medium text-muted-foreground">{t("shell.theme_brand")}</DropdownMenuLabel>{BRANDS.map((b) => (<DropdownMenuItem key={b.id} onClick={() => setBrand(b.id)}><span className="size-3.5 shrink-0 rounded-full border [background:var(--mf-brand-swatch)]" style={{ "--mf-brand-swatch": b.swatch } as React.CSSProperties} aria-hidden="true" /><span className="flex-1">{b.label}</span>{brand === b.id ? <Check className="size-3.5 text-primary" /> : null}</DropdownMenuItem>))}</> : null}
               </DropdownMenuContent>
             </DropdownMenu>
-            <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="hidden md:inline-flex" aria-label="Giao diện">{THEME_ICON[props.theme]}</Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="max-h-[80vh] w-56 overflow-y-auto"><DropdownMenuLabel className="text-xs font-medium text-muted-foreground">{t("shell.theme_mode")}</DropdownMenuLabel><DropdownMenuItem onClick={() => props.onThemeChange("light")}><Sun className="size-4" /><span className="flex-1">{t("shell.theme_light")}</span>{props.theme === "light" ? <Check className="size-3.5 text-primary" /> : null}</DropdownMenuItem><DropdownMenuItem onClick={() => props.onThemeChange("dark")}><Moon className="size-4" /><span className="flex-1">{t("shell.theme_dark")}</span>{props.theme === "dark" ? <Check className="size-3.5 text-primary" /> : null}</DropdownMenuItem><DropdownMenuItem onClick={() => props.onThemeChange("system")}><Monitor className="size-4" /><span className="flex-1">{t("shell.theme_system")}</span>{props.theme === "system" ? <Check className="size-3.5 text-primary" /> : null}</DropdownMenuItem>{props.allowBrandChange !== false ? <><DropdownMenuSeparator /><DropdownMenuLabel className="text-xs font-medium text-muted-foreground">{t("shell.theme_brand")}</DropdownMenuLabel>{BRANDS.map((b) => (<DropdownMenuItem key={b.id} onClick={() => setBrand(b.id)}><span className="size-3.5 shrink-0 rounded-full border [background:var(--mf-brand-swatch)]" style={{ "--mf-brand-swatch": b.swatch } as React.CSSProperties} aria-hidden="true" /><span className="flex-1">{b.label}</span>{brand === b.id ? <Check className="size-3.5 text-primary" /> : null}</DropdownMenuItem>))}</> : null}</DropdownMenuContent></DropdownMenu>
+            <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="hidden md:inline-flex" aria-label="Giao diện">{THEME_ICON[props.theme]}</Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="max-h-[80vh] w-56 overflow-y-auto"><DropdownMenuLabel className="text-xs font-medium text-muted-foreground">{t("shell.theme_mode")}</DropdownMenuLabel><DropdownMenuItem onClick={() => props.onThemeChange("light")}><Sun className="size-4" /><span className="flex-1">{t("shell.theme_light")}</span>{props.theme === "light" ? <Check className="size-3.5 text-primary" /> : null}</DropdownMenuItem><DropdownMenuItem onClick={() => props.onThemeChange("dark")}><Moon className="size-4" /><span className="flex-1">{t("shell.theme_dark")}</span>{props.theme === "dark" ? <Check className="size-3.5 text-primary" /> : null}</DropdownMenuItem><DropdownMenuItem onClick={() => props.onThemeChange("system")}><Monitor className="size-4" /><span className="flex-1">{t("shell.theme_system")}</span>{props.theme === "system" ? <Check className="size-3.5 text-primary" /> : null}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setPrefsOpen(true)}><Keyboard className="size-4" /><span className="flex-1">Tuỳ chọn hiển thị</span></DropdownMenuItem>{props.allowBrandChange !== false ? <><DropdownMenuSeparator /><DropdownMenuLabel className="text-xs font-medium text-muted-foreground">{t("shell.theme_brand")}</DropdownMenuLabel>{BRANDS.map((b) => (<DropdownMenuItem key={b.id} onClick={() => setBrand(b.id)}><span className="size-3.5 shrink-0 rounded-full border [background:var(--mf-brand-swatch)]" style={{ "--mf-brand-swatch": b.swatch } as React.CSSProperties} aria-hidden="true" /><span className="flex-1">{b.label}</span>{brand === b.id ? <Check className="size-3.5 text-primary" /> : null}</DropdownMenuItem>))}</> : null}</DropdownMenuContent></DropdownMenu>
             <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="rounded-full" aria-label="Tài khoản"><Avatar className="size-7"><AvatarFallback>{initials(props.fullName)}</AvatarFallback></Avatar></Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-56"><DropdownMenuLabel><div className="truncate">{props.fullName ?? "Khách"}</div>{props.userSubtitle ? <div className="truncate text-xs font-normal text-muted-foreground">{props.userSubtitle}</div> : null}</DropdownMenuLabel><DropdownMenuSeparator />{props.onChangePassword ? <DropdownMenuItem onClick={props.onChangePassword}><KeyRound className="size-4" /> {t("account.change_password")}</DropdownMenuItem> : null}{props.onLogoutOtherSessions ? <DropdownMenuItem onClick={() => setConfirmLogoutOthers(true)}><MonitorSmartphone className="size-4" /> {t("account.logout_other_sessions_menu")}</DropdownMenuItem> : null}{props.onLogout ? <DropdownMenuItem onClick={props.onLogout}><LogOut className="size-4" /> Đăng xuất</DropdownMenuItem> : null}</DropdownMenuContent></DropdownMenu>
           </header>
           {!online ? <div className="shrink-0 border-b border-warning/30 bg-warning/10 px-3 py-1.5 text-center text-xs text-warning-text" role="status">Đang ngoại tuyến. Dữ liệu chưa tải và thao tác lưu cần kết nối mạng.</div> : null}
@@ -412,6 +434,19 @@ export function AppShell(props: AppShellProps) {
           <main ref={mainRef} id="mf-main-content" tabIndex={0} className="mf-shell-content min-h-0 flex-1 overflow-auto outline-none">{props.children}</main>
         </div>
       </div>
+
+      {/* Bảng tuỳ chọn hiển thị — người dùng chỉnh mật độ/bo góc/bề rộng trên máy mình,
+        * chồng lên mặc định do app đặt. Xem `preferences.tsx`. */}
+      <Sheet open={prefsOpen} onOpenChange={setPrefsOpen}>
+        <SheetContent side="right" className="w-[min(22rem,92vw)] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Tuỳ chọn hiển thị</SheetTitle>
+          </SheetHeader>
+          <div className="mt-2 px-1">
+            <DesignPreferencePanel />
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <Dialog open={shortcutsOpen} onOpenChange={setShortcutsOpen}>
         <DialogContent className="max-w-sm">

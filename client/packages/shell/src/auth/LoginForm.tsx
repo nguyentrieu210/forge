@@ -1,10 +1,34 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { ArrowRight, Eye, EyeOff, Factory, Loader2, LockKeyhole, ShieldCheck } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Factory, Loader2, LockKeyhole, Monitor, Moon, ShieldCheck, Sun } from "lucide-react";
 import type { FrappeAdapter } from "@metaforge/adapter-frappe";
 import { Button, Input, Label, toast } from "@metaforge/ui";
 import { ForgeBrandLogo } from "../BrandLogo.js";
 import { useT } from "../i18n/index.js";
 import { AuthVisualStyles } from "./AuthPresentation.js";
+import { useTheme, type ThemeMode } from "../theme.js";
+
+const THEME_ORDER: ThemeMode[] = ["light", "dark", "system"];
+const THEME_LABEL: Record<ThemeMode, string> = { light: "Sáng", dark: "Tối", system: "Theo máy" };
+
+/** Nút xoay vòng sáng → tối → theo máy. Một nút thay ba, vì màn đăng nhập không có chỗ cho menu. */
+function ThemeToggle() {
+  const [theme, setTheme] = useTheme();
+  const next = THEME_ORDER[(THEME_ORDER.indexOf(theme) + 1) % THEME_ORDER.length]!;
+  const Icon = theme === "light" ? Sun : theme === "dark" ? Moon : Monitor;
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className="absolute -top-2 right-0 size-8 text-muted-foreground hover:text-foreground"
+      aria-label={`Giao diện: ${THEME_LABEL[theme]}. Chuyển sang ${THEME_LABEL[next]}`}
+      title={`Giao diện: ${THEME_LABEL[theme]}`}
+      onClick={() => setTheme(next)}
+    >
+      <Icon className="size-4" aria-hidden="true" />
+    </Button>
+  );
+}
 
 export interface LoginFormProps {
   adapter: FrappeAdapter;
@@ -107,7 +131,13 @@ export function LoginForm({
   };
 
   const formPanel = (
-    <div className="mf-auth-panel-enter w-full max-w-[430px]" data-testid="forge-auth-login-panel">
+    <div className="mf-auth-panel-enter relative w-full max-w-[430px]" data-testid="forge-auth-login-panel">
+      {/* Đổi giao diện NGAY TRÊN màn đăng nhập, theo `authentication/toolbar.vue` của vben.
+        *
+        * Trước đây nút đổi sáng/tối chỉ có sau khi đã vào Desk. Người dùng máy đang ở chế độ
+        * tối mà hệ thống resolve ra sáng (hoặc ngược lại) phải chịu đúng màn đầu tiên họ nhìn
+        * thấy, và không có cách nào đổi trước khi đăng nhập. */}
+      <ThemeToggle />
       <div className="mb-8 flex items-center gap-3 lg:hidden">
         <BrandMark brandMark={brandMark} size={34} />
         <div className="min-w-0">

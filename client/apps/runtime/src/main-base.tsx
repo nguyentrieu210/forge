@@ -10,7 +10,7 @@ import type { UrlStateBridge } from "@metaforge/views/url-state";
 import {
   AppShell, AuthBoundary, BusinessContextBar, BusinessContextProvider, I18nProvider,
   CommandPalette, LoginForm, applyBrand, normalizeBrand, applyDesign, resolveIcon, useBusinessContext, useTheme,
-  ScopeGateBody, resolveScopeState,
+  ScopeGateBody, resolveScopeState, RouteProgress,
   type AwesomeRecord, type NavItem,
 } from "@metaforge/shell";
 import { Button, Toaster } from "@metaforge/ui";
@@ -493,6 +493,7 @@ function Shell({ manifest, boot, logout, nav, active, breadcrumbs = [], children
     document.title = crumb ? `${crumb} — ${manifest.name}` : manifest.name;
   }, [crumb, manifest.name]);
 
+
   const palette = useMemo(() => ({
     actions: nav.map((item) => ({
       id: `go-${item.key}`,
@@ -524,7 +525,6 @@ function Shell({ manifest, boot, logout, nav, active, breadcrumbs = [], children
   return (
     <>
       <AppShell
-        brand={manifest.name}
         brandMode={brandMode}
         allowBrandChange
         nav={nav}
@@ -570,7 +570,9 @@ function Shell({ manifest, boot, logout, nav, active, breadcrumbs = [], children
 function RuntimeRoutes({ manifest, boot, logout, nav, catalogError }: ScreenProps & { catalogError?: string }) {
   const home = resolveHomeRoute(manifest);
   const screen = { manifest, boot, logout, nav };
-  return <Suspense fallback={<Splash>Đang tải màn hình…</Splash>}>
+  // Dải tiến trình bám đỉnh màn hình chạy ĐÚNG lúc chunk màn đang tải và tắt ngay khi xong —
+  // không hẹn giờ, không đoán phần trăm. Xem `RouteProgress`.
+  return <Suspense fallback={<><RouteProgress /><Splash>Đang tải màn hình…</Splash></>}>
     <Routes>
       <Route path="/" element={<Navigate to={home} replace />} />
       <Route path="/overview/:domain" element={<OverviewScreen {...screen} />} />
