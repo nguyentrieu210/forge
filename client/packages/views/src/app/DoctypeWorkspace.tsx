@@ -120,6 +120,7 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
                   bridge={bridge}
                   activeRow={decoded}
                   actions={extension?.listActions}
+                  showAdvancedFilter={!props.extension?.suppressAdvancedFilter}
                   onRowClick={(row) => onNavigate(`${listPath}/${encodeURIComponent(String(row.name))}`)}
                   onCreate={() => onNavigate(`${listPath}/new`)}
                   onSingle={() => { if (!decoded) onNavigate(`${listPath}/${encodeURIComponent(doctype)}`); }}

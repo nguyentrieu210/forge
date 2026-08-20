@@ -33,5 +33,12 @@ export interface DoctypeWorkspaceExtensionResolution {
 
 export interface DoctypeWorkspaceExtension {
   id: string;
+  /**
+   * Ẩn nút "Bộ lọc nâng cao" trên MỌI màn danh sách của app đăng ký extension này.
+   * Cờ đặt ở cấp app chứ không ở `resolve()` vì phạm vi là toàn app, không phải từng DocType —
+   * để ở `resolve()` thì mọi DocType thường (vốn cố ý trả `undefined` để rơi về CRUD chuẩn)
+   * sẽ phải trả về một object chỉ để mang cờ, làm hỏng ngữ nghĩa fall-through.
+   */
+  suppressAdvancedFilter?: boolean;
   resolve(context: DoctypeWorkspaceExtensionContext): DoctypeWorkspaceExtensionResolution | undefined;
 }

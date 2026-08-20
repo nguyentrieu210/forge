@@ -22,6 +22,7 @@ function stockPurpose(raw: string | null): ManufacturingStockPurpose | undefined
  */
 export const alumdoorWorkspaceExtension: DoctypeWorkspaceExtension = {
   id: "alumdoor",
+  suppressAdvancedFilter: true,
   resolve(context) {
     const { doctype, isNew, decoded, bridge, base, printBase, listPath, closeRequest, onNavigate } = context;
 

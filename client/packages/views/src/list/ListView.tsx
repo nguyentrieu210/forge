@@ -88,7 +88,7 @@ const PAGE_SIZES = [20, 50, 100];
 
 /** Checkbox và STT là hai cột cố định độc lập. */
 const STICKY_SELECT = "sticky left-0 z-20 bg-inherit";
-const STICKY_INDEX = "sticky left-10 z-20 bg-inherit shadow-[inset_-1px_0_0_var(--border)]";
+const STICKY_INDEX = "sticky left-10 z-20 bg-inherit";
 const SELECT_W = "w-10 min-w-10 max-w-10";
 const INDEX_W = "w-12 min-w-12 max-w-12";
 
@@ -474,12 +474,12 @@ export function ListView(props: ListViewProps) {
         tabIndex={onRowClick ? (focusedRow === name || (!focusedRow && index === 0) ? 0 : -1) : undefined}
         aria-label={onRowClick ? `${t("common.open", "Mở")} ${name}` : undefined}
       >
-        <TableCell className={cn("border-r border-input px-0 text-center", SELECT_W, STICKY_SELECT, compact && "py-1")} style={{ width: 40 }}>
+        <TableCell className={cn("px-0 text-center", SELECT_W, STICKY_SELECT, compact && "py-1")} style={{ width: 40 }}>
           <span onClick={(event) => event.stopPropagation()}>
             <Checkbox checked={selected} onCheckedChange={() => toggleRow(name)} aria-label={`${t("list.select_row")} ${name}`} />
           </span>
         </TableCell>
-        <TableCell className={cn("border-r border-input px-0 text-center text-xs tabular-nums text-muted-foreground", INDEX_W, STICKY_INDEX, compact && "py-1")} style={{ width: 48 }}>
+        <TableCell className={cn("px-0 text-center text-xs tabular-nums text-muted-foreground", INDEX_W, STICKY_INDEX, compact && "py-1")} style={{ width: 48 }}>
           {pageStart + index + 1}
         </TableCell>
         {columns.map((c) => {
@@ -488,7 +488,7 @@ export function ListView(props: ListViewProps) {
           <TableCell key={c.fieldname} data-col={c.fieldname} // Bề rộng do <colgroup> quyết định — không đặt w-full/w-px ở ô nữa, hai nguồn tranh nhau
                      // thì trình duyệt chọn theo luật riêng và kết quả không đoán được.
                     style={pinnedLeft === undefined ? undefined : { left: pinnedLeft }}
-                    className={cn(props.centerContent ? "text-center" : c.align === "right" && "text-right", (props.centerContent || c.align === "center") && "text-center", compact && "py-1", !c.isTitle && "whitespace-nowrap", pinnedLeft !== undefined && "sticky z-10 bg-card shadow-[inset_-1px_0_0_var(--border)]")}>
+                    className={cn(props.centerContent ? "text-center" : c.align === "right" && "text-right", (props.centerContent || c.align === "center") && "text-center", compact && "py-1", !c.isTitle && "whitespace-nowrap", pinnedLeft !== undefined && "sticky z-10 bg-inherit shadow-[inset_-1px_0_0_var(--border)]")}>
             {c.isTitle
                     ? <TitleCell row={row} col={c} centered={props.centerContent} imgField={imgField} displayValues={props.displayValues} onUploadImage={props.onUploadImage} />
                     : c.fieldtype === "Link" && c.options
@@ -713,10 +713,10 @@ export function ListView(props: ListViewProps) {
           <TableHeader>
             <TableRow ref={headRowRef} className="hover:bg-transparent">
               {/* Checkbox và STT là hai cột độc lập đúng contract: cố định, không resize/ẩn/đổi chỗ. */}
-              <TableHead className={cn("top-0 border-r border-input px-0 text-center", SELECT_W, STICKY_SELECT, "z-40 bg-muted", compact && "h-7")} style={{ width: 40 }}>
+              <TableHead className={cn("top-0 px-0 text-center", SELECT_W, STICKY_SELECT, "z-40", compact && "h-7")} style={{ width: 40 }}>
                 <Checkbox checked={allPageSelected} onCheckedChange={toggleAllPage} aria-label={t("list.select_all_page")} />
               </TableHead>
-              <TableHead className={cn("top-0 border-r border-input px-0 text-center tabular-nums", INDEX_W, STICKY_INDEX, "z-40 bg-muted", compact && "h-7")} style={{ width: 48 }}>
+              <TableHead className={cn("top-0 px-0 text-center tabular-nums", INDEX_W, STICKY_INDEX, "z-40", compact && "h-7")} style={{ width: 48 }}>
                 #
               </TableHead>
               {columns.map((c) => (
@@ -820,15 +820,15 @@ export function ListView(props: ListViewProps) {
               {/* Hàng tổng cũng phải có ĐÚNG số ô như các hàng khác, nếu không cột lệch hẳn một
                   nhịp và mọi con số tổng rơi sai cột. */}
               <TableRow className="bg-card hover:bg-transparent">
-                <TableCell aria-hidden className={cn("border-r border-input px-0", SELECT_W, STICKY_SELECT)} style={{ width: 40 }} />
-                <TableCell className={cn("border-r border-input px-0 text-center text-xs text-muted-foreground", INDEX_W, STICKY_INDEX)} style={{ width: 48 }} title="Tổng hợp trên trang hiện tại">Σ trang</TableCell>
+                <TableCell aria-hidden className={cn("px-0", SELECT_W, STICKY_SELECT)} style={{ width: 40 }} />
+                <TableCell className={cn("px-0 text-center text-xs text-muted-foreground", INDEX_W, STICKY_INDEX)} style={{ width: 48 }} title="Tổng hợp trên trang hiện tại">Σ trang</TableCell>
                 {columns.map((c) => {
                   const pinnedLeft = pinnedOffsets.get(c.fieldname);
                   return (
                   <TableCell
                     key={c.fieldname}
                     style={pinnedLeft === undefined ? undefined : { left: pinnedLeft }}
-                    className={cn(props.centerContent ? "text-center tabular-nums" : c.align === "right" && "text-right tabular-nums", pinnedLeft !== undefined && "sticky z-10 bg-card shadow-[inset_-1px_0_0_var(--border)]")}
+                    className={cn(props.centerContent ? "text-center tabular-nums" : c.align === "right" && "text-right tabular-nums", pinnedLeft !== undefined && "sticky z-10 bg-inherit shadow-[inset_-1px_0_0_var(--border)]")}
                   >
                     {c.align === "right" && !c.isStatus ? formatValue(aggregateColumn(rows, c), c) : null}
                   </TableCell>
@@ -1094,14 +1094,15 @@ function SortHeader({
           }}
         >
           {/* Ba trạng thái:
-              - bình thường: vạch xám luôn thấy ⇒ người dùng BIẾT là kéo được (trước đây ẩn hẳn
-                nên không ai đoán ra có tính năng này)
+              - bình thường: KHÔNG vẽ gì. Vạch xám thường trực ở mép phải mọi cột đọc ra thành
+                đường kẻ dọc chia cắt bảng — đúng thứ chủ dự án yêu cầu gỡ. Đánh đổi đã biết:
+                không nhìn thấy thì không đoán ra kéo được, nên chỉ cần rê vào cột là vạch hiện.
               - rê vào cột: vạch đậm và cao lên
               - rê đúng tay nắm: vạch dày, màu chủ đạo, cao hết ô + hiện bảng hướng dẫn */}
           <span
             className={cn(
               "w-px rounded-full transition-[height,width,background-color]",
-              "h-4 bg-border",
+              "h-4 bg-transparent",
               "group-hover/th:h-5 group-hover/th:bg-muted-foreground/60",
               "group-hover/grip:h-full group-hover/grip:w-[3px] group-hover/grip:bg-primary",
               resizing && "h-full w-[3px] bg-primary",

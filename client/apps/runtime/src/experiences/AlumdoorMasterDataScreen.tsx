@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { ChevronRight, PackageSearch } from "lucide-react";
-import { Button, StatusBadge, type StatusTone } from "@metaforge/ui";
+import { Button, type StatusTone } from "@metaforge/ui";
 
 /* Hallmark · macrostructure: Workbench · genre: modern-minimal
  * pre-emit critique: P4 H5 E4 S4 R5 V4
@@ -585,57 +585,20 @@ function StepMarker({ step }: { step: number }) {
   );
 }
 
-/**
- * Dòng phụ dưới nhãn: vai trò trong chuỗi (tĩnh) + tình trạng dữ liệu (đo được mới có).
- *
- * Vai trò hiện cả khi chưa đo, vì nó là dữ kiện thiết kế chứ không phải số liệu — biết "mục này
- * nuôi bước nhập kho" đã đủ để người dựng hệ biết vì sao phải khai nó trước.
- */
-function EntryMeta({ entry }: { entry: ResolvedMasterEntry }) {
-  const { gate } = entry.definition;
-  const { status } = entry;
-  if (!gate && !status.label && !status.unmeasuredField) return null;
-
-  return (
-    <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-      {status.label ? <StatusBadge tone={status.tone}>{status.label}</StatusBadge> : null}
-      {gate ? (
-        <span className="text-[11px] leading-4 text-muted-foreground">
-          {`Cổng chuỗi · ${gate.step}`}
-          {status.state === "blocked" || status.state === "partial" ? ` — ${gate.why}` : ""}
-        </span>
-      ) : null}
-      {status.unmeasuredField ? (
-        <span className="text-[11px] leading-4 text-muted-foreground/80">{`chưa đo ${status.unmeasuredField}`}</span>
-      ) : null}
-    </span>
-  );
-}
-
 function MasterLink({ entry, onNavigate, prominent = false }: {
   entry: ResolvedMasterEntry;
   onNavigate: (route: string) => void;
   prominent?: boolean;
 }) {
-  // Viền trái cho mục ĐANG chặn: đây là chỉ báo duy nhất còn đọc được khi hàng bị cắt ngắn ở
-  // cột hẹp. Màu không đứng một mình — chip bên dưới luôn có chữ, nên người không phân biệt
-  // được màu vẫn đọc ra trạng thái.
-  const alarm = entry.status.state === "blocked"
-    ? "border-l-2 border-l-destructive/60 pl-2"
-    : entry.status.state === "partial"
-      ? "border-l-2 border-l-warning/60 pl-2"
-      : "";
-
   return (
     <Button
       type="button"
       variant="ghost"
-      className={`group h-auto min-h-11 w-full items-start justify-between gap-3 rounded-md px-2.5 py-2.5 text-left font-normal hover:bg-primary/5 hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${alarm} ${prominent ? "text-[15px]" : "text-sm"}`}
+      className={`group h-auto min-h-11 w-full items-start justify-between gap-3 rounded-md px-2.5 py-2.5 text-left font-normal hover:bg-primary/5 hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${prominent ? "text-[15px]" : "text-sm"}`}
       onClick={() => onNavigate(entry.route)}
     >
       <span className="flex min-w-0 flex-col">
         <span className="min-w-0 whitespace-normal leading-5">{entry.displayLabel}</span>
-        <EntryMeta entry={entry} />
       </span>
       <ChevronRight
         className="mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary group-focus-visible:translate-x-0.5 group-focus-visible:text-primary"
@@ -643,22 +606,6 @@ function MasterLink({ entry, onNavigate, prominent = false }: {
       />
     </Button>
   );
-}
-
-/**
- * Nhãn nhóm: đếm CỔNG ĐANG CHẶN, không đếm mục.
- *
- * Luôn đi kèm danh từ ("2 cổng đang chặn") vì một con số trần cạnh tiêu đề nhóm chính là lỗi
- * đã phải gỡ một lần. Chưa đo thì không vẽ gì — im lặng đúng hơn là một chip "0".
- */
-function GroupAlarm({ group }: { group: ResolvedMasterGroup }) {
-  if (group.blockedCount > 0) {
-    return <StatusBadge tone="destructive">{`${group.blockedCount} cổng đang chặn`}</StatusBadge>;
-  }
-  if (group.partialCount > 0) {
-    return <StatusBadge tone="warning">{`${group.partialCount} mục thiếu trường then chốt`}</StatusBadge>;
-  }
-  return null;
 }
 
 function MasterGroupSection({ group, onNavigate }: {
@@ -673,7 +620,6 @@ function MasterGroupSection({ group, onNavigate }: {
         <div className="mb-2 flex flex-wrap items-baseline gap-x-2.5 gap-y-1 border-b pb-3">
           <StepMarker step={group.step} />
           <h2 className="text-base font-semibold tracking-tight">{group.title}</h2>
-          <GroupAlarm group={group} />
         </div>
         <nav aria-label={group.title} className="grid min-w-0 gap-x-3 sm:grid-cols-2">
           {group.items.map((entry) => (
@@ -689,7 +635,6 @@ function MasterGroupSection({ group, onNavigate }: {
       <div className="mb-1 flex flex-wrap items-baseline gap-x-2.5 gap-y-1 px-2.5">
         <StepMarker step={group.step} />
         <h2 className="text-sm font-semibold tracking-tight">{group.title}</h2>
-        <GroupAlarm group={group} />
       </div>
       <nav aria-label={group.title} className="min-w-0">
         {group.items.map((entry) => (
@@ -766,103 +711,8 @@ export function summarizeChain(groups: ResolvedMasterGroup[], readiness?: Alumdo
   };
 }
 
-function ChainNotice({ summary }: { summary: MasterChainSummary }) {
-  if (!summary.measured) {
-    return (
-      <p className="mb-4 text-sm text-muted-foreground">
-        Chưa có số liệu tình trạng dữ liệu. Màn hình đang chỉ hiện <b>vai trò của từng danh mục trong chuỗi vận hành</b>;
-        {" "}mục nào đủ, mục nào rỗng thì phải mở ra mới biết.
-      </p>
-    );
-  }
-  /**
-   * PHẠM VI của mọi kết luận bên dưới. Luôn đi kèm, kể cả khi mọi thứ xanh.
-   *
-   * Ba chỗ màn này KHÔNG được im lặng:
-   *  · bước không mục nào canh — hiện `đơn hàng` đã có Khách hàng, `hoá đơn` và `công nợ` thì
-   *    chưa: `Sales Invoice.debit_to` và `Payment Entry.paid_from/paid_to` đều là
-   *    `Link(Account)!` bắt buộc, mà `Account` KHÔNG có trong brief (DocType nền tảng, cùng loại
-   *    lỗ hổng với `Batch`) nên không mục nào trên màn Danh mục dẫn tới nó;
-   *  · mục có trên màn mà `readiness` không có khoá — chưa ai đếm;
-   *  · mục đếm được dòng nhưng chưa ai đo trường then chốt.
-   */
-  const measuredCount = summary.visible - summary.unknown;
-  const scope = (
-    <>
-      {summary.uncoveredSteps.length > 0 ? (
-        <>{" "}Màn này không đo <b>{summary.uncoveredSteps.join(" · ")}</b> — chưa danh mục nào canh các bước đó.</>
-      ) : null}
-      {/* Một chuỗi liền, không ghép từ nhiều nút: `{a}/{b}` tách thành ba nút văn bản và trình
-          duyệt được phép xuống dòng ngay giữa con số với dấu gạch. */}
-      {summary.unknown > 0 ? (
-        <>{` Mới đếm được ${measuredCount}/${summary.visible} danh mục, còn ${summary.unknown} danh mục chưa ai đếm.`}</>
-      ) : null}
-      {summary.unmeasured > 0 ? (
-        <>{` ${summary.unmeasured} mục đủ số dòng nhưng chưa ai đo trường then chốt — "đủ dùng" của chúng mới đúng ở mức đếm dòng.`}</>
-      ) : null}
-    </>
-  );
-
-  const counts = [
-    // "danh mục rỗng" là chữ SAI cho con số này: nó đếm mục có `gate` đang chặn, mà mục chặn
-    // chưa chắc rỗng (Nhà cung cấp 41 bản ghi vẫn chặn khi bảng giá nhập trống). Nó cũng bỏ
-    // ngoài mọi mục rỗng không gate, nên bản trước in "1 danh mục rỗng" ngay trên 5 nhãn "Rỗng".
-    summary.blocked > 0 ? `${summary.blocked} mục đang chặn chuỗi` : "",
-    summary.partial > 0 ? `${summary.partial} mục thiếu trường then chốt` : "",
-    summary.idle > 0 ? `${summary.idle} danh mục rỗng chưa đặt vai trò` : "",
-  ].filter(Boolean).join(", ");
-
-  if (summary.blocked > 0 || summary.partial > 0) {
-    return (
-      <p className="mb-4 text-sm text-muted-foreground">
-        {summary.brokenSteps.length > 0 ? (
-          <>Chuỗi vận hành đang đứt ở <b>{summary.brokenSteps.join(" · ")}</b> — {counts}.</>
-        ) : (
-          <>Chưa mục nào chặn hẳn một bước, nhưng còn {counts}.</>
-        )}
-        {scope}
-      </p>
-    );
-  }
-
-  /**
-   * "Đã thông" đòi BA điều kiện, không phải hai.
-   *
-   * `blocked === 0 && partial === 0` là điều kiện của một màn chưa biết phân biệt "đo rồi, sạch"
-   * với "chưa đo". Truyền `readiness={}` cho ra đúng hai số 0 đó và màn tuyên bố cả tám bước đã
-   * đủ dữ liệu nền sau 0 phép đo. Nên `unknown === 0` (chưa ai đếm mục) và `unmeasured === 0`
-   * (đếm dòng rồi nhưng chưa đo trường then chốt) là điều kiện thứ ba và thứ tư — cùng hàng, chứ
-   * không phải một dòng chú thích.
-   *
-   * Câu này cũng chỉ được gọi tên các bước THẬT SỰ có mục canh. Bản trước đọc thuộc lòng cả tám
-   * bước trong khi chỉ 5 bước có gate — chủ xưởng đọc xong mở bán là kẹt ở đúng ba bước cuối.
-   */
-  if (summary.unknown > 0 || summary.unmeasured > 0) {
-    return (
-      <p className="mb-4 text-sm text-muted-foreground">
-        Chưa danh mục nào đếm được đang kêu, nhưng <b>chưa kết luận được chuỗi đã thông</b>.{scope}
-      </p>
-    );
-  }
-
-  if (summary.coveredSteps.length === 0) {
-    return (
-      <p className="mb-4 text-sm text-muted-foreground">
-        Đã đếm đủ {summary.visible} danh mục và không mục nào kêu, nhưng <b>không mục nào canh một bước vận hành nào</b> — màn này chưa kết luận được gì về chuỗi.{scope}
-      </p>
-    );
-  }
-
-  return (
-    <p className="mb-4 text-sm text-muted-foreground">
-      Không còn mục nào chặn: <b>{summary.coveredSteps.join(" → ")}</b> đã đủ dữ liệu nền.{scope}
-    </p>
-  );
-}
-
 export function AlumdoorMasterDataScreen({ items, onNavigate, readiness }: AlumdoorMasterDataScreenProps) {
   const groups = useMemo(() => resolveMasterGroups(items, readiness), [items, readiness]);
-  const summary = useMemo(() => summarizeChain(groups, readiness), [groups, readiness]);
 
   if (groups.length === 0) {
     return (
@@ -876,7 +726,6 @@ export function AlumdoorMasterDataScreen({ items, onNavigate, readiness }: Alumd
 
   return (
     <section className="w-full min-w-0 overflow-x-clip">
-      <ChainNotice summary={summary} />
       <div className="grid min-w-0 grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-12 xl:gap-x-8 xl:gap-y-6">
         {groups.map((group) => (
           <MasterGroupSection key={group.id} group={group} onNavigate={onNavigate} />

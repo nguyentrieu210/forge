@@ -1864,6 +1864,11 @@
  */
 :root {
   --accent-hover: color-mix(in srgb, var(--foreground) 7%, var(--accent));
+  /* Sọc hàng TẮT. Đổi lại `color-mix(in srgb, var(--accent) 55%, transparent)` là bật lại toàn
+   * hệ; muốn bật cho riêng một app thì đặt token này trong khối `html[data-app="<id>"]`.
+   * KHÔNG thêm selector vào chính luật sọc bên dưới: nó đang ngang specificity với luật `:hover`
+   * ngay sau nó và chỉ thắng nhờ thứ tự — nâng specificity lên là hover chết. */
+  --mf-row-stripe: transparent;
 }
 
 /* Hàng xen kẽ: vben bật mặc định. Trên bảng ERP nhiều cột, sọc là thứ giữ mắt đi đúng hàng khi
@@ -1871,12 +1876,23 @@
  * Dùng `:nth-child(even)` chứ không phải `odd`: hàng đầu giữ nền `--card` để liền với header. */
 .mf-shell .mf-list-view tbody tr:nth-child(even),
 .mf-shell .mf-report tbody tr:nth-child(even) {
-  background: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: var(--mf-row-stripe);
 }
 
 .mf-shell .mf-list-view thead th,
 .mf-shell .mf-report thead th {
   background: var(--accent);
+}
+
+/* HÀNG TIÊU ĐỀ LÀ MỘT MẶT LIỀN.
+ * Trước đây màu của nó đến từ ba nguồn đá nhau: `bg-secondary` trên `<thead>` (component Table),
+ * `var(--accent)` ở luật ngay trên, và `!bg-muted` của lớp v3. Hai ô đông cứng (checkbox/STT)
+ * mang `bg-inherit` nên rơi vào nguồn khác với các ô còn lại → luôn thấy mối nối ngay sau cột STT.
+ * Chốt một màu cho MỌI ô, `!important` để thắng cả v3. Vẫn phải ĐỤC (không dùng `transparent`):
+ * ô tiêu đề là sticky, trong suốt thì dòng dữ liệu trôi qua bên dưới sẽ hiện xuyên lên. */
+.mf-shell .mf-list-view thead th,
+.mf-shell .mf-report thead th {
+  background: var(--muted) !important;
 }
 
 .mf-shell .mf-list-view tbody tr:hover,
