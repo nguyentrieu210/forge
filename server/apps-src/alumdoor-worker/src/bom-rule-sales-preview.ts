@@ -112,11 +112,11 @@ function geometryValues(args: Json): Json {
     billable_area_sqm: areaPerSet,
     leaf_count: positive(args.leaf_count),
     set_count: 1,
-    PB_RAY_RONG: widthRay,
+    "RONG-PB-RAY": widthRay,
     PB_NHUA_RONG: widthPlastic,
     PB_RONG: width,
-    PB_CAO: height,
-    CAT_LA_RONG: cut,
+    "CAO-PB": height,
+    "RONG-CAT-LA": cut,
     CAO_LUOI: positive(args.mesh_height_m),
   };
   for (const key of Object.keys(values)) {

@@ -35,7 +35,15 @@ export interface FormViewProps {
   forceReadOnly?: boolean;
   conflict?: boolean;
   onReload?: () => void;
-  onSave?: (changed: Record<string, unknown>, all: Record<string, unknown>) => void;
+  /**
+   * Trả đúng `true` (hoặc Promise của `true`) khi đã ghi thành công ⇒ FormView tự xoá trạng thái
+   * "đang sửa".
+   *
+   * Kiểu để `unknown` chứ không phải `boolean`: các caller cũ trả về đủ thứ (id của toast…) và
+   * không caller nào phải sửa chỉ vì cái này. Chỉ nhận ĐÚNG `true` mới reset — một caller nuốt
+   * lỗi rồi trả `undefined` sẽ không vô tình làm form trông như đã lưu sạch.
+   */
+  onSave?: (changed: Record<string, unknown>, all: Record<string, unknown>) => unknown;
   saving?: boolean;
   /** lỗi field-level từ server (mapError.fieldErrors) → gắn vào đúng control. */
   fieldErrors?: Record<string, string>;
@@ -140,6 +148,26 @@ export function FormView(props: FormViewProps) {
   }, [props.fieldErrors]);
 
   const isDirty = form.formState.isDirty;
+
+  /**
+   * SAU KHI LƯU, hấp thụ ĐÚNG MỘT lần "dirty" do chính các ô tự ghi lại.
+   *
+   * Triệu chứng: lưu thành công, toast báo xong, nhưng nút Lưu sáng lại ngay và bấm bao nhiêu
+   * lần cũng vậy. Nguyên nhân là sau khi form được reset, một control nào đó ghi lại giá trị đã
+   * chuẩn hoá của chính nó (nghi nhất là lưới bảng con: server trả kèm `name`/`parent`/`idx`,
+   * lưới ghi lại bản đã lược) — RHF thấy khác `defaultValues` nên đánh dirty, mà server thì coi
+   * là không có gì đổi nên `modified` không tăng và effect reset theo doc không chạy lại.
+   *
+   * Đây là VÁ TRIỆU CHỨNG, không phải vá gốc: tôi chưa xác định được đúng control nào ghi lại.
+   * Nó an toàn ở chỗ chỉ hấp thụ MỘT lần ngay sau một lần lưu thành công — người dùng sửa tiếp
+   * thì dirty quay lại bình thường, không có nguy cơ nuốt thay đổi thật.
+   */
+  const vuaLuu = useRef(false);
+  useEffect(() => {
+    if (!vuaLuu.current || !isDirty) return;
+    vuaLuu.current = false;
+    form.reset(form.getValues());
+  }, [isDirty, form]);
   // Chống mất dữ liệu: cảnh báo khi rời trang (đóng tab/refresh/điều hướng ngoài) lúc form dirty.
   useEffect(() => {
     if (!isDirty || typeof window === "undefined") return;
@@ -215,7 +243,7 @@ export function FormView(props: FormViewProps) {
 
   // Ctrl/Cmd+S = Lưu (chặn hộp thoại lưu trang mặc định của trình duyệt). Đọc isDirty/onValid MỚI
   // NHẤT qua ref — đăng ký listener 1 lần, không tái đăng ký mỗi phím gõ.
-  const onValidRef = useRef<(vals: FieldValues) => void>(() => {});
+  const onValidRef = useRef<(vals: FieldValues) => void | Promise<void>>(() => {});
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
@@ -352,7 +380,7 @@ export function FormView(props: FormViewProps) {
     props.onWorkflowAction?.(a);
   };
 
-  const onValid = (vals: FieldValues) => {
+  const onValid = async (vals: FieldValues) => {
     if (props.conflict) return; // conflict → chặn ghi
     const result = buildSchema(resolved, t).safeParse(vals);
     if (!result.success) {
@@ -368,8 +396,26 @@ export function FormView(props: FormViewProps) {
       return;
     }
     const dirty = form.formState.dirtyFields;
+    /**
+     * Ô CHỈ-ĐỌC không bao giờ được gửi lên, kể cả khi form coi nó là đã đổi.
+     *
+     * Ô suy ra (`fetch_from`) như `Item.inventory_mode` do CLIENT điền: mở bản ghi chưa có giá
+     * trị đó ra là luật fetch chạy, ô được ghi, và `dirtyFields` đánh dấu nó. Nhưng server chặn
+     * thẳng — `generic-controller.ts` ném "Field is read-only: <tên ô>" khi nhận một ô read-only
+     * mà bản ghi chưa có giá trị cũ. Kết quả: người dùng không sửa gì cái ô đó, không nhìn thấy
+     * nó (nó `list_only`), mà mỗi lần Lưu đều bị chặn bởi chính tên nó.
+     *
+     * Server đằng nào cũng không nhận, nên gửi lên chỉ có hại. Lọc ở đây thay vì bỏ read-only
+     * khỏi metadata: ô vẫn phải chỉ-đọc, và tồn kho vẫn cần đọc giá trị của nó.
+     */
+    const chiDoc = new Set(
+      resolved.filter((item) => !item.layout && item.readOnly).map((item) => item.field.fieldname),
+    );
     const changed: Record<string, unknown> = {};
-    for (const k of Object.keys(dirty)) changed[k] = vals[k];
+    for (const k of Object.keys(dirty)) {
+      if (chiDoc.has(k)) continue;
+      changed[k] = vals[k];
+    }
     /**
      * Các ô tổng do chính form tính (`updateTotals`) cố ý KHÔNG đánh dấu dirty: đánh dấu thì
      * vừa mở chứng từ lên đã bị coi là có thay đổi chưa lưu và chặn nút đóng.
@@ -383,7 +429,24 @@ export function FormView(props: FormViewProps) {
       if (fieldname in changed) continue;
       if (Number(vals[fieldname] ?? 0) !== Number(doc[fieldname] ?? 0)) changed[fieldname] = vals[fieldname];
     }
-    props.onSave?.(changed, { ...vals, name: doc.name, modified: doc.modified });
+    const daGhi = await props.onSave?.(changed, { ...vals, name: doc.name, modified: doc.modified });
+
+    /**
+     * Ghi xong thì XOÁ trạng thái "đang sửa" ngay, không chờ `doc.modified` đổi.
+     *
+     * Effect reset ở trên chỉ chạy khi `[doc.name, doc.modified]` đổi, mà `modified` được tính từ
+     * `modified_at` + `version` — nên nó CHỈ đổi khi server thật sự ghi. Khi form dirty vì một
+     * khác biệt server coi là không có gì (ô tuỳ chọn rỗng: form giữ `""`, tài liệu không có
+     * khoá), server trả 200 mà không tăng version → reset không bao giờ chạy → người dùng thấy
+     * "Lưu thành công" nhưng nút Lưu vẫn sáng, bấm bao nhiêu lần cũng vậy.
+     *
+     * Reset về đúng giá trị vừa gửi, không phải giá trị rỗng: nếu server có chuẩn hoá gì thì
+     * effect trên vẫn reset lại lần nữa khi tài liệu mới về.
+     */
+    if (daGhi === true) {
+      form.reset(vals);
+      vuaLuu.current = true;
+    }
   };
   onValidRef.current = onValid;
 

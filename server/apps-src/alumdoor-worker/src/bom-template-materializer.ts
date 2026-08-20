@@ -358,8 +358,8 @@ export function bomContextFromProductionLine(line: BomProductionLineInput): { co
     estimated_weight_kg: line.estimated_weight_kg,
     output_qty: line.output_qty,
     PB_RONG: line.width_m,
-    PB_CAO: line.height_m,
-    CAT_LA_RONG: line.cut_width_m,
+    "CAO-PB": line.height_m,
+    "RONG-CAT-LA": line.cut_width_m,
   };
   for (const key of Object.keys(values)) {
     if (values[key] === undefined || values[key] === null || values[key] === "") delete values[key];

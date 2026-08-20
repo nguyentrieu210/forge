@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 import { useState, type ReactNode } from "react";
-import type { Doc, DocTypeMeta } from "@metaforge/core";
+import { withAppBase, type Doc, type DocTypeMeta } from "@metaforge/core";
 import { cn } from "@metaforge/ui";
 import {
   Boxes,
@@ -22,6 +22,9 @@ import {
   type PresentationStatusTone,
 } from "./document-presentation.js";
 import { resolveDocumentExperienceProfile } from "./document-experience-profile.js";
+
+/** BASE của app (Vite thay lúc build) — xem chú thích ở `withAppBase`. */
+const APP_BASE: string = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? "/";
 
 const ARCHETYPE_ICON: Record<DocumentArchetype, typeof Package> = {
   master: UserRound,
@@ -76,6 +79,15 @@ export function DocumentExperience({
   if (!presentation) return <>{children}</>;
 
   const Icon = ARCHETYPE_ICON[presentation.archetype];
+  /**
+   * `file_url` mà máy chủ trả về tính từ GỐC SITE ("/files/…"), còn app có thể chạy dưới một base
+   * khác — `withAppBase` nối lại cho đúng. Thiếu bước này thì ảnh 404 im lặng.
+   */
+  const anhBanGhi = (() => {
+    const ten = meta.image_field ?? meta.fields?.find((f) => f.fieldtype === "Attach Image")?.fieldname;
+    const gt = ten ? doc[ten] : undefined;
+    return typeof gt === "string" && gt ? withAppBase(gt, APP_BASE) : "";
+  })();
   const profile = resolveDocumentExperienceProfile(presentation.archetype);
   const systemModified = doc.modified ? String(doc.modified) : "";
   const systemOwner = doc.owner ? String(doc.owner) : "";
@@ -208,12 +220,27 @@ export function DocumentExperience({
         <span className={cn("absolute inset-y-0 left-0 w-0.5", profile.accentClass)} aria-hidden="true" />
         <div className="mf-document-hero-main mx-auto flex min-h-10 w-full max-w-[96rem] items-center">
           <div className="flex min-w-0 items-center gap-2">
-            <span className={cn(
-              "grid size-7 shrink-0 place-items-center rounded-md ring-1",
-              profile.iconClass,
-            )}>
-              <Icon className="size-3.5" />
-            </span>
+            {/**
+              * Có ảnh sản phẩm thì hiện ẢNH, không hiện biểu tượng chung.
+              *
+              * Biểu tượng người của archetype "master" nói bản ghi này thuộc LOẠI nào — thông tin
+              * đó người dùng đã biết vì họ vừa bấm vào đây. Tấm ảnh mới là thứ nói bản ghi này là
+              * CÁI GÌ, và với danh mục vật tư thì nhìn ảnh nhanh hơn đọc tên.
+              */}
+            {anhBanGhi ? (
+              <img
+                src={anhBanGhi}
+                alt={presentation.title}
+                className="size-12 shrink-0 rounded-md border border-border/80 object-cover shadow-sm"
+              />
+            ) : (
+              <span className={cn(
+                "grid size-7 shrink-0 place-items-center rounded-md ring-1",
+                profile.iconClass,
+              )}>
+                <Icon className="size-3.5" />
+              </span>
+            )}
 
             <div className="min-w-0">
               <div className="flex min-w-0 items-center gap-1.5">

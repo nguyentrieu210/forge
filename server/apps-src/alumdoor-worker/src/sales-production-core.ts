@@ -523,7 +523,18 @@ export function calculateLeafPlan(policy: RawPolicy, line: Json): LeafPlan {
   const deduction = finiteNonNegative(deductionInput, "Trừ chiều cao trước khi chia");
   const effective = height - deduction;
   if (!(effective > 0)) throw new Error(`Chiều cao sau khi trừ phải lớn hơn 0: ${height} − ${deduction}.`);
-  const divisor = finitePositive(policy.leaf_divisor_const ?? line.leaf_divisor_m, "Ước số chia lá");
+  /**
+   * `||` chứ KHÔNG phải `??`. Chính sách nào lấy ước số từ bản lá của từng mã thì để trống ô
+   * hằng số — mà "để trống" trong kho này là chuỗi `"0"`, không phải null. `??` chỉ rơi xuống
+   * khi null/undefined nên nó giữ nguyên `"0"`, rồi `finitePositive` ném "Ước số chia lá phải
+   * lớn hơn 0" và KHÔNG BAO GIỜ đọc tới bản lá của mã. Đo trên dữ liệu Alumdoor 21/08/2026:
+   * chính sách "Cửa CN Đức" khai `leaf_divisor_source = "Bản lá của bộ quy cách"` cùng với
+   * `leaf_divisor_const = "0"` — tức toàn bộ 15 mã cửa Đức không tính nổi số lá.
+   *
+   * `||` coi `"0"`, `""`, `0` đều là chưa khai, và đó đúng là ý nghĩa của chúng ở đây: ước số
+   * chia bằng 0 vốn vô nghĩa nên không có giá trị hợp lệ nào bị `||` nuốt mất.
+   */
+  const divisor = finitePositive(policy.leaf_divisor_const || line.leaf_divisor_m, "Ước số chia lá");
   const rounding = text(policy.leaf_rounding ?? line.leaf_rounding) as LeafRounding;
   if (!["Ngưỡng trừ-một-lá", "Nấc 0-0.3-0.7-1", "Làm tròn xuống"].includes(rounding)) {
     throw new Error(`${text(policy.policy_name ?? policy.name)}: chưa khai Cách làm tròn số lá.`);
@@ -643,9 +654,16 @@ function raySpecificGeometry(
   if (!profile || checked(profile.disabled)) throw new Error(`${chosen.parsed.policy_name}: không đọc được Geometry Profile đang hiệu lực ${profileName}.`);
   const rules = Array.isArray(chosen.raw.geometry_rules) ? chosen.raw.geometry_rules : [];
   if (!rules.length) throw new Error(`${chosen.parsed.policy_name}: chưa khai Geometry Rules.`);
+  /**
+   * MÃ Ô HÌNH HỌC PHẢI TRÙNG VỚI DANH MỤC `Geometry Field`, và danh mục đó dùng gạch nối:
+   * RONG-CAT-LA · CAO-PB · RONG-PB-RAY. Code trước đây tra CAT_LA_RONG / PB_CAO / PB_RAY_RONG —
+   * hai bộ từ vựng không có một chữ nào chung, nên bộ lọc dưới đây luôn ra RỖNG và mọi dòng cửa
+   * tấm liền Úc chết với "Loại ray ... không được hỗ trợ. Cho phép: ." — thông báo tự nó đã lộ
+   * ra danh sách rỗng mà không ai đọc ra nghĩa.
+   */
   const supportedRayTypes = [...new Set(
     rules
-      .filter((rule) => text(rule.target_field) === "CAT_LA_RONG")
+      .filter((rule) => text(rule.target_field) === "RONG-CAT-LA")
       .map((rule) => text(rule.ray_type))
       .filter(Boolean),
   )];
@@ -657,15 +675,15 @@ function raySpecificGeometry(
     geometry_profile: profileName,
     profile_fields: Array.isArray(profile.fields) ? profile.fields : [],
     rules,
-    inputs: { PB_CAO: height, PB_RAY_RONG: width },
+    inputs: { "CAO-PB": height, "RONG-PB-RAY": width },
     context: {
       customer_group: customerGroup,
       ray_type: rayType,
       has_butterfly_bracket: checked(row.has_butterfly_bracket),
     },
-    required_targets: ["CAT_LA_RONG"],
+    required_targets: ["RONG-CAT-LA"],
   });
-  const cutWidth = finitePositive(result.values.CAT_LA_RONG, "Rộng cắt lá theo Geometry Policy");
+  const cutWidth = finitePositive(result.values["RONG-CAT-LA"], "Rộng cắt lá theo Geometry Policy");
   return { cut_width_m: roundTo(cutWidth), ray_type: rayType, applied_rules: result.applied_rules.map((entry) => entry.rule_code) };
 }
 

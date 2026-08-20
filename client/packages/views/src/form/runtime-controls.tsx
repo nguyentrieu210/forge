@@ -137,12 +137,20 @@ export function RuntimeLinkControl(props: FieldControlProps) {
   }, [props.services, target, value]);
 
   const allowCreate = Boolean(target && props.field.allow_create !== false && props.field.allow_create !== 0 && props.services?.quickCreate && !props.readOnly && !props.compact);
+  /**
+   * Nap nhan doctype dich NGAY, khong doi bat danh sach ra.
+   *
+   * Truoc day dieu kien co `!open` nen nhan chi duoc hoi sau khi nguoi dung bam mo. Trong lúc
+   * cho, nut "Tao moi" ha xuong `target` — tuc TEN KY THUAT tieng Anh — roi vai tram mili giay
+   * sau moi doi sang nhan tieng Viet. Nguoi dung thay dung khoanh khac do va tuong app chua
+   * duoc dich. `getMeta` co cache o adapter nen nap som khong ton them lan goi nao.
+   */
   useEffect(() => {
-    if (!open || !allowCreate || !target || !props.services?.getMeta) return;
+    if (!allowCreate || !target || !props.services?.getMeta) return;
     let alive = true;
     void props.services.getMeta(target).then((meta) => { if (alive) setTargetLabel(meta.label); }).catch(() => undefined);
     return () => { alive = false; };
-  }, [allowCreate, open, props.services, target]);
+  }, [allowCreate, props.services, target]);
 
   useEffect(() => {
     if (!open || !target || !search) return;

@@ -385,6 +385,12 @@ interface V2BatchBalance {
 interface V2Batch {
   name?: string;
   batch_id?: string;
+  /**
+   * Doctype `Batch` dat ten o la `item` (Link -> Item), khong phai `item_code`.
+   * Doc nham ten thi bo loc duoi day luon so undefined voi ma hang, tuc KHONG lo nao khop
+   * va de xuat cat luon bao het hang — hong im lang, khong nem loi.
+   */
+  item?: string;
   item_code?: string;
   color?: string;
   condition?: string;
@@ -529,7 +535,7 @@ async function listV2BatchStock(
   const color = String(args.color ?? args.colour ?? "").trim();
   const condition = String(args.condition ?? args.generation ?? "").trim();
   return enriched.filter(({ batch, warehouse: rowWarehouse }) =>
-    (!itemCode || batch.item_code === itemCode)
+    (!itemCode || (batch.item ?? batch.item_code) === itemCode)
     && (!warehouse
       || rowWarehouse === warehouse
       || (includeOffcut
@@ -886,7 +892,7 @@ async function snapshotReconciliationV2(
   const selected: typeof stock = [];
   for (const row of stock) {
     if (itemGroup) {
-      const item = await readMaster(call, "Item", String(row.item_code ?? row.batch.item_code ?? ""));
+      const item = await readMaster(call, "Item", String(row.item_code ?? row.batch.item ?? row.batch.item_code ?? ""));
       if (item?.item_group !== itemGroup) continue;
     }
     selected.push(row);
@@ -894,7 +900,7 @@ async function snapshotReconciliationV2(
   const snapshotAt = new Date().toISOString();
   const lines = selected.map((row, index) => ({
     row_id: `ROW-${index + 1}`,
-    item_code: String(row.item_code ?? row.batch.item_code ?? ""),
+    item_code: String(row.item_code ?? row.batch.item ?? row.batch.item_code ?? ""),
     batch_no: String(row.batch_no ?? row.batch.name ?? ""),
     book_qty: Number(row.actual_qty ?? 0),
     book_weight_kg: row.actual_weight == null ? undefined : Number(row.actual_weight),

@@ -5,14 +5,13 @@
  * được thêm tab Nhập hàng loạt dùng chung renderer, không sinh page riêng theo từng nghiệp vụ.
  */
 import { useMemo, useState, type ReactNode } from "react";
-import { List, Rows3, X } from "lucide-react";
-import { Button, ConfirmDialog, chromeFill, chromeText, cn, Dialog, DialogContent, DialogHeader, DialogTitle, useT } from "@metaforge/ui";
+import { X } from "lucide-react";
+import { chromeFill, chromeText, cn, Dialog, DialogContent, DialogHeader, DialogTitle, useT } from "@metaforge/ui";
 import { useMeta } from "../container/hooks.js";
-import { buildPrintPath, resolveBulkRenderPolicy, resolveCreateSurface, type UrlStateBridge } from "./doctype-workspace-support.js";
+import { buildPrintPath, resolveCreateSurface, type UrlStateBridge } from "./doctype-workspace-support.js";
 import type { DoctypeWorkspaceExtension } from "./workspace-extension.js";
 import { SplitView } from "../detail/SplitView.js";
 import { ListRuntimeContainer } from "../list/ListRuntimeContainer.js";
-import { BulkGridContainer } from "../bulk/BulkGridContainer.js";
 import { FormContainer } from "../container/FormContainer.js";
 import { NewFormContainer } from "../container/NewFormContainer.js";
 import { ContextContainer } from "../container/ContextContainer.js";
@@ -21,7 +20,6 @@ import {
   V3_DATA_SURFACE_CLASS,
   V3_FULL_CREATE_DIALOG_CLASS,
   V3_QUICK_ENTRY_DIALOG_CLASS,
-  V3_VIEW_SWITCHER_CLASS,
 } from "../data-surface/v3.js";
 
 export interface DoctypeWorkspaceProps {
@@ -40,8 +38,6 @@ export interface DoctypeWorkspaceProps {
 export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
   const t = useT();
   const [closeRequest, setCloseRequest] = useState(0);
-  const [bulkDirty, setBulkDirty] = useState(false);
-  const [confirmBulkExit, setConfirmBulkExit] = useState(false);
   const titleMeta = useMeta(props.doctype);
   const { doctype, name, onNavigate, bridge } = props;
   const base = props.base ?? "/app";
@@ -67,21 +63,13 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
   const metadataCreateSurface = useMemo(() => resolveCreateSurface(titleMeta.data), [titleMeta.data]);
   const createSurface = extension?.createSurface ?? metadataCreateSurface;
   const useFullCreate = createSurface === "full";
-  const bulkPolicy = useMemo(() => titleMeta.data ? resolveBulkRenderPolicy(titleMeta.data) : undefined, [titleMeta.data]);
-  const bulkEnabled = Boolean(bulkPolicy?.enabled && !isTree);
-  const bulkOnly = Boolean(bulkPolicy?.rowSource);
-  const bulkActive = !decoded && !isNew && !extensionHasDetail && !extension?.suppressBulk
-    && bulkEnabled && (bulkOnly || bridge.get("view") === "bulk");
-
-  const modeTabs = bulkEnabled && !bulkOnly && !decoded && !isNew && !extensionHasDetail && !extension?.suppressBulk ? (
-    <div className={V3_VIEW_SWITCHER_CLASS} role="navigation" aria-label={t("common.view", "Chế độ xem")}>
-      <Button variant={bulkActive ? "ghost" : "secondary"} size="sm" className="h-8 rounded-md" onClick={() => {
-        if (bulkActive && bulkDirty) { setConfirmBulkExit(true); return; }
-        bridge.set({ view: null });
-      }}><List /> Danh sách</Button>
-      <Button variant={bulkActive ? "secondary" : "ghost"} size="sm" className="h-8 rounded-md" onClick={() => bridge.set({ view: "bulk" })}><Rows3 /> Nhập hàng loạt</Button>
-    </div>
-  ) : null;
+  /**
+   * THANH TAB "Danh sách / Nhập hàng loạt" ĐÃ GỠ — chủ dự án không dùng (2026-08-20).
+   *
+   * Gỡ ở đây chứ không chỉ tắt `viewPolicy.mobile.bulk.enabled`: chủ dự án yêu cầu bỏ hẳn khỏi
+   * giao diện. `BulkGridContainer` vẫn còn nguyên trong repo — nó là code dùng chung, app khác
+   * có thể đang cần; cái bị bỏ là LỐI VÀO từ màn doctype này.
+   */
 
   const detail = extension?.detail ?? (decoded ? (
     <FormContainer
@@ -104,9 +92,8 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
   return (
     <>
       <div className={V3_DATA_SURFACE_CLASS} data-ui-version="v3" data-surface="doctype-workspace">
-        {modeTabs}
         <div className="min-h-0 flex-1">
-          {bulkActive ? <BulkGridContainer doctype={doctype} bridge={bridge} title={displayTitle} onDirtyChange={setBulkDirty} /> : (
+          {(
             <SplitView
               autoSaveId={`mf-split-v3-${doctype}`}
               hasDetail={isTree || Boolean(decoded) || extensionHasDetail}
@@ -137,17 +124,6 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
           )}
         </div>
       </div>
-
-      <ConfirmDialog
-        open={confirmBulkExit}
-        onOpenChange={setConfirmBulkExit}
-        title="Bỏ thay đổi chưa lưu?"
-        description="Bulk View đang có thay đổi chưa lưu. Chuyển về danh sách sẽ bỏ các chỉnh sửa này."
-        cancelLabel="Tiếp tục chỉnh"
-        confirmLabel="Bỏ thay đổi"
-        destructive
-        onConfirm={() => { setBulkDirty(false); bridge.set({ view: null }); }}
-      />
 
       <Dialog open={isNew} onOpenChange={(open) => { if (!open) requestCreateClose(); }}>
         <DialogContent

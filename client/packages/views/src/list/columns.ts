@@ -103,20 +103,34 @@ export function deriveColumns(meta: DocTypeMeta, ctx: DeriveColumnsCtx = {}): Li
    * `list_only` là "cột này đáng xem trong bảng, nhưng đừng bắt người ta nhìn nó lúc đang
    * gõ". `đã nhận %` là loại thứ hai; một field tên `secret_note` là loại thứ nhất.
    */
+  /**
+   * FIELD ẢNH ĐƯỢC PHÉP LÀM CỘT RIÊNG khi app khai nó vào `viewPolicy.list.columns`.
+   *
+   * Trước đây nó bị loại vô điều kiện với lý do "ảnh đã nằm trong ô tiêu đề". Lý do đó đúng cho
+   * cái avatar 32px bám cột tên — nhưng nó biến việc "cho tôi một CỘT ảnh sản phẩm" thành điều
+   * không thể làm bằng cấu hình: khai vào `viewPolicy` cũng bị bỏ qua lặng lẽ, và người dùng
+   * kéo cột rộng bao nhiêu thì ảnh vẫn 32px vì nó không phải cột.
+   *
+   * Nay: khai rõ trong `viewPolicy.list.columns` ⇒ có cột riêng (và `ImageCell` vẽ ảnh lớn,
+   * bấm được để đổi). KHÔNG khai ⇒ giữ nguyên hành vi cũ, ảnh bám ô tiêu đề. Đường fallback vẫn
+   * loại nó ra để không ai vô tình nhận một cột chứa URL thô.
+   */
+  const khaiTrongViewPolicy = new Set(meta.viewPolicy?.list?.columns ?? []);
+  const anhLamCotRieng = Boolean(imgField && khaiTrongViewPolicy.has(imgField));
+
   const inList = fields.filter(
     (f: DocField) =>
       f.in_list_view === 1 &&
       f.hidden !== 1 &&
       !isLayout(f.fieldtype) &&
       f.fieldname !== titleName &&
-      f.fieldname !== imgField &&
+      (anhLamCotRieng || f.fieldname !== imgField) &&
       readable(f),
   );
   const chosen = inList.length > 0 ? inList : titleFallback(meta, titleName).filter(readable);
   for (const f of chosen) {
-    // Attach Image đã nằm trong title cell. Nếu fallback chạm đúng field ảnh thì cũng không sinh
-    // thêm cột chứa URL thô.
-    if (f.hidden === 1 || f.fieldname === imgField) continue;
+    // Đường FALLBACK (app không khai cột): ảnh vẫn thuộc ô tiêu đề, không sinh cột URL thô.
+    if (f.hidden === 1 || (!anhLamCotRieng && f.fieldname === imgField)) continue;
     const size = sizeFor(f);
     cols.push({
       fieldname: f.fieldname,
@@ -157,6 +171,8 @@ export function imageField(meta: DocTypeMeta, ctx: DeriveColumnsCtx = {}): strin
 }
 
 function sizeFor(field: DocField): { defaultWidth: number; minWidth: number } {
+  // Ô ảnh vẽ hình 112px + đệm; để rộng mặc định thì cột co lại và ảnh bị cắt.
+  if (field.fieldtype === "Attach Image") return { defaultWidth: 144, minWidth: 128 };
   if (field.fieldtype === "Check") return { defaultWidth: 80, minWidth: 72 };
   if (field.fieldtype === "Date") return { defaultWidth: 112, minWidth: 104 };
   if (field.fieldtype === "Datetime") return { defaultWidth: 144, minWidth: 128 };

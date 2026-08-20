@@ -28,14 +28,25 @@ export function dedupe(values: string[]): string[] {
   return [...new Set(values.filter(Boolean))];
 }
 
+/** Trần cứng cho một trang. Xem `clampPageLength`. */
+export const MAX_PAGE_LENGTH = 2000;
+
 /**
  * Frappe clients ask for pages far larger than the kernel serves. Clamping
  * rather than rejecting keeps a list usable; the caller learns the real size
  * from the row count.
+ *
+ * TRẦN NÂNG 100 → 2000 (2026-08-20). Trần 100 cũ khiến "Dòng mỗi trang: Tất cả" ở Desk trở thành
+ * lời nói dối: người dùng chọn xem hết, giao diện xin 2000 dòng, máy chủ lặng lẽ trả 100 và
+ * không nói gì. Cùng cái bẫy đó làm mọi lượt quét dữ liệu qua `/api/resource/...` chỉ chạm 100
+ * bản ghi đầu mà tưởng là đã quét hết.
+ *
+ * Vẫn GIỮ một trần: không trần thì một lời gọi lỡ tay kéo cả trăm nghìn dòng qua worker. 2000 đủ
+ * cho mọi danh mục của xưởng (lớn nhất ~3.300 phường xã) mà vẫn là một con số hữu hạn.
  */
 export function clampPageLength(value: number): number {
   if (!Number.isSafeInteger(value) || value < 1) return 20;
-  return Math.min(value, 100);
+  return Math.min(value, MAX_PAGE_LENGTH);
 }
 
 /**

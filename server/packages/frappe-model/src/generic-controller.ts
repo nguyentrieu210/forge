@@ -105,8 +105,21 @@ async function normalizeDocument(context: ControllerContext<JsonObject>, meta: D
       continue;
     }
     const readOnly = Boolean(field.read_only) || (context.existing?.docstatus === 1 && !field.allow_on_submit);
+    /**
+     * Ô SUY RA TỪ LIÊN KẾT (`fetch_from`) là ngoại lệ của "chỉ đọc thì giữ giá trị cũ".
+     *
+     * Chúng chỉ đọc với NGƯỜI DÙNG, nhưng giá trị đến từ SERVER: router tính lại chúng từ bản
+     * ghi được trỏ tới ở mỗi lượt ghi, trước khi tới đây. Giữ giá trị cũ trong trường hợp này
+     * là vứt bỏ đúng con số server vừa tính, và làm ô đó đứng yên vĩnh viễn.
+     *
+     * Hỏng đo được: đổi Bộ theo dõi của một mặt hàng thì `inventory_mode` không đổi theo, nên
+     * luật kiểm so bộ MỚI với kiểu tồn CŨ rồi từ chối — lỗi trỏ vào đúng ô người dùng vừa sửa.
+     * Cùng gốc với lỗi "Field is read-only: inventory_mode" lúc nhập liệu.
+     */
+    const suyRaTuLienKet = typeof field.fetch_from === "string" && field.fetch_from.trim() !== "";
     let value: JsonValue | undefined;
-    if (readOnly && prior !== undefined) value = structuredClone(prior);
+    if (readOnly && suyRaTuLienKet && provided !== undefined) value = normalizeValue(field, provided, context.command.action);
+    else if (readOnly && prior !== undefined) value = structuredClone(prior);
     else if (readOnly && provided !== undefined && prior === undefined) throw errors.validation(`Field is read-only: ${field.fieldname}`);
     else if (provided !== undefined) value = normalizeValue(field, provided, context.command.action);
     else if (prior !== undefined && context.command.action === "save") value = structuredClone(prior);

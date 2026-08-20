@@ -652,6 +652,68 @@ async function listDocuments(doctype: string, args: FrappeArgs, context: FrappeR
   return page.rows.map((row) => toFrappeListRow(row as JsonObject));
 }
 
+/**
+ * Điền các trường `fetch_from` từ bản ghi được trỏ tới.
+ *
+ * `fetch_from` khai dạng `"<trường link>.<trường nguồn>"`. Kernel LƯU khai báo đó nhưng không
+ * bao giờ tự tính — chỉ client tính, khi có người ngồi mở form và chọn tay.
+ *
+ * Hậu quả đo được: mọi tài liệu tạo qua REST đều để trống các ô này. `Item.inventory_mode`
+ * (`fetch_from: measurement_profile.inventory_mode`) rỗng sạch 296 mã sau một đợt nhập, và vì
+ * nó là cổng vào toàn bộ luật nhôm nên các luật đó ngủ im — không lỗi nào hiện ra, chỉ là
+ * không có gì chạy. Tệ hơn: ô rỗng rồi lại thành nguồn của một luật khác, nên đổi Bộ theo dõi
+ * bị từ chối với thông báo trỏ vào chính ô mình vừa đổi.
+ *
+ * Chỉ tính khi trường link CÓ MẶT trong payload — không đụng tới tài liệu không khai link, và
+ * không ghi đè khi bản ghi đích đọc không được.
+ */
+async function resolveFetchFrom(
+  doctype: string, payload: JsonObject, meta: DocTypeMeta, context: FrappeRouterContext,
+): Promise<void> {
+  const doc = new Map<string, JsonObject | null>();
+  for (const field of meta.fields) {
+    const spec = typeof field.fetch_from === "string" ? field.fetch_from.trim() : "";
+    if (!spec) continue;
+    const [linkField, sourceField] = spec.split(".", 2);
+    if (!linkField || !sourceField) continue;
+    const linkTarget = meta.fields.find((f) => f.fieldname === linkField);
+    const linkDoctype = typeof linkTarget?.options === "string" ? linkTarget.options : "";
+    const linkValue = payload[linkField];
+    if (!linkDoctype || typeof linkValue !== "string" || !linkValue.trim()) continue;
+
+    const key = `${linkDoctype}|${linkValue}`;
+    if (!doc.has(key)) {
+      // `loadReadable` trả về bản ghi BỌC (CanonicalDocument); các ô nằm trong `.data`.
+      const record = await loadReadable(linkDoctype, linkValue, context).catch(() => null);
+      doc.set(key, (record?.data ?? null) as JsonObject | null);
+    }
+    const nguon = doc.get(key);
+    if (!nguon) continue;
+    const value = nguon[sourceField];
+    if (value === undefined) continue;
+
+    /**
+     * Ô CHỈ-ĐỌC thì luôn suy ra; ô SỬA ĐƯỢC chỉ điền khi người gửi bỏ trống.
+     *
+     * Bản đầu ghi đè vô điều kiện, và nó đã âm thầm phá dữ liệu thật: `Item Price.uom` khai
+     * `fetch_from = item_code.default_sales_uom` mà KHÔNG chỉ-đọc. Ngày 21/08/2026 tôi ghi dòng
+     * giá cửa Úc dưới 4m² với `uom = "Bộ"` (bán trọn bộ, ảnh bảng giá ghi đ/bộ) và dòng bát khoá
+     * âm nền với `uom = "Cặp"`; cả hai bị đổi ngược về ĐVT bán mặc định của mặt hàng — "m2" và
+     * "Cái". Không lỗi, không cảnh báo, chỉ có con số giữ nguyên còn đơn vị thì đổi nghĩa. Một
+     * dòng ghi "1.800.000 / m²" thay vì "1.800.000 / bộ" là sai tiền gấp mấy lần.
+     *
+     * `fetch_from` vốn là TIỆN LỢI — điền hộ giá trị hay dùng — chứ không phải RÀNG BUỘC. Chỗ
+     * biến nó thành ràng buộc là cờ `read_only`: ô nào chỉ-đọc thì người dùng không có quyền
+     * nói khác, ô nào sửa được thì lời người gửi phải thắng.
+     */
+    const chiDoc = field.read_only === true;
+    const daGui = payload[field.fieldname];
+    const coGiaTri = daGui !== undefined && daGui !== null && daGui !== "";
+    if (!chiDoc && coGiaTri) continue;
+    payload[field.fieldname] = value as JsonValue;
+  }
+}
+
 async function createDocument(doctype: string, args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
   const submitted = documentArgument(args);
   const meta = await requireMeta(doctype, context);
@@ -697,6 +759,7 @@ async function createDocument(doctype: string, args: FrappeArgs, context: Frappe
     payload = dropNoCopyFields(payload, meta);
   }
 
+  await resolveFetchFrom(doctype, payload, meta, context);
   await assertNoAmbiguousItemPrice(doctype, payload, "", context);
 
   const name = amendedFrom
@@ -804,6 +867,7 @@ async function saveDocument(doctype: string, name: string, args: FrappeArgs, con
   // that were not edited in this request. Merge in Frappe shape first so child rows
   // are preserved, then convert the complete document back to the kernel payload.
   const payload = toKernelPayload({ ...toFrappeDoc(current), ...submitted }, meta);
+  await resolveFetchFrom(doctype, payload, meta, context);
   await assertNoAmbiguousItemPrice(doctype, payload, name, context);
   await context.runCommand(await buildCommand({
     tenantId: context.tenantId, actor: context.actor, doctype, name,

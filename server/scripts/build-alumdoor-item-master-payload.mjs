@@ -249,9 +249,34 @@ if (existsSync(DECISIONS_PATH)) {
   if (decisions.format !== "alumdoor-catalog-decisions/v1") {
     throw new Error(`Dinh dang file quyet dinh la: ${decisions.format}`);
   }
-  const retired = new Set((decisions.retired_items ?? []).map((row) => row.item_code));
+  /**
+   * Khoá quyết định theo CẢ HAI dạng mã — mã nguồn và mã sau đổi tên.
+   *
+   * Quyết định được ghi theo mã SAU đổi tên (`NHOM-LAMAU-PHE`), nhưng lớp dịch mã ở trên chỉ chạy
+   * khi D1 đã có mặt hàng để đối chiếu. Dựng trên D1 TRẮNG thì nó tự bỏ qua — đúng như thiết kế,
+   * "lúc đó nguồn chính là sự thật" — nên payload giữ mã nguồn (`NVL-LAMAU-PHE`) và mọi quyết
+   * định trượt hết trong im lặng.
+   *
+   * Đo trên D1 trắng 2026-08-20: 6/22 quyết định không khớp. Hậu quả không phải là "thiếu một
+   * nhãn": 5 mã đã cho nghỉ hưu được nhập ACTIVE (trùng mã trong danh mục), và `NVL-LAMAU-PHE`
+   * giữ `default_sales_uom="Thùng"` — đơn vị E07 đã gỡ, tức tham chiếu treo ngay từ lần nhập đầu.
+   *
+   * Bảng đổi mã là chỗ DUY NHẤT biết hai mã đó là một, nên tra ngược nó ra alias thay vì bắt
+   * người viết quyết định phải đoán bộ dựng đang chạy trên D1 có hàng hay không.
+   */
+  const aliasOf = new Map();
+  if (existsSync(CONVENTION_PATH)) {
+    for (const row of JSON.parse(await readFile(CONVENTION_PATH, "utf8")).mapping ?? []) {
+      if (row?.to && row?.from) aliasOf.set(row.to, row.from);
+    }
+  }
+  const codeKeys = (code) => (aliasOf.has(code) ? [code, aliasOf.get(code)] : [code]);
+
+  const retired = new Set((decisions.retired_items ?? []).flatMap((row) => codeKeys(row.item_code)));
   const overrides = new Map();
-  for (const row of decisions.field_overrides ?? []) overrides.set(`${row.item_code}::${row.field}`, row.value);
+  for (const row of decisions.field_overrides ?? []) {
+    for (const code of codeKeys(row.item_code)) overrides.set(`${code}::${row.field}`, row.value);
+  }
   let applied = 0;
   payload.items = payload.items.map((item) => {
     let next = item;
@@ -266,7 +291,12 @@ if (existsSync(DECISIONS_PATH)) {
     }
     return next;
   });
-  const stale = [...retired].filter((code) => !payload.items.some((item) => item.item_code === code));
+  // Tính theo TỪNG QUYẾT ĐỊNH, không theo từng mã: sau khi thêm alias thì mỗi quyết định có hai
+  // mã mà payload chỉ mang một, nên đếm theo mã sẽ báo đủ mọi quyết định là "đã mục".
+  const payloadCodes = new Set(payload.items.map((item) => item.item_code));
+  const stale = (decisions.retired_items ?? [])
+    .filter((row) => !codeKeys(row.item_code).some((code) => payloadCodes.has(code)))
+    .map((row) => row.item_code);
   if (stale.length > 0) {
     // Quyet dinh tro vao ma khong con trong payload la quyet dinh da muc - bao chu khong lang le bo.
     console.log(`ALUMDOOR_CATALOG_DECISIONS_STALE count=${stale.length} codes=${stale.slice(0, 5).join(",")}`);

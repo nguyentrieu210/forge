@@ -83,7 +83,19 @@ export interface DocumentReadScope {
 }
 
 // ---- limits / budget --------------------------------------------------------
-export const MAX_LIMIT = 100;
+/**
+ * Trần số dòng cho MỘT lần đọc danh sách.
+ *
+ * 100 → 2000 (2026-08-20). Trần 100 biến "Dòng mỗi trang: Tất cả" ở Desk thành lời nói dối:
+ * người dùng chọn xem hết, giao diện xin nhiều hơn, tầng API cắt xuống 100 và KHÔNG báo gì.
+ * Cùng cái trần đó khiến mọi lượt quét dữ liệu qua `/api/resource/...` chỉ chạm 100 bản ghi đầu
+ * mà tưởng đã quét hết — một lớp lỗi im lặng, không lệnh nào kêu.
+ *
+ * Vẫn giữ TRẦN chứ không bỏ: một lời gọi lỡ tay kéo cả trăm nghìn dòng qua worker là cách chắc
+ * chắn để treo tab và ăn hết thời gian CPU. 2000 phủ mọi danh mục của xưởng (lớn nhất ~3.300
+ * phường xã vẫn cần phân trang) mà vẫn là một con số hữu hạn.
+ */
+export const MAX_LIMIT = 2000;
 export const DEFAULT_LIMIT = 25;
 const MAX_FILTERS = 20;
 const MAX_IN_VALUES = 50;

@@ -1025,18 +1025,19 @@ export function LinkCombobox({
    * Trước đây nút in thẳng `target`, tức là TÊN KỸ THUẬT: giữa một giao diện tiếng Việt
    * hiện ra "Tạo mới Material Request", "Tạo mới Price List". Nhãn có sẵn trong metadata
    * và `getMeta` có cache ở adapter, nên đây là một lượt đọc cho mỗi doctype — chỉ chạy
-   * khi popover MỞ và khi thật sự có nút tạo nhanh.
+   * ngay khi có nút tạo nhanh — KHÔNG đợi popover mở, vì trong lúc chờ nút hạ xuống tên
+   * kỹ thuật tiếng Anh rồi mới đổi, người dùng thấy đúng khoảnh khắc đó. `getMeta` có cache.
    */
   const [targetLabel, setTargetLabel] = useState<string>();
   useEffect(() => {
-    if (!open || !quickCreate || !getMeta) return;
+    if (!quickCreate || !getMeta) return;
     let alive = true;
     void getMeta(target)
       .then((meta) => { if (alive && meta?.label) setTargetLabel(meta.label); })
       // Không đọc được metadata thì lùi về tên kỹ thuật — xấu, nhưng vẫn bấm được.
       .catch(() => { /* fallback target */ });
     return () => { alive = false; };
-  }, [open, quickCreate, getMeta, target]);
+  }, [quickCreate, getMeta, target]);
 
   useEffect(() => {
     if (!value || !resolveDisplay) { if (!value) setPickedDesc(undefined); return; }

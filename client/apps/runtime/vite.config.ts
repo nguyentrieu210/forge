@@ -151,10 +151,26 @@ export default defineConfig({
         target: forgeBackend,
         changeOrigin: true,
       },
+      /**
+       * `/files` PHẢI proxy y như `/api`.
+       *
+       * `upload_file` trả `file_url` tính từ gốc site ("/files/<id>/anh.png"). Trình duyệt hỏi
+       * đường dẫn đó về CHÍNH origin đang mở — tức Vite ở 5173 — nơi không giữ tệp nào. Kết quả:
+       * ảnh upload thành công, lưu đúng vào bản ghi, mà ngoài danh sách chỉ hiện biểu tượng ảnh
+       * vỡ. Lỗi trông như "upload hỏng" trong khi thật ra chỉ là tệp nằm ở cổng khác.
+       */
+      "/files": {
+        target: forgeBackend,
+        changeOrigin: true,
+      },
     },
   },
   preview: {
     proxy: {
+      "/files": {
+        target: forgeBackend,
+        changeOrigin: true,
+      },
       "/api": {
         target: forgeBackend,
         changeOrigin: true,

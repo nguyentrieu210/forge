@@ -136,17 +136,17 @@ export function renderCell(value: unknown, col: ListColumn, fmt?: BoundFormatter
 }
 
 /** Avatar ảnh cho cột tiêu đề (nếu doctype có image_field). */
-export function RowAvatar({ src, alt }: { src?: string; alt: string }) {
+export function RowAvatar({ src, alt, size = "size-8" }: { src?: string; alt: string; size?: string }) {
   const initial = (alt || "?").trim().charAt(0).toUpperCase();
   // Frappe trả file_url tính từ GỐC SITE ("/files/x.jpg"), còn app chạy dưới "/kho/" — dùng thẳng
   // là trình duyệt gọi ra ngoài phạm vi app và nhận 404, ảnh không bao giờ hiện.
   src = src ? withAppBase(src, APP_BASE) : src;
   if (src) {
     // ảnh động → allowlist inline (kích thước cố định); không phải "browser default"
-    return <img src={src} alt={alt} className="size-8 shrink-0 rounded-lg border border-border/80 object-cover shadow-sm" />;
+    return <img src={src} alt={alt} className={cn(size, "shrink-0 rounded-lg border border-border/80 object-cover shadow-sm")} />;
   }
   return (
-    <span className="grid size-8 shrink-0 place-items-center rounded-lg border border-border/80 bg-muted text-xs font-semibold text-muted-foreground shadow-sm">
+    <span className={cn(size, "grid shrink-0 place-items-center rounded-lg border border-border/80 bg-muted text-xs font-semibold text-muted-foreground shadow-sm")}>
       {initial}
     </span>
   );

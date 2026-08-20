@@ -84,7 +84,15 @@ export interface ListViewProps {
   onUploadImage?: (name: string, file: File) => Promise<void>;
 }
 
-const PAGE_SIZES = [20, 50, 100];
+/**
+ * `TAT_CA` = xem hết, không phân trang.
+ *
+ * 2000 là trần AN TOÀN chứ không phải "vô hạn": danh mục vật tư của xưởng cỡ vài trăm dòng, còn
+ * một bảng chứng từ vài chục nghìn dòng mà kéo hết về thì trình duyệt đứng hình và người dùng
+ * không hiểu vì sao. Có trần thì trường hợp xấu nhất vẫn là một trang chậm, không phải một tab treo.
+ */
+const TAT_CA = 2000;
+const PAGE_SIZES = [20, 50, 100, TAT_CA];
 
 /** Checkbox và STT là hai cột cố định độc lập. */
 const STICKY_SELECT = "sticky left-0 z-20 bg-inherit";
@@ -308,7 +316,18 @@ export function ListView(props: ListViewProps) {
     const insertAt = customerIndex < 0 ? 0 : customerIndex + 1;
     return [...filters.slice(0, insertAt), approvalFilter, ...filters.slice(insertAt)];
   }, [meta]);
-  const imgField = useMemo(() => derivedColumns.find((column) => column.isTitle)?.imageFieldname, [derivedColumns]);
+  /**
+   * Ảnh chỉ hiện MỘT chỗ.
+   *
+   * Mặc định ảnh bám vào ô tiêu đề (avatar nhỏ). Nhưng khi chính field ảnh đó cũng được khai
+   * thành một CỘT riêng thì vẽ cả hai chỗ là cùng một tấm ảnh hiện hai lần trên một hàng — cột
+   * riêng thắng, vì đó là thứ người dùng cố ý đặt vào bố cục.
+   */
+  const imgField = useMemo(() => {
+    const ten = derivedColumns.find((column) => column.isTitle)?.imageFieldname;
+    if (!ten) return undefined;
+    return derivedColumns.some((column) => column.isImage && column.fieldname === ten) ? undefined : ten;
+  }, [derivedColumns]);
 
   const total = props.total ?? rows.length;
   const pageStart = (state.page - 1) * state.pageSize;
@@ -491,6 +510,8 @@ export function ListView(props: ListViewProps) {
                     className={cn(props.centerContent ? "text-center" : c.align === "right" && "text-right", (props.centerContent || c.align === "center") && "text-center", compact && "py-1", !c.isTitle && "whitespace-nowrap", pinnedLeft !== undefined && "sticky z-10 bg-inherit shadow-[inset_-1px_0_0_var(--border)]")}>
             {c.isTitle
                     ? <TitleCell row={row} col={c} centered={props.centerContent} imgField={imgField} displayValues={props.displayValues} onUploadImage={props.onUploadImage} />
+                    : c.isImage
+                      ? <ImageCell row={row} col={c} onUpload={props.onUploadImage} />
                     : c.fieldtype === "Link" && c.options
                       ? <LinkCell doctype={c.options} value={row[c.fieldname]} displayValues={props.displayValues} />
                       : renderCell(row[c.fieldname], c, props.fmt)}
@@ -579,7 +600,19 @@ export function ListView(props: ListViewProps) {
       ) : null}
 
       {/* overscroll-contain: chặn trang phía sau cùng cuộn/nảy khi kéo hết danh sách (mobile). */}
-      <div ref={scrollRef} className="mf-list-scroll min-h-0 w-full max-w-full flex-1 overflow-x-auto overflow-y-auto overscroll-contain">
+      {/*
+        * `max-h-[100dvh]` + `overflow-y-scroll` đặt THẲNG ở đây, không qua class của khung cha.
+        *
+        * Vùng này vốn dựa vào `flex-1 + min-h-0` bên trong một chuỗi `h-full`. Chuỗi đó chỉ đúng
+        * khi MỌI khung cha đều có chiều cao xác định — thiếu một mắt là `flex-1` nở bằng nội
+        * dung, không bao giờ tràn, nên không có gì để cuộn, mà lớp ngoài `overflow-hidden` thì
+        * cắt mất phần dư. Người dùng thấy danh sách cụt và không cuộn được.
+        *
+        * Chặn theo `100dvh` là giới hạn không phụ thuộc cha: dù chuỗi trên có đứt, vùng danh
+        * sách vẫn không cao hơn khung nhìn nên luôn cuộn được. `overflow-y-scroll` (thay vì
+        * `auto`) giữ thanh cuộn luôn hiện, không nhảy ra nhảy vào khi số dòng đổi.
+        */}
+      <div ref={scrollRef} className="mf-list-scroll min-h-0 w-full max-w-full max-h-[100dvh] flex-1 overflow-x-auto overflow-y-scroll overscroll-contain">
         {pull.distance > 0 || pull.refreshing ? (
           <div
             className="flex items-center justify-center gap-2 overflow-hidden text-xs text-muted-foreground"
@@ -850,6 +883,28 @@ export function ListView(props: ListViewProps) {
         onPage={(page) => onStateChange({ page })}
         onPageSize={(pageSize) => onStateChange({ pageSize })}
       />
+    </div>
+  );
+}
+
+/**
+ * Ô ẢNH của một CỘT riêng — bấm vào là chọn/chụp ảnh mới ngay tại danh sách.
+ *
+ * `columns.ts` đã đánh dấu `isImage` từ lâu nhưng KHÔNG ai đọc, nên một cột `Attach Image` đưa
+ * vào danh sách sẽ hiện ra chuỗi `/files/abc.jpg` thay vì cái ảnh. Đây là chỗ đọc nó.
+ *
+ * Dùng lại `AvatarUpload` của cột tiêu đề: cùng một thao tác (bấm → chọn tệp / chụp), cùng một
+ * đường ghi, nên không sinh ra hai cách đổi ảnh hành xử khác nhau.
+ */
+function ImageCell({ row, col, onUpload }: { row: Doc; col: ListColumn; onUpload?: (name: string, file: File) => Promise<void> }) {
+  const src = row[col.fieldname] as string | undefined;
+  const alt = String(row.item_name ?? row.name ?? "");
+  const id = String(row.name ?? "");
+  return (
+    <div className="flex items-center justify-center">
+      {onUpload
+        ? <AvatarUpload name={id} src={src} alt={alt} onUpload={onUpload} size="size-28" />
+        : <RowAvatar src={src} alt={alt} size="size-28" />}
     </div>
   );
 }
@@ -1162,12 +1217,12 @@ function PaginationBar({
       <div className="ml-auto flex items-center gap-2">
         <span className="hidden text-xs text-muted-foreground sm:inline">{t("list.rows_per_page", "Dòng mỗi trang")}</span>
         <Select value={String(pageSize)} onValueChange={(v) => onPageSize(Number(v))}>
-          <SelectTrigger className="h-8 w-[4.5rem]" aria-label={t("list.rows_per_page", "Dòng mỗi trang")}>
+          <SelectTrigger className="h-8 w-[5.5rem]" aria-label={t("list.rows_per_page", "Dòng mỗi trang")}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {PAGE_SIZES.map((s) => (
-              <SelectItem key={s} value={String(s)}>{s}</SelectItem>
+              <SelectItem key={s} value={String(s)}>{s === TAT_CA ? t("list.rows_all", "Tất cả") : s}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -1272,11 +1327,13 @@ function groupLabel(
  * Vì sao: khai ảnh cho 40 mặt hàng theo đường cũ là mở form → tìm ô Ảnh → chọn tệp → lưu → quay
  * lại danh sách, nhân 40 lần. Bấm thẳng vào avatar rút còn hai thao tác.
  */
-function AvatarUpload({ name, src, alt, onUpload }: {
+function AvatarUpload({ name, src, alt, onUpload, size = "size-7" }: {
   name: string;
   src?: string;
   alt: string;
   onUpload: (name: string, file: File) => Promise<void>;
+  /** Ô ảnh có CỘT riêng cần to hơn avatar bám cột tiêu đề — 28px nhìn không ra sản phẩm gì. */
+  size?: string;
 }) {
   const [busy, setBusy] = useState(false);
   return (
@@ -1288,7 +1345,7 @@ function AvatarUpload({ name, src, alt, onUpload }: {
       // FileButton chỉ bỏ qua việc mở hộp chọn tệp khi sự kiện bị preventDefault.
       onClick={(e) => e.stopPropagation()}
       title="Bấm để đổi ảnh"
-      className="group/av relative size-7 shrink-0 p-0 hover:bg-transparent"
+      className={cn("group/av relative shrink-0 p-0 hover:bg-transparent", size)}
       onFiles={async (files) => {
         const f = files?.[0];
         if (!f) return;
@@ -1296,7 +1353,7 @@ function AvatarUpload({ name, src, alt, onUpload }: {
         try { await onUpload(name, f); } finally { setBusy(false); }
       }}
     >
-      <RowAvatar src={src} alt={alt} />
+      <RowAvatar src={src} alt={alt} size={size} />
       <span className="absolute inset-0 grid place-items-center rounded-md bg-black/45 opacity-0 transition-opacity group-hover/av:opacity-100">
         {busy ? <Loader2 className="size-3.5 animate-spin text-white" /> : <Camera className="size-3.5 text-white" />}
       </span>

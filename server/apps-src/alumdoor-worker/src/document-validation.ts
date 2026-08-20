@@ -359,9 +359,21 @@ export async function validateItemMaster(call: PlatformCall, subject: ValidatorS
       Boolean(row) && typeof row === "object" && !Array.isArray(row)
       && String((row as Record<string, unknown>).uom ?? "") === uom
       && positive((row as Record<string, unknown>).conversion_factor));
-    if (!converted) {
-      return refuse(`${code}: ${uom} khác ĐVT tồn ${stockUom} nhưng chưa có hệ số quy đổi.`);
-    }
+    /**
+     * HỆ SỐ QUY ĐỔI ĐỂ TRỐNG VẪN LƯU ĐƯỢC MẶT HÀNG (chủ dự án chốt 2026-08-20).
+     *
+     * Trước đây chỗ này TỪ CHỐI lưu. Hệ quả: đang dựng danh mục mà chưa cân thử để biết
+     * "1 con bù lon nặng bao nhiêu kg" thì KHÔNG khai nổi mặt hàng — buộc người nhập gõ một số
+     * bịa cho qua cửa. Một con số bịa nằm im trong danh mục nguy hiểm hơn một ô trống: ô trống
+     * thì nhìn thấy, số bịa thì trông như đã khai và âm thầm nhân sai cả trăm lần (bù lon thật
+     * là 0,096 kg/con, số "10" lệch hơn 100 lần).
+     *
+     * Chỗ chặn THẬT vẫn còn nguyên và nằm đúng chỗ nó phải nằm: khi lập CHỨNG TỪ theo đơn vị đó
+     * (xem `ĐVT mặc định … chưa có hệ số quy đổi trên Item` bên dưới) và ở `clouderp-core/uom.ts`
+     * (`factor > 0` mới coi là có quy đổi). Tức là khai thiếu thì vẫn không nhập/xuất kho được —
+     * chỉ khác ở chỗ lỗi nổ ra lúc DÙNG, không phải lúc KHAI.
+     */
+    if (!converted) continue;
   }
   return accept();
 }
