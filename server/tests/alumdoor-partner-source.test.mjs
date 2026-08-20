@@ -48,22 +48,64 @@ async function realPlan() {
 
 /* ───────────────────────── Con số neo của nguồn thật ───────────────────────── */
 
-test("nguồn thật chia đúng bốn rổ: 448 = 403 khách + 2 NCC + 36 hoãn + 7 dòng trùng đã gộp", async () => {
+test("nguồn thật: 448 = 403 khách + 5 NCC-thuần + 33 hoãn + 7 dòng trùng đã gộp", async () => {
   const { plan } = await realPlan();
   const s = plan.summary;
 
   assert.equal(s.partner_count, 448, "448 đối tác có tên trong DS-KH-NCC.md");
   assert.equal(s.customer_count, 403, "403 khách nạp được vào D1");
-  assert.equal(s.supplier_count, 2, "2 dòng tự khai NCC");
-  assert.equal(s.deferred_count, 36, "34 dòng thiếu thẩm quyền + 2 dòng của cặp khai ngược nhau");
+  assert.equal(s.supplier_count, 9, "2 tự khai NCC + 7 suy từ cột NCC của DANH-MỤC.md");
+  assert.equal(s.both_customer_and_supplier, 4, "4 đối tác VỪA mua VỪA bán");
+  assert.equal(s.deferred_count, 33, "31 thiếu thẩm quyền + 2 dòng của cặp khai ngược nhau");
   assert.equal(s.duplicate_count, 7, "7 dòng trùng ĐỊNH DANH (tên CÓ DẤU) đã gộp vào dòng trước");
 
-  // Không dòng nào được bốc hơi: bốn rổ phải cộng lại đúng bằng tổng.
+  /**
+   * PHÉP CỘNG ĐỔI KHI NCC VÀ KHÁCH THÔI LOẠI TRỪ NHAU.
+   *
+   * Bản trước cộng bốn rổ rời nhau. Nay một đối tác có thể nằm ở CẢ HAI rổ khách và NCC, nên
+   * cộng thẳng `customer_count + supplier_count` là đếm 4 người hai lần. Bất biến đúng là:
+   * mỗi dòng nguồn rơi vào đúng MỘT trong bốn số phận — thành khách (kể cả khách kiêm NCC),
+   * thành NCC thuần, bị hoãn, hoặc đã gộp vào dòng trước.
+   */
+  const supplierOnly = s.supplier_count - s.both_customer_and_supplier;
+  assert.equal(supplierOnly, 5, "9 NCC trừ 4 người kiêm khách");
   assert.equal(
-    s.customer_count + s.supplier_count + s.deferred_count + s.duplicate_count,
+    s.customer_count + supplierOnly + s.deferred_count + s.duplicate_count,
     s.partner_count,
-    "tổng bốn rổ phải bằng 448 — lệch là có dòng bị nuốt",
+    "tổng bốn số phận phải bằng 448 — lệch là có dòng bị nuốt hoặc đếm hai lần",
   );
+});
+
+test("NCC và KHÁCH không loại trừ nhau — 4 đối tác vừa mua vừa bán", async () => {
+  /**
+   * Bản trước gặp `NCC` là đẩy sang rổ nhà cung cấp rồi `continue`, nên đối tác đó không bao giờ
+   * có bản ghi `Customer`. Nguồn bác bỏ ở bốn chỗ: bốn tên vừa đứng ở cột NCC của `DANH-MỤC.md`
+   * (ta MUA của họ) vừa đứng ở cột ĐẠI LÝ của sheet đơn hàng tháng (ta BÁN cho họ).
+   */
+  const { plan } = await realPlan();
+  const both = plan.customers.filter((row) => row.also_supplier);
+  assert.deepEqual(
+    both.map((row) => `${row.source_row}:${row.partner_name}`),
+    ["121:ANH TUẤN Q7", "182:ANH ĐẠT MOTOR", "200:ĐỨC TÀI", "216:VIỆT ĐÔNG HƯNG"],
+  );
+  // Cả bốn phải có mặt ở CẢ HAI rổ — vào rổ này mà mất rổ kia là quay lại mô hình loại trừ.
+  const supplierRows = new Set(plan.suppliers.map((row) => row.source_row));
+  for (const row of both) assert.equal(supplierRows.has(row.source_row), true, row.partner_name);
+});
+
+test("NCC ta đang mua hàng KHÔNG bị hỏi 'nhóm giá là gì'", async () => {
+  /**
+   * `ANH HUY BẠC ĐẠN` (184), `PHÚ XUÂN VIỆT` (211), `TIẾN ĐẠT` (213) từng nằm trong rổ hoãn với
+   * tư cách "khách chưa rõ nhóm giá". Chúng thiếu nhóm giá không phải vì nguồn sót — mà vì ta
+   * KHÔNG bán cho họ. Đưa chúng cho chủ xưởng là hỏi một câu không có câu trả lời.
+   */
+  const { plan } = await realPlan();
+  const deferredRows = new Set(plan.deferred.map((row) => row.source_row));
+  for (const row of [184, 211, 213]) {
+    assert.equal(deferredRows.has(row), false, `dòng ${row} là NCC, không phải khách chưa rõ nhóm giá`);
+  }
+  assert.equal(plan.summary.supplier_from_purchase_history, 7);
+  assert.equal(plan.summary.supplier_declared, 2);
 });
 
 test("403 khách chia đúng theo thẩm quyền và theo nhóm giá", async () => {
@@ -91,11 +133,21 @@ test("403 khách chia đúng theo thẩm quyền và theo nhóm giá", async () 
   );
 });
 
-test("2 nhà cung cấp là hai cái tên cụ thể, không phải hai con số vô danh", async () => {
+test("9 nhà cung cấp là chín cái tên cụ thể, kèm bằng chứng của từng cái", async () => {
   const { plan } = await realPlan();
   assert.deepEqual(
-    plan.suppliers.map((row) => `${row.source_row}:${row.partner_name}`),
-    ["196:CTY NAM PHÁT", "318:ANH BẢO BỌ - LỘC PHÁT"],
+    plan.suppliers.map((row) => `${row.source_row}:${row.partner_name}:${row.supplier_authority}`),
+    [
+      "121:ANH TUẤN Q7:purchase_history",
+      "182:ANH ĐẠT MOTOR:purchase_history",
+      "184:ANH HUY BẠC ĐẠN:purchase_history",
+      "196:CTY NAM PHÁT:declared",
+      "200:ĐỨC TÀI:purchase_history",
+      "211:PHÚ XUÂN VIỆT:purchase_history",
+      "213:TIẾN ĐẠT:purchase_history",
+      "216:VIỆT ĐÔNG HƯNG:purchase_history",
+      "318:ANH BẢO BỌ - LỘC PHÁT:declared_and_purchase_history",
+    ],
   );
 });
 
@@ -560,13 +612,16 @@ test("chủ xưởng điền cột phân loại cho một dòng hoãn thì lư�
   const { source } = await realPlan();
   const plan = buildPartnerPlan({ ...source, partners: parsePartnerSource(filled).partners });
 
+  // TIẾN ĐẠT vốn đã là NCC (mua của họ); điền `KH` làm nó kiêm thêm vai khách.
   assert.equal(plan.summary.customer_count, 404, "khách tăng đúng 1");
-  assert.equal(plan.summary.deferred_count, 35, "hoãn giảm đúng 1");
+  assert.equal(plan.summary.both_customer_and_supplier, 5, "TIẾN ĐẠT nay kiêm cả hai vai");
+  assert.equal(plan.summary.deferred_count, 33, "TIẾN ĐẠT đã rời rổ hoãn từ trước, không giảm thêm");
   assert.equal(plan.summary.partner_count, partnerRows, "448 không đổi — nguồn không co không phình");
   assert.equal(plan.summary.customer_count >= floor, true, "sàn phải cho phép rổ hoãn cạn dần");
   assert.equal(plan.summary.deferred_count <= maxDeferred, true);
+  const supplierOnly = plan.summary.supplier_count - plan.summary.both_customer_and_supplier;
   assert.equal(
-    plan.summary.customer_count + plan.summary.supplier_count + plan.summary.deferred_count + plan.summary.duplicate_count,
+    plan.summary.customer_count + supplierOnly + plan.summary.deferred_count + plan.summary.duplicate_count,
     partnerRows,
   );
 });

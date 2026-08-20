@@ -276,6 +276,34 @@ const MONTHLY_SHEETS = [
   "T22026.md", "T32026.md", "T42026.md", "T52026.md", "T62026.md", "T72026.md",
 ];
 
+/**
+ * Tên đã đứng ở cột NCC của `DANH-MỤC.md` — bằng chứng TA ĐANG MUA HÀNG của họ.
+ *
+ * Đây là trục thứ hai, độc lập với cột `KH/NCC/KH LẺ` của `DS-KH-NCC.md`. Nguồn đo được 12 tên;
+ * 4 trong số đó cũng đứng ở cột ĐẠI LÝ của sheet đơn hàng, tức vừa mua vừa bán.
+ *
+ * Ô NCC đôi khi ghi hai tên ngăn bằng dấu phẩy (`"VIỆT ĐÔNG HƯNG, PHÚ XUÂN VIỆT"`) — tách ra,
+ * vì đó là hai nhà cung cấp thật cho cùng một mặt hàng, không phải một cái tên dài.
+ */
+export async function loadSupplierReferences(repoRoot) {
+  const refs = new Set();
+  const danhMucPath = resolve(repoRoot, "apps/alumdoor/docs/nguon/ms-lien/DANH-MỤC.md");
+  if (!existsSync(danhMucPath)) return refs;
+  const rows = parseAlumdoorIndexedMarkdownRows(await readFile(danhMucPath, "utf8"));
+  const SUPPLIER_COLUMN = 12;
+  const FIRST_PRODUCT_ROW = 4;
+  for (const row of rows) {
+    if (row.source_row < FIRST_PRODUCT_ROW) continue;
+    const cell = readAlumdoorCell(row, SUPPLIER_COLUMN);
+    if (!cell) continue;
+    for (const name of cell.split(/\s*,\s*/u)) {
+      const key = partnerKey(name);
+      if (key) refs.add(key);
+    }
+  }
+  return refs;
+}
+
 export async function loadPartnerSource(repoRoot) {
   const base = resolve(repoRoot, "apps/alumdoor/docs/nguon/don-hang-xuat-hang");
   const partnerPath = resolve(base, "DS-KH-NCC.md");
@@ -290,8 +318,15 @@ export async function loadPartnerSource(repoRoot) {
     if (existsSync(file)) monthlyTexts.push(await readFile(file, "utf8"));
   }
   const dealerRefs = parseDealerReferences(monthlyTexts);
+  const supplierRefs = await loadSupplierReferences(repoRoot);
 
-  return { partners, nameless, dealerRefs, monthly_sheet_count: monthlyTexts.length };
+  return {
+    partners,
+    nameless,
+    dealerRefs,
+    supplierRefs,
+    monthly_sheet_count: monthlyTexts.length,
+  };
 }
 
 /** Trường được phép hợp nhất từ dòng trùng sang dòng giữ, kèm nhãn để ghi vết vào `note`. */
@@ -332,7 +367,36 @@ const MERGEABLE_FIELDS = Object.freeze([
  * Rổ HOÃN không chặn cả lượt nạp — nạp 403 khách đúng rồi bổ sung phần còn lại tốt hơn nạp 0
  * khách — nhưng mọi rổ đều được ĐẾM và so trần ở `customer-import-core.mjs`.
  */
-export function buildPartnerPlan({ partners, dealerRefs }) {
+/**
+ * NCC VÀ KHÁCH KHÔNG LOẠI TRỪ NHAU — cùng một đối tác có thể vừa mua vừa bán.
+ *
+ * Bản trước coi cột `KH/NCC/KH LẺ` là một trục DUY NHẤT: gặp `NCC` thì đẩy sang rổ nhà cung cấp
+ * rồi `continue`, nên đối tác đó KHÔNG BAO GIỜ có bản ghi `Customer`. Nguồn bác bỏ mô hình đó ở
+ * bốn chỗ đo được — bốn tên vừa đứng ở cột NCC của `DANH-MỤC.md` (ta MUA của họ) vừa đứng ở cột
+ * ĐẠI LÝ của sheet đơn hàng tháng (ta BÁN cho họ):
+ *
+ *     dòng 121  ANH TUẤN Q7      mua: hệ thống tự dừng
+ *     dòng 182  ANH ĐẠT MOTOR    mua: còi báo động
+ *     dòng 200  ĐỨC TÀI          mua: bắn bướm inox
+ *     dòng 216  VIỆT ĐÔNG HƯNG   mua: trục 114
+ *
+ * Và ba tên nữa đang nằm nhầm trong rổ hoãn với tư cách "khách chưa rõ nhóm giá", trong khi
+ * chúng là NHÀ CUNG CẤP ta đang mua hàng thật: `ANH HUY BẠC ĐẠN` (184), `PHÚ XUÂN VIỆT` (211),
+ * `TIẾN ĐẠT` (213). Chúng thiếu nhóm giá không phải vì nguồn sót — mà vì ta KHÔNG bán cho họ.
+ * Xếp chúng vào rổ chờ chủ xưởng điền là hỏi một câu không có câu trả lời.
+ *
+ * Nên từ đây là HAI CỜ ĐỘC LẬP:
+ *
+ *     is_customer  ⟸ khai `KH`/`KH LẺ`, HOẶC có mặt ở cột ĐẠI LÝ sheet đơn hàng
+ *     is_supplier  ⟸ khai `NCC`, HOẶC có mặt ở cột NCC của `DANH-MỤC.md`
+ *
+ * Một đối tác bật cả hai cờ thì sinh CẢ HAI bản ghi. Đây không phải trùng lặp: `Customer` và
+ * `Supplier` là hai doctype khác nhau, hai vòng đời công nợ khác nhau (phải thu vs phải trả),
+ * và nền tảng không có doctype "đối tác" chung.
+ *
+ * Chỉ HOÃN khi KHÔNG bật được cờ nào — tức nguồn không nói gì về quan hệ với người này.
+ */
+export function buildPartnerPlan({ partners, dealerRefs, supplierRefs = new Set() }) {
   const customers = [];
   const suppliers = [];
   const deferred = [];
@@ -404,10 +468,6 @@ export function buildPartnerPlan({ partners, dealerRefs }) {
       });
     }
 
-    if (kept.kind === "SUPPLIER") {
-      suppliers.push(kept);
-      continue;
-    }
     if (kept.kind === "UNKNOWN") {
       // Có chữ trong ô phân loại nhưng không hiểu là gì — khác hẳn với ô trống.
       unknownKind.push({ source_row: kept.source_row, kind_raw: kept.kind_raw });
@@ -415,16 +475,39 @@ export function buildPartnerPlan({ partners, dealerRefs }) {
       continue;
     }
 
-    const priceGroup = kept.kind ?? (dealerRefs.has(kept.key) ? "Đại lý" : null);
-    if (!priceGroup) {
-      deferred.push({ ...kept, defer_reason: "missing_price_group_authority" });
+    /* Cờ NHÀ CUNG CẤP — hai bằng chứng độc lập, cái nào có cũng đủ. */
+    const declaredSupplier = kept.kind === "SUPPLIER";
+    const purchasedFrom = supplierRefs.has(kept.key);
+    const isSupplier = declaredSupplier || purchasedFrom;
+    if (isSupplier) {
+      suppliers.push({
+        ...kept,
+        supplier_authority: declaredSupplier
+          ? (purchasedFrom ? "declared_and_purchase_history" : "declared")
+          : "purchase_history",
+      });
+    }
+
+    /* Cờ KHÁCH HÀNG — độc lập hẳn với cờ trên. Khai `NCC` KHÔNG phải bằng chứng "không bán cho
+       họ"; nó chỉ nói về chiều mua. Bằng chứng bán là cột ĐẠI LÝ của sheet đơn hàng. */
+    const declaredCustomer = kept.kind === "Đại lý" || kept.kind === "Lẻ" ? kept.kind : null;
+    const priceGroup = declaredCustomer ?? (dealerRefs.has(kept.key) ? "Đại lý" : null);
+    if (priceGroup) {
+      customers.push({
+        ...kept,
+        price_group: priceGroup,
+        price_group_authority: declaredCustomer ? "declared" : "sales_history",
+        also_supplier: isSupplier,
+      });
       continue;
     }
-    customers.push({
-      ...kept,
-      price_group: priceGroup,
-      price_group_authority: kept.kind ? "declared" : "sales_history",
-    });
+
+    /* Không bán cho họ. Nếu ta MUA của họ thì đây không phải chỗ thiếu dữ liệu — quan hệ đã rõ,
+       chỉ là quan hệ một chiều. Hỏi chủ xưởng "nhóm giá của nhà cung cấp này là gì" là hỏi một
+       câu không có câu trả lời. */
+    if (isSupplier) continue;
+
+    deferred.push({ ...kept, defer_reason: "missing_price_group_authority" });
   }
 
   const nearDuplicateNames = collectNearDuplicateNames(groups);
@@ -441,6 +524,9 @@ export function buildPartnerPlan({ partners, dealerRefs }) {
       dealer_count: customers.filter((row) => row.price_group === "Đại lý").length,
       retail_count: customers.filter((row) => row.price_group === "Lẻ").length,
       supplier_count: suppliers.length,
+      supplier_declared: suppliers.filter((row) => row.supplier_authority?.startsWith("declared")).length,
+      supplier_from_purchase_history: suppliers.filter((row) => row.supplier_authority === "purchase_history").length,
+      both_customer_and_supplier: customers.filter((row) => row.also_supplier).length,
       deferred_count: deferred.length,
       duplicate_count: duplicates.length,
       unknown_kind_count: unknownKind.length,
