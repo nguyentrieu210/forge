@@ -575,3 +575,106 @@ test("CHỐT CHẶN · bộ nhập cấu thành TỪ CHỐI chạy khi D1 chưa 
   // Không đọc được meta thì cũng phải chặn, không được đi tiếp.
   assert.deepEqual(bomTemplateMetaCompositionGaps({}), ["không đọc được meta của BOM Template"]);
 });
+
+/* ───────── Đính chính 2026-08-20: bậc diện tích KHÔNG đổi bộ cấu phần ───────── */
+
+test("bậc diện tích có cửa RIÊNG, không dùng chung bằng chứng với cách giao", () => {
+  /**
+   * Bản trước cho hai trục dùng CHUNG một cờ: mở `salesModeOnBomTemplate` là bậc diện tích cũng
+   * tự do theo. Đó là lấy bằng chứng của trục này đi mở cổng cho trục khác — hai trục có hai
+   * loại rủi ro khác hẳn:
+   *
+   *   cách giao       rủi ro ở ĐỊNH MỨC — trọn bộ 17 cấu phần, tách món 8 (đo trên ĐM.md)
+   *   bậc diện tích   rủi ro ở GIÁ      — bỏ hậu tố bậc khi area_tier còn 0/558 là xoá thang giá
+   */
+  assert.equal(structuralDrops().has("bỏ bậc diện tích"), true, "mặc định ĐÓNG");
+  assert.equal(
+    structuralDrops({ salesModeOnBomTemplate: true }).has("bỏ bậc diện tích"),
+    true,
+    "mở cửa cách giao KHÔNG được mở kèm cửa bậc diện tích",
+  );
+  assert.equal(structuralDrops({ areaTierOnItemPrice: true }).has("bỏ bậc diện tích"), false);
+  assert.equal(
+    structuralDrops({ areaTierOnItemPrice: true }).has("bỏ cách bán"),
+    true,
+    "và ngược lại — mở cửa bậc KHÔNG mở kèm cửa cách giao",
+  );
+  assert.equal(structuralDrops({ salesModeOnBomTemplate: true, areaTierOnItemPrice: true }).size, 0);
+});
+
+test("nguồn: 11/11 họ có bậc đều CÙNG bộ cấu phần — con số '4 hoặc 8' là khối chép lặp", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const { parseAlumdoorIndexedMarkdownRows, readAlumdoorCell } =
+    await import("../scripts/lib/alumdoor-source-markdown.mjs");
+  const { resolve, dirname } = await import("node:path");
+  const { fileURLToPath } = await import("node:url");
+  const root = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
+  const rows = parseAlumdoorIndexedMarkdownRows(
+    await readFile(resolve(root, "apps/alumdoor/docs/nguon/ms-lien/ĐM.md"), "utf8"),
+  );
+
+  let current = null;
+  const blocks = [];
+  for (const row of rows) {
+    const stt = readAlumdoorCell(row, 1);
+    const name = readAlumdoorCell(row, 2);
+    const code = readAlumdoorCell(row, 3);
+    if (stt) { current = { tp: name || readAlumdoorCell(row, 4), rows: [] }; blocks.push(current); continue; }
+    if (current && (name || code)) current.rows.push(code || name);
+  }
+
+  const families = new Map();
+  for (const block of blocks) {
+    const match = (block.tp || "").match(/^(.*_TRỌN BỘ)\s*(>?\s*[\d-]+m²)$/u);
+    if (!match) continue;
+    const key = match[1].trim();
+    if (!families.has(key)) families.set(key, []);
+    families.get(key).push([...new Set(block.rows)].sort().join("|"));
+  }
+
+  assert.equal(families.size, 11, "11 họ có hậu tố bậc");
+  for (const [family, signatures] of families) {
+    assert.equal(new Set(signatures).size, 1, `${family}: mọi bậc phải cùng bộ cấu phần`);
+  }
+
+  // Chỗ đẻ ra con số sai: bậc 3-4m² liệt kê ĐÚNG 7 cấu phần đó hai lượt.
+  const tiny = blocks.find((b) => (b.tp || "").includes("MSK 8D_TRỌN BỘ 3-4m²"));
+  const mid = blocks.find((b) => (b.tp || "").includes("MSK 8D_TRỌN BỘ 5-6m²"));
+  assert.equal(tiny.rows.length, 14);
+  assert.equal(new Set(tiny.rows).size, 7, "14 dòng nhưng chỉ 7 cấu phần — chép hai lượt");
+  assert.equal(mid.rows.length, 7);
+  assert.deepEqual([...new Set(tiny.rows)].sort(), [...new Set(mid.rows)].sort());
+});
+
+test("đối chứng: cách giao đổi cấu phần THẬT, không phải do chép lặp", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const { parseAlumdoorIndexedMarkdownRows, readAlumdoorCell } =
+    await import("../scripts/lib/alumdoor-source-markdown.mjs");
+  const { resolve, dirname } = await import("node:path");
+  const { fileURLToPath } = await import("node:url");
+  const root = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
+  const rows = parseAlumdoorIndexedMarkdownRows(
+    await readFile(resolve(root, "apps/alumdoor/docs/nguon/ms-lien/ĐM.md"), "utf8"),
+  );
+
+  let current = null;
+  const blocks = [];
+  for (const row of rows) {
+    const stt = readAlumdoorCell(row, 1);
+    const name = readAlumdoorCell(row, 2);
+    const code = readAlumdoorCell(row, 3);
+    if (stt) { current = { tp: name || readAlumdoorCell(row, 4), rows: [] }; blocks.push(current); continue; }
+    if (current && (name || code)) current.rows.push(code || name);
+  }
+  const pick = (needle) => blocks.find((b) => (b.tp || "").includes(needle));
+  const full = new Set(pick("CỬA LƯỚI MẮT VÕNG STĐ - Trọn bộ").rows);
+  const split = new Set(pick("CỬA LƯỚI MẮT VÕNG STĐ - Tách món").rows);
+
+  assert.equal(full.size, 17, "trọn bộ 17 cấu phần DUY NHẤT — không có dòng chép lặp");
+  assert.equal(split.size, 8);
+  // Phần chênh đúng là những thứ làm nên bộ cửa hoàn chỉnh.
+  for (const part of ["NVL-TRUC114_1.8LY", "NVL-V4-KEM_TOLE75_STD", "TP-BUOMSAT", "NVL-TOLE1.2x190-CORON"]) {
+    assert.equal(full.has(part), true, `trọn bộ phải có ${part}`);
+    assert.equal(split.has(part), false, `tách món KHÔNG có ${part}`);
+  }
+});

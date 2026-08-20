@@ -341,15 +341,40 @@ export function violatesCodeConvention(code) {
  * BOM biết phân giải theo nó là làm mất luôn phần trọn bộ. Cửa mở nằm ở `structuralDrops()`,
  * và nó ĐÓNG cho tới khi có số đo chứng minh BOM Template đã khai `sales_mode`.
  *
- * Cùng lý do với bậc diện tích: các biến thể `3-4m²` … `>10m²` của `TP-TOLEKEM124_6D` có
- * template 4 hoặc 8 cấu phần khác nhau.
+ * ĐÍNH CHÍNH 2026-08-20 — BẬC DIỆN TÍCH **KHÔNG** GIỐNG LÝ DO TRÊN.
+ *
+ * Bản trước viết: *"các biến thể `3-4m²` … `>10m²` của `TP-TOLEKEM124_6D` có template 4 hoặc 8
+ * cấu phần khác nhau"*. Đếm lại trên `ĐM.md`, con số đó là **ẢO GIÁC CỦA MỘT KHỐI BỊ CHÉP HAI
+ * LẦN**:
+ *
+ *     LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 3-4m²    14 dòng con
+ *     LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 5-6m²     7 dòng con
+ *
+ * Nhưng 14 dòng đó là ĐÚNG 7 cấu phần liệt kê hai lượt, và 7 của bậc 5-6 là TẬP CON TUYỆT ĐỐI
+ * của nó — hiệu rỗng. Sau khi `classifyAlumdoorItemSourceCode` loại 2 mã `CPSTD_*` (chi phí) và
+ * 1 mã `PHUTHU*` (phụ thu), còn **4** — và bản chép đôi còn **8**. Đó chính là "4 hoặc 8".
+ *
+ * Đếm cho CẢ 11 họ có bậc: mọi họ đều `GIỐNG HỆT` giữa các bậc.
+ *
+ *     8 họ `CỬA ĐL*_TRỌN BỘ`            5 cấu phần, giống nhau mọi bậc
+ *     3 họ `LÁ ĐÀI LOAN STĐ MSK *`      7 cấu phần, giống nhau cả 8 bậc (có dòng chép lặp)
+ *
+ * ⇒ **Bậc diện tích KHÔNG đổi bộ cấu phần.** Nó là thuộc tính của DÒNG GIÁ, không phải của định
+ * mức — đúng như `Item Price.area_tier` đã dựng sẵn để nhận.
+ *
+ * Đối chứng: cách giao thì đổi thật, và không phải do chép lặp. `CỬA LƯỚI MẮT VÕNG STĐ` trọn bộ
+ * có **17 cấu phần duy nhất**, tách món **8** — phần chênh là đúng những thứ làm nên bộ cửa
+ * hoàn chỉnh: `NVL-TRUC114_1.8LY` · `NVL-TOLE1.2x190-CORON` (ray) · `NVL-V4-KEM_TOLE75_STD` ·
+ * `TP-BUOMSAT` · `TP-BUOMINOX` · `RONNHUAVANGCANHAY_RSU70` · hai mã lá Đài Loan.
+ *
+ * Hai trục vì thế cần HAI cổng khác nhau, xem `structuralDrops`.
  */
 export const SALES_MODE_DROP = 'bỏ cách bán';
 export const AREA_TIER_DROP = 'bỏ bậc diện tích';
 const STRUCTURAL_DROPS = new Set([SALES_MODE_DROP, AREA_TIER_DROP]);
 
 /**
- * Cửa mở cho trục CÁCH GIAO — mở bằng BẰNG CHỨNG, không bằng thiện chí.
+ * HAI cửa mở, HAI loại bằng chứng. Mở bằng BẰNG CHỨNG, không bằng thiện chí.
  *
  * `bỏ cách bán` chỉ thôi là "chặn gộp" khi BOM Template thật sự phân giải theo `sales_mode`:
  * cột đã có trên doctype, bộ nhập đã ghi giá trị, và `template_code` đã tách theo (mặt hàng,
@@ -366,10 +391,25 @@ const STRUCTURAL_DROPS = new Set([SALES_MODE_DROP, AREA_TIER_DROP]);
  * lưới. Đã nới cổng đó để nó đọc CÁCH GIAO trên dòng bán, nhưng vẫn phải kiểm lại bằng một đơn
  * thật trước khi mở cửa.
  *
- * `bỏ bậc diện tích` KHÔNG có cửa nào ở đây: đó là trục khác, do luật giá theo bậc lo.
+ * `bỏ bậc diện tích` có cửa RIÊNG, và bằng chứng của nó khác hẳn.
+ *
+ * Bậc KHÔNG đổi cấu phần (đo ở trên, 11/11 họ), nên nó không phải rủi ro về ĐỊNH MỨC. Rủi ro của
+ * nó nằm ở GIÁ: bỏ hậu tố bậc khỏi mã trong khi `Item Price.area_tier` còn rỗng là **xoá hẳn
+ * thang giá** — 8 mức giá của một cửa sụp thành một, và không có gì báo.
+ *
+ * `area_tier` đang là **0/558**. Cửa chỉ mở khi dòng giá thật sự mang bậc.
+ *
+ * Vì thế: hai cờ độc lập. Mở cờ này không mở cờ kia — trộn chúng là lấy bằng chứng của trục này
+ * đi mở cổng cho trục khác.
  */
-export function structuralDrops({ salesModeOnBomTemplate = false } = {}) {
-  return salesModeOnBomTemplate ? new Set([AREA_TIER_DROP]) : STRUCTURAL_DROPS;
+export function structuralDrops({
+  salesModeOnBomTemplate = false,
+  areaTierOnItemPrice = false,
+} = {}) {
+  const drops = new Set();
+  if (!salesModeOnBomTemplate) drops.add(SALES_MODE_DROP);
+  if (!areaTierOnItemPrice) drops.add(AREA_TIER_DROP);
+  return drops;
 }
 
 function mergeSafety(group, drops = STRUCTURAL_DROPS) {
