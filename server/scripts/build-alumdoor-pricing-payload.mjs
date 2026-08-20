@@ -3,6 +3,11 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  applySealedPriceAuthority,
+  loadSealedTierTable,
+  SEALED_PRICE_SOURCE,
+} from "./lib/alumdoor-sealed-price-authority.mjs";
 
 export const ALUMDOOR_PRICE_LIST = "ALUMDOOR-SELLING";
 export const STANDARD_VARIANT = "STANDARD";
@@ -186,7 +191,14 @@ function addUnique(map, doc, kind, blockers) {
   if (JSON.stringify(previous) !== JSON.stringify(doc)) blockers.push({ type: `conflicting_${kind}`, name: doc.name, first: previous, second: doc });
 }
 
-export function buildPricingPayload(pricingSourceFile, itemPayloadFile) {
+/**
+ * `sealedTierTable` là BẢNG GIÁ CÓ MỘC (`BANG-GIA-CHINH-THUC-31-07-2026 §3`), nạp sẵn bởi bên
+ * gọi vì hàm này đồng bộ còn việc đọc file thì bất đồng bộ.
+ *
+ * Truyền `null` = không áp thẩm quyền, giá giữ nguyên như `ĐM.md`. Đó là hành vi của mọi bản
+ * trước, nên bỏ tham số không làm hỏng đường ống cũ — chỉ là không có ai đè giá.
+ */
+export function buildPricingPayload(pricingSourceFile, itemPayloadFile, sealedTierTable = null) {
   const sourceRows = Array.isArray(pricingSourceFile?.records) ? pricingSourceFile.records : [];
   const items = Array.isArray(itemPayloadFile?.items) ? itemPayloadFile.items : [];
   /**
@@ -436,6 +448,26 @@ export function buildPricingPayload(pricingSourceFile, itemPayloadFile) {
     blockers.push({ type: "unresolved_surcharge", row: lineage });
   }
 
+  /**
+   * THẨM QUYỀN GIÁ: bảng có mộc thắng `ĐM.md`.
+   *
+   * Chủ xưởng chốt 2026-08-20. Chạy TRƯỚC phép kiểm `rate > 0` để giá bị đè cũng phải qua cổng
+   * đó — đè xong mới kiểm, chứ không kiểm giá cũ rồi thay bằng giá chưa kiểm.
+   *
+   * Đo trên ảnh chụp D1: bảng phủ 88 dòng giá, 84 dòng KHỚP SẴN, đúng 4 dòng bị đè — cả 4 đều
+   * là `TP-TOLEKEM124_8D` ở bốn bậc đắt nhất. Không có thiệt hại phụ.
+   */
+  const sealed = applySealedPriceAuthority([...itemPrices.values()], sealedTierTable);
+  if (sealed.report.applied) {
+    itemPrices.clear();
+    for (const row of sealed.item_prices) itemPrices.set(row.name, row);
+    console.log(
+      `ALUMDOOR_SEALED_PRICE_AUTHORITY covered=${sealed.report.covered_row_count} ` +
+        `confirmed=${sealed.report.confirmed_count} overridden=${sealed.report.override_count} ` +
+        `source=${JSON.stringify(SEALED_PRICE_SOURCE)}`,
+    );
+  }
+
   for (const row of itemPrices.values()) if (!(Number(row.rate) > 0)) blockers.push({ type: "non_positive_item_price", name: row.name, rate: row.rate });
   const payload = {
     format: "alumdoor-pricing-payload/v1",
@@ -463,6 +495,7 @@ export function buildPricingPayload(pricingSourceFile, itemPayloadFile) {
     base_item_price_count: [...itemPrices.values()].filter((row) => row.price_variant === STANDARD_VARIANT).length,
     variant_item_price_count: [...itemPrices.values()].filter((row) => row.price_variant !== STANDARD_VARIANT).length,
     item_price_count: itemPrices.size,
+    sealed_price_authority: sealed.report,
     pricing_rule_count: pricingRules.size,
     resolution_count: resolutions.length,
     resolutions,
@@ -478,7 +511,14 @@ if (process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import
   const [sourceArg, itemArg, outputArg, reportArg] = process.argv.slice(2);
   if (!sourceArg || !itemArg || !outputArg || !reportArg) throw new Error("Usage: node build-alumdoor-pricing-payload.mjs <pricing-source.json> <item-payload.json> <pricing-payload.json> <report.json>");
   const [pricingSourceFile, itemPayloadFile] = await Promise.all([readFile(resolve(sourceArg), "utf8").then(JSON.parse), readFile(resolve(itemArg), "utf8").then(JSON.parse)]);
-  const { payload, report } = buildPricingPayload(pricingSourceFile, itemPayloadFile);
+  /**
+   * Nạp bảng giá có mộc từ gốc repo, không từ cwd — bộ dựng này được gọi từ nhiều thư mục khác
+   * nhau (pricing-adapter, bom-adapter, seed-full.sh). Neo theo cwd thì có adapter im lặng chạy
+   * KHÔNG có thẩm quyền giá, và giá lệch chỉ lộ ra ở đơn hàng thật.
+   */
+  const sealedTierTable = await loadSealedTierTable(resolve(dirname(fileURLToPath(import.meta.url)), "..", ".."));
+  if (!sealedTierTable) console.log("ALUMDOOR_SEALED_PRICE_AUTHORITY skipped=no-source");
+  const { payload, report } = buildPricingPayload(pricingSourceFile, itemPayloadFile, sealedTierTable);
   await mkdir(dirname(resolve(outputArg)), { recursive: true });
   await writeFile(resolve(outputArg), `${JSON.stringify(payload, null, 2)}\n`, "utf8");
   await writeFile(resolve(reportArg), `${JSON.stringify(report, null, 2)}\n`, "utf8");
