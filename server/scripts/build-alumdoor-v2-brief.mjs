@@ -14,6 +14,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { applyAlumdoorChildPresentation } from "./lib/alumdoor-child-presentation.mjs";
 import { parseField } from "./lib/compile-brief.mjs";
+import { applyFieldDescriptions } from "./lib/alumdoor-field-descriptions.mjs";
 import { GEOMETRY_FIELDS, GEOMETRY_PROFILES } from "./lib/alumdoor-geometry-catalog.mjs";
 import { CUTTING_POLICIES, cuttingPolicyFixtureData } from "./lib/alumdoor-cutting-policy-catalog.mjs";
 import { bomSourceFixtureRows } from "./lib/alumdoor-bom-template-source-catalog.mjs";
@@ -101,7 +102,7 @@ const moveFieldsAfter = (dt, names, anchor) => {
  * `unchanged` khi manifest byte-identical, nên giữ nguyên số cũ là mọi sửa đổi metadata nằm im
  * trong file mà không bao giờ vào tenant.
  */
-brief.version = "2.5.0";
+brief.version = "2.10.0";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 for (const role of ["General Accountant", "Chief Accountant", "Director", "Kế toán tổng hợp", "Kế toán trưởng", "Giám đốc"]) {
   if (!brief.roles.includes(role)) brief.roles.push(role);
@@ -928,7 +929,18 @@ brief.doctypes.push({
     "conditions_json:Code Điều kiện áp dụng JSON",
     "priority:Int=(0) Ưu tiên",
     "disabled:Check=(0) Ngừng dùng",
-    "source_status:Select(READY,READY_WITH_ACTUALS,DEFERRED)!=(DEFERRED) Trạng thái chuẩn hóa nguồn",
+    // `COMPOSITION` = danh sách cấu thành dùng trên ĐƠN BÁN, không phải định mức sản xuất.
+    //
+    // `scripts/lib/alumdoor-sales-bom-composition.mjs` ghi giá trị này từ trước, nhưng options
+    // chỉ có ba giá trị kia, và `generic-controller.ts:170` TỪ CHỐI giá trị Select ngoài
+    // options (kể cả Administrator — `normalizeValue` không có cửa admin). Hệ quả đo được:
+    // `import-alumdoor-sales-bom-composition-local.mjs` ném ở POST đầu tiên, 0 template cấu
+    // thành nào tồn tại trong D1, và `alumdoor.sales.preview_bom_requirements` không xổ được
+    // cấu thành cho BẤT KỲ mặt hàng nào. Bộ kiểm không thấy vì nó chỉ so chuỗi trong bộ nhớ.
+    //
+    // Phải là giá trị RIÊNG chứ không dùng lại `DEFERRED`: bộ nhập template sản xuất chỉ cho
+    // nghỉ hưu bản `source_status === 'DEFERRED'`, gộp hai loại là nó tắt nhầm template bán.
+    "source_status:Select(READY,READY_WITH_ACTUALS,DEFERRED,COMPOSITION)!=(DEFERRED) Trạng thái chuẩn hóa nguồn",
     "source_ref:Data Tham chiếu nguồn",
     "deferred_components_json:Code Thành phần chờ chuẩn hóa JSON",
     "required_context_fields_json:Code Ngữ cảnh bắt buộc JSON",
@@ -1871,6 +1883,17 @@ note("MASTER · Measurement Profile chỉ đo/tồn; Geometry Field/Profile sở
     note("DANH MỤC · +Pricing Scope (+child) — pricing_scope đổi Data → Link");
   }
 
+  // Pricing Rule đặt tên bằng `format:{title}`, mà `title` là `ALUMDOOR-PR:{mã hàng}:{biến thể}`.
+  // Tức tên của nó NHÚNG mã hàng, y như Item Price. Đổi mã mà không đổi được tên chính sách giá
+  // thì tên còn ôm mã đã chết và lần chạy sau của importer giá sẽ tạo bản mới thay vì cập nhật.
+  {
+    const rule = doctype("Pricing Rule");
+    if (rule.allow_rename !== true) {
+      rule.allow_rename = true;
+      note("SALES · Pricing Rule cho phép đổi tên — tên nó nhúng mã hàng qua {title}");
+    }
+  }
+
   // ── 2. Quy tắc BOM ──
   // authority_type=SOURCE là trạng thái NHÁP CÓ CHỦ ĐÍCH theo audit 2026-08-16. Khai vào
   // brief KHÔNG có nghĩa là duyệt: mặc định vẫn SOURCE, chủ xưởng mới đổi được.
@@ -2014,7 +2037,84 @@ note("MASTER · Measurement Profile chỉ đo/tồn; Geometry Field/Profile sở
       retiredGroups += 1;
     }
     note(`DANH MỤC · Item Group: ngừng dùng ${retiredGroups} nhóm ERP tổng quát ngoài cây chuẩn`);
+
+    /**
+     * Cho một nhóm ngừng dùng thì phải nhặt lại NHỮNG ĐỨA CON của nó.
+     *
+     * Đợt trước bỏ sót đúng chỗ này: 4 nhóm ĐANG DÙNG — Nan/lá cửa, Phụ kiện CN Đức, Phụ kiện
+     * chung, Ray và trục — vẫn lấy `Vật tư & phụ kiện` làm cha, mà nhóm cha đó vừa bị cho ngừng
+     * dùng. Cây danh mục gãy một nhánh và không có gì báo, vì link nằm trong JSON.
+     *
+     * Nhóm chuẩn thay thế là `Phụ kiện & vật tư` — cùng chữ, đảo thứ tự, nên đây là hai tên cho
+     * một khái niệm chứ không phải hai khái niệm.
+     *
+     * Khai tường minh và NÉM khi gặp mồ côi ngoài danh sách: đoán cha là đoán phân loại hàng, mà
+     * đoán sai thì mọi chính sách giá bám theo nhóm sẽ ăn nhầm mặt hàng.
+     */
+    const PARENT_REPLACEMENT = new Map([["Vật tư & phụ kiện", "Phụ kiện & vật tư"]]);
+    // Tập "đang dùng" phải là HỢP của hai nguồn: nhóm chuẩn trong catalog (chúng vào D1 qua
+    // `documents`) và fixture chưa bị cho ngừng dùng. Chỉ soi fixture thì `Phụ kiện & vật tư` —
+    // nhóm cha chuẩn — trông như đã chết, và bản vá này tự chặn chính nó.
+    const activeGroups = new Set([
+      ...canonicalGroups,
+      ...brief.fixtures.filter((f) => f.type === "Item Group" && f.data?.disabled !== true).map((f) => f.name),
+    ]);
+    let reparented = 0;
+    const orphans = [];
+    for (const fixture of brief.fixtures) {
+      if (fixture.type !== "Item Group" || fixture.data?.disabled === true) continue;
+      const parent = fixture.data?.parent_item_group;
+      if (!parent || activeGroups.has(parent)) continue;
+      const replacement = PARENT_REPLACEMENT.get(parent);
+      if (!replacement) { orphans.push(`${fixture.name} → ${parent}`); continue; }
+      if (!activeGroups.has(replacement)) throw new Error(`Nhóm thay thế ${replacement} cũng không còn dùng`);
+      fixture.data = { ...fixture.data, parent_item_group: replacement };
+      reparented += 1;
+    }
+    if (orphans.length > 0) {
+      throw new Error(`Item Group mồ côi cha, chưa khai nhóm thay thế: ${orphans.join(", ")}`);
+    }
+    if (reparented > 0) note(`DANH MỤC · Item Group: nhặt lại ${reparented} nhóm con mất cha sau khi cho cha ngừng dùng`);
   }
+
+  /**
+   * `Stores` — kho mặc định của ERP lọt vào từ lúc dựng máy.
+   *
+   * Nằm trong `master_records`, KHÔNG có tên kho (trường bắt buộc), không vai trò, không chứng
+   * từ nào nhắc tới. Nhưng brief không khai nên installer không quản, mà picker lại đọc hợp hai
+   * kho — nên nó vẫn hiện ra cho người dùng chọn.
+   *
+   * Gỡ đúng cách là KHAI rồi cho ngừng dùng: có khai thì installer mới nắm, và `disabled` giữ
+   * lại dấu vết thay vì xoá trắng. Cùng lối đã dùng cho 22 màu và 11 nhóm hàng.
+   */
+  if (!brief.fixtures.some((row) => row.type === "Warehouse" && row.name === "Stores")) {
+    brief.fixtures.push({
+      type: "Warehouse",
+      name: "Stores",
+      data: { warehouse_name: "Stores", is_group: false, disabled: true },
+    });
+    note("DANH MỤC · Warehouse: khai rồi cho ngừng dùng kho mặc định ERP `Stores`");
+  }
+
+  /**
+   * `CUST-1` / `CUST-2` — "Acme Corporation" và "Beta Industries".
+   *
+   * Khách hàng mẫu lọt vào lúc dựng máy, y như kho `Stores`. Không nơi nào tham chiếu (đã đo:
+   * 0 chứng từ, 0 dòng con) và thiếu cả `price_group` — trường quyết định giá. Nhưng chúng nằm
+   * trong `master_records` mà brief không khai, nên installer không quản, còn ô chọn khách thì
+   * vẫn mời chúng ra giữa 440 khách thật.
+   *
+   * Khai rồi cho ngừng dùng, không xoá — giữ dấu vết và để installer nắm được.
+   */
+  for (const [code, label] of [["CUST-1", "Acme Corporation"], ["CUST-2", "Beta Industries"]]) {
+    if (brief.fixtures.some((row) => row.type === "Customer" && row.name === code)) continue;
+    brief.fixtures.push({
+      type: "Customer",
+      name: code,
+      data: { customer_name: label, price_group: "Đại lý", disabled: true },
+    });
+  }
+  note("DANH MỤC · Customer: khai rồi cho ngừng dùng 2 khách mẫu lọt vào lúc dựng máy");
 
   // ── 4. Bốn doctype rỗng rời khỏi menu, KHÔNG bị xoá ──
   // `menu: false` chứ không xoá doctype: xoá thì bản ghi cũ thành mồ côi — vẫn nằm trong kho
@@ -2306,27 +2406,36 @@ note("MASTER · Measurement Profile chỉ đo/tồn; Geometry Field/Profile sở
       permissions: { "Chủ xưởng": "rwc", "Kinh doanh": "r", "Kế toán": "r", "Thủ kho": "r", "Sản xuất": "r" },
     });
 
-    // Chép nguyên bảng §6, không thêm bớt. Mã hàng để đúng dạng đang có trong Item.
+    // Chép nguyên bảng §6, không thêm bớt.
+    //
+    // Mã hàng cập nhật 19/08 sau hai đợt đổi mã. Trước đó cả 17 dòng trỏ mã cũ và treo hết:
+    // cascade đổi tên chỉ theo `documents`/`document_children`, KHÔNG theo `master_records` —
+    // mà danh mục này nằm ở đấy. Vá ở D1 là vá vào chỗ sẽ bị đè khi cài lại app, nên sửa nguồn.
+    //
+    // Hai chỗ ghi lại chứ không tự quyết:
+    //   · `MOTO-TANKE800` thiếu chữ R — gần như chắc là lỗi gõ, nhưng đổi mã là đổi danh tính.
+    //   · Bình lưu điện có HAI bộ mã: `PIN-UPS-E800I/E1000I` (đúng nhóm) và `PK-UPS-ALE800/
+    //     ALE1000` (nhóm phụ kiện). Chọn bộ `PIN-`; bộ kia trông như trùng lặp.
     const MOTORS = [
-      ["MOTO-TANKER-400", "TP-MT-TANKER400KG", 15, "Motor + Lắc 32 + Bộ ĐK"],
-      ["MOTO-TANKER-600", "TP-MT-TANKER600KG", 18, "Motor + Lắc 32 + Bộ ĐK"],
-      ["MOTO-TANKER-800", "TP-MT-TANKER800KG", 27, "Motor + Lắc 38 + Bộ ĐK"],
-      ["MOTO-ALUMAX-400", "TP-MT-ALUMAX400KG", 15, "Motor + Lắc 32 + Bộ ĐK"],
-      ["MOTO-ALUMAX-600", "TP-MT-ALUMAX600KG", 25, "Motor + Lắc 32 + Bộ ĐK"],
-      ["MOTO-JG-300", "TP-MT-JG300KG", 18, "Motor + Lắc 33 + Bộ ĐK"],
-      ["MOTO-JG-400", "TP-MT-JG400KG", 28, "Motor + Lắc 33 + Bộ ĐK"],
-      ["MOTO-JG-600", "TP-MT-JG600KG", 36, "Motor + Lắc 36 + Bộ ĐK"],
-      ["MOTO-JG-800", "TP-MT-JG800KG", 42, "Motor + Lắc 38 + Bộ ĐK"],
-      ["MOTO-JG-1000", "TP-MT-JG1000KG", 48, "Motor + Lắc 40 + Bộ ĐK"],
-      ["MOTO-JG-1500", "TP-MT-JG1500KG", 55, "Motor + Lắc 40 + Bộ ĐK"],
-      ["MOTO-YHLD-300", "TP-MT-YHLD300KG", 15, "Motor + Lắc 36 + Bộ ĐK"],
-      ["MOTO-YHLD-500", "TP-MT-YHLD500KG", 15, "Motor + Lắc 36 + Bộ ĐK"],
-      ["MOTO-YHLD-800", "TP-MT-YHLD800KG", 25, "Motor + Lắc 40 + Bộ ĐK"],
-      ["MOTO-YHLD-1000", "TP-MT-YHLD1000KG", 35, "Motor + Lắc 40 + Bộ ĐK"],
+      ["MOTO-TANKER-400", "MOTO-TANKER400", 15, "Motor + Lắc 32 + Bộ ĐK"],
+      ["MOTO-TANKER-600", "MOTO-TANKER600", 18, "Motor + Lắc 32 + Bộ ĐK"],
+      ["MOTO-TANKER-800", "MOTO-TANKE800", 27, "Motor + Lắc 38 + Bộ ĐK"],
+      ["MOTO-ALUMAX-400", "MOTO-ALUMAX400", 15, "Motor + Lắc 32 + Bộ ĐK"],
+      ["MOTO-ALUMAX-600", "MOTO-ALUMAX600", 25, "Motor + Lắc 32 + Bộ ĐK"],
+      ["MOTO-JG-300", "MOTO-JG300", 18, "Motor + Lắc 33 + Bộ ĐK"],
+      ["MOTO-JG-400", "MOTO-JG400", 28, "Motor + Lắc 33 + Bộ ĐK"],
+      ["MOTO-JG-600", "MOTO-JG600", 36, "Motor + Lắc 36 + Bộ ĐK"],
+      ["MOTO-JG-800", "MOTO-JG800", 42, "Motor + Lắc 38 + Bộ ĐK"],
+      ["MOTO-JG-1000", "MOTO-JG1000", 48, "Motor + Lắc 40 + Bộ ĐK"],
+      ["MOTO-JG-1500", "MOTO-JG1500", 55, "Motor + Lắc 40 + Bộ ĐK"],
+      ["MOTO-YHLD-300", "MOTO-YHLD300", 15, "Motor + Lắc 36 + Bộ ĐK"],
+      ["MOTO-YHLD-500", "MOTO-YHLD500", 15, "Motor + Lắc 36 + Bộ ĐK"],
+      ["MOTO-YHLD-800", "MOTO-YHLD800", 25, "Motor + Lắc 40 + Bộ ĐK"],
+      ["MOTO-YHLD-1000", "MOTO-YHLD1000", 35, "Motor + Lắc 40 + Bộ ĐK"],
     ];
     const UPS = [
-      ["PIN-E800", "TP-UPS-E800", 600, "9 AH"],
-      ["PIN-E1000", "TP-UPS-E1000", 1000, "12 AH"],
+      ["PIN-E800", "PIN-UPS-E800I", 600, "9 AH"],
+      ["PIN-E1000", "PIN-UPS-E1000I", 1000, "12 AH"],
     ];
     const SOURCE = "BANG-GIA-CHINH-THUC-31-07-2026 §6 (bảng có mộc, hiệu lực 31/07/2026)";
     brief.fixtures.push(
@@ -2354,22 +2463,75 @@ note("MASTER · Measurement Profile chỉ đo/tồn; Geometry Field/Profile sở
   // ── Item Price nhận bậc ──
   // Một mặt hàng, tám giá. Trước đây là tám mặt hàng, mỗi cái một giá.
   {
+    /**
+     * Bậc "mọi diện tích" — phải khớp `ALL_AREA_TIER` trong `packages/clouderp-pricing/src/index.ts`
+     * và trong `scripts/build-alumdoor-pricing-payload.mjs`.
+     *
+     * Đây là SENTINEL trong khoá đặt tên, không phải một bậc thật: nó cố tình KHÔNG có cận trên
+     * lẫn cận dưới, và đường tra giá nhận ra nó bằng MÃ chứ không bằng cận (`priceTierMatches`
+     * chặn trước `areaWithinTier`). Vì thế đừng gán cận cho nó — gán cũng không ai đọc.
+     */
+    const ALL_AREA_TIER = "MOI-DIEN-TICH";
     const price = doctype("Item Price");
     if (!price.fields.some((entry) => nameOf(entry) === "area_tier")) {
       addAfter(price, "uom", {
         "//": [
-          "Trống = đơn giá áp cho MỌI diện tích (đa số mặt hàng). Có giá trị = chỉ áp cho bậc đó.",
+          "MOI-DIEN-TICH = đơn giá áp cho MỌI diện tích (đa số mặt hàng). Bậc thật = chỉ áp cho bậc đó.",
           "Nhờ vậy một mặt hàng giữ được thang giá 8 bậc mà không cần 8 mã hàng.",
+          "BẮT BUỘC có giá trị, không được để trống: nó là một khoá trong `naming` bên dưới, mà",
+          "`resolveAutoname` (frappe-model/src/autoname.ts ~124) NÉM LỖI khi khoá trong format rỗng.",
+          "Đo trên D1: 558/558 dòng giá hiện không có bậc ⇒ để trống là 558/558 dòng không tạo được.",
+          "`default` chỉ cứu được lượt tạo không khai bậc SAU KHI router lấy tài liệu đã áp default",
+          "để đặt tên (frappe-api/src/router.ts → namingSource). Trước bản vá đó, createDocument áp",
+          "default vào `payload` nhưng gọi resolveNewName bằng `submitted` (thân yêu cầu thô), nên",
+          "mọi POST /api/resource/Item Price không tự khai area_tier vẫn bị TỪ CHỐI — đường importer",
+          "không dính vì payload luôn phát area_tier (558/558), lỗi chỉ lộ ở màn hình Danh mục.",
         ],
         fieldname: "area_tier",
         label: "Bậc diện tích",
         fieldtype: "Link",
         options: "Bậc diện tích",
+        required: true,
+        default: ALL_AREA_TIER,
         link_filters: '{"disabled":0}',
       });
       // Khoá đặt tên phải mang bậc, không thì tám dòng giá của cùng một mặt hàng đè lên nhau.
       price.naming = "format:{price_list}:{item_code}:{uom}:{price_variant}:{area_tier}";
       note("SALES · Item Price nhận area_tier — một mặt hàng giữ được thang giá 8 bậc");
+    }
+    /**
+     * Bản ghi sentinel phải TỒN TẠI, không chỉ là quy ước chuỗi.
+     *
+     * `area_tier` là `Link` tới `Bậc diện tích`, và `generic-controller.ts` ~249 kiểm mọi giá trị
+     * Link có bản ghi thật, nếu không thì ném "Bậc diện tích reference is invalid or unavailable".
+     * Thiếu bản ghi này thì mọi dòng `Item Price` đều bị từ chối — nặng hơn hẳn cái nó đi chữa.
+     *
+     * Để trống cả `min_area_sqm` lẫn `max_area_sqm` là CÓ CHỦ Ý: nó không phải một khoảng, và
+     * `areaWithinTier` (fail-closed với bậc không cận) không bao giờ được gọi cho nó.
+     */
+    if (!brief.fixtures.some((entry) => entry.type === "Bậc diện tích" && entry.name === ALL_AREA_TIER)) {
+      brief.fixtures.push({
+        type: "Bậc diện tích",
+        name: ALL_AREA_TIER,
+        data: {
+          tier_code: ALL_AREA_TIER,
+          tier_name: "Mọi diện tích",
+          sort_order: 0,
+          note: "Sentinel của khoá đặt tên Item Price, KHÔNG phải bậc thật. Đừng gán cận trên/dưới, đừng ngừng dùng: ngừng dùng nó là chặn tạo mọi dòng giá không theo bậc (558/558 dòng đang chạy).",
+          disabled: false,
+        },
+      });
+      note("DANH MỤC · +Bậc diện tích MOI-DIEN-TICH — sentinel giữ khoá đặt tên Item Price đủ 5 đoạn");
+    }
+    // Khoá đặt tên của Item Price NHÚNG mã hàng — 558/558 dòng trên D1 đều vậy. Đổi mã hàng mà
+    // không đổi được tên dòng giá thì tên còn ôm mã đã chết, và lần chạy sau của importer giá sẽ
+    // tính ra một tên khác rồi TẠO MỚI thay vì cập nhật: 558 dòng giá trùng, và pricing ném
+    // "Multiple active Item Price records match" đúng lúc đang bán hàng.
+    //
+    // Đây là kiểu lỗi chỉ lộ ở lần chạy THỨ HAI, nên bật quyền đổi tên trước khi cần đến.
+    if (price.allow_rename !== true) {
+      price.allow_rename = true;
+      note("SALES · Item Price cho phép đổi tên — khoá đặt tên của nó nhúng mã hàng");
     }
   }
 
@@ -2629,8 +2791,27 @@ note(`UI Link · ${leafLinkFilterCount} ô Warehouse/Item Group chỉ chọn nú
    *
    * `Cutting Policy.dealer_split_sales_basis` có sẵn để tính đúng, nhưng không gì truyền cách
    * bán vào nên nhánh đó KHÔNG BAO GIỜ chạy. Và fact bị lấy khỏi dòng bán thì nó bò sang khoá
-   * bản ghi: 96 mã hàng đang nhồi `TRONBO` vào chính mã — đúng là dựng lại Sales Option qua
-   * cửa sau, ở tầng khó gỡ nhất.
+   * bản ghi — đúng là dựng lại Sales Option qua cửa sau, ở tầng khó gỡ nhất.
+   *
+   * ĐO LẠI trên NGUỒN GỐC `ms-lien/ĐM.md` bằng `scripts/lib/alumdoor-source-markdown.mjs`
+   * (2026-08-19). Cả bản "96 mã nhồi TRONBO" lẫn bản sửa lần trước ("86/355, 5 họ, 12→7") đều
+   * SAI; đây là số đếm lại được:
+   *
+   *  102 / 363   khối định mức có TÊN thành phẩm mang cách giao (698 lần "TRỌN BỘ", 33 "TÁCH MÓN")
+   *  100 / 363   khối có MÃ CHA nhồi cách giao
+   *  100 / 358   MÃ CHA phân biệt nhồi cách giao: 94 `TRONBO` + 2 `TACHMON` + 4 hậu tố ` - TM`
+   *    0 / 235   mã CẤU PHẦN nhồi cách giao — không có. 100 là mã cha, không phải "kể cả cấu phần".
+   *    6         họ mã có ĐỦ CẢ HAI biến thể — chỉ 6 họ này gộp mã là mất hẳn một bộ cấu phần
+   *
+   * Sáu họ đó là toàn bộ phần `sales_mode` mở khoá được, và `buildCodeMapping` tự đếm chúng
+   * (`unsafe_merges_unlocked_by_sales_mode`): chạy trên 358 mã cha thật cho 13 họ bị chặn →
+   * còn 7 khi mở trục cách giao; 7 họ còn lại bị chặn vì BẬC DIỆN TÍCH, không phải cách giao.
+   * Sáu họ: LUOI-MV, LUOI-SN, LUOI-SN13X26, LUOI-SN13X26-INOX, LUOI-SNPHI19-INOX,
+   * LUOI-LUOIMV-INOX. Bản trước liệt kê 5 và bỏ sót LUOI-SNPHI19-INOX — ai đọc danh sách đó rồi
+   * gộp `TP-LUOI-SNPHI19-INOX - TRONBO` (6 cấu phần) với `- TM` (1 cấu phần) là mất hẳn một bộ.
+   *
+   * Ba cách viết cho một fact (`TRONBO` / `TACHMON` / ` - TM`) cũng là lý do không được dò cách
+   * giao bằng cách bới chuỗi trong mã.
    *
    * `sales_mode` trả về là một Select hai giá trị, KHÔNG Link tới doctype nào, nên nó không
    * hồi sinh `Sales Option`/`Sales Package`. Chốt chặn cuối file vẫn ném lỗi nếu ai dựng lại
@@ -2703,6 +2884,57 @@ note(`UI Link · ${leafLinkFilterCount} ô Warehouse/Item Group chỉ chọn nú
   if (brief.doctypes.some((entry) => ["Sales Option", "Sales Package"].includes(entry.name)))
     throw new Error("Generator resurrected deprecated Sales Option/Sales Package DocType");
   note("REPRO · source-authoritative O2C/master contracts restored; deprecated sales option fields forbidden");
+}
+
+// ── Nguyên nhân cửa lỗi: nối dây ──
+//
+// Danh mục có 11 nguyên nhân thật của xưởng kèm bên chịu trách nhiệm, nhưng tới 19/08 KHÔNG ai
+// đọc — audit nền tảng bắt được đúng chỗ đó. Trong khi `Warranty Claim.issue_cause` lại là một
+// Select 4 nhóm thô khai riêng: hai bảng phân loại song song cho cùng một câu hỏi.
+//
+// GHI RÕ CHỖ HỤT, không tự lấp: Select cũ có nhóm "Vận chuyển/lắp đặt" mà danh mục KHÔNG có
+// nguyên nhân nào tương ứng, còn danh mục có bên chịu trách nhiệm "Sale" mà Select không có.
+// Đây là dữ liệu chủ xưởng phải bổ sung, không phải chỗ để tôi bịa thêm nguyên nhân.
+//
+// An toàn để đổi ngay: hiện có 0 bản ghi Warranty Claim, nên không có dữ liệu nào phải chuyển.
+{
+  const claim = brief.doctypes.find((entry) => entry.name === "Warranty Claim");
+  const at = (claim?.fields ?? []).findIndex((field) => nameOf(field) === "issue_cause");
+  if (claim && at >= 0 && (typeof claim.fields[at] === "string" || claim.fields[at].fieldtype !== "Link")) {
+    claim.fields[at] = {
+      fieldname: "issue_cause",
+      label: "Nguyên nhân",
+      fieldtype: "Link",
+      options: "Nguyên nhân cửa lỗi",
+      required: true,
+      link_filters: '{"disabled":0}',
+      description: "Chọn nguyên nhân cụ thể từ danh mục. Bên chịu trách nhiệm đi theo nguyên nhân, không khai lại ở đây.",
+    };
+    note("BẢO HÀNH · issue_cause đổi Select → Link(Nguyên nhân cửa lỗi) — thôi hai bảng phân loại song song");
+  }
+}
+
+// Ô hiện ra con số mà không nói con số từ đâu thì người dùng không kiểm được. Audit 19/08 đếm
+// 118 ô như vậy trên 57 tên trường; mô tả khai theo TÊN TRƯỜNG nên sửa một chỗ là cả 118 ô nhận.
+const described = applyFieldDescriptions(brief.doctypes, parseField);
+note(`UI · mô tả tiếng Việt cho trường tính toán: ${described} ô`);
+
+// Rỗng và không nơi nào trỏ tới, nhưng vẫn chiếm một dòng trên menu Danh mục. Giữ DocType (mua
+// hàng sẽ cần) nhưng thôi bày ra cho tới khi có dữ liệu thật.
+{
+  // `menu: false` một mình là KHÔNG đủ: nó gỡ doctype khỏi tập ứng viên của nav, nên tên còn nằm
+  // trong `navigation.items` sẽ thành nav key lạ và brief không biên dịch được
+  // ("navigation.items names unknown nav key"). Phải gỡ ở CẢ HAI chỗ.
+  const supplierItem = brief.doctypes.find((entry) => entry.name === "Supplier Item");
+  if (supplierItem && supplierItem.menu !== false) {
+    supplierItem.menu = false;
+    const items = brief.navigation?.items;
+    if (Array.isArray(items)) {
+      const at = items.indexOf("Supplier Item");
+      if (at >= 0) items.splice(at, 1);
+    }
+    note("UI · Supplier Item rời menu — 0 bản ghi và không trường nào trỏ tới");
+  }
 }
 
 const childPresentation = applyAlumdoorChildPresentation(brief);

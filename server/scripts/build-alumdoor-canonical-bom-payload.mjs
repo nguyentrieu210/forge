@@ -21,7 +21,18 @@ const preflight = preflightAlumdoorItemSourceRecords(records);
 if (preflight.blocker_count !== 0) throw new Error(`BOM build requires zero Item source blockers; got ${preflight.blocker_count}`);
 const clean = (v) => String(v ?? "").trim();
 const parentRowOf = (record) => Number(record?.source_parent_row);
-const itemMap = new Map(itemPayload.items.map((row)=>[clean(row.item_code),row]));
+// Tra được bằng CẢ mã đang dùng lẫn mã gốc trong bảng tính.
+//
+// Tham chiếu cấu phần đến từ bản trích nguồn nên mang mã theo bảng tính, còn danh sách mặt hàng
+// đã dịch sang mã đang dùng. Chỉ khoá một bên thì 1.031 cấu phần báo `missing_component_item`
+// dù mặt hàng có đủ — đo được sau đợt đổi mã.
+const itemMap = new Map();
+for (const row of itemPayload.items) {
+  const canonical = clean(row.item_code);
+  itemMap.set(canonical, row);
+  const original = clean(row.source_item_code_original);
+  if (original && !itemMap.has(original)) itemMap.set(original, row);
+}
 const itemCodes = new Set(itemMap.keys());
 const blockers=[]; const excluded=[]; const parents=new Map(); const excludedParents=new Map(); const groups=new Map();
 
@@ -67,7 +78,15 @@ for(const record of records){
   const item=itemMap.get(ref.item_code); if(!item){addBlock("missing_component_item",record,{canonical_item_code:ref.item_code});continue;}
   const parentRecord=parents.get(parentRow); const parentItem=parentRecord?itemMap.get(clean(parentRecord.item_code)):null;
   if(!parentRecord||!parentItem){addBlock("missing_parent_item",record,{canonical_item_code:ref.item_code});continue;}
-  if(ref.item_code===clean(parentItem.item_code)){
+  // So mã ĐANG DÙNG với mã ĐANG DÙNG.
+  //
+  // Trước đây so `ref.item_code` (mã của bộ dựng) với mã cha đang dùng — hai vế khác không gian
+  // mã nên phép kiểm hụt. Hệ quả không phải là báo sai mà là ghi hỏng: nền tảng từ chối với
+  // "BOM row 1 cannot consume its own output Item" ngay lúc ghi, sau khi đã dựng xong cả payload.
+  //
+  // Sau đợt gộp mã, hai mã nguồn KHÁC nhau có thể cùng quy về một mặt hàng — nên phép kiểm này
+  // giờ mới thật sự cần đúng.
+  if(clean(item.item_code)===clean(parentItem.item_code)){
     excluded.push({source_row:record.source_row,source_index:index,source_parent_row:parentRow,source_item_code:clean(record.item_code),canonical_item_code:ref.item_code,reason:"canonical_self_reference_non_bom"});
     continue;
   }
@@ -98,7 +117,13 @@ for(const record of records){
     continue;
   }
   const line={
-    item_code:ref.item_code,
+    // Mã ĐANG DÙNG, không phải mã canonical của bộ dựng.
+    //
+    // `ref.item_code` là mã do bộ dựng tự chuẩn hoá từ bảng tính (vd `NVL-BATFE` → `NVL-BATSAT`),
+    // và nó vẫn phải giữ nguyên cho các tra cứu phía nguồn bên dưới. Nhưng thứ ĐẨY VÀO D1 phải là
+    // mã mặt hàng thật, nếu không importer báo 347 "mặt hàng không tồn tại" — đo được sau đợt đổi mã.
+    // `lineage.canonical_item_code` bên dưới vẫn giữ mã bộ dựng: đó là bằng chứng, không phải con trỏ.
+    item_code:clean(item.item_code),
     uom:uom.runtime_uom,
     ...(uom.conversion_factor?{conversion_factor:uom.conversion_factor}:{}),
     resolution:quantity.status,
@@ -117,7 +142,8 @@ for(const [parentRow,lines] of [...groups.entries()].sort((a,b)=>a[0]-b[0])){
   const output=resolveBomParentOutput(parentItem);
   if(output.status!=="accepted"){addBlock(output.reason,parent,{item_code:clean(parent.item_code),stock_uom:output.stock_uom});continue;}
   const normalized=[...lines].sort((a,b)=>(a.lineage.source_row-b.lineage.source_row)||a.item_code.localeCompare(b.item_code,"vi"));
-  const snapshot={schema_version:3,source:"apps/alumdoor/docs/nguon/ms-lien/ĐM.md",source_index:Number(parent.source_index),source_row:Number(parent.source_row),item:clean(parent.item_code),output,lines:normalized};
+  // Mã cha cũng phải là mã đang dùng, cùng lý do với mã cấu phần ở trên.
+  const snapshot={schema_version:3,source:"apps/alumdoor/docs/nguon/ms-lien/ĐM.md",source_index:Number(parent.source_index),source_row:Number(parent.source_row),item:clean(parentItem.item_code),output,lines:normalized};
   const fingerprint=createHash("sha256").update(JSON.stringify(snapshot)).digest("hex");
   boms.push({source_index:Number(parent.source_index),source_row:Number(parent.source_row),item:clean(parent.item_code),company:"ALUMDOOR",quantity:1,output_uom:output.output_uom,bom_status:"Draft",bom_fingerprint:fingerprint,lines:normalized,configuration_snapshot:snapshot});
 }

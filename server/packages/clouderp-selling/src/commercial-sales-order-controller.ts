@@ -15,6 +15,7 @@ import { resolveCommercialLine } from "./commercial-line-resolver.js";
 import { calculateSalesTotals } from "./totals.js";
 import type { SalesItem, SalesOrderData } from "./types.js";
 import type { PricingRuleSnapshot } from "../../clouderp-pricing/src/commercial-policy.js";
+import { areaTierBasisSqm } from "../../clouderp-pricing/src/index.js";
 
 const ALUMDOOR_COMPANY = "ALUMDOOR";
 const ALUMDOOR_PRICE_GROUPS = new Set(["Đại lý", "Lẻ"]);
@@ -341,12 +342,25 @@ function trustedCommercialFacts(
   };
 }
 
-function optionalPositiveFacts(line: SalesItem): { areaSqm?: number; lengthM?: number; setCount?: number } {
+function optionalPositiveFacts(line: SalesItem): {
+  areaSqm?: number;
+  areaPerSetSqm?: number;
+  lengthM?: number;
+  setCount?: number;
+} {
   const area = finitePositive(line.billable_area_sqm);
   const length = finitePositive(line.length_m);
   const sets = finitePositive(line.set_count);
+  // `areaSqm` (cả dòng) và `areaPerSetSqm` (một bộ) là HAI trục khác nhau và không thay nhau
+  // được: phụ thu theo m² tính trên cả dòng, còn bậc giá tra theo một bộ.
+  const perSet = areaTierBasisSqm(line as unknown as {
+    area_per_set_sqm?: unknown;
+    billable_area_sqm?: unknown;
+    set_count?: unknown;
+  });
   return {
     ...(area === undefined ? {} : { areaSqm: area }),
+    ...(perSet === undefined ? {} : { areaPerSetSqm: perSet }),
     ...(length === undefined ? {} : { lengthM: length }),
     ...(sets === undefined ? {} : { setCount: sets }),
   };

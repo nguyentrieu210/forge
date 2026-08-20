@@ -20,6 +20,10 @@ const ALLOWED = new Set([
   'bom-rule',
   'customer',
   'manufacturing-master',
+  'item-code-rename',
+  'link-repair',
+  'layer-converge',
+  'catalog-all',
 ]);
 
 function run(command, args, { cwd, capture = true, allowFailure = false, env } = {}) {
@@ -169,10 +173,16 @@ async function main() {
 
     log(`LIVE_APPLY_AUTHORITY=PASS adapter=${adapter} sha=${liveSha} remote=local-bare`);
     const manufacturingMaster = adapter === 'manufacturing-master';
+    // `catalog-all` là CẢ CHUỖI import, không phải một adapter. Nó gọi lại chính run-local-import
+    // cho từng bước, nên phải chạy BÊN TRONG quyền hạn này — chạy thẳng thì bước đầu tiên đã vướng
+    // cổng STALE_WORKTREE, vì kho đang ở agent-live chứ không phải main.
+    const catalogAll = adapter === 'catalog-all';
     const runner = manufacturingMaster
       ? path.join(ROOT, 'scripts', 'local-runner', 'import-alumdoor-manufacturing-master-local.mjs')
-      : path.join(ROOT, 'scripts', 'local-runner', 'run-local-import.mjs');
-    const runnerArgs = manufacturingMaster ? [runner, '--apply', ...passthrough] : [runner, adapter, ...passthrough];
+      : catalogAll
+        ? path.join(ROOT, 'scripts', 'local-runner', 'import-alumdoor-catalog-all-local.mjs')
+        : path.join(ROOT, 'scripts', 'local-runner', 'run-local-import.mjs');
+    const runnerArgs = (manufacturingMaster || catalogAll) ? [runner, '--apply', ...passthrough] : [runner, adapter, ...passthrough];
     const result = run(process.execPath, runnerArgs, {
       cwd: ROOT,
       capture: false,
@@ -180,7 +190,7 @@ async function main() {
       env: {
         FORGE_LOCAL_EXPECTED_SHA: liveSha,
         FORGE_LOCAL_REPO_ROOT: ROOT,
-        ...(manufacturingMaster ? { FORGE_LIVE_BRANCH: 'main' } : {}),
+        ...(manufacturingMaster || catalogAll ? { FORGE_LIVE_BRANCH: 'main' } : {}),
       },
     });
     if (result.status !== 0) throw new Error(`Guarded live apply failed adapter=${adapter} exit=${result.status}`);

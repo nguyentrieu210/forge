@@ -16,7 +16,7 @@ import { reverseGl, reversePayment, reverseStock } from "../../ledger/src/index.
 import { addMinor, fromScaledInt, multiplyScaled, negateMinor, toScaledInt } from "../../money/src/index.js";
 import { domainEvent } from "../../outbox/src/index.js";
 import { buildTrackedStockLines, deriveOutgoingValuation } from "../../clouderp-stock/src/index.js";
-import { resolveServerPrice } from "../../clouderp-pricing/src/index.js";
+import { areaTierBasisSqm, resolveServerPrice } from "../../clouderp-pricing/src/index.js";
 import type { PricingRuleSnapshot } from "../../clouderp-pricing/src/commercial-policy.js";
 import { applyUomConversion, pricedQtyMicros, stockQtyMicros } from "../../clouderp-core/src/uom.js";
 import { assertCurrencyScale, calculateSalesTotals } from "./totals.js";
@@ -1014,7 +1014,15 @@ async function applySellingPricing<T extends SalesItem>(context: ControllerConte
     const priceUom = typeof item.rate_uom === "string" && item.rate_uom.trim()
       ? item.rate_uom.trim()
       : typeof item.uom === "string" ? item.uom.trim() : "";
-    const price = await resolveServerPrice(context, { itemCode:item.item_code, qtyMicros, postingDate, priceList, documentCurrency:currency, ...(priceUom ? { uom:priceUom } : {}), partyType:"Customer", party:customer, ...(customerGroup?{customerGroup}:{}) });
+    // Diện tích một bộ phải đi cùng yêu cầu tra giá ở ĐÂY nữa, không chỉ ở đường Đơn hàng.
+    //
+    // Đây là đường tra giá của Hoá đơn bán KHÔNG lập từ đơn (`controllers.ts` ~629; hoá đơn lập
+    // từ đơn thì đóng băng dòng của đơn). `priceTierMatches` fail-closed khi thiếu diện tích,
+    // nên bỏ trống ở đây nghĩa là: ngay khi mặt hàng đầu tiên có dòng giá theo bậc, báo giá và
+    // đơn hàng vẫn ra giá bình thường còn hoá đơn bán lẻ cùng mặt hàng đó ném
+    // "Item Price … does not exist for variant STANDARD".
+    const areaPerSet = areaTierBasisSqm(item as unknown as { area_per_set_sqm?: unknown; billable_area_sqm?: unknown; set_count?: unknown });
+    const price = await resolveServerPrice(context, { itemCode:item.item_code, qtyMicros, postingDate, priceList, documentCurrency:currency, ...(priceUom ? { uom:priceUom } : {}), ...(areaPerSet === undefined ? {} : { billableAreaSqm: areaPerSet }), partyType:"Customer", party:customer, ...(customerGroup?{customerGroup}:{}) });
     const hasSubmittedRate = allowsManualOverride && item.rate !== undefined && item.rate !== null && String(item.rate).trim() !== "";
     const submittedRateMinor = hasSubmittedRate
       ? toScaledInt(item.rate, price.currency_scale, `${item.item_code}.rate`)

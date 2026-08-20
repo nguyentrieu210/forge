@@ -1,3 +1,9 @@
+// Mã hàng cập nhật 19/08 sau hai đợt đổi mã. Fixture nằm trong `master_records`, mà cascade
+// đổi tên chỉ theo `documents`/`document_children` — nên chúng giữ mã cũ và treo hết. Cài lại
+// app còn ghi mã cũ trở lại, nên sửa ở nguồn mới dứt.
+//
+// `TP-UC KT 4D XN-VK` đi theo quy ước mã (thành `CUA-UC-KT-4D`, rụng hậu tố màu vì thuộc họ
+// gộp đã duyệt). Bốn mã 4.6D thuộc họ gộp CHƯA duyệt nên chỉ được rút gọn dấu cách.
 const fixed = (value) => ({ base: { kind: "CONSTANT", value } });
 const field = (name, multiply = 1, offset = undefined) => ({
   base: { kind: "FIELD", field: name, ...(offset === undefined ? {} : { offset }) },
@@ -118,7 +124,7 @@ function makeUcKt4dXnVk() {
   const componentRows = [688, 689, 690, 691, 692, 693, 694, 695, 696, 697, 698, 699, 700, 701, 702, 703, 704, 706, 707, 708, 709, 710, 711, 712];
   return sourceTemplateBase({
     name: "SRC-UC-KT-4D-XN-VK",
-    itemCode: "TP-UC KT 4D XN-VK",
+    itemCode: "CUA-UC-KT-4D",
     productRow,
     componentRows,
     requiredKeys: [
@@ -259,28 +265,28 @@ function makeUcKt46Template({ name, itemCode, productRow, leafItem, sourceProduc
 const UC_KT_46_VARIANTS = [
   {
     name: "SRC-UC-KT-46D-XN-VK",
-    itemCode: "TP-UC KT 4.6D XN-VK",
+    itemCode: "TP-UC-KT-4.6D-XN-VK",
     productRow: 732,
     leafItem: "NVL-TOLE0.42x598-XN-VK",
     sourceProductName: "CỬA ÚC KT 4.6D XN-VK",
   },
   {
     name: "SRC-UC-KT-46D-XR-CF",
-    itemCode: "TP-UC KT 4.6D XR-CF",
+    itemCode: "TP-UC-KT-4.6D-XR-CF",
     productRow: 757,
     leafItem: "NVL-TOLE0.42x598-XR-CF",
     sourceProductName: "CỬA ÚC KT 4.6D XR-CAFE",
   },
   {
     name: "SRC-UC-KT-46D-TR-XLC",
-    itemCode: "TP-UC KT 4.6D TRẮNG-XLC",
+    itemCode: "TP-UC-KT-4.6D-TRẮNG-XLC",
     productRow: 782,
     leafItem: "NVL-TOLE0.42x598-TR-XLC",
     sourceProductName: "CỬA ÚC KT 4.6D TR-XLC",
   },
   {
     name: "SRC-UC-KT-46D-KU-GU",
-    itemCode: "TP-UC KT 4.6D KU-GU",
+    itemCode: "TP-UC-KT-4.6D-KU-GU",
     productRow: 807,
     leafItem: "NVL-TOLE0.42x598-KU-GU",
     sourceProductName: "CỬA ÚC KT 4.6D KU-GU",

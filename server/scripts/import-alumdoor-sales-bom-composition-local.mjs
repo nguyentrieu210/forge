@@ -5,6 +5,7 @@ import process from 'node:process';
 
 import { assertLocalMutationChildContext } from '../../scripts/local-runner/assert-local-mutation-child-context.mjs';
 import {
+  bomTemplateMetaCompositionGaps,
   buildSalesBomCompositionTemplates,
   salesBomCompositionSignature,
 } from './lib/alumdoor-sales-bom-composition.mjs';
@@ -109,7 +110,30 @@ async function deleteDoc(doctype, name) {
   await requireOk(`/api/resource/${encodeURIComponent(doctype)}/${encodeURIComponent(name)}`, { method: 'DELETE' });
 }
 
+/**
+ * CHỐT CHẶN TRƯỚC KHI XOÁ — bộ nhập này xoá SẠCH rồi mới ghi lại.
+ *
+ * Nền tảng TỪ CHỐI, không nuốt: trường lạ ném `Unknown field ...`
+ * (frappe-model/src/generic-controller.ts:79) và giá trị Select ngoài options ném
+ * `... must be one of the configured options` (cùng file, ~170) — kể cả Administrator, vì
+ * `normalizeValue` không có cửa admin. Chạy trên một D1 chưa triển khai brief mới thì thứ tự
+ * hiện tại là: xoá hết Bill of Materials + BOM Template → POST đầu tiên trả 4xx → `requireOk`
+ * ném → D1 còn 0 template và 0 định mức. Mất dữ liệu vì một cột chưa deploy.
+ *
+ * Nên hỏi META trước khi đụng vào bất cứ thứ gì. `GET /api/resource/DocType/<tên>` trả
+ * `toFrappeDocType` (frappe-api/src/meta-shape.ts:130) — có `fields[].fieldname` và
+ * `fields[].options`. Đường đọc, không đổi trạng thái.
+ */
+async function assertBomTemplateMetaReady() {
+  const meta = dataOf(await requireOk(`/api/resource/DocType/${encodeURIComponent('BOM Template')}`));
+  const gaps = bomTemplateMetaCompositionGaps(meta);
+  if (gaps.length) {
+    throw new Error(`BOM Template trên D1 chưa khớp brief — ${gaps.join('; ')}. Triển khai brief trước; KHÔNG xoá gì cả.`);
+  }
+}
+
 await login();
+await assertBomTemplateMetaReady();
 const existingTemplateRows = await listDocs('BOM Template', ['name', 'template_code', 'item_code', 'disabled', 'modified']);
 const existingBomRows = await listDocs('Bill of Materials', ['name', 'item', 'docstatus', 'is_active', 'modified']);
 const submittedBoms = existingBomRows.filter((row) => Number(row.docstatus) === 1);
@@ -119,10 +143,23 @@ if (submittedBoms.length) {
 
 const existingTemplates = [];
 for (const row of existingTemplateRows) existingTemplates.push(await getDoc('BOM Template', row.name));
-const expectedByParent = new Map(templates.map((row) => [row.item_code, salesBomCompositionSignature(row)]));
+/**
+ * Gom theo `template_code`, KHÔNG theo `item_code`.
+ *
+ * Hôm nay hai khoá bằng nhau nên phép kiểm không đổi. Nhưng mục tiêu của cả luồng là một mặt
+ * hàng giữ HAI danh sách cấu thành; lúc đó gom theo `item_code` làm hai template rơi vào một
+ * rổ, `candidates.length === 1` sai, và bộ nhập báo `template_count_mismatch` cho chính thứ nó
+ * vừa cố tình dựng ra. Gom theo khoá tách sẵn thì mỗi (mặt hàng, cách giao) vẫn phải đúng một
+ * bản — giữ nguyên sức mạnh của phép kiểm.
+ */
+const templateKeyOf = (row) => String(row?.template_code ?? row?.item_code ?? '').normalize('NFC').trim();
+const expectedByParent = new Map(templates.map((row) => [templateKeyOf(row), salesBomCompositionSignature(row)]));
+if (expectedByParent.size !== templates.length) {
+  throw new Error(`Sales BOM composition có template_code trùng: ${templates.length} template nhưng chỉ ${expectedByParent.size} khoá phân biệt.`);
+}
 const existingByParent = new Map();
 for (const row of existingTemplates) {
-  const parent = String(row?.item_code ?? '').normalize('NFC').trim();
+  const parent = templateKeyOf(row);
   const list = existingByParent.get(parent) ?? [];
   list.push(row);
   existingByParent.set(parent, list);
@@ -176,12 +213,12 @@ for (const template of templates) {
 }
 
 const postBomRows = await listDocs('Bill of Materials', ['name']);
-const postTemplateRows = await listDocs('BOM Template', ['name', 'item_code']);
+const postTemplateRows = await listDocs('BOM Template', ['name', 'item_code', 'template_code']);
 const postTemplates = [];
 for (const row of postTemplateRows) postTemplates.push(await getDoc('BOM Template', row.name));
 const postByParent = new Map();
 for (const row of postTemplates) {
-  const parent = String(row?.item_code ?? '').normalize('NFC').trim();
+  const parent = templateKeyOf(row);
   const list = postByParent.get(parent) ?? [];
   list.push(row);
   postByParent.set(parent, list);
@@ -190,8 +227,8 @@ const failures = [];
 if (postBomRows.length) failures.push({ reason: 'bill_of_materials_not_empty', count: postBomRows.length });
 for (const [parent, signature] of expectedByParent) {
   const candidates = postByParent.get(parent) ?? [];
-  if (candidates.length !== 1) failures.push({ item_code: parent, reason: 'template_count_mismatch', count: candidates.length });
-  else if (salesBomCompositionSignature(candidates[0]) !== signature) failures.push({ item_code: parent, reason: 'composition_signature_mismatch' });
+  if (candidates.length !== 1) failures.push({ template_code: parent, reason: 'template_count_mismatch', count: candidates.length });
+  else if (salesBomCompositionSignature(candidates[0]) !== signature) failures.push({ template_code: parent, reason: 'composition_signature_mismatch' });
 }
 if (postTemplates.length !== templates.length) {
   failures.push({ reason: 'global_template_count_mismatch', expected: templates.length, actual: postTemplates.length });

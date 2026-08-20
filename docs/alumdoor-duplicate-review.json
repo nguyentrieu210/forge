@@ -1,0 +1,814 @@
+{
+  "format": "alumdoor-duplicate-review/v1",
+  "generated_at": "2026-08-19T17:03:08.488Z",
+  "group_count": 25,
+  "groups": [
+    {
+      "item_name": "RON NHỰA ĐÁY RAY",
+      "item_group": "Ray và trục",
+      "member_count": 2,
+      "same_rates": false,
+      "any_bom": false,
+      "any_used": true,
+      "hint": "GIÁ KHÁC NHAU — xem kỹ, có thể là hai món",
+      "members": [
+        {
+          "item_code": "RNHUA-DR",
+          "stock_uom": "Mét",
+          "price_count": 1,
+          "rates": [
+            "20000"
+          ],
+          "bom_count": 0,
+          "used_in_documents": 0
+        },
+        {
+          "item_code": "NVL-RNHUA-DR",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 9
+        }
+      ]
+    },
+    {
+      "item_name": "RON INOX ĐÁY RAY",
+      "item_group": "Ray và trục",
+      "member_count": 2,
+      "same_rates": false,
+      "any_bom": false,
+      "any_used": true,
+      "hint": "GIÁ KHÁC NHAU — xem kỹ, có thể là hai món",
+      "members": [
+        {
+          "item_code": "RAY-RNINOX-DR",
+          "stock_uom": "Mét",
+          "price_count": 1,
+          "rates": [
+            "15000"
+          ],
+          "bom_count": 0,
+          "used_in_documents": 0
+        },
+        {
+          "item_code": "RAY-RINOX-DR",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 9
+        }
+      ]
+    },
+    {
+      "item_name": "BỌ 1VIS 503N-71-595",
+      "item_group": "Phụ kiện CN Đức",
+      "member_count": 2,
+      "same_rates": false,
+      "any_bom": true,
+      "any_used": true,
+      "hint": "GIÁ KHÁC NHAU — xem kỹ, có thể là hai món",
+      "members": [
+        {
+          "item_code": "PK-BO-1VIS-503N-71-595",
+          "stock_uom": "Con",
+          "price_count": 1,
+          "rates": [
+            "1500"
+          ],
+          "bom_count": 1,
+          "used_in_documents": 2
+        },
+        {
+          "item_code": "PK-BO1VIS-503N-71-595",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 5
+        }
+      ]
+    },
+    {
+      "item_name": "RON ĐÁY ÚC",
+      "item_group": "Phụ kiện chung",
+      "member_count": 2,
+      "same_rates": false,
+      "any_bom": true,
+      "any_used": true,
+      "hint": "GIÁ KHÁC NHAU — xem kỹ, có thể là hai món",
+      "members": [
+        {
+          "item_code": "RONDAYUC",
+          "stock_uom": "Mét",
+          "price_count": 4,
+          "rates": [
+            "10000"
+          ],
+          "bom_count": 1,
+          "used_in_documents": 1
+        },
+        {
+          "item_code": "NVL-RONDAYUC",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 42
+        }
+      ]
+    },
+    {
+      "item_name": "RAY SẮT U70 (CÓ RON)",
+      "item_group": "Ray và trục",
+      "member_count": 2,
+      "same_rates": false,
+      "any_bom": true,
+      "any_used": true,
+      "hint": "GIÁ KHÁC NHAU — xem kỹ, có thể là hai món",
+      "members": [
+        {
+          "item_code": "RAY-RS7P-CO-RON",
+          "stock_uom": "Mét",
+          "price_count": 1,
+          "rates": [
+            "75000"
+          ],
+          "bom_count": 1,
+          "used_in_documents": 3
+        },
+        {
+          "item_code": "RAY-TOLE1.2X190-RON",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 183
+        }
+      ]
+    },
+    {
+      "item_name": "CỬA LƯỚI SN PHI 19 STD - TÁCH MÓN",
+      "item_group": "Cửa Lưới",
+      "member_count": 2,
+      "same_rates": false,
+      "any_bom": true,
+      "any_used": true,
+      "hint": "GIÁ KHÁC NHAU — xem kỹ, có thể là hai món",
+      "members": [
+        {
+          "item_code": "LUOI-SN-TM",
+          "stock_uom": "Bộ",
+          "price_count": 2,
+          "rates": [
+            "490000"
+          ],
+          "bom_count": 1,
+          "used_in_documents": 9
+        },
+        {
+          "item_code": "LUOI-SNPHI19-INOX-TM",
+          "stock_uom": "Bộ",
+          "price_count": 2,
+          "rates": [
+            "1290000"
+          ],
+          "bom_count": 1,
+          "used_in_documents": 1
+        }
+      ]
+    },
+    {
+      "item_name": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 3-4m²",
+      "item_group": "Cửa Đài Loan",
+      "member_count": 2,
+      "same_rates": false,
+      "any_bom": true,
+      "any_used": true,
+      "hint": "GIÁ KHÁC NHAU — xem kỹ, có thể là hai món",
+      "members": [
+        {
+          "item_code": "TP-TOLEKEM124_1LY_TRONBO_3-4m²_MSK",
+          "stock_uom": "Bộ",
+          "price_count": 1,
+          "rates": [
+            "690000"
+          ],
+          "bom_count": 1,
+          "used_in_documents": 5
+        },
+        {
+          "item_code": "NVL-TOLEKEM124_1LY_MSK",
+          "stock_uom": "Bộ",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 1,
+          "used_in_documents": 21
+        }
+      ]
+    },
+    {
+      "item_name": "AL595",
+      "item_group": "Nan/lá cửa",
+      "member_count": 3,
+      "same_rates": true,
+      "any_bom": false,
+      "any_used": true,
+      "hint": "giá giống nhau nhưng đã dùng trong chứng từ — gộp phải dời lịch sử",
+      "members": [
+        {
+          "item_code": "NVL-AL595-GS",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        },
+        {
+          "item_code": "NVL-AL595-VK",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        },
+        {
+          "item_code": "NVL-AL595-THO",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        }
+      ]
+    },
+    {
+      "item_name": "AL71",
+      "item_group": "Nan/lá cửa",
+      "member_count": 3,
+      "same_rates": true,
+      "any_bom": false,
+      "any_used": true,
+      "hint": "giá giống nhau nhưng đã dùng trong chứng từ — gộp phải dời lịch sử",
+      "members": [
+        {
+          "item_code": "NVL-AL71-GS",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        },
+        {
+          "item_code": "NVL-AL71-VK",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        },
+        {
+          "item_code": "NVL-AL71-THO",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        }
+      ]
+    },
+    {
+      "item_name": "AL503",
+      "item_group": "Nan/lá cửa",
+      "member_count": 3,
+      "same_rates": true,
+      "any_bom": false,
+      "any_used": true,
+      "hint": "giá giống nhau nhưng đã dùng trong chứng từ — gộp phải dời lịch sử",
+      "members": [
+        {
+          "item_code": "NVL-AL503-GS",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        },
+        {
+          "item_code": "NVL-AL503-VK",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        },
+        {
+          "item_code": "NVL-AL503-THO",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        }
+      ]
+    },
+    {
+      "item_name": "AL548",
+      "item_group": "Nan/lá cửa",
+      "member_count": 3,
+      "same_rates": true,
+      "any_bom": false,
+      "any_used": true,
+      "hint": "giá giống nhau nhưng đã dùng trong chứng từ — gộp phải dời lịch sử",
+      "members": [
+        {
+          "item_code": "NVL-AL548-GS",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        },
+        {
+          "item_code": "NVL-AL548-VK",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        },
+        {
+          "item_code": "NVL-AL548-THO",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        }
+      ]
+    },
+    {
+      "item_name": "AL501",
+      "item_group": "Nan/lá cửa",
+      "member_count": 3,
+      "same_rates": true,
+      "any_bom": false,
+      "any_used": true,
+      "hint": "giá giống nhau nhưng đã dùng trong chứng từ — gộp phải dời lịch sử",
+      "members": [
+        {
+          "item_code": "NVL-AL501-GS",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        },
+        {
+          "item_code": "NVL-AL501-VK",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        },
+        {
+          "item_code": "NVL-AL501-THO",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        }
+      ]
+    },
+    {
+      "item_name": "AL652",
+      "item_group": "Nan/lá cửa",
+      "member_count": 3,
+      "same_rates": true,
+      "any_bom": false,
+      "any_used": true,
+      "hint": "giá giống nhau nhưng đã dùng trong chứng từ — gộp phải dời lịch sử",
+      "members": [
+        {
+          "item_code": "NVL-AL652-GS",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        },
+        {
+          "item_code": "NVL-AL652-VK",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        },
+        {
+          "item_code": "NVL-AL652-THO",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        }
+      ]
+    },
+    {
+      "item_name": "AL552",
+      "item_group": "Nan/lá cửa",
+      "member_count": 3,
+      "same_rates": true,
+      "any_bom": false,
+      "any_used": true,
+      "hint": "giá giống nhau nhưng đã dùng trong chứng từ — gộp phải dời lịch sử",
+      "members": [
+        {
+          "item_code": "NVL-AL552-GS",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        },
+        {
+          "item_code": "NVL-AL552-VK",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        },
+        {
+          "item_code": "NVL-AL552-THO",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        }
+      ]
+    },
+    {
+      "item_name": "AL752",
+      "item_group": "Nan/lá cửa",
+      "member_count": 3,
+      "same_rates": true,
+      "any_bom": false,
+      "any_used": true,
+      "hint": "giá giống nhau nhưng đã dùng trong chứng từ — gộp phải dời lịch sử",
+      "members": [
+        {
+          "item_code": "NVL-AL752-GS",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        },
+        {
+          "item_code": "NVL-AL752-VK",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        },
+        {
+          "item_code": "NVL-AL752-THO",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        }
+      ]
+    },
+    {
+      "item_name": "AL50",
+      "item_group": "Nan/lá cửa",
+      "member_count": 3,
+      "same_rates": true,
+      "any_bom": false,
+      "any_used": true,
+      "hint": "giá giống nhau nhưng đã dùng trong chứng từ — gộp phải dời lịch sử",
+      "members": [
+        {
+          "item_code": "NVL-AL50-GS",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        },
+        {
+          "item_code": "NVL-AL50-VK",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        },
+        {
+          "item_code": "NVL-AL50-THO",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        }
+      ]
+    },
+    {
+      "item_name": "ALVIP50",
+      "item_group": "Nan/lá cửa",
+      "member_count": 3,
+      "same_rates": true,
+      "any_bom": false,
+      "any_used": true,
+      "hint": "giá giống nhau nhưng đã dùng trong chứng từ — gộp phải dời lịch sử",
+      "members": [
+        {
+          "item_code": "NVL-ALVIP50-GS",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        },
+        {
+          "item_code": "NVL-ALVIP50-VK",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 0
+        },
+        {
+          "item_code": "NVL-ALVIP50-THO",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        }
+      ]
+    },
+    {
+      "item_name": "AL70 ( 2 LỚP)",
+      "item_group": "Nan/lá cửa",
+      "member_count": 3,
+      "same_rates": true,
+      "any_bom": false,
+      "any_used": true,
+      "hint": "giá giống nhau nhưng đã dùng trong chứng từ — gộp phải dời lịch sử",
+      "members": [
+        {
+          "item_code": "NVL-AL70(2LOP)-GS",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        },
+        {
+          "item_code": "NVL-AL70(2LOP)-VK",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        },
+        {
+          "item_code": "NVL-AL70(2LOP)-THO",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 4
+        }
+      ]
+    },
+    {
+      "item_name": "AL75",
+      "item_group": "Nan/lá cửa",
+      "member_count": 3,
+      "same_rates": true,
+      "any_bom": false,
+      "any_used": true,
+      "hint": "giá giống nhau nhưng đã dùng trong chứng từ — gộp phải dời lịch sử",
+      "members": [
+        {
+          "item_code": "NVL-AL75-GS",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        },
+        {
+          "item_code": "NVL-AL75-VK",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        },
+        {
+          "item_code": "NVL-AL75-THO",
+          "stock_uom": "Kg",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 2
+        }
+      ]
+    },
+    {
+      "item_name": "ĐỨC AL548N - MSK",
+      "item_group": "Cửa CN Đức",
+      "member_count": 2,
+      "same_rates": true,
+      "any_bom": true,
+      "any_used": true,
+      "hint": "giá giống nhau nhưng đã dùng trong chứng từ — gộp phải dời lịch sử",
+      "members": [
+        {
+          "item_code": "TP-ALD-548N-GS",
+          "stock_uom": "Bộ",
+          "price_count": 2,
+          "rates": [
+            "1390000"
+          ],
+          "bom_count": 1,
+          "used_in_documents": 7
+        },
+        {
+          "item_code": "TP-ALD-548N-THO",
+          "stock_uom": "Bộ",
+          "price_count": 2,
+          "rates": [
+            "1390000"
+          ],
+          "bom_count": 1,
+          "used_in_documents": 7
+        }
+      ]
+    },
+    {
+      "item_name": "CỬA ĐL6D XN-XLC_TRỌN BỘ_5-6m²",
+      "item_group": "Cửa Đài Loan",
+      "member_count": 2,
+      "same_rates": true,
+      "any_bom": true,
+      "any_used": true,
+      "hint": "giá giống nhau nhưng đã dùng trong chứng từ — gộp phải dời lịch sử",
+      "members": [
+        {
+          "item_code": "TP-CUADL6D-XN-XLC_TRONBO_5-6m²",
+          "stock_uom": "Bộ",
+          "price_count": 2,
+          "rates": [
+            "430000"
+          ],
+          "bom_count": 1,
+          "used_in_documents": 5
+        },
+        {
+          "item_code": "TP-CUADL6D-XN-VK_TRONBO_5-6m²",
+          "stock_uom": "Bộ",
+          "price_count": 2,
+          "rates": [
+            "430000"
+          ],
+          "bom_count": 1,
+          "used_in_documents": 6
+        }
+      ]
+    },
+    {
+      "item_name": "CỬA ĐL7D XN-XLC_TRỌN BỘ_5-6m²",
+      "item_group": "Cửa Đài Loan",
+      "member_count": 2,
+      "same_rates": true,
+      "any_bom": true,
+      "any_used": true,
+      "hint": "giá giống nhau nhưng đã dùng trong chứng từ — gộp phải dời lịch sử",
+      "members": [
+        {
+          "item_code": "TP-CUADL7D-XN-XLC_TRONBO_5-6m²",
+          "stock_uom": "Bộ",
+          "price_count": 1,
+          "rates": [
+            "460000"
+          ],
+          "bom_count": 1,
+          "used_in_documents": 4
+        },
+        {
+          "item_code": "TP-CUADL7D-XN-VK_TRONBO_5-6m²",
+          "stock_uom": "Bộ",
+          "price_count": 1,
+          "rates": [
+            "460000"
+          ],
+          "bom_count": 1,
+          "used_in_documents": 4
+        }
+      ]
+    },
+    {
+      "item_name": "CỬA ĐL8D XN-XLC_TRỌN BỘ_5-6m²",
+      "item_group": "Cửa Đài Loan",
+      "member_count": 2,
+      "same_rates": true,
+      "any_bom": true,
+      "any_used": true,
+      "hint": "giá giống nhau nhưng đã dùng trong chứng từ — gộp phải dời lịch sử",
+      "members": [
+        {
+          "item_code": "TP-CUADL8D-XN-XLC_TRONBO_5-6m²",
+          "stock_uom": "Bộ",
+          "price_count": 1,
+          "rates": [
+            "490000"
+          ],
+          "bom_count": 1,
+          "used_in_documents": 4
+        },
+        {
+          "item_code": "TP-CUADL8D-XN-VK_TRONBO_5-6m²",
+          "stock_uom": "Bộ",
+          "price_count": 1,
+          "rates": [
+            "490000"
+          ],
+          "bom_count": 1,
+          "used_in_documents": 4
+        }
+      ]
+    },
+    {
+      "item_name": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_5-6m²",
+      "item_group": "Cửa Đài Loan",
+      "member_count": 2,
+      "same_rates": true,
+      "any_bom": true,
+      "any_used": true,
+      "hint": "giá giống nhau nhưng đã dùng trong chứng từ — gộp phải dời lịch sử",
+      "members": [
+        {
+          "item_code": "TP-CUADL1LY-XN-XLC_TRONBO_5-6m²",
+          "stock_uom": "Bộ",
+          "price_count": 1,
+          "rates": [
+            "570000"
+          ],
+          "bom_count": 1,
+          "used_in_documents": 4
+        },
+        {
+          "item_code": "TP-CUADL1LY-XN-VK_TRONBO_5-6m²",
+          "stock_uom": "Bộ",
+          "price_count": 1,
+          "rates": [
+            "570000"
+          ],
+          "bom_count": 1,
+          "used_in_documents": 5
+        }
+      ]
+    },
+    {
+      "item_name": "BÁT (DÙNG BẮT VÀO LÁ YẾM)",
+      "item_group": "Nan/lá cửa",
+      "member_count": 2,
+      "same_rates": true,
+      "any_bom": false,
+      "any_used": true,
+      "hint": "giá giống nhau nhưng đã dùng trong chứng từ — gộp phải dời lịch sử",
+      "members": [
+        {
+          "item_code": "NHOM-BAT-MV",
+          "stock_uom": "Cái",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 5
+        },
+        {
+          "item_code": "NHOM-BAT-SN",
+          "stock_uom": "Cái",
+          "price_count": 0,
+          "rates": [],
+          "bom_count": 0,
+          "used_in_documents": 5
+        }
+      ]
+    }
+  ]
+}

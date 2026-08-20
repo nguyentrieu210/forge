@@ -5,12 +5,42 @@ import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const ROOT = path.win32.resolve(process.env.FORGE_LOCAL_REPO_ROOT || 'C:\\alumdoor');
 const ORIGIN = (process.env.FORGE_ORIGIN || 'http://127.0.0.1:8799').replace(/\/$/, '');
 const AUTHORITY_BRANCH = process.env.FORGE_LIVE_BRANCH || 'main';
 const APPLY = process.argv.includes('--apply');
-const EXPECTED_COUNT = 22;
+
+/**
+ * 3 nhà cung cấp, không phải 22.
+ *
+ * Đo trên nguồn ngày 2026-08-19:
+ *   DS-KH-NCC.md   → 2 dòng khai `NCC` ở cột `KH/NCC/KH LẺ`: `CTY NAM PHÁT` (dòng 196),
+ *                    `ANH BẢO BỌ - LỘC PHÁT` (dòng 318). Tổng 448 đối tác có tên, 2 là NCC.
+ *   DS-HH-NHẬP.md  → 1 tên dưới cột `NHÀ CUNG CẤP`: `TIẾN ĐẠT` (dòng 2).
+ *   Gộp theo `supplierKey` → 3 tên, không trùng nhau.
+ *
+ * 22 là con số của một bản nguồn nào đó không còn đối chiếu được; giữ nó thì `SOURCE_DRIFT` bắn
+ * mọi lượt chạy và người ta hiểu nhầm thành "nguồn hỏng".
+ *
+ * CẢNH BÁO CÒN TREO: `DS-HH-NHẬP.md` tự khai "2 dòng có dữ liệu" — 1 tiêu đề + 1 dữ liệu. Một
+ * sheet hàng nhập chỉ có một dòng là dấu hiệu bản trích bị cắt. Và `TIẾN ĐẠT` cũng nằm ở
+ * DS-KH-NCC dòng 213 với cột phân loại BỎ TRỐNG, tức đang bị bộ nhập Customer xếp vào rổ hoãn.
+ * Hai nguồn nói khác nhau về cùng một cái tên — chủ xưởng phải chốt, không đoán ở đây.
+ */
+const EXPECTED_COUNT = 3;
+
+/**
+ * Dòng dữ liệu đầu tiên của `DS-KH-NCC.md` là dòng 3: dòng 1 là tiêu đề bảng
+ * (`DANH SÁCH NCC/KHÁCH HÀNG`), dòng 2 là tiêu đề cột.
+ *
+ * VÌ SAO PHẢI CHẶN: tiêu đề cột phân loại viết là `KH/NCC/KH LẺ`, mà bộ lọc dưới đây nhận diện
+ * NCC bằng `includes('NCC')` — nên chính DÒNG TIÊU ĐỀ tự nhận mình là nhà cung cấp và lọt vào
+ * danh sách với tên `Nhà cung cấp/tên khách hàng`. Đo được: không guard → 4 NCC, có guard → 3.
+ * Nhánh `DS-HH-NHẬP` bên dưới đã có guard `<= 1` từ đầu; nhánh này thì chưa.
+ */
+const PARTY_FIRST_DATA_ROW = 3;
 const PARTY_SOURCE = path.join(ROOT, 'apps', 'alumdoor', 'docs', 'nguon', 'don-hang-xuat-hang', 'DS-KH-NCC.md');
 const GOODS_SOURCE = path.join(ROOT, 'apps', 'alumdoor', 'docs', 'nguon', 'don-hang-xuat-hang', 'DS-HH-NHẬP.md');
 const runId = `${new Date().toISOString().replace(/[:.]/g, '-')}-${crypto.randomBytes(4).toString('hex')}`;
@@ -78,8 +108,8 @@ function parseSegments(line) {
   }
   return out;
 }
-function sourceRows() {
-  if (!existsSync(PARTY_SOURCE) || !existsSync(GOODS_SOURCE)) throw fail('SOURCE_MISSING', 'DS-KH-NCC.md or DS-HH-NHẬP.md missing');
+/** Gộp hai nguồn thành danh sách NCC. Thuần văn bản, không đụng fs/process — để test gọi được. */
+export function collectSuppliers(partyText, goodsText) {
   const map = new Map();
   const add = (row, source) => {
     const name = clean(row.name);
@@ -92,20 +122,25 @@ function sourceRows() {
       existing.sources.push(source);
     }
   };
-  for (const raw of readFileSync(PARTY_SOURCE, 'utf8').normalize('NFC').split(/\r?\n/)) {
+  for (const raw of String(partyText ?? '').normalize('NFC').split(/\r?\n/)) {
     const rowNo = raw.match(/^\s*(\d+)\s*\|/u)?.[1];
-    if (!rowNo) continue;
+    if (!rowNo || Number(rowNo) < PARTY_FIRST_DATA_ROW) continue;
     const fields = parseSegments(raw);
     if (!upper(fields[2]).includes('NCC')) continue;
     add({ name: fields[0], owner: fields[1], phone: fields[3], address: fields[4], note: fields[5] }, `DS-KH-NCC:${rowNo}`);
   }
-  for (const raw of readFileSync(GOODS_SOURCE, 'utf8').normalize('NFC').split(/\r?\n/)) {
+  for (const raw of String(goodsText ?? '').normalize('NFC').split(/\r?\n/)) {
     const rowNo = raw.match(/^\s*(\d+)\s*\|/u)?.[1];
     if (!rowNo || Number(rowNo) <= 1) continue;
     const fields = parseSegments(raw);
     if (fields[1]) add({ name: fields[1] }, `DS-HH-NHẬP:${rowNo}`);
   }
-  const suppliers = [...map.values()].sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+  return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+}
+
+function sourceRows() {
+  if (!existsSync(PARTY_SOURCE) || !existsSync(GOODS_SOURCE)) throw fail('SOURCE_MISSING', 'DS-KH-NCC.md or DS-HH-NHẬP.md missing');
+  const suppliers = collectSuppliers(readFileSync(PARTY_SOURCE, 'utf8'), readFileSync(GOODS_SOURCE, 'utf8'));
   if (suppliers.length !== EXPECTED_COUNT) throw fail('SOURCE_DRIFT', `expected ${EXPECTED_COUNT} canonical suppliers, got ${suppliers.length}`);
   const sha256 = crypto.createHash('sha256')
     .update(readFileSync(PARTY_SOURCE))
@@ -185,27 +220,42 @@ async function upsert(row) {
   return existing ? 'updated' : 'created';
 }
 
-assertLocalOnly();
-const repoSha = assertAuthority();
-const source = sourceRows();
-mkdirSync(runDir, { recursive: true });
-writeFileSync(path.join(runDir, 'source.json'), `${JSON.stringify(source, null, 2)}\n`, 'utf8');
-await login();
-if (!APPLY) {
-  const planned = { exact: 0, 'would-create': 0, 'would-update': 0 };
-  for (const row of source.suppliers) planned[await upsert(row)] += 1;
-  console.log(`ALUMDOOR_SUPPLIER_DRY_RUN_PASS suppliers=${source.suppliers.length} create=${planned['would-create']} update=${planned['would-update']} exact=${planned.exact}`);
-  process.exit(0);
+async function main() {
+  assertLocalOnly();
+  const repoSha = assertAuthority();
+  const source = sourceRows();
+  mkdirSync(runDir, { recursive: true });
+  writeFileSync(path.join(runDir, 'source.json'), `${JSON.stringify(source, null, 2)}\n`, 'utf8');
+  await login();
+  if (!APPLY) {
+    const planned = { exact: 0, 'would-create': 0, 'would-update': 0 };
+    for (const row of source.suppliers) planned[await upsert(row)] += 1;
+    console.log(`ALUMDOOR_SUPPLIER_DRY_RUN_PASS suppliers=${source.suppliers.length} create=${planned['would-create']} update=${planned['would-update']} exact=${planned.exact}`);
+    process.exit(0);
+  }
+  let lockPath = '';
+  try {
+    lockPath = acquireLock(repoSha); backup();
+    const first = { created: 0, updated: 0, exact: 0 };
+    for (const row of source.suppliers) first[await upsert(row)] += 1;
+    const second = { created: 0, updated: 0, exact: 0 };
+    for (const row of source.suppliers) second[await upsert(row)] += 1;
+    if (second.created !== 0 || second.updated !== 0 || second.exact !== EXPECTED_COUNT) throw fail('IDEMPOTENCY_FAILED', JSON.stringify(second));
+    writeFileSync(path.join(runDir, 'result.json'), `${JSON.stringify({ status: 'PASS', repo_sha: repoSha, count: EXPECTED_COUNT, first, second }, null, 2)}\n`, 'utf8');
+    console.log(`ALUMDOOR_SUPPLIER_MASTER_IMPORT_PASS suppliers=${EXPECTED_COUNT} created=${first.created} updated=${first.updated} exact=${first.exact}`);
+    console.log(`ALUMDOOR_SUPPLIER_MASTER_IDEMPOTENCE_PASS exact=${second.exact}`);
+  } finally { releaseLock(lockPath); }
 }
-let lockPath = '';
-try {
-  lockPath = acquireLock(repoSha); backup();
-  const first = { created: 0, updated: 0, exact: 0 };
-  for (const row of source.suppliers) first[await upsert(row)] += 1;
-  const second = { created: 0, updated: 0, exact: 0 };
-  for (const row of source.suppliers) second[await upsert(row)] += 1;
-  if (second.created !== 0 || second.updated !== 0 || second.exact !== EXPECTED_COUNT) throw fail('IDEMPOTENCY_FAILED', JSON.stringify(second));
-  writeFileSync(path.join(runDir, 'result.json'), `${JSON.stringify({ status: 'PASS', repo_sha: repoSha, count: EXPECTED_COUNT, first, second }, null, 2)}\n`, 'utf8');
-  console.log(`ALUMDOOR_SUPPLIER_MASTER_IMPORT_PASS suppliers=${EXPECTED_COUNT} created=${first.created} updated=${first.updated} exact=${first.exact}`);
-  console.log(`ALUMDOOR_SUPPLIER_MASTER_IDEMPOTENCE_PASS exact=${second.exact}`);
-} finally { releaseLock(lockPath); }
+
+/**
+ * File này vừa là script chạy thật, vừa là nơi chứa `collectSuppliers` cho test gọi. Không có cổng
+ * này thì `import` từ test sẽ kéo theo cả đòi Windows, đòi cây git sạch, rồi gọi mạng.
+ *
+ * So CẢ đường tuyệt đối LẪN tên file: trên Windows hai đường dẫn khác hoa/thường vẫn là một file,
+ * mà so hụt ở đây thì script im lặng không làm gì — kiểu hỏng tệ nhất trong một bộ nhập dữ liệu.
+ */
+const selfPath = fileURLToPath(import.meta.url);
+const entryPath = process.argv[1] ? path.resolve(process.argv[1]) : '';
+const RUN_AS_SCRIPT = entryPath === selfPath
+  || (entryPath !== '' && path.basename(entryPath).toLowerCase() === path.basename(selfPath).toLowerCase());
+if (RUN_AS_SCRIPT) await main();

@@ -1,5 +1,5 @@
 import {
-  alumdoorCommercialBenefits, defaultAlumdoorDiscountPercent, errors, resolveCommercialLine,
+  alumdoorCommercialBenefits, areaTierBasisSqm, defaultAlumdoorDiscountPercent, errors, resolveCommercialLine,
   withAlumdoorDefaultDiscountSnapshot,
   type JsonObject, type JsonValue, type MutationCommand,
 } from "./router-platform.js";
@@ -36,6 +36,21 @@ export async function previewSalesCommercialLine(args: FrappeArgs, context: Frap
     : Number.isFinite(explicitArea) && explicitArea > 0
       ? explicitArea
       : undefined;
+
+  /**
+   * Cùng một phép suy diện tích-một-bộ mà `optionalPositiveFacts` dùng lúc lưu đơn, để xem trước
+   * và lưu không bao giờ ra hai bậc khác nhau. `billable_area_sqm` ở đây là diện tích CẢ DÒNG vừa
+   * tính lại (`effectiveArea`), nên nó phải đi vào cùng ô đó.
+   *
+   * Chuyển tay từ `router.ts` khi gom nhánh: `main` đã dời `previewSalesCommercialLine` sang file
+   * này (`refactor(router): bóc 6 method AlumDoor khỏi switch dùng chung`), còn `agent-live` sửa
+   * nó tại chỗ cũ. Bỏ qua bước chuyển này là màn xem trước báo một bậc, lưu đơn ra bậc khác.
+   */
+  const previewAreaPerSet = areaTierBasisSqm({
+    area_per_set_sqm: line.area_per_set_sqm,
+    billable_area_sqm: effectiveArea,
+    set_count: line.set_count,
+  });
 
   const fakeCommand: MutationCommand<JsonObject> = {
     schema_version: 1,
@@ -84,6 +99,9 @@ export async function previewSalesCommercialLine(args: FrappeArgs, context: Frap
       ? { discountPercentageOverride: Number.isFinite(requestedDiscount) ? requestedDiscount : expectedDiscount }
       : {}),
     ...(effectiveArea === undefined ? {} : { areaSqm: effectiveArea }),
+    // Bậc tra theo diện tích MỘT BỘ. `effectiveArea` là qty của dòng m², tức ĐÃ nhân số bộ —
+    // đưa thẳng nó xuống là đơn 2 bộ cửa 3,5m² ăn nhầm bậc 7m².
+    ...(previewAreaPerSet === undefined ? {} : { areaPerSetSqm: previewAreaPerSet }),
     ...(Number.isFinite(Number(line.length_m)) ? { lengthM: Number(line.length_m) } : {}),
     ...(Number.isFinite(Number(line.set_count)) ? { setCount: Number(line.set_count) } : {}),
   });

@@ -1,0 +1,149 @@
+{
+  "format": "alumdoor-catalog-decisions/v1",
+  "//": [
+    "Quyết định về danh mục, khai thành DỮ LIỆU để sống sót qua mỗi lần import lại.",
+    "",
+    "Bản trích nguồn không biết gì về những quyết định này — nó chỉ ghi lại bảng tính nói gì.",
+    "Nên nếu không có file này, mỗi lần chạy `catalog-all` sẽ bật lại 21 mã đã cho nghỉ hưu và",
+    "trả `default_sales_uom` về một đơn vị đã bị gỡ. Đo được: importer từ chối với 22 xung đột.",
+    "",
+    "Mỗi mục PHẢI có lý do. Một quyết định không kèm lý do thì lần sau không ai dám đụng vào,",
+    "và cũng không ai biết khi nào nó hết đúng."
+  ],
+  "retired_items": [
+    {
+      "item_code": "VT-TON-DL1LYX175",
+      "item_name": "TÔN KẼM ĐÀI LOAN 1LY STD",
+      "kept": "VT-TON-DL1LYX124",
+      "reason": "Trùng tên trong cùng nhóm hàng với mã được giữ, và KHÔNG có giá, KHÔNG có định mức, KHÔNG chứng từ nào nhắc tới. Màu là thuộc tính của dòng chứng từ (mọi dòng có `color`), không phải của mặt hàng."
+    },
+    {
+      "item_code": "PK-DINHTAN-SN",
+      "item_name": "ĐINH TÁN",
+      "kept": "PK-DINHTAN-MV",
+      "reason": "Trùng tên trong cùng nhóm hàng với mã được giữ, và KHÔNG có giá, KHÔNG có định mức, KHÔNG chứng từ nào nhắc tới. Màu là thuộc tính của dòng chứng từ (mọi dòng có `color`), không phải của mặt hàng."
+    },
+    {
+      "item_code": "RAY-RNHUA-CR",
+      "item_name": "RON NHỰA CẠNH RAY",
+      "kept": "RAY-RNHUA-LONG-CR",
+      "reason": "Trùng tên trong cùng nhóm hàng với mã được giữ, và KHÔNG có giá, KHÔNG có định mức, KHÔNG chứng từ nào nhắc tới. Màu là thuộc tính của dòng chứng từ (mọi dòng có `color`), không phải của mặt hàng."
+    },
+    {
+      "item_code": "PK-PL168",
+      "item_name": "PULY 168",
+      "kept": "PK-PULY-168",
+      "reason": "Trùng tên trong cùng nhóm hàng với mã được giữ, và KHÔNG có giá, KHÔNG có định mức, KHÔNG chứng từ nào nhắc tới. Màu là thuộc tính của dòng chứng từ (mọi dòng có `color`), không phải của mặt hàng."
+    },
+    {
+      "item_code": "PK-PL140",
+      "item_name": "PULY 140",
+      "kept": "PK-PULY-140",
+      "reason": "Trùng tên trong cùng nhóm hàng với mã được giữ, và KHÔNG có giá, KHÔNG có định mức, KHÔNG chứng từ nào nhắc tới. Màu là thuộc tính của dòng chứng từ (mọi dòng có `color`), không phải của mặt hàng."
+    },
+    {
+      "item_code": "NVL-RHU100-THÔ",
+      "item_name": "RAY HỘP TD U100",
+      "kept": "RAY-HOP-TD-U100",
+      "reason": "Trùng tên trong cùng nhóm hàng với mã được giữ, và KHÔNG có giá, KHÔNG có định mức, KHÔNG chứng từ nào nhắc tới. Màu là thuộc tính của dòng chứng từ (mọi dòng có `color`), không phải của mặt hàng."
+    },
+    {
+      "item_code": "NVL-RHU100-VK",
+      "item_name": "RAY HỘP TD U100",
+      "kept": "RAY-HOP-TD-U100",
+      "reason": "Trùng tên trong cùng nhóm hàng với mã được giữ, và KHÔNG có giá, KHÔNG có định mức, KHÔNG chứng từ nào nhắc tới. Màu là thuộc tính của dòng chứng từ (mọi dòng có `color`), không phải của mặt hàng."
+    },
+    {
+      "item_code": "NVL-RHU100-GS",
+      "item_name": "RAY HỘP TD U100",
+      "kept": "RAY-HOP-TD-U100",
+      "reason": "Trùng tên trong cùng nhóm hàng với mã được giữ, và KHÔNG có giá, KHÔNG có định mức, KHÔNG chứng từ nào nhắc tới. Màu là thuộc tính của dòng chứng từ (mọi dòng có `color`), không phải của mặt hàng."
+    },
+    {
+      "item_code": "NVL-R87A1-THÔ",
+      "item_name": "RAY ĐƠN TD U76",
+      "kept": "RAY-TD87A1",
+      "reason": "Trùng tên trong cùng nhóm hàng với mã được giữ, và KHÔNG có giá, KHÔNG có định mức, KHÔNG chứng từ nào nhắc tới. Màu là thuộc tính của dòng chứng từ (mọi dòng có `color`), không phải của mặt hàng."
+    },
+    {
+      "item_code": "NVL-R87A1-VK",
+      "item_name": "RAY ĐƠN TD U76",
+      "kept": "RAY-TD87A1",
+      "reason": "Trùng tên trong cùng nhóm hàng với mã được giữ, và KHÔNG có giá, KHÔNG có định mức, KHÔNG chứng từ nào nhắc tới. Màu là thuộc tính của dòng chứng từ (mọi dòng có `color`), không phải của mặt hàng."
+    },
+    {
+      "item_code": "NVL-R87A1-GS",
+      "item_name": "RAY ĐƠN TD U76",
+      "kept": "RAY-TD87A1",
+      "reason": "Trùng tên trong cùng nhóm hàng với mã được giữ, và KHÔNG có giá, KHÔNG có định mức, KHÔNG chứng từ nào nhắc tới. Màu là thuộc tính của dòng chứng từ (mọi dòng có `color`), không phải của mặt hàng."
+    },
+    {
+      "item_code": "NVL-RHM8-THÔ",
+      "item_name": "RAY HỘP TD U76",
+      "kept": "RAY-RAYHOP",
+      "reason": "Trùng tên trong cùng nhóm hàng với mã được giữ, và KHÔNG có giá, KHÔNG có định mức, KHÔNG chứng từ nào nhắc tới. Màu là thuộc tính của dòng chứng từ (mọi dòng có `color`), không phải của mặt hàng."
+    },
+    {
+      "item_code": "NVL-RHM8-VK",
+      "item_name": "RAY HỘP TD U76",
+      "kept": "RAY-RAYHOP",
+      "reason": "Trùng tên trong cùng nhóm hàng với mã được giữ, và KHÔNG có giá, KHÔNG có định mức, KHÔNG chứng từ nào nhắc tới. Màu là thuộc tính của dòng chứng từ (mọi dòng có `color`), không phải của mặt hàng."
+    },
+    {
+      "item_code": "NVL-RHM8-GS",
+      "item_name": "RAY HỘP TD U76",
+      "kept": "RAY-RAYHOP",
+      "reason": "Trùng tên trong cùng nhóm hàng với mã được giữ, và KHÔNG có giá, KHÔNG có định mức, KHÔNG chứng từ nào nhắc tới. Màu là thuộc tính của dòng chứng từ (mọi dòng có `color`), không phải của mặt hàng."
+    },
+    {
+      "item_code": "NVL-AL70(1LOP)-VK",
+      "item_name": "AL70 ( 1 LỚP)",
+      "kept": "NVL-AL70(1LOP)-THO",
+      "reason": "Trùng tên trong cùng nhóm hàng với mã được giữ, và KHÔNG có giá, KHÔNG có định mức, KHÔNG chứng từ nào nhắc tới. Màu là thuộc tính của dòng chứng từ (mọi dòng có `color`), không phải của mặt hàng."
+    },
+    {
+      "item_code": "NVL-AL70(1LOP)-GS",
+      "item_name": "AL70 ( 1 LỚP)",
+      "kept": "NVL-AL70(1LOP)-THO",
+      "reason": "Trùng tên trong cùng nhóm hàng với mã được giữ, và KHÔNG có giá, KHÔNG có định mức, KHÔNG chứng từ nào nhắc tới. Màu là thuộc tính của dòng chứng từ (mọi dòng có `color`), không phải của mặt hàng."
+    },
+    {
+      "item_code": "NVL-ALVIPST700-VK",
+      "item_name": "ALVIPST700",
+      "kept": "NVL-ALVIPST700-THO",
+      "reason": "Trùng tên trong cùng nhóm hàng với mã được giữ, và KHÔNG có giá, KHÔNG có định mức, KHÔNG chứng từ nào nhắc tới. Màu là thuộc tính của dòng chứng từ (mọi dòng có `color`), không phải của mặt hàng."
+    },
+    {
+      "item_code": "NVL-ALVIPST700-GS",
+      "item_name": "ALVIPST700",
+      "kept": "NVL-ALVIPST700-THO",
+      "reason": "Trùng tên trong cùng nhóm hàng với mã được giữ, và KHÔNG có giá, KHÔNG có định mức, KHÔNG chứng từ nào nhắc tới. Màu là thuộc tính của dòng chứng từ (mọi dòng có `color`), không phải của mặt hàng."
+    },
+    {
+      "item_code": "NVL-ALVIPST500-VK",
+      "item_name": "ALVIPST500",
+      "kept": "NVL-ALVIPST500-THO",
+      "reason": "Trùng tên trong cùng nhóm hàng với mã được giữ, và KHÔNG có giá, KHÔNG có định mức, KHÔNG chứng từ nào nhắc tới. Màu là thuộc tính của dòng chứng từ (mọi dòng có `color`), không phải của mặt hàng."
+    },
+    {
+      "item_code": "NVL-ALVIPST500-GS",
+      "item_name": "ALVIPST500",
+      "kept": "NVL-ALVIPST500-THO",
+      "reason": "Trùng tên trong cùng nhóm hàng với mã được giữ, và KHÔNG có giá, KHÔNG có định mức, KHÔNG chứng từ nào nhắc tới. Màu là thuộc tính của dòng chứng từ (mọi dòng có `color`), không phải của mặt hàng."
+    },
+    {
+      "item_code": "NVL-GOIGANG",
+      "item_name": "GỐI GANG",
+      "kept": "TP-GOIGANG",
+      "reason": "Trùng tên trong cùng nhóm hàng với mã được giữ, và KHÔNG có giá, KHÔNG có định mức, KHÔNG chứng từ nào nhắc tới. Màu là thuộc tính của dòng chứng từ (mọi dòng có `color`), không phải của mặt hàng."
+    }
+  ],
+  "field_overrides": [
+    {
+      "item_code": "NHOM-LAMAU-PHE",
+      "field": "default_sales_uom",
+      "value": "Kg",
+      "reason": "Nguồn ghi `Thùng`, nhưng `Thùng` đã bị gỡ khỏi danh mục đơn vị (E07 cấm). Quay về `stock_uom`, cũng đúng bằng `default_purchase_uom` — cả mua lẫn tồn đều Kg, chỉ mỗi ô bán lạc."
+    }
+  ]
+}

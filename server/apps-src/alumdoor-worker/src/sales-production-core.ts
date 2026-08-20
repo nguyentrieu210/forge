@@ -687,6 +687,46 @@ export function isFullSetSalesItemCode(value: unknown): boolean {
   return bomItemKey(value).includes("TRONBO");
 }
 
+/**
+ * Mã hàng có nói TÁCH MÓN không — cùng ba cách viết mà nguồn dùng.
+ *
+ * `scripts/lib/alumdoor-sales-bom-composition.mjs` đo trên `ms-lien/ĐM.md`: 2 mã viết `TACHMON`
+ * và 4 mã chỉ có hậu tố ` - TM` (`TP-LUOI-MV-STD - TM`, `TP-LUOI-SN-STD - TM`,
+ * `TP-LUOI-SNPHI19-INOX - TM`, `TP-LUOIMV-INOX- TM`). `TM` chỉ tính ở CUỐI mã: hai chữ quá ngắn
+ * để nhận ở giữa.
+ *
+ * Cho toàn bộ vị từ này chạy qua 569 mã phân biệt của `ĐM.md` + `app-vat-tu/BaoCao.md`: khớp
+ * đúng 6 mã, đúng 6 mã tách món thật, KHÔNG mã nào trúng oan, và giao với
+ * `isFullSetSalesItemCode` (94 mã) là RỖNG.
+ */
+function isSplitSalesItemCode(value: unknown): boolean {
+  const key = bomItemKey(value);
+  return key.includes("TACHMON") || key.includes("CHILA") || key.endsWith("TM");
+}
+
+/**
+ * Dòng bán này có cấu thành để xổ không.
+ *
+ * Trước đây cổng này chỉ là `isFullSetSalesItemCode` — dò chuỗi `TRONBO` trong MÃ HÀNG. Hai chỗ
+ * hỏng đo được:
+ *
+ *  1. HÔM NAY: bộ dựng template cấu thành đã sinh template cho cả 6 mặt hàng TÁCH MÓN, nhưng mã
+ *     của chúng không chứa `TRONBO` nên cổng từ chối trước khi tới `inspectSalesLineBom
+ *     Composition` — 6 template đó là hàng chết, không đơn nào xổ được.
+ *  2. SAU KHI GỘP MÃ: mã sạch token thì không mã nào còn `TRONBO`, cổng từ chối 100% cửa lưới.
+ *
+ * Nên hỏi thêm CÁCH GIAO trên dòng bán (`sales_mode`, Select hai giá trị đã có trên Quotation /
+ * Sales Order / Sales Invoice Item). Dòng nào khai cách giao là dòng nói rõ nó cần cấu thành
+ * nào — đó chính là fact đã được trả về dòng bán thay vì nhét trong mã.
+ *
+ * Vẫn giữ hai phép dò mã làm ĐƯỜNG LUI cho 100 mã còn nhồi cách giao: chúng chưa được gộp, và
+ * dòng bán cũ để trống `sales_mode` thì vẫn phải chạy như trước.
+ */
+function salesLineHasComposition(itemCode: string, args: Json): boolean {
+  if (text(args.sales_mode)) return true;
+  return isFullSetSalesItemCode(itemCode) || isSplitSalesItemCode(itemCode);
+}
+
 function sameBomItem(left: unknown, right: unknown): boolean {
   const leftKey = bomItemKey(left);
   return Boolean(leftKey) && leftKey === bomItemKey(right);
@@ -1129,7 +1169,7 @@ export async function previewDraftSalesBomRequirements(call: ProductionPlatformC
     const itemCode = text(args.item_code);
     if (!itemCode) throw new Error("Cần chọn mặt hàng cửa.");
     const item = await readDoc<ItemDoc>(call, "Item", itemCode);
-    if (!isFullSetSalesItemCode(itemCode)) {
+    if (!salesLineHasComposition(itemCode, args)) {
       return answer({
         item_code: itemCode,
         bom_applicable: false,
@@ -1142,7 +1182,7 @@ export async function previewDraftSalesBomRequirements(call: ProductionPlatformC
         actual_complete: true,
         pending_fields: [],
         static_bom: false,
-        reason: "Chỉ mặt hàng có mã TRỌN BỘ mới xổ BOM trên đơn bán hàng.",
+        reason: "Dòng bán chưa chọn Cách giao và mã hàng cũng không nói TRỌN BỘ / TÁCH MÓN, nên không có danh sách cấu thành để xổ.",
       });
     }
     const staticBoms = await listDocs<BomDoc>(call, "Bill of Materials", [

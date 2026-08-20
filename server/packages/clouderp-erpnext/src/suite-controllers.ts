@@ -9,7 +9,7 @@ import { reverseGl, reversePayment, reverseStock } from "../../ledger/src/index.
 import { fromScaledInt, multiplyScaled, toScaledInt } from "../../money/src/index.js";
 import { domainEvent } from "../../outbox/src/index.js";
 import { calculateSalesTotals } from "../../clouderp-selling/src/totals.js";
-import { resolveServerPrice } from "../../clouderp-pricing/src/index.js";
+import { areaTierBasisSqm, resolveServerPrice } from "../../clouderp-pricing/src/index.js";
 import { buildTrackedStockLines, deriveOutgoingValuation } from "../../clouderp-stock/src/index.js";
 import type {
   AssetDisposalData, AssetMaintenanceData, AssetMovementData, ExpenseClaimData, ExpenseClaimItem,
@@ -397,7 +397,11 @@ export class PosInvoiceController extends SuiteController<PosInvoiceData> {
       let rate = toScaledInt(raw.rate, scale, `items[${index}].rate`); let pricing: JsonObject = {};
       if (priceList) {
         const customerGroup = typeof customer.customer_group === "string" ? customer.customer_group : null;
-        const resolved = await resolveServerPrice(context as unknown as ControllerContext<JsonObject>, { priceList, itemCode: raw.item_code, documentCurrency: currency, partyType: "Customer", party: input.customer, ...(customerGroup ? { customerGroup } : {}), postingDate: input.posting_at, qtyMicros: qty });
+        // Cửa thứ ba của cùng một lỗi: thiếu diện tích thì `priceTierMatches` loại mọi dòng giá
+        // có bậc, nên POS bán mặt hàng có thang bậc sẽ báo "does not exist" trong khi báo giá và
+        // đơn hàng cùng mặt hàng đó vẫn ra giá.
+        const areaPerSet = areaTierBasisSqm(raw as unknown as { area_per_set_sqm?: unknown; billable_area_sqm?: unknown; set_count?: unknown });
+        const resolved = await resolveServerPrice(context as unknown as ControllerContext<JsonObject>, { priceList, itemCode: raw.item_code, documentCurrency: currency, ...(areaPerSet === undefined ? {} : { billableAreaSqm: areaPerSet }), partyType: "Customer", party: input.customer, ...(customerGroup ? { customerGroup } : {}), postingDate: input.posting_at, qtyMicros: qty });
         rate = resolved.rate_minor;
         pricing = {
           item_price: resolved.item_price,

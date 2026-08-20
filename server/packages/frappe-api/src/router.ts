@@ -12,7 +12,7 @@
  */
 
 import {
-  appMethodTarget, blocksSelfApproval, combinedNavigation, dispatchAppMethod, errors, mergeCustomizations,
+  appMethodTarget, areaTierBasisSqm, assertItemPriceTierIsUnambiguous, blocksSelfApproval, combinedNavigation, dispatchAppMethod, errors, mergeCustomizations,
   navItemPath, parseCsvImport, parseCustomField, parseDocTypeMeta, parsePropertySetter, parseQueryRequest,
   permissionAllows, renderPrintFormat, resolveAutoname, sha256Hex, validateWorkflow,
   type Actor, type AppInstaller, type AppMethodEnv, type AppReportService, type AppReportSpec,
@@ -697,9 +697,25 @@ async function createDocument(doctype: string, args: FrappeArgs, context: Frappe
     payload = dropNoCopyFields(payload, meta);
   }
 
+  await assertNoAmbiguousItemPrice(doctype, payload, "", context);
+
   const name = amendedFrom
     ? await nextAmendmentName(doctype, amendedFrom, context)
-    : await resolveNewName(doctype, meta, submitted, context);
+    // Đặt tên phải nhìn thấy `default` của trường, nếu không thì `default` là ảo tưởng.
+    //
+    // `payload` là tài liệu SẼ được ghi (đã áp default ngay trên); `submitted` là thân yêu cầu
+    // thô. Trước khi vá, tên được tính từ `submitted`, nên một doctype đặt tên bằng
+    // `format:{…}` mà khoá nằm trong đó có `default` thì lượt tạo nào không tự khai khoá ấy
+    // cũng bị TỪ CHỐI. Đo được trên `Item Price` (`format:…:{price_variant}:{area_tier}`,
+    // `area_tier` có `default: "MOI-DIEN-TICH"`): POST không mang `area_tier` ném
+    // "area_tier is required because it appears in the Item Price naming format", trong khi
+    // cùng tài liệu đó qua đường có default lại ra tên hợp lệ. Frappe áp default TRƯỚC autoname,
+    // và ngay trên đây đã nói "Frappe defaults are part of the server contract" — nên đây là
+    // sửa cho khớp hợp đồng đó, không phải nới luật.
+    //
+    // `name` phải lấy lại từ `submitted`: `stripServerOwnedFields` loại nó khỏi `payload`, mà
+    // đường `prompt` của `resolveNewName` đọc đúng trường này để lấy tên do người dùng đặt.
+    : await resolveNewName(doctype, meta, namingSource(submitted, payload), context);
 
   await context.runCommand(await buildCommand({
     tenantId: context.tenantId, actor: context.actor, doctype, name,
@@ -757,6 +773,9 @@ async function renameDocument(args: FrappeArgs, context: FrappeRouterContext): P
   if (await context.documents.getDocument(context.tenantId, doctype, newName)) throw errors.exists();
 
   const namingField = meta.autoname?.startsWith("field:") ? meta.autoname.slice("field:".length) : undefined;
+  // `cascade` phải xin rõ ràng. Mặc định vẫn là hành vi cũ — từ chối khi còn thứ trỏ vào tên
+  // cũ — nên không lệnh đổi tên nào đang chạy bỗng dưng bắt đầu ghi vào chứng từ khác.
+  const cascade = args.bool("cascade");
   await context.documents.renameDocument(
     context.tenantId,
     doctype,
@@ -765,8 +784,9 @@ async function renameDocument(args: FrappeArgs, context: FrappeRouterContext): P
     context.actor.user_id,
     context.now(),
     namingField,
+    { cascade },
   );
-  return { doctype, name: newName, renamed: true };
+  return { doctype, name: newName, renamed: true, cascaded: cascade };
 }
 
 async function saveDocument(doctype: string, name: string, args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
@@ -784,6 +804,7 @@ async function saveDocument(doctype: string, name: string, args: FrappeArgs, con
   // that were not edited in this request. Merge in Frappe shape first so child rows
   // are preserved, then convert the complete document back to the kernel payload.
   const payload = toKernelPayload({ ...toFrappeDoc(current), ...submitted }, meta);
+  await assertNoAmbiguousItemPrice(doctype, payload, name, context);
   await context.runCommand(await buildCommand({
     tenantId: context.tenantId, actor: context.actor, doctype, name,
     action: "save", expectedVersion: current.version, document: payload,
@@ -3214,6 +3235,31 @@ function toKernelPayload(submitted: JsonObject, meta: DocTypeMeta): JsonObject {
  * uses `field:name`; otherwise the server allocates from the naming series so a
  * client cannot choose where it lands in the sequence.
  */
+/**
+ * Tài liệu dùng để ĐẶT TÊN: bản đã áp default, cộng lại `name` do người dùng đặt.
+ *
+ * `toKernelPayload` dựng một object MỚI và `stripServerOwnedFields` loại `name` khỏi nó, nên
+ * truyền thẳng `payload` sẽ làm hỏng đường `prompt` (nơi tên là do người dùng chọn).
+ */
+function namingSource(submitted: JsonObject, payload: JsonObject): JsonObject {
+  return typeof submitted.name === "string" ? { ...payload, name: submitted.name } : payload;
+}
+
+/**
+ * `Item Price` là doctype metadata thuần, không có controller riêng, nên chốt chặn nghiệp vụ
+ * duy nhất đặt được nằm ở đúng hai cửa ghi này (`POST`/`PUT /api/resource/Item Price`) — cả
+ * màn Danh mục lẫn importer giá đều đi qua đây.
+ */
+async function assertNoAmbiguousItemPrice(
+  doctype: string,
+  payload: JsonObject,
+  name: string,
+  context: FrappeRouterContext,
+): Promise<void> {
+  if (doctype !== "Item Price") return;
+  await assertItemPriceTierIsUnambiguous(context.documents, context.tenantId, payload, name);
+}
+
 async function resolveNewName(doctype: string, meta: DocTypeMeta, submitted: JsonObject, context: FrappeRouterContext): Promise<string> {
   // A Single is named after its doctype, so there is exactly one and its name is
   // predictable. Honouring an autoname here would mint a second one.

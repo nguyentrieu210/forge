@@ -95,6 +95,8 @@ interface Env {
 
 import type { PlatformCall } from "./platform-call.js";
 import { accept, answer, forbidden, refuse } from "./responses.js";
+import { motorLoadKg, suggestMotor, suggestUps, type MotorThresholdRow } from "./motor-selection.js";
+import { catalogReadiness } from "./catalog-readiness.js";
 import {
   checked, nearlyEqual, normalizedUom, positive, readDoorPolicies, readMaster, readSlatCatalog, validateDocumentColors, validateItemMaster, validatePurchaseMeasurement, validateTransactionLines, validationDocument, warmMasters,
   type ValidatorSubject,
@@ -2594,6 +2596,23 @@ async function calculateDoor(call: PlatformCall, args: Record<string, unknown>):
   }
 }
 
+/**
+ * Bảng ngưỡng motor/UPS đọc từ tenant.
+ *
+ * Đọc cả hai loại dòng trong một lần: motor tra theo diện tích, bình lưu điện tra theo tải
+ * motor. Chúng ở chung một danh mục vì cùng là "bảng tra chọn thiết bị", nhưng luật khác nhau
+ * nên bên dưới lọc theo `selection_basis` chứ không trộn.
+ */
+async function readMotorThresholds(call: PlatformCall): Promise<MotorThresholdRow[]> {
+  const query = new URLSearchParams({
+    fields: JSON.stringify(["rule_code", "item_code", "selection_basis", "max_area_sqm", "max_motor_kg", "includes", "sort_order", "disabled"]),
+    limit_page_length: "200",
+  });
+  const response = await call(`resource/${encodeURIComponent("Ngưỡng chọn Motor")}?${query}`).catch(() => null);
+  if (!response?.ok) return [];
+  return ((await response.json()) as { data?: MotorThresholdRow[] }).data ?? [];
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -2620,6 +2639,36 @@ export default {
          * Cửa Úc vẫn thuần số học: luật của nó là hệ số theo loại motor, nằm trong Cutting
          * Policy chứ không theo mã nhôm.
          */
+        /**
+         * Tra motor theo diện tích cửa, và bình lưu điện theo tải của chính motor vừa chọn.
+         *
+         * Danh mục `Ngưỡng chọn Motor` có dữ liệu từ 19/08 nhưng tới lúc đó chưa ai đọc — audit
+         * nền tảng bắt được đúng chỗ đó: dựng kho xong mà chưa nối dây thì người bán vẫn phải
+         * nhớ bảng trong đầu, tức là danh mục không đỡ được việc gì.
+         */
+        if (method === "alumdoor.motor.suggest") {
+          const rows = await readMotorThresholds(call);
+          if (rows.length === 0) return answer({ motor: null, ups: null, note: "Chưa có bảng ngưỡng chọn Motor" });
+          const motor = suggestMotor(rows, Number(args.area_sqm));
+          if (!motor) {
+            return answer({ motor: null, ups: null, note: `Không có motor nào cho cửa ${args.area_sqm} m² — bảng ngưỡng dừng ở mức thấp hơn` });
+          }
+          // `motor_kg` truyền vào thì ưu tiên; không truyền thì suy từ mã luật và TỪ CHỐI nếu
+          // không suy được, thay vì đoán rồi chọn nhầm bình.
+          const motorKg = args.motor_kg === undefined || args.motor_kg === null || args.motor_kg === ""
+            ? motorLoadKg(motor.rule_code)
+            : Number(args.motor_kg);
+          return answer({ motor, ups: suggestUps(rows, motorKg), motor_kg: motorKg });
+        }
+        /**
+         * Tình trạng SẴN SÀNG của từng danh mục, cho màn Danh mục. ĐỌC-CHỈ.
+         *
+         * Không nhận tham số nào: phạm vi đo là bảng khai cứng trong `catalog-readiness.ts`
+         * (đúng các khoá màn liệt kê), còn tenant và quyền đọc đi theo danh tính người gọi qua
+         * `call`. Cho client chọn doctype ở đây thì method biến thành một máy đếm vạn năng —
+         * một bề mặt rộng hơn hẳn thứ màn cần.
+         */
+        if (method === "alumdoor.catalog.readiness") return await catalogReadiness(call);
         if (method === "alumdoor.slats.compute") {
           try {
             const kind = args.australian_kind ? String(args.australian_kind) as AustralianDoor : null;

@@ -29,6 +29,14 @@ import {
   alumdoorOperationalRouteForAction,
   alumdoorOperationalRouteForDoctype,
 } from "./alumdoor-operational-routes.js";
+/**
+ * CHỈ LẤY KIỂU, không lấy code: `import type` bị xoá hẳn lúc biên dịch, nên nó KHÔNG kéo màn
+ * Danh mục ra khỏi gói lazy mà `experience-registry.tsx` đang giữ.
+ *
+ * Lấy thẳng từ file khai kiểu chứ không chép lại một bản: hình dạng số đo là hợp đồng giữa
+ * worker và màn, và một bản sao ở giữa sẽ lệch đúng vào ngày ai đó thêm trường.
+ */
+import type { AlumdoorMasterReadiness } from "./experiences/AlumdoorMasterDataScreen.js";
 import "./styles.css";
 
 const ApplicationCatalogContainer = lazy(() => import("@metaforge/views/catalog").then((module) => ({ default: module.ApplicationCatalogContainer })));
@@ -930,11 +938,43 @@ function MetaIndexScreen(props: ScreenProps & { kind: "reports" | "masters" }) {
   const activeReportGroup = groups.find((group) => group.id === selectedReportGroup) ?? groups[0];
   const isAlumdoorMasterData = props.kind === "masters" && normalize(props.manifest.domain) === "alumdoor";
   const backFallback = resolveHomeRoute(props.manifest);
+
+  /**
+   * Số đo tình trạng danh mục — nguồn duy nhất là `alumdoor.catalog.readiness` (worker của app).
+   *
+   * `undefined` là trạng thái BAN ĐẦU và cũng là trạng thái KHI HỎNG, cố ý cùng một giá trị:
+   * màn đọc `readiness === undefined` là "chưa đo" và nói thẳng ra. Không có `{}` ở đây —
+   * `readiness={}` cho ra blocked=0, partial=0 và màn tuyên bố cả chuỗi đã thông sau 0 phép đo
+   * (xem `MasterChainSummary.unknown` bên màn). Cũng không có số dựng sẵn: một con số hợp lý mà
+   * sai thì không ai nghi để đi kiểm.
+   *
+   * Theo đúng lối nạp của file này (`ManifestBoundary`, `Runtime`): `useEffect` + cờ `alive`
+   * huỷ setState sau khi rời màn, và lỗi bị nuốt tại chỗ vì đây là số PHỤ — hỏng thì màn vẫn
+   * dẫn đường được, chỉ mất phần tô màu.
+   *
+   * Gọi khi `isAlumdoorMasterData` mới đúng: đây là method của app Alumdoor, gọi ở app khác chỉ
+   * tốn một lượt 404. Điều kiện nằm TRONG effect chứ không bọc ngoài hook — thứ tự hook phải
+   * bất biến giữa các lần render.
+   */
+  const [readiness, setReadiness] = useState<AlumdoorMasterReadiness>();
+  useEffect(() => {
+    if (!isAlumdoorMasterData) return;
+    let alive = true;
+    adapter.callPost<AlumdoorMasterReadiness>("alumdoor.catalog.readiness", {})
+      .then((value) => {
+        // Chỉ nhận đúng hình dạng bản đồ. Một thân trả về khác (mảng, chuỗi lỗi) mà cứ nhận thì
+        // màn coi như ĐÃ ĐO và mọi mục thành "chưa ai đếm" — sai kiểu khó thấy hơn hẳn lỗi mạng.
+        if (alive && value && typeof value === "object" && !Array.isArray(value)) setReadiness(value);
+      })
+      .catch(() => { /* chưa cài worker, mất mạng, hoặc không đủ quyền đọc: để "chưa đo" */ });
+    return () => { alive = false; };
+  }, [isAlumdoorMasterData, props.manifest.id]);
+
   return (
     <Shell {...props} active={active} breadcrumbs={[{ label: "Quay lại", onClick: () => navigateBack(navigate, backFallback) }, { label: title }]}>
       <div className="h-full overflow-auto bg-muted/20 p-3 md:p-4">
         {isAlumdoorMasterData ? (
-          <AlumdoorMasterDataScreen items={items} onNavigate={navigate} />
+          <AlumdoorMasterDataScreen items={items} onNavigate={navigate} readiness={readiness} />
         ) : (
           <section className="w-full overflow-hidden rounded-lg border bg-card shadow-sm">
           <div className="border-b px-5 py-4">

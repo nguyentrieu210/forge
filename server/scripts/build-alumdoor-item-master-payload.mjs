@@ -1,10 +1,15 @@
 #!/usr/bin/env node
 import { readFile, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { partitionAlumdoorItemSourceBlockers } from "./lib/alumdoor-item-blocker-partition.mjs";
 import { buildCanonicalAlumdoorItemMaster } from "./lib/alumdoor-item-master-classification.mjs";
 import { preflightAlumdoorItemSourceRecords } from "./lib/alumdoor-item-source-preflight.mjs";
 import { ITEM_SOURCE_ROLES } from "./lib/alumdoor-item-source-contract.mjs";
+import { createSourceCodeResolver, translateSourceRecords } from "./lib/alumdoor-source-code-resolver.mjs";
+import { loadPurchaseCatalog, applyPurchaseCatalog } from "./lib/alumdoor-purchase-catalog.mjs";
+import { DatabaseSync } from "node:sqlite";
+import { existsSync } from "node:fs";
 
 const [sourceArg, payloadArg, auditArg] = process.argv.slice(2);
 if (!sourceArg || !payloadArg || !auditArg) {
@@ -21,6 +26,8 @@ const records = Array.isArray(source) ? source : source.records;
 if (!Array.isArray(records)) {
   throw new Error("source-records.json phải là array hoặc object { records: [...] }");
 }
+
+
 
 const clean = (value) => String(value ?? "").trim();
 const uomKey = (value) => clean(value).replace(/\s+/g, "").toLocaleUpperCase("vi");
@@ -175,6 +182,128 @@ const audit = {
   item_payload_blockers: master.blockers,
   bom_blockers_retained: sourcePartition.bom_blockers,
 };
+
+/**
+ * Dịch mã sang mã ĐANG DÙNG — ở ĐẦU RA, không phải đầu vào.
+ *
+ * Bản trích nguồn giữ mã theo bảng tính gốc và không được sửa (nó là bằng chứng), nhưng danh
+ * mục đã qua hai đợt đổi mã: dựng xong payload thì 476/587 mã trong đó không còn tồn tại. Chạy
+ * lại chuỗi import như vậy là TẠO LẠI 476 mặt hàng mã cũ bên cạnh mã mới — xoá sổ cả hai đợt
+ * đổi mã, và không gì báo.
+ *
+ * VÌ SAO Ở ĐẦU RA: bộ dựng này đã có cơ chế chuẩn hoá riêng (bí danh nguồn, canonical_item_code).
+ * Dịch ở đầu vào là dựng lớp chuẩn hoá THỨ HAI chọi với lớp thứ nhất — thử rồi: 516 tham chiếu
+ * BOM gãy ngay, vì mã mặt hàng đổi mà mã trong dòng định mức thì không. Ở đầu ra, bộ dựng đã làm
+ * xong việc của nó và chỉ còn một phép đổi danh tính cuối cùng.
+ *
+ * Không có D1 (máy khác, hoặc lần dựng đầu khi chưa có gì) thì bỏ qua: lúc đó nguồn chính là sự
+ * thật, không có gì để dịch.
+ */
+// Neo theo VỊ TRÍ CỦA CHÍNH FILE NÀY, không theo thư mục làm việc.
+//
+// Bốn adapter gọi bộ dựng này từ bốn thư mục khác nhau. Neo theo `process.cwd()` thì `pricing` và
+// `bom` in ra `skipped=no-d1-or-mapping` rồi đi tiếp — tức là lặng lẽ bỏ qua cả việc dịch mã lẫn
+// lớp quyết định, đúng hai thứ vừa dựng để bảo vệ danh mục.
+const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
+const SERVER_ROOT = resolve(SCRIPT_DIR, "..");
+const REPO_ROOT = resolve(SERVER_ROOT, "..");
+const D1_PATH = process.env.ALUMDOOR_D1_PATH
+  || resolve(SERVER_ROOT, "apps/tenant-worker/.wrangler/state/v3/d1/miniflare-D1DatabaseObject/0f70e06fc007ec84591c21ca1daaf09474ca2074a0d42ba21eb2a3fcdbb2cdf8.sqlite");
+const CONVENTION_PATH = resolve(REPO_ROOT, "docs/alumdoor-item-code-mapping.json");
+// Giữ lại bộ dịch mã để lớp danh mục mua dùng lại. Dựng bộ dịch thứ hai là mở đường cho hai
+// bộ trôi dạt khỏi nhau, mà sai lệch giữa chúng thì không có gì báo.
+let resolveSourceCodeForPurchase = (code) => code;
+if (existsSync(D1_PATH) && existsSync(CONVENTION_PATH)) {
+  const tenant = process.env.ALUMDOOR_TENANT || "demo";
+  const db = new DatabaseSync(D1_PATH, { readOnly: true });
+  const liveCodes = new Set(
+    db.prepare("SELECT name FROM documents WHERE tenant_id=? AND doctype='Item'").all(tenant).map((row) => row.name),
+  );
+  const conventionMap = new Map(
+    JSON.parse(await readFile(CONVENTION_PATH, "utf8")).mapping.map((row) => [row.from, row.to]),
+  );
+  const resolveSourceCode = createSourceCodeResolver({ conventionMap, liveCodes });
+  resolveSourceCodeForPurchase = resolveSourceCode;
+  const translation = translateSourceRecords(payload.items, resolveSourceCode);
+  payload.items = translation.records;
+  const stillMissing = payload.items.filter((item) => !liveCodes.has(item.item_code)).length;
+  console.log(`ALUMDOOR_ITEM_PAYLOAD_TRANSLATED changed=${translation.changed} unresolved=${translation.unresolved.size} not_in_d1=${stillMissing} live_items=${liveCodes.size}`);
+} else {
+  console.log("ALUMDOOR_ITEM_PAYLOAD_TRANSLATED skipped=no-d1-or-mapping");
+}
+
+/**
+ * Áp LỚP QUYẾT ĐỊNH lên payload.
+ *
+ * Bản trích nguồn chỉ ghi lại bảng tính nói gì — nó không biết gì về những quyết định đã lấy về
+ * danh mục. Không có lớp này thì mỗi lần chạy `catalog-all` sẽ bật lại 21 mã đã cho nghỉ hưu và
+ * trả `default_sales_uom` về một đơn vị đã bị gỡ. Đo được: importer từ chối với đúng 22 xung đột.
+ *
+ * Quyết định là DỮ LIỆU, không phải mã lệnh: nằm trong `docs/alumdoor-catalog-decisions.json`,
+ * mỗi mục kèm lý do. Quyết định không có lý do thì lần sau không ai dám đụng, mà cũng không ai
+ * biết khi nào nó hết đúng.
+ */
+const DECISIONS_PATH = resolve(REPO_ROOT, "docs/alumdoor-catalog-decisions.json");
+if (existsSync(DECISIONS_PATH)) {
+  const decisions = JSON.parse(await readFile(DECISIONS_PATH, "utf8"));
+  if (decisions.format !== "alumdoor-catalog-decisions/v1") {
+    throw new Error(`Dinh dang file quyet dinh la: ${decisions.format}`);
+  }
+  const retired = new Set((decisions.retired_items ?? []).map((row) => row.item_code));
+  const overrides = new Map();
+  for (const row of decisions.field_overrides ?? []) overrides.set(`${row.item_code}::${row.field}`, row.value);
+  let applied = 0;
+  payload.items = payload.items.map((item) => {
+    let next = item;
+    if (retired.has(item.item_code) && item.disabled !== 1) { next = { ...next, disabled: 1 }; applied += 1; }
+    for (const field of Object.keys(item)) {
+      const key = `${item.item_code}::${field}`;
+      if (!overrides.has(key)) continue;
+      const value = overrides.get(key);
+      if (String(next[field] ?? "") === String(value)) continue;
+      next = { ...next, [field]: value };
+      applied += 1;
+    }
+    return next;
+  });
+  const stale = [...retired].filter((code) => !payload.items.some((item) => item.item_code === code));
+  if (stale.length > 0) {
+    // Quyet dinh tro vao ma khong con trong payload la quyet dinh da muc - bao chu khong lang le bo.
+    console.log(`ALUMDOOR_CATALOG_DECISIONS_STALE count=${stale.length} codes=${stale.slice(0, 5).join(",")}`);
+  }
+  console.log(`ALUMDOOR_CATALOG_DECISIONS_APPLIED changes=${applied} retired=${retired.size} overrides=${overrides.size}`);
+}
+
+/**
+ * Áp LỚP DANH MỤC MUA — giá nhập, ĐVT nhập, hệ số quy đổi, nhà cung cấp.
+ *
+ * Nguồn: `apps/alumdoor/docs/nguon/ms-lien/DANH-MỤC.md` (sheet DANH MỤC của MS LIÊN BS.xlsx) và
+ * `data/trong-luong-nhom.json`. Cho tới 2026-08-19 CHƯA script nào đọc file đầu, dù nó là chỗ
+ * duy nhất trong bốn file gốc có GIÁ NHẬP · ĐVT NHẬP · NCC theo từng mã.
+ *
+ * Chạy SAU lớp quyết định vì `default_sales_uom` có thể vừa bị ghi đè, và hệ số quy đổi phải
+ * tính trên `stock_uom` cuối cùng chứ không phải bản trước ghi đè.
+ *
+ * `blocked` KHÔNG chặn payload: mặt hàng thiếu hệ số vẫn giữ nguyên như cũ, chỉ là không nhận
+ * được ĐVT mua. Đó là trạng thái nó đang có sẵn, không phải hồi quy.
+ */
+const purchaseCatalog = await loadPurchaseCatalog(REPO_ROOT);
+if (purchaseCatalog.available) {
+  const applied = applyPurchaseCatalog(payload.items, purchaseCatalog, resolveSourceCodeForPurchase);
+  payload.items = applied.items;
+  payload.purchase_prices = applied.purchase_prices;
+  payload.supplier_items = applied.supplier_items;
+  audit.purchase_catalog = applied.report;
+  console.log(
+    `ALUMDOOR_PURCHASE_CATALOG_APPLIED source_rows=${applied.report.source_row_count} ` +
+      `matched=${applied.report.matched_item_count} changes=${applied.report.change_count} ` +
+      `blocked=${applied.report.blocked_count} conflicts=${applied.report.conflict_count} ` +
+      `prices=${applied.report.purchase_price_count} supplier_items=${applied.report.supplier_item_count} ` +
+      `unmatched_source=${applied.report.unmatched_source_code_count}`,
+  );
+} else {
+  console.log("ALUMDOOR_PURCHASE_CATALOG_APPLIED skipped=no-source");
+}
 
 await writeFile(payloadPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
 await writeFile(auditPath, `${JSON.stringify(audit, null, 2)}\n`, "utf8");

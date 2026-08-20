@@ -19,7 +19,16 @@ const boms = bomPayload.boms ?? [];
 const blockers = audit.blockers ?? [];
 const excluded = audit.excluded ?? [];
 const lines = boms.flatMap((bom) => bom.lines ?? []);
-const itemMap = new Map(items.map((item) => [String(item.item_code ?? "").trim(), item]));
+// Tra được bằng CẢ mã đang dùng lẫn mã gốc trong bảng tính: tham chiếu đến từ bản trích nguồn
+// (mã bảng tính) còn danh sách mặt hàng đã dịch sang mã đang dùng. Chỉ khoá một bên là hàng nghìn
+// tham chiếu "mất mặt hàng" dù mặt hàng có đủ.
+const itemMap = new Map();
+for (const item of items) {
+  const canonicalCode = String(item.item_code ?? "").trim();
+  itemMap.set(canonicalCode, item);
+  const originalCode = String(item.source_item_code_original ?? "").trim();
+  if (originalCode && !itemMap.has(originalCode)) itemMap.set(originalCode, item);
+}
 
 assert.equal(items.length, 587, "Gate A canonical Item count must remain 587");
 assert.equal(audit.blocker_counts?.missing_component_item ?? 0, 0, "missing_component_item must remain zero");

@@ -3,6 +3,11 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  applySealedPriceAuthority,
+  loadSealedTierTable,
+  SEALED_PRICE_SOURCE,
+} from "./lib/alumdoor-sealed-price-authority.mjs";
 
 export const ALUMDOOR_PRICE_LIST = "ALUMDOOR-SELLING";
 export const STANDARD_VARIANT = "STANDARD";
@@ -34,14 +39,58 @@ const disabled = (value) => truthy(value) || ["true", "yes", "có", "co"].includ
 const condition = (field, operator, value) => ({ field, operator, value });
 const stableSort = (rows) => [...rows].sort((a, b) => clean(a.name) < clean(b.name) ? -1 : clean(a.name) > clean(b.name) ? 1 : 0);
 
-export function itemPriceName(priceList, itemCode, uom, variant = STANDARD_VARIANT) {
+/**
+ * Bậc "mọi diện tích" — phải khớp `ALL_AREA_TIER` trong `packages/clouderp-pricing/src/index.ts`.
+ *
+ * Chép hằng số thay vì import: script này chạy bằng node thuần trên file `.mjs`, không qua `tsc`,
+ * nên không với tới `packages/**\/*.ts`. Bù lại bằng test neo hai bên bằng nhau.
+ */
+export const ALL_AREA_TIER = "MOI-DIEN-TICH";
+
+/**
+ * LỆCH NGUỒN CHƯA GIẢI QUYẾT — thang giá theo bậc diện tích, họ TP-TOLEKEM124_8D.
+ *
+ * Đo trên hai nguồn, không đoán:
+ *   · `BANG-GIA-CHINH-THUC-31-07-2026 §3` — bảng 8 bậc × 7 cột, có mộc, hiệu lực 31/07/2026.
+ *   · `ms-lien/ĐM.md` — 88 mã có hậu tố bậc trong MÃ HÀNG, gộp còn 11 gốc mã / 7 thang giá.
+ *
+ * 6/7 thang khớp nguyên vẹn 8/8 bậc. Riêng `TP-TOLEKEM124_8D_MSK` (khớp cột "1LY STĐ") lệch ở
+ * ĐÚNG 4 bậc đắt nhất, ĐM.md luôn cao hơn:
+ *   3-4 m²: 660.000 vs 630.000  (+30.000)
+ *   4-5 m²: 640.000 vs 620.000  (+20.000)
+ *   5-6 m²: 620.000 vs 610.000  (+10.000)
+ *   6-7 m²: 610.000 vs 600.000  (+10.000)
+ *   7-8 / 8-9 / 9-10 / >10 m²: bằng nhau (590/580/570/560).
+ *
+ * Kèm một điểm lệch NHÃN nữa, ghi luôn: theo giá trị thì `TOLEKEM124_6D` khớp cột "8 DEM STĐ",
+ * `_8D` khớp "1LY STĐ", `_1LY` khớp "1.2LY STĐ" — tên mã lệch nhãn cột đúng một nấc.
+ *
+ * KHÔNG tự chọn bên nào. Luật "nguồn gốc thắng bản trích" nghiêng về BANG-GIA, nhưng ĐM.md mới
+ * là thứ đang chạy trên D1, và chênh 30.000đ/m² là tiền thật trên mỗi đơn. Chủ xưởng chốt.
+ */
+
+export function itemPriceName(priceList, itemCode, uom, variant = STANDARD_VARIANT, areaTier = ALL_AREA_TIER) {
   const base = `${clean(priceList)}:${clean(itemCode)}`;
   const canonicalVariant = clean(variant).toUpperCase() || STANDARD_VARIANT;
-  // The doctype names itself format:{price_list}:{item_code}:{uom}:{price_variant}, so the
-  // server appends the variant even when it is STANDARD. Dropping the suffix here made every
-  // base row's payload name disagree with the name the row actually gets, which surfaced as
-  // 331 extra_managed_item_price blockers on the next preflight.
-  return clean(uom) ? `${base}:${clean(uom)}:${canonicalVariant}` : `${base}:${canonicalVariant}`;
+  const canonicalTier = clean(areaTier) || ALL_AREA_TIER;
+  // The doctype names itself format:{price_list}:{item_code}:{uom}:{price_variant}:{area_tier},
+  // so the server appends the variant even when it is STANDARD. Dropping the suffix here made
+  // every base row's payload name disagree with the name the row actually gets, which surfaced
+  // as 331 extra_managed_item_price blockers on the next preflight.
+  //
+  // Đoạn bậc là BẮT BUỘC, không phải tuỳ chọn: `resolveAutoname` ném lỗi khi một khoá trong
+  // format rỗng, nên dòng giá không bậc vẫn phải mang `MOI-DIEN-TICH`. Bỏ đoạn này đi thì tên
+  // payload lệch tên D1 đúng một đoạn — và lệch tên nghĩa là importer TẠO MỚI thay vì cập nhật.
+  //
+  // 558/558 dòng đang chạy trên D1 vẫn mang tên BỐN đoạn, và chúng KHÔNG được đổi tên (tên
+  // `Item Price` nằm trên dòng bán nên guard tham chiếu của nền tảng từ chối). Chỗ nối hai dạng
+  // tên là `scripts/lib/alumdoor-item-price-alias.mjs`: nó ghép tên cũ làm bí danh của tên chuẩn
+  // để importer cập nhật TẠI CHỖ. Vì thế tên ở đây phải luôn là tên CHUẨN năm đoạn — phát tên
+  // bốn đoạn cho "gọn" là làm hỏng cả lượt tạo dòng giá mới (nền tảng đặt tên năm đoạn, payload
+  // chờ tên bốn đoạn, post-verify báo `missing_after_apply`).
+  return clean(uom)
+    ? `${base}:${clean(uom)}:${canonicalVariant}:${canonicalTier}`
+    : `${base}:${canonicalVariant}:${canonicalTier}`;
 }
 
 function sourceLineage(row) {
@@ -61,14 +110,24 @@ function sourceLineage(row) {
   };
 }
 
-function itemPriceDocument(item, rate, variant, lineage) {
+/**
+ * Một dòng `Item Price`.
+ *
+ * `areaTier` mặc định là `MOI-DIEN-TICH` vì đó là hình dạng của 558/558 dòng giá đang chạy: giá
+ * không phụ thuộc diện tích. Tham số này là chỗ để thang giá theo bậc đi vào đường ống — nguồn
+ * `BANG-GIA-CHINH-THUC-31-07-2026 §3` là bảng 8 bậc × 7 cột, và trên D1 nó đang bị nhồi vào MÃ
+ * HÀNG: 88 mã có hậu tố bậc (`…_TRONBO_4-5m²`), gộp lại chỉ còn 11 gốc mã / 7 thang giá khác
+ * nhau. Không có tham số này thì đường ống không có cách nào phát ra 8 dòng giá cho một mã.
+ */
+function itemPriceDocument(item, rate, variant, lineage, areaTier = ALL_AREA_TIER) {
   const uom = clean(item.default_sales_uom) || clean(item.stock_uom);
   return {
     doctype: "Item Price",
-    name: itemPriceName(ALUMDOOR_PRICE_LIST, item.item_code, uom, variant),
+    name: itemPriceName(ALUMDOOR_PRICE_LIST, item.item_code, uom, variant, areaTier),
     price_list: ALUMDOOR_PRICE_LIST,
     item_code: clean(item.item_code),
     uom,
+    area_tier: clean(areaTier) || ALL_AREA_TIER,
     price_variant: variant,
     rate,
     currency: "VND",
@@ -116,9 +175,13 @@ function deductionVariant(row) {
 
 function motorFamilyTarget(row, item) {
   const semantic = fold(`${row.item_name} ${row.source_parent_name}`);
-  if (semantic.includes("TANKER_ALUMAX")) return /^(TP-MT-TANKER|TP-MT-ALUMAX)/i.test(item.item_code);
-  if (semantic.includes("YHLD")) return /^TP-MT-YHLD/i.test(item.item_code);
-  if (semantic.includes("JG")) return /^TP-MT-JG/i.test(item.item_code);
+  // Khớp theo mã NGUỒN, không theo mã đang dùng: tiền tố `TP-MT-*` là cách bảng tính đặt mã, và
+  // bảng tính thì không đổi. Khoá theo mã đang dùng thì mỗi đợt đổi mã lại làm luật này im lặng
+  // ngừng khớp — im lặng, vì "không nhận ra motor nào" trông hệt như "đơn này không có motor".
+  const code = clean(item.source_item_code_original) || clean(item.item_code);
+  if (semantic.includes("TANKER_ALUMAX")) return /^(TP-MT-TANKER|TP-MT-ALUMAX)/i.test(code);
+  if (semantic.includes("YHLD")) return /^TP-MT-YHLD/i.test(code);
+  if (semantic.includes("JG")) return /^TP-MT-JG/i.test(code);
   return false;
 }
 
@@ -128,10 +191,33 @@ function addUnique(map, doc, kind, blockers) {
   if (JSON.stringify(previous) !== JSON.stringify(doc)) blockers.push({ type: `conflicting_${kind}`, name: doc.name, first: previous, second: doc });
 }
 
-export function buildPricingPayload(pricingSourceFile, itemPayloadFile) {
+/**
+ * `sealedTierTable` là BẢNG GIÁ CÓ MỘC (`BANG-GIA-CHINH-THUC-31-07-2026 §3`), nạp sẵn bởi bên
+ * gọi vì hàm này đồng bộ còn việc đọc file thì bất đồng bộ.
+ *
+ * Truyền `null` = không áp thẩm quyền, giá giữ nguyên như `ĐM.md`. Đó là hành vi của mọi bản
+ * trước, nên bỏ tham số không làm hỏng đường ống cũ — chỉ là không có ai đè giá.
+ */
+export function buildPricingPayload(pricingSourceFile, itemPayloadFile, sealedTierTable = null) {
   const sourceRows = Array.isArray(pricingSourceFile?.records) ? pricingSourceFile.records : [];
   const items = Array.isArray(itemPayloadFile?.items) ? itemPayloadFile.items : [];
-  const itemsByCode = new Map(items.map((item) => [clean(item.item_code), { ...item, item_code: clean(item.item_code) }]));
+  /**
+   * Tra được bằng CẢ HAI mã: mã đang dùng và mã gốc trong bảng tính.
+   *
+   * Dòng giá đến từ bản trích nguồn nên mang mã theo bảng tính, còn danh sách mặt hàng đã được
+   * dịch sang mã đang dùng. Chỉ khoá theo một bên thì 292 dòng giá báo `missing_canonical_item`
+   * — đo được sau đợt đổi mã.
+   *
+   * Không dịch dòng giá: khoá thêm bí danh là một phép thêm, còn dịch là một phép SỬA, và sửa
+   * bản trích nguồn thì mất đường truy về bảng tính.
+   */
+  const itemsByCode = new Map();
+  for (const raw of items) {
+    const item = { ...raw, item_code: clean(raw.item_code) };
+    itemsByCode.set(item.item_code, item);
+    const original = clean(raw.source_item_code_original);
+    if (original && !itemsByCode.has(original)) itemsByCode.set(original, item);
+  }
   const blockers = [];
   const resolutions = [];
   const baseByCode = new Map();
@@ -159,9 +245,15 @@ export function buildPricingPayload(pricingSourceFile, itemPayloadFile) {
       blockers.push({ type: "invalid_base_price", item_code: code, rate, row: sourceLineage(row) });
       continue;
     }
-    const prior = baseByCode.get(code);
+    // Khoá theo mã CANONICAL, không theo mã nguồn.
+    //
+    // `code` là mã trong bảng tính, còn `ensureVariant` bên dưới tra bằng `item.item_code` —
+    // mã đang dùng. Trộn hai không gian khoá thì mọi biến thể motor báo `variant_target_missing
+    // _base_price` dù giá gốc có đủ: đo được 179 dòng như vậy sau đợt đổi mã.
+    const baseKey = clean(item.item_code);
+    const prior = baseByCode.get(baseKey);
     if (!prior) {
-      baseByCode.set(code, { item, rate, uom, lineages: [sourceLineage(row)] });
+      baseByCode.set(baseKey, { item, rate, uom, lineages: [sourceLineage(row)] });
       continue;
     }
     if (prior.rate === rate && prior.uom === uom) {
@@ -174,7 +266,7 @@ export function buildPricingPayload(pricingSourceFile, itemPayloadFile) {
       const incoming = sourceLineage(row);
       if (rate < prior.rate) {
         v5VariantRows.push({ rate: prior.rate, lineage: prior.lineages[0] });
-        baseByCode.set(code, { item, rate, uom, lineages: [incoming] });
+        baseByCode.set(baseKey, { item, rate, uom, lineages: [incoming] });
       } else {
         v5VariantRows.push({ rate, lineage: incoming });
       }
@@ -189,7 +281,10 @@ export function buildPricingPayload(pricingSourceFile, itemPayloadFile) {
   for (const base of baseByCode.values()) addUnique(itemPrices, itemPriceDocument(base.item, base.rate, STANDARD_VARIANT, { source_rows: base.lineages }), "item_price", blockers);
 
   const ensureVariant = (itemCode, variant, lineage) => {
-    const base = baseByCode.get(clean(itemCode));
+    // Nhận CẢ mã nguồn lẫn mã đang dùng: có chỗ gọi bằng mã bảng tính (`NVL-V5_KEM_STD`), có chỗ
+    // gọi bằng mã canonical. Quy về một mối ngay tại đây thay vì bắt từng chỗ gọi tự nhớ.
+    const resolvedItem = itemsByCode.get(clean(itemCode));
+    const base = baseByCode.get(clean(resolvedItem?.item_code ?? itemCode));
     if (!base) {
       blockers.push({ type: "variant_target_missing_base_price", item_code: clean(itemCode), variant, lineage });
       return null;
@@ -198,7 +293,35 @@ export function buildPricingPayload(pricingSourceFile, itemPayloadFile) {
     addUnique(itemPrices, document, "item_price", blockers);
     return document;
   };
-  const addRule = (rule) => addUnique(pricingRules, pricingRuleDocument(rule), "pricing_rule", blockers);
+  /**
+   * Chính sách giá phải mang mã ĐANG DÙNG, giống dòng giá.
+   *
+   * Có chỗ gọi bằng mã bảng tính, có chỗ gọi bằng mã canonical. Để lẫn thì bộ kiểm báo
+   * `rule_missing_variant_item_price`: chính sách trỏ vào một dòng giá mà theo mã của nó thì
+   * không tồn tại — đo được 24 dòng như vậy. Quy về một mối tại đây, không bắt từng chỗ gọi nhớ.
+   */
+  const addRule = (rule) => {
+    const source = clean(rule.itemCode);
+    const canonical = itemsByCode.get(source)?.item_code;
+    if (!canonical || canonical === source) return addUnique(pricingRules, pricingRuleDocument(rule), "pricing_rule", blockers);
+    // TÊN cũng phải theo mã đang dùng, không chỉ trường mã.
+    //
+    // Tên chính sách là `ALUMDOOR-PR:{mã}:{biến thể}` — nối bằng dấu hai chấm. Chỉ sửa trường mã
+    // mà để tên mang mã nguồn thì D1 (đã đổi tên theo mã mới) và payload gọi CÙNG MỘT luật bằng
+    // hai tên: importer thấy 24 luật "thừa" ở D1 và 24 luật "mới" trong payload.
+    //
+    // Thay theo ĐOẠN, không thay chuỗi con — mã hàng không chứa dấu hai chấm nên phép này chắc.
+    const rename = (value) => (typeof value === "string" && value.includes(":")
+      ? value.split(":").map((part) => (part === source ? canonical : part)).join(":")
+      : value);
+    const normalized = {
+      ...rule,
+      itemCode: canonical,
+      ...(rule.name ? { name: rename(rule.name) } : {}),
+      ...(rule.exclusiveGroup ? { exclusiveGroup: rename(rule.exclusiveGroup) } : {}),
+    };
+    return addUnique(pricingRules, pricingRuleDocument(normalized), "pricing_rule", blockers);
+  };
   const addGroupVariantPrices = (itemGroup, variant, lineage) => {
     let count = 0;
     for (const base of baseByCode.values()) {
@@ -325,6 +448,26 @@ export function buildPricingPayload(pricingSourceFile, itemPayloadFile) {
     blockers.push({ type: "unresolved_surcharge", row: lineage });
   }
 
+  /**
+   * THẨM QUYỀN GIÁ: bảng có mộc thắng `ĐM.md`.
+   *
+   * Chủ xưởng chốt 2026-08-20. Chạy TRƯỚC phép kiểm `rate > 0` để giá bị đè cũng phải qua cổng
+   * đó — đè xong mới kiểm, chứ không kiểm giá cũ rồi thay bằng giá chưa kiểm.
+   *
+   * Đo trên ảnh chụp D1: bảng phủ 88 dòng giá, 84 dòng KHỚP SẴN, đúng 4 dòng bị đè — cả 4 đều
+   * là `TP-TOLEKEM124_8D` ở bốn bậc đắt nhất. Không có thiệt hại phụ.
+   */
+  const sealed = applySealedPriceAuthority([...itemPrices.values()], sealedTierTable);
+  if (sealed.report.applied) {
+    itemPrices.clear();
+    for (const row of sealed.item_prices) itemPrices.set(row.name, row);
+    console.log(
+      `ALUMDOOR_SEALED_PRICE_AUTHORITY covered=${sealed.report.covered_row_count} ` +
+        `confirmed=${sealed.report.confirmed_count} overridden=${sealed.report.override_count} ` +
+        `source=${JSON.stringify(SEALED_PRICE_SOURCE)}`,
+    );
+  }
+
   for (const row of itemPrices.values()) if (!(Number(row.rate) > 0)) blockers.push({ type: "non_positive_item_price", name: row.name, rate: row.rate });
   const payload = {
     format: "alumdoor-pricing-payload/v1",
@@ -352,6 +495,7 @@ export function buildPricingPayload(pricingSourceFile, itemPayloadFile) {
     base_item_price_count: [...itemPrices.values()].filter((row) => row.price_variant === STANDARD_VARIANT).length,
     variant_item_price_count: [...itemPrices.values()].filter((row) => row.price_variant !== STANDARD_VARIANT).length,
     item_price_count: itemPrices.size,
+    sealed_price_authority: sealed.report,
     pricing_rule_count: pricingRules.size,
     resolution_count: resolutions.length,
     resolutions,
@@ -367,7 +511,14 @@ if (process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import
   const [sourceArg, itemArg, outputArg, reportArg] = process.argv.slice(2);
   if (!sourceArg || !itemArg || !outputArg || !reportArg) throw new Error("Usage: node build-alumdoor-pricing-payload.mjs <pricing-source.json> <item-payload.json> <pricing-payload.json> <report.json>");
   const [pricingSourceFile, itemPayloadFile] = await Promise.all([readFile(resolve(sourceArg), "utf8").then(JSON.parse), readFile(resolve(itemArg), "utf8").then(JSON.parse)]);
-  const { payload, report } = buildPricingPayload(pricingSourceFile, itemPayloadFile);
+  /**
+   * Nạp bảng giá có mộc từ gốc repo, không từ cwd — bộ dựng này được gọi từ nhiều thư mục khác
+   * nhau (pricing-adapter, bom-adapter, seed-full.sh). Neo theo cwd thì có adapter im lặng chạy
+   * KHÔNG có thẩm quyền giá, và giá lệch chỉ lộ ra ở đơn hàng thật.
+   */
+  const sealedTierTable = await loadSealedTierTable(resolve(dirname(fileURLToPath(import.meta.url)), "..", ".."));
+  if (!sealedTierTable) console.log("ALUMDOOR_SEALED_PRICE_AUTHORITY skipped=no-source");
+  const { payload, report } = buildPricingPayload(pricingSourceFile, itemPayloadFile, sealedTierTable);
   await mkdir(dirname(resolve(outputArg)), { recursive: true });
   await writeFile(resolve(outputArg), `${JSON.stringify(payload, null, 2)}\n`, "utf8");
   await writeFile(resolve(reportArg), `${JSON.stringify(report, null, 2)}\n`, "utf8");

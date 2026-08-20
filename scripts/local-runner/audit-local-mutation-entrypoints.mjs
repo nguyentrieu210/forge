@@ -81,6 +81,9 @@ const guardedChildren = [
   ['server/scripts/import-alumdoor-pricing-local.mjs', /assertLocalMutationChildContext\(\[['"]pricing['"]\]\)/, 'pricing'],
   ['server/scripts/import-alumdoor-canonical-bom-local.mjs', /assertLocalMutationChildContext\(\[['"]bom['"]\]\)/, 'bom'],
   ['server/scripts/import-alumdoor-bom-template-local.mjs', /assertLocalMutationChildContext\(\[['"]bom-template['"],\s*['"]bom['"]\]\)/, 'bom-template|bom'],
+  ['server/scripts/import-alumdoor-item-code-rename-local.mjs', /assertLocalMutationChildContext\(\[['"]item-code-rename['"]\]\)/, 'item-code-rename'],
+  ['server/scripts/import-alumdoor-catalog-link-repair-local.mjs', /assertLocalMutationChildContext\(\[['"]link-repair['"]\]\)/, 'link-repair'],
+  ['server/scripts/import-alumdoor-layer-converge-local.mjs', /assertLocalMutationChildContext\(\[['"]layer-converge['"]\]\)/, 'layer-converge'],
 ];
 for (const [file, pattern, adapters] of guardedChildren) {
   requireFile(file);
@@ -91,6 +94,9 @@ requireMatch('server/scripts/import-alumdoor-item-master-local.mjs', /if \(valid
 requireMatch('server/scripts/import-alumdoor-pricing-local.mjs', /if \(!apply\)[\s\S]*process\.exit\(0\);[\s\S]*assertLocalMutationChildContext/, 'pricing_dry_run_must_remain_prelock');
 requireMatch('server/scripts/import-alumdoor-canonical-bom-local.mjs', /if \(validateOnly\)[\s\S]*process\.exit\(0\);[\s\S]*assertLocalMutationChildContext/, 'bom_validate_only_must_remain_prelock');
 requireMatch('server/scripts/import-alumdoor-bom-template-local.mjs', /if \(validateOnly\)[\s\S]*process\.exit\(0\);[\s\S]*assertLocalMutationChildContext/, 'bom_template_validate_only_must_remain_prelock');
+requireMatch('server/scripts/import-alumdoor-item-code-rename-local.mjs', /if \(validateOnly\)[\s\S]*process\.exit\(0\);[\s\S]*assertLocalMutationChildContext/, 'item_code_rename_validate_only_must_remain_prelock');
+requireMatch('server/scripts/import-alumdoor-catalog-link-repair-local.mjs', /if \(validateOnly\)[\s\S]*process\.exit\(0\);[\s\S]*assertLocalMutationChildContext/, 'link_repair_validate_only_must_remain_prelock');
+requireMatch('server/scripts/import-alumdoor-layer-converge-local.mjs', /if \(validateOnly\)[\s\S]*process\.exit\(0\);[\s\S]*assertLocalMutationChildContext/, 'layer_converge_validate_only_must_remain_prelock');
 
 for (const stale of [
   'server/scripts/import-alumdoor-item-master-local-impl.mjs',

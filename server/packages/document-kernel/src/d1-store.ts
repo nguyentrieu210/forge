@@ -40,6 +40,97 @@ interface ReceiptRow {
   result_json: string;
 }
 
+/**
+ * Khoá mang NHÃN chứ không mang con trỏ.
+ *
+ * `item_name`, `source_item_name`, … chứa tên người đọc. Trên D1 Alumdoor có 17 giá trị nhãn
+ * TRÙNG Y HỆT một mã hàng, chỉ vì lúc nhập liệu người ta gõ mã vào ô tên. Nếu tính chúng là
+ * tham chiếu thì rename bị chặn oan; nếu thay chúng theo mã mới thì giao diện xấu đi mà không
+ * sửa được liên kết nào. Cả cascade lẫn guard đều bỏ qua nhóm khoá này.
+ */
+const DISPLAY_LABEL_KEY = /_name$/;
+
+/**
+ * Thay mọi lá có giá trị ĐÚNG BẰNG `from` thành `to`, giữ nguyên phần còn lại.
+ *
+ * So nguyên giá trị, không so chuỗi con — đây là toàn bộ lằn ranh an toàn của cascade.
+ */
+/**
+ * Mã hàng ẩn ở ba chỗ, không phải một.
+ *
+ * Ngoài giá trị lá nguyên vẹn, nó còn sống trong hai dạng nữa — cả hai đều đo được trên D1
+ * Alumdoor 19/08, và cả hai đều KHÔNG được sửa bằng thay chuỗi con:
+ *
+ *  1. KHOÁ NỐI BẰNG DẤU HAI CHẤM. Chính nền tảng đặt tên bằng `format:{a}:{b}:{c}`, nên đây là
+ *     dạng của nền tảng chứ không phải thói quen riêng của một app:
+ *       `Item Price.name`      558  `{bảng giá}:{mã}:{đvt}:{biến thể}`
+ *       `rule_code`            337  `{mã cha}:{mã con}:{số thứ tự}`
+ *       `Pricing Rule.name` / `.title` / `.exclusive_group`  56 mỗi loại
+ *     So theo ĐOẠN, không so chuỗi con: đã kiểm không mã hàng nào chứa dấu hai chấm, nên một
+ *     đoạn hoặc bằng đúng mã hoặc không liên quan. Nhờ vậy `TP-CUA` không đụng `TP-CUADL1LY`.
+ *
+ *  2. JSON SERIALIZE THÀNH CHUỖI. `deferred_components_json` (100 lần) là mảng JSON nằm trong
+ *     một ô text, `item_code` nằm bên trong. Parse ra, sửa, đóng gói lại — vẫn là so nguyên giá
+ *     trị lá, chỉ là sâu thêm một lớp.
+ */
+function rewriteColonSegments(input: string, from: string, to: string): { value: string; changed: boolean } {
+  if (!input.includes(":") || !input.includes(from)) return { value: input, changed: false };
+  const parts = input.split(":");
+  let changed = false;
+  const next = parts.map((part) => {
+    if (part !== from) return part;
+    changed = true;
+    return to;
+  });
+  return changed ? { value: next.join(":"), changed } : { value: input, changed: false };
+}
+
+function rewriteEmbeddedJson(input: string, from: string, to: string): { value: string; changed: boolean } {
+  const trimmed = input.trim();
+  if (!trimmed.startsWith("[") && !trimmed.startsWith("{")) return { value: input, changed: false };
+  if (!input.includes(from)) return { value: input, changed: false };
+  let parsed: unknown;
+  // Chuỗi trông giống JSON mà parse không ra thì để nguyên — đây là ô dữ liệu của người dùng,
+  // không phải chỗ để đoán.
+  try { parsed = JSON.parse(input); } catch { return { value: input, changed: false }; }
+  if (parsed === null || typeof parsed !== "object") return { value: input, changed: false };
+  const next = rewriteLeafMatches(parsed, from, to);
+  return next.changed ? { value: JSON.stringify(next.value), changed: true } : { value: input, changed: false };
+}
+
+export function rewriteLeafMatches(input: unknown, from: string, to: string, key = ""): { value: unknown; changed: boolean } {
+  if (typeof input === "string") {
+    if (DISPLAY_LABEL_KEY.test(key)) return { value: input, changed: false };
+    if (input === from) return { value: to, changed: true };
+    const embedded = rewriteEmbeddedJson(input, from, to);
+    if (embedded.changed) return embedded;
+    const segmented = rewriteColonSegments(input, from, to);
+    if (segmented.changed) return segmented;
+    return { value: input, changed: false };
+  }
+  if (Array.isArray(input)) {
+    let changed = false;
+    const out = input.map((entry) => {
+      // Phần tử mảng thừa hưởng khoá của mảng: `tags[]` vẫn là `tags`, `items[]` vẫn là `items`.
+      const next = rewriteLeafMatches(entry, from, to, key);
+      changed ||= next.changed;
+      return next.value;
+    });
+    return changed ? { value: out, changed } : { value: input, changed: false };
+  }
+  if (input && typeof input === "object") {
+    let changed = false;
+    const out: Record<string, unknown> = {};
+    for (const [childKey, childValue] of Object.entries(input as Record<string, unknown>)) {
+      const next = rewriteLeafMatches(childValue, from, to, childKey);
+      changed ||= next.changed;
+      out[childKey] = next.value;
+    }
+    return changed ? { value: out, changed } : { value: input, changed: false };
+  }
+  return { value: input, changed: false };
+}
+
 export class D1MutationStore implements MutationStore {
   private readonly writer: D1Database | D1DatabaseSession;
 
@@ -513,13 +604,66 @@ export class D1MutationStore implements MutationStore {
   }
 
   /**
+   * Thay mọi tham chiếu tới `oldName` bằng `newName`, khớp NGUYÊN giá trị lá.
+   *
+   * Đọc–sửa–ghi ở tầng JS thay vì json_set trong SQL: đường dẫn tới một tham chiếu là tuỳ ý
+   * và lồng nhiều tầng (`component_rules[].item_code`), viết bằng SQL vừa không đọc được vừa
+   * không cách nào chứng minh là quét hết.
+   *
+   * Lọc `LIKE` chỉ để giảm số dòng phải parse; quyết định thay hay không luôn là phép so
+   * nguyên giá trị ở `rewriteLeafMatches`, nên chuỗi con lọt vào đây rồi vẫn không bị đổi.
+   */
+  private async cascadeReferences(tenantId: string, oldKey: string, oldName: string, newName: string): Promise<void> {
+    const like = `%${oldName}%`;
+    const writes: D1PreparedStatement[] = [];
+
+    const docs = await this.writer.prepare(
+      `SELECT doc_key, payload_json FROM documents WHERE tenant_id=?1 AND doc_key<>?2 AND payload_json LIKE ?3`,
+    ).bind(tenantId, oldKey, like).all<{ doc_key: string; payload_json: string }>();
+    for (const row of docs.results ?? []) {
+      const next = rewriteLeafMatches(JSON.parse(row.payload_json), oldName, newName);
+      if (!next.changed) continue;
+      writes.push(this.writer.prepare(`UPDATE documents SET payload_json=?3 WHERE tenant_id=?1 AND doc_key=?2`)
+        .bind(tenantId, row.doc_key, JSON.stringify(next.value)));
+    }
+
+    const kids = await this.writer.prepare(
+      `SELECT parent_key, fieldname, row_id, payload_json FROM document_children
+       WHERE tenant_id=?1 AND parent_key<>?2 AND payload_json LIKE ?3`,
+    ).bind(tenantId, oldKey, like).all<{ parent_key: string; fieldname: string; row_id: string; payload_json: string }>();
+    for (const row of kids.results ?? []) {
+      const next = rewriteLeafMatches(JSON.parse(row.payload_json), oldName, newName);
+      if (!next.changed) continue;
+      writes.push(this.writer.prepare(
+        `UPDATE document_children SET payload_json=?5
+         WHERE tenant_id=?1 AND parent_key=?2 AND fieldname=?3 AND row_id=?4`,
+      ).bind(tenantId, row.parent_key, row.fieldname, row.row_id, JSON.stringify(next.value)));
+    }
+
+    if (writes.length > 0) await this.writer.batch(writes);
+  }
+
+  /**
    * Renames a document, moving its children and collaboration rows with it.
    *
-   * Refuses when anything still points at the old name. Link values live inside
-   * JSON payloads with no foreign keys, so a rename cannot be cascaded reliably:
-   * rewriting "every payload containing this string" would also corrupt unrelated
-   * text that happens to match. A refused rename is recoverable; a half-rewritten
-   * link graph is not.
+   * Mặc định VẪN từ chối khi còn thứ trỏ vào tên cũ. Lý do ghi từ đầu vẫn đúng nguyên văn:
+   * link nằm trong JSON, không có khoá ngoại, nên "thay mọi payload có chứa chuỗi này" sẽ
+   * phá cả đoạn văn bản vô can trùng chữ.
+   *
+   * `cascade` là dạng AN TOÀN của việc đó, và khác ở đúng một điểm: nó thay **nguyên giá trị
+   * lá**, không thay chuỗi con. Khác biệt ấy đo được trên dữ liệu thật:
+   *   · `TP-CUA` KHÔNG bị đụng khi tồn tại `TP-CUADL1LY` — hai giá trị khác nhau;
+   *   · `component_key` là trường ĐA HÌNH, 15 giá trị của nó là khoá vị trí (`LEAF_SHEET`,
+   *     `T_BRACKET`, `BOTTOM_SEAL`) chứ không phải mã hàng — so nguyên giá trị nên chúng
+   *     không bao giờ khớp, trong khi so theo ngữ nghĩa trường thì hoặc bỏ sót hoặc ăn nhầm.
+   *
+   * Khoá tận cùng `_name` bị loại khỏi CẢ cascade lẫn guard: đó là nhãn hiển thị, không phải
+   * con trỏ. Đổi `item_name` "TẨY NHÔM" thành "VT-TAY-NHOM" là làm giao diện xấu đi chứ không
+   * sửa được tham chiếu nào.
+   *
+   * Bất biến giữ cho cascade không thể bỏ sót: sau khi thay xong, guard vẫn chạy y như cũ và
+   * PHẢI đếm được 0. Cascade và guard soi cùng một thứ theo cùng một phép so, nên "cascade
+   * xong mà guard vẫn thấy" là ném lỗi chứ không phải ghi bừa.
    */
   async renameDocument(
     tenantId: string,
@@ -529,15 +673,29 @@ export class D1MutationStore implements MutationStore {
     actor: string,
     now: string,
     namingField?: string,
+    options: { cascade?: boolean } = {},
   ): Promise<void> {
     const oldKey = documentKey(doctype, oldName);
     const newKey = documentKey(doctype, newName);
 
+    if (options.cascade) await this.cascadeReferences(tenantId, oldKey, oldName, newName);
+
+    // `json_tree`, KHÔNG phải `json_each`: json_each chỉ liệt kê thành viên TẦNG TRÊN CÙNG, nên một
+    // tham chiếu nằm trong mảng con lọt lưới hoàn toàn. Đo trên danh mục Alumdoor 19/08: trong 76 mã
+    // hàng mà guard cũ cho qua, 3 mã đang được `Purchase Receipt.items[].item_code` trỏ tới — đổi tên
+    // xong là ba dòng phiếu nhập trỏ vào mặt hàng không còn tồn tại, và không có gì báo.
+    //
+    // Phép so vẫn là so NGUYÊN giá trị lá (`type='text'`), không phải so chuỗi con: một mô tả có chứa
+    // mã bên trong không bị tính là tham chiếu. Đổi lại, guard cố ý RỘNG TAY — một trường tên trùng y
+    // hệt mã cũng làm nó từ chối. Với thao tác đổi danh tính thì lệch về phía từ chối mới đúng: từ
+    // chối nhầm tốn một lần soát tay, cho qua nhầm thì mất tham chiếu mà không ai biết.
     const referenced = await this.writer.prepare(
       `SELECT (SELECT COUNT(*) FROM documents WHERE tenant_id=?1 AND doc_key<>?2
-                 AND EXISTS(SELECT 1 FROM json_each(payload_json) WHERE json_each.value=?3))
+                 AND EXISTS(SELECT 1 FROM json_tree(payload_json) WHERE json_tree.type='text' AND json_tree.value=?3
+                   AND (json_tree.key IS NULL OR substr(json_tree.key, -5) <> '_name')))
             + (SELECT COUNT(*) FROM document_children WHERE tenant_id=?1 AND parent_key<>?2
-                 AND EXISTS(SELECT 1 FROM json_each(payload_json) WHERE json_each.value=?3))
+                 AND EXISTS(SELECT 1 FROM json_tree(payload_json) WHERE json_tree.type='text' AND json_tree.value=?3
+                   AND (json_tree.key IS NULL OR substr(json_tree.key, -5) <> '_name')))
             + (SELECT COUNT(*) FROM documents WHERE tenant_id=?1 AND doctype=?4 AND amended_from=?3) AS total`,
     ).bind(tenantId, oldKey, oldName, doctype).first<{ total: number }>();
     if (Number(referenced?.total ?? 0) > 0) {
@@ -545,6 +703,15 @@ export class D1MutationStore implements MutationStore {
     }
 
     await this.writer.batch([
+      // `document_children` khoá ngoại theo doc_key và chỉ khai ON DELETE CASCADE — không có
+      // ON UPDATE. Đổi doc_key của cha trong khi con còn trỏ tên cũ là vi phạm ngay, mà đổi con
+      // trước thì tên mới chưa tồn tại nên cũng vi phạm. Không thứ tự nào đúng, phải hoãn kiểm
+      // tra tới lúc commit.
+      //
+      // Mọi Item đều có dòng con `uom_conversions`, nên trước khi vá thì đường đổi tên coi như
+      // chưa từng chạy được lần nào — và lỗi bị bọc thành HTTP 500 "Storage operation failed"
+      // nên không log nào chỉ ra nguyên nhân.
+      this.writer.prepare('PRAGMA defer_foreign_keys = ON'),
       this.writer.prepare(
         `UPDATE documents
          SET doc_key=?3,
@@ -556,6 +723,11 @@ export class D1MutationStore implements MutationStore {
       ).bind(tenantId, oldKey, newKey, newName, now, actor, namingField ?? "", namingField ? `$.${namingField}` : "$.__unused"),
       this.writer.prepare(`UPDATE document_children SET parent_key=?3 WHERE tenant_id=?1 AND parent_key=?2`).bind(tenantId, oldKey, newKey),
       this.writer.prepare(`UPDATE versions SET doc_key=?3 WHERE tenant_id=?1 AND doc_key=?2`).bind(tenantId, oldKey, newKey),
+      // `document_search` (2.796 dòng) và `document_views` khoá ngoại theo (tenant_id, doctype,
+      // name) chứ không theo doc_key, nên chúng KHÔNG tự đi theo khi tên đổi. Lô lệnh cũ cập nhật
+      // comments/assignments/shares/tags/files nhưng bỏ sót đúng hai bảng CÓ khoá ngoại.
+      this.writer.prepare(`UPDATE document_search SET name=?4 WHERE tenant_id=?1 AND doctype=?2 AND name=?3`).bind(tenantId, doctype, oldName, newName),
+      this.writer.prepare(`UPDATE document_views SET name=?4 WHERE tenant_id=?1 AND doctype=?2 AND name=?3`).bind(tenantId, doctype, oldName, newName),
       this.writer.prepare(`UPDATE document_comments SET name=?4 WHERE tenant_id=?1 AND doctype=?2 AND name=?3`).bind(tenantId, doctype, oldName, newName),
       this.writer.prepare(`UPDATE assignments SET name=?4 WHERE tenant_id=?1 AND doctype=?2 AND name=?3`).bind(tenantId, doctype, oldName, newName),
       this.writer.prepare(`UPDATE document_shares SET name=?4 WHERE tenant_id=?1 AND doctype=?2 AND name=?3`).bind(tenantId, doctype, oldName, newName),

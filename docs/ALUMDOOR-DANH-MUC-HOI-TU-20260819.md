@@ -173,14 +173,73 @@ hợp lý, chạy trên 587 mã thật mới lộ ra chỗ nó ăn nhầm.
 | Họ bị gộp | 52 | Gộp là ĐÍCH (§5 nêu ví dụ 5 mã `AL595` về một), nhưng phải cố ý |
 | Chưa suy được tiền tố | 0 | — |
 
-### Còn lại: bước đổi mã thật
+### Đổi mã hàng — ĐÃ CHẠY XONG 19/08
 
-Bộ chuẩn hoá và bảng ánh xạ đã xong; bước **thi hành** thì chưa, và cố ý chưa:
+`EXECUTION_STATUS=SUCCESS`. **344 mã đổi tên** (15 mã đã đổi từ lần chạy hỏng trước, tổng
+359/359), **324 dòng `Item Price`** và **56 `Pricing Rule`** đổi tên theo. Lần chạy thứ hai:
+0/0/0 — bất biến.
 
-- mã đi vào Item Price, BOM, BOM Rule applicability, lô tồn và mọi chứng từ, nên đổi mã phải
-  là một adapter có bảo vệ riêng, không phải vài câu SQL;
-- và nó đóng cứng danh tính mặt hàng, nên phải chạy **sau khi** chủ xưởng duyệt 13 tên rút gọn
-  và 52 họ gộp ở trên.
+Kiểm chứng độc lập trên D1 sau khi chạy:
+
+| | |
+|---|---:|
+| Item | 587 (không đổi — đổi tên, không gộp) |
+| Mã cũ còn sót | **0** / 359 |
+| Mã mới đã có mặt | **359** / 359 |
+| Tham chiếu còn trỏ mã cũ (lá hoặc đoạn) | **0** |
+| Vi phạm khoá ngoại | **0** |
+| Item Price / Pricing Rule | 558 / 83 (không đổi) |
+
+Không chạy: 215 mã thuộc 52 họ **gộp** và 13 mã **vượt 24 ký tự** — cả hai cần chủ xưởng quyết
+(xem bảng cuối mục này).
+
+### Năm lỗi phải vá mới chạy được — không cái nào lộ ra nếu chỉ đọc code
+
+| # | Lỗi | Đo được |
+|---|---|---|
+| 1 | Guard tham chiếu dùng `json_each`, chỉ quét tầng trên cùng | 3/76 mã bị bắt hụt — đổi tên xong là 3 dòng `Purchase Receipt.items[]` trỏ vào mặt hàng không tồn tại |
+| 2 | `document_search` (2.796 dòng) + `document_views` không đi theo khi đổi tên | Mọi lần đổi tên hỏng với `FOREIGN KEY constraint failed`, bọc thành HTTP 500 "Storage operation failed" |
+| 3 | `document_children` khoá ngoại theo doc_key, không có ON UPDATE | Không thứ tự cập nhật nào hợp lệ — phải `defer_foreign_keys` |
+| 4 | API chặn cứng 100 dòng/trang; vòng lặp lấy "nhận ít hơn xin" làm dấu hết trang | Mọi phép đếm tính trên 100 bản ghi đầu; báo "344 mặt hàng vắng mặt" trong khi cả 587 còn nguyên |
+| 5 | Importer ghi rồi mới kiểm | Lần chạy 14:23 đổi 15 mã rồi mới dừng — đúng trạng thái nửa vời mà adapter sinh ra để tránh |
+
+Lỗi 2 và 3 nghĩa là **đường đổi tên document chưa từng chạy được lần nào** trên nền tảng này.
+Bộ test không bắt được vì lược đồ trong test chép thiếu đúng các dòng `FOREIGN KEY` — không có
+ràng buộc thì không có gì để vi phạm.
+
+### Cascade: mã hàng ẩn ở ba chỗ, không phải một
+
+| Dạng | Số lần | Cách xử lý |
+|---|---:|---|
+| Giá trị lá nguyên vẹn | — | So bằng nhau |
+| Khoá nối bằng `:` — `Item Price.name`, `rule_code`, `Pricing Rule.name/title/exclusive_group` | 558 / 2.830 / 56 mỗi loại | Thay theo **đoạn** (không mã nào chứa `:`) |
+| JSON serialize thành chuỗi — `deferred_components_json` | 338 | Parse, sửa lá, đóng gói lại |
+
+Không đụng: khoá tận cùng `_name` (nhãn hiển thị, không phải con trỏ), và chuỗi con — `TP-CUA`
+nằm trong `TP-CUADL1LY` là hai mã khác nhau.
+
+Cái quyết định độ an toàn là **so nguyên giá trị, không so ngữ nghĩa trường**: `component_key`
+là trường đa hình, 15 giá trị của nó là khoá vị trí (`LEAF_SHEET`, `T_BRACKET`, `BOTTOM_SEAL`)
+chứ không phải mã hàng — so giá trị thì chúng không khớp, còn cascade theo metadata Link thì
+hoặc bỏ sót hoặc ăn nhầm. Cũng vì vậy KHÔNG khai `source_item_code`/`component_key` là
+`Link(Item)`: đo ra 106/209 và 15/138 giá trị của chúng không trỏ tới Item nào.
+
+### Một chỗ cố ý không đụng
+
+3 `Material Specification` có tên `ĐM-{mã}` trùng chữ với mã vừa đổi: `ĐM-RNINOX-DR`,
+`ĐM-TRỤC 114_1.8LY`, `ĐM-TRỤC 114_2.1LY`. Trông như dẫn xuất từ mã hàng, nhưng chỉ **5/17**
+bản ghi có phần sau `ĐM-` ứng với một Item — 12 cái còn lại (`ĐM-TD325`, `ĐM-A282`, `ĐM-RHM8`…)
+không ứng với mã hàng nào, và Material Specification không có trường link nào trỏ Item. Tức
+KHÔNG có luật "spec_code bám theo item_code"; đổi nó theo mã mới là bịa ra một luật không có
+thật. Adapter ghi log `ALUMDOOR_RENAME_OWN_IDENTITY_UNTOUCHED` và đi tiếp.
+
+### Vẫn cần chủ xưởng quyết
+
+| Nhóm | Số lượng | Vì sao máy không quyết được |
+|---|---:|---|
+| Vượt 24 ký tự | 13 | Rút ngắn là đặt tên, mà tên phải để xưởng đọc được |
+| Họ bị gộp | 52 họ (215 mã) | Gộp là ĐÍCH (§5 nêu ví dụ 5 mã `AL595` về một), nhưng phải cố ý |
+| 3 `spec_code` ở trên | 3 | Xác nhận là trùng chữ, không phải liên kết |
 
 Riêng `TRONBO` trong mã cần nói rõ: nhồi cách bán vào mã hàng chính là **dựng lại `Sales Option`
 qua cửa sau** — thứ đã bị xoá ở `46cff213` và audit 16/08 cấm đưa lại.

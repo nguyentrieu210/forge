@@ -11,6 +11,16 @@ export const GEOMETRY_FIELDS = Object.freeze([
   Object.freeze({ code: "RAY_DAI", name: "Dài ray", uom: "Mét", axis: "LENGTH" }),
   Object.freeze({ code: "V4_DAI", name: "Dài V4/V5", uom: "Mét", axis: "LENGTH" }),
   Object.freeze({ code: "TRUC_DAI", name: "Dài trục", uom: "Mét", axis: "LENGTH" }),
+  // Không phải kích thước dài, nên đi trục OTHER — trục này có sẵn trong lược đồ, không phải bịa thêm.
+  //
+  // Mã viết thường trong khi cả danh mục viết HOA là CÓ CHỦ ĐÍCH: đây là tên trường mà máy tính
+  // giá dùng (`billable_area_sqm` trong ngữ cảnh tính giá), không phải một mã danh mục do người
+  // đặt. Đổi cho "đồng bộ" là làm hỏng 11 quy tắc BOM đang trỏ vào nó.
+  //
+  // Vì sao phải khai: `BOM Rule.source_field` là Link(Geometry Field), và 11 quy tắc đã trỏ vào
+  // `billable_area_sqm` từ trước — ví dụ "20 CÁI/M2" ⇒ `(billable_area_sqm) × 20`. Không khai thì
+  // 11 link đó treo, mà link treo trong JSON thì không có gì chặn: audit 19/08 mới lôi ra được.
+  Object.freeze({ code: "billable_area_sqm", name: "Diện tích tính tiền", uom: "m2", axis: "OTHER" }),
 ]);
 
 const row = (geometryField, role, { required = false, visible = true, editable = role === "INPUT", sequence } = {}) =>

@@ -4,6 +4,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { assertLocalMutationChildContext } from "../../scripts/local-runner/assert-local-mutation-child-context.mjs";
+import { classifyManagedItemPriceNames } from "./lib/alumdoor-item-price-alias.mjs";
 
 const args = process.argv.slice(2);
 const apply = args.includes("--apply");
@@ -38,7 +39,10 @@ const NUMERIC_FIELDS = new Set([
 ]);
 const MANAGED_FIELDS = Object.freeze({
   "Price List": ["price_list_name", "effective_date", "currency", "disabled"],
-  "Item Price": ["price_list", "item_code", "uom", "price_variant", "rate", "currency", "disabled"],
+  // `area_tier` PHẢI nằm trong danh sách quản lý: `diffs()` chỉ so những trường liệt kê ở đây,
+  // nên thiếu nó thì đổi bậc của một dòng giá = 0 khác biệt = không PUT lại, và `--expect-idempotent`
+  // báo "sạch" trong khi D1 vẫn giữ bậc cũ. Đây là bậc quyết định đơn giá, không phải ghi chú.
+  "Item Price": ["price_list", "item_code", "uom", "area_tier", "price_variant", "rate", "currency", "disabled"],
   "Pricing Rule": [
     "title", "disabled", "price_list", "currency", "rule_level", "apply_on", "item_code", "effect_type",
     "adjustment_basis", "adjustment_rate", "priority", "exclusive_group", "conditions", "taxable", "discountable",
@@ -173,8 +177,10 @@ async function listAll(doctype) {
   }
   return out;
 }
-async function upsert(doctype, expected, existing) {
-  const name = expectedName(expected);
+async function upsert(doctype, expected, existing, targetName) {
+  // Tên để GHI có thể là bí danh (dòng cũ chưa đổi tên). Lượt TẠO thì không truyền tên bí danh
+  // được — nền tảng tự đặt tên theo `format:` nên dòng mới luôn ra tên chuẩn năm đoạn.
+  const name = targetName ?? expectedName(expected);
   const document = apiDocument(expected);
   if (!existing) {
     await requireOk(`/api/resource/${encodeURIComponent(doctype)}`, { method: "POST", body: { ...document, name } });
@@ -222,13 +228,35 @@ const expectedPriceNames = new Set(payload.item_prices.map(expectedName));
 const expectedRuleNames = new Set(payload.pricing_rules.map(expectedName));
 const managedExistingPrices = existingItemPrices.filter((row) => clean(row.price_list) === managedList);
 const managedExistingRules = existingRules.filter((row) => clean(row.price_list) === managedList && clean(row.name).startsWith("ALUMDOOR-PR:"));
-for (const row of managedExistingPrices) {
-  if (!expectedPriceNames.has(clean(row.name))) blockers.push({ type: "extra_managed_item_price", name: row.name });
+/**
+ * Tên cũ là BÍ DANH, không phải dòng thừa — phép phân loại nằm ở
+ * `scripts/lib/alumdoor-item-price-alias.mjs` (có test neo trên chính bản chụp D1).
+ */
+const ALL_AREA_TIER = "MOI-DIEN-TICH";
+const { alias: itemPriceAlias, blockers: nameBlockers } = classifyManagedItemPriceNames({
+  existingNames: managedExistingPrices.map((row) => clean(row.name)),
+  expectedNames: expectedPriceNames,
+  allAreaTier: ALL_AREA_TIER,
+});
+blockers.push(...nameBlockers);
+/** Tên để GET/PUT: tên bí danh nếu dòng đang sống dưới tên cũ, còn lại là tên chuẩn. */
+function platformName(doctype, row) {
+  const name = expectedName(row);
+  return doctype === "Item Price" ? itemPriceAlias.get(name) ?? name : name;
 }
 for (const row of managedExistingRules) {
   if (!expectedRuleNames.has(clean(row.name))) blockers.push({ type: "extra_managed_pricing_rule", name: row.name });
 }
-for (const row of payload.item_prices) preimage.item_prices.push({ name: row.name, doc: await getDoc("Item Price", row.name) });
+// Ảnh trước phải chụp đúng bản ghi SẼ BỊ GHI: dòng sống dưới tên cũ thì chụp theo tên cũ, nếu
+// không thì ảnh trước toàn `null` và khôi phục lại là tạo mới thay vì trả về nguyên trạng.
+for (const row of payload.item_prices) {
+  const actual = platformName("Item Price", row);
+  preimage.item_prices.push({
+    name: row.name,
+    ...(actual === clean(row.name) ? {} : { platform_name: actual }),
+    doc: await getDoc("Item Price", actual),
+  });
+}
 for (const row of payload.pricing_rules) preimage.pricing_rules.push({ name: row.name, doc: await getDoc("Pricing Rule", row.name) });
 
 const preimagePath = path.resolve(preimageArg);
@@ -257,8 +285,9 @@ assertLocalMutationChildContext(["pricing"]);
 
 const result = { created: 0, updated: 0, exact: 0 };
 async function applyOne(doctype, expected) {
-  const existing = await getDoc(doctype, expectedName(expected));
-  const status = await upsert(doctype, expected, existing);
+  const name = platformName(doctype, expected);
+  const existing = await getDoc(doctype, name);
+  const status = await upsert(doctype, expected, existing, name);
   result[status] += 1;
 }
 await applyOne("Price List", payload.price_list);
@@ -272,7 +301,7 @@ for (const [doctype, rows] of [
   ["Pricing Rule", payload.pricing_rules],
 ]) {
   for (const expected of rows) {
-    const actual = await getDoc(doctype, expectedName(expected));
+    const actual = await getDoc(doctype, platformName(doctype, expected));
     if (!actual) {
       verifyFailures.push({ doctype, name: expected.name, reason: "missing_after_apply" });
       continue;
@@ -283,7 +312,9 @@ for (const [doctype, rows] of [
 }
 const finalManagedPrices = (await listAll("Item Price")).filter((row) => clean(row.price_list) === managedList);
 const finalManagedRules = (await listAll("Pricing Rule")).filter((row) => clean(row.price_list) === managedList && clean(row.name).startsWith("ALUMDOOR-PR:"));
-for (const row of finalManagedPrices) if (!expectedPriceNames.has(clean(row.name))) verifyFailures.push({ doctype: "Item Price", name: row.name, reason: "extra_managed" });
+// Tên bí danh là tên hợp lệ ở bước này: nó chỉ vào đúng dòng payload vừa ghi, không phải dòng thừa.
+const acceptedPriceNames = new Set([...expectedPriceNames, ...itemPriceAlias.values()]);
+for (const row of finalManagedPrices) if (!acceptedPriceNames.has(clean(row.name))) verifyFailures.push({ doctype: "Item Price", name: row.name, reason: "extra_managed" });
 for (const row of finalManagedRules) if (!expectedRuleNames.has(clean(row.name))) verifyFailures.push({ doctype: "Pricing Rule", name: row.name, reason: "extra_managed" });
 if (verifyFailures.length > 0) {
   console.error(JSON.stringify({ verify_failures: verifyFailures }, null, 2));
