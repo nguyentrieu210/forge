@@ -479,7 +479,7 @@ export function ListView(props: ListViewProps) {
             <Checkbox checked={selected} onCheckedChange={() => toggleRow(name)} aria-label={`${t("list.select_row")} ${name}`} />
           </span>
         </TableCell>
-        <TableCell className={cn("px-0 text-center text-xs tabular-nums text-muted-foreground", INDEX_W, STICKY_INDEX, compact && "py-1")} style={{ width: 48 }}>
+        <TableCell className={cn("px-0 pr-1 text-right text-xs tabular-nums text-muted-foreground", INDEX_W, STICKY_INDEX, compact && "py-1")} style={{ width: 48 }}>
           {pageStart + index + 1}
         </TableCell>
         {columns.map((c) => {
@@ -716,7 +716,7 @@ export function ListView(props: ListViewProps) {
               <TableHead className={cn("top-0 px-0 text-center", SELECT_W, STICKY_SELECT, "z-40", compact && "h-7")} style={{ width: 40 }}>
                 <Checkbox checked={allPageSelected} onCheckedChange={toggleAllPage} aria-label={t("list.select_all_page")} />
               </TableHead>
-              <TableHead className={cn("top-0 px-0 text-center tabular-nums", INDEX_W, STICKY_INDEX, "z-40", compact && "h-7")} style={{ width: 48 }}>
+              <TableHead className={cn("top-0 px-0 pr-1 text-right tabular-nums", INDEX_W, STICKY_INDEX, "z-40", compact && "h-7")} style={{ width: 48 }}>
                 #
               </TableHead>
               {columns.map((c) => (
