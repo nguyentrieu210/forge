@@ -1894,7 +1894,7 @@
  * cách, đệm 12px của nó cộng với nửa ô STT bỏ không thành một dải trắng ~30px đọc ra là khe hở. */
 .mf-shell .mf-list-view thead th:nth-child(3),
 .mf-shell .mf-list-view tbody td:nth-child(3) {
-  padding-left: 0.25rem;
+  padding-left: 0.5rem;
 }
 
 .mf-shell .mf-list-view thead,

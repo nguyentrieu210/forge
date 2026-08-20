@@ -88,9 +88,9 @@ const PAGE_SIZES = [20, 50, 100];
 
 /** Checkbox và STT là hai cột cố định độc lập. */
 const STICKY_SELECT = "sticky left-0 z-20 bg-inherit";
-const STICKY_INDEX = "sticky left-10 z-20 bg-inherit";
-const SELECT_W = "w-10 min-w-10 max-w-10";
-const INDEX_W = "w-12 min-w-12 max-w-12";
+const STICKY_INDEX = "sticky left-9 z-20 bg-inherit";
+const SELECT_W = "w-9 min-w-9 max-w-9";
+const INDEX_W = "w-8 min-w-8 max-w-8";
 
 export function ListView(props: ListViewProps) {
   const t = useT();
@@ -361,7 +361,7 @@ export function ListView(props: ListViewProps) {
   const hasRowActions = Boolean(props.onDelete || props.onApprove);
   const totalCols = columns.length + (hasRowActions ? 4 : 3); // checkbox + STT + dữ liệu + thao tác + đệm
   const pinnedOffsets = useMemo(() => {
-    let left = 100; // checkbox 44px + STT 56px
+    let left = 68; // checkbox 36px + STT 32px (khớp <colgroup>)
     const offsets = new Map<string, number>();
     for (const column of columns) {
       if (!pinnedSet.has(column.fieldname)) continue;
@@ -474,12 +474,12 @@ export function ListView(props: ListViewProps) {
         tabIndex={onRowClick ? (focusedRow === name || (!focusedRow && index === 0) ? 0 : -1) : undefined}
         aria-label={onRowClick ? `${t("common.open", "Mở")} ${name}` : undefined}
       >
-        <TableCell className={cn("px-0 text-center", SELECT_W, STICKY_SELECT, compact && "py-1")} style={{ width: 40 }}>
+        <TableCell className={cn("px-0 text-center", SELECT_W, STICKY_SELECT, compact && "py-1")} style={{ width: 36 }}>
           <span onClick={(event) => event.stopPropagation()}>
             <Checkbox checked={selected} onCheckedChange={() => toggleRow(name)} aria-label={`${t("list.select_row")} ${name}`} />
           </span>
         </TableCell>
-        <TableCell className={cn("px-0 pr-1 text-right text-xs tabular-nums text-muted-foreground", INDEX_W, STICKY_INDEX, compact && "py-1")} style={{ width: 48 }}>
+        <TableCell className={cn("px-0 text-center text-xs tabular-nums text-muted-foreground", INDEX_W, STICKY_INDEX, compact && "py-1")} style={{ width: 32 }}>
           {pageStart + index + 1}
         </TableCell>
         {columns.map((c) => {
@@ -689,8 +689,8 @@ export function ListView(props: ListViewProps) {
             Hai cột này không chứa dữ liệu người dùng nên không có gì để nới — chốt cứng luôn.
           */}
           <colgroup>
-            <col style={{ width: 40, minWidth: 40, maxWidth: 40 }} />
-            <col style={{ width: 48, minWidth: 48, maxWidth: 48 }} />
+            <col style={{ width: 36, minWidth: 36, maxWidth: 36 }} />
+            <col style={{ width: 32, minWidth: 32, maxWidth: 32 }} />
             {columns.map((c) => (
               <col
                 key={c.fieldname}
@@ -713,10 +713,10 @@ export function ListView(props: ListViewProps) {
           <TableHeader>
             <TableRow ref={headRowRef} className="hover:bg-transparent">
               {/* Checkbox và STT là hai cột độc lập đúng contract: cố định, không resize/ẩn/đổi chỗ. */}
-              <TableHead className={cn("top-0 px-0 text-center", SELECT_W, STICKY_SELECT, "z-40", compact && "h-7")} style={{ width: 40 }}>
+              <TableHead className={cn("top-0 px-0 text-center", SELECT_W, STICKY_SELECT, "z-40", compact && "h-7")} style={{ width: 36 }}>
                 <Checkbox checked={allPageSelected} onCheckedChange={toggleAllPage} aria-label={t("list.select_all_page")} />
               </TableHead>
-              <TableHead className={cn("top-0 px-0 pr-1 text-right tabular-nums", INDEX_W, STICKY_INDEX, "z-40", compact && "h-7")} style={{ width: 48 }}>
+              <TableHead className={cn("top-0 px-0 text-center tabular-nums", INDEX_W, STICKY_INDEX, "z-40", compact && "h-7")} style={{ width: 32 }}>
                 #
               </TableHead>
               {columns.map((c) => (
@@ -820,8 +820,8 @@ export function ListView(props: ListViewProps) {
               {/* Hàng tổng cũng phải có ĐÚNG số ô như các hàng khác, nếu không cột lệch hẳn một
                   nhịp và mọi con số tổng rơi sai cột. */}
               <TableRow className="bg-card hover:bg-transparent">
-                <TableCell aria-hidden className={cn("px-0", SELECT_W, STICKY_SELECT)} style={{ width: 40 }} />
-                <TableCell className={cn("px-0 text-center text-xs text-muted-foreground", INDEX_W, STICKY_INDEX)} style={{ width: 48 }} title="Tổng hợp trên trang hiện tại">Σ trang</TableCell>
+                <TableCell aria-hidden className={cn("px-0", SELECT_W, STICKY_SELECT)} style={{ width: 36 }} />
+                <TableCell className={cn("px-0 text-center text-xs text-muted-foreground", INDEX_W, STICKY_INDEX)} style={{ width: 32 }} title="Tổng hợp trên trang hiện tại">Σ</TableCell>
                 {columns.map((c) => {
                   const pinnedLeft = pinnedOffsets.get(c.fieldname);
                   return (
