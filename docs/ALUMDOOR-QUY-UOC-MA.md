@@ -188,3 +188,70 @@ Dòng AL595: **năm mã cũ gộp về một**. Đó là điều làm được k
 - Luật đo: đại lý đo phủ bì nhựa (`RCL + 0,02`), khách lẻ đo phủ bì ray (`RCL + 0,08`) —
   xem `ALUMDOOR-LUAT-DO-VA-GIA.md`, đã được sheet `GHI CHÚ` xác nhận độc lập
 - Cao và Rộng tính bằng **mét**
+
+---
+
+## Giải mã token trong mã hàng — chốt 2026-08-20
+
+**LÁ LÀ THÀNH PHẨM CHÍNH CỦA CÁI CỬA** (chủ xưởng chốt). Ray, trục, V4/V5, motor là cấu phần.
+Danh tính mặt hàng nằm ở **loại lá** = vật liệu × bản × độ dày. Nguồn nói đúng vậy: tên thành
+phẩm của cả BỘ CỬA vẫn bắt đầu bằng chữ LÁ —
+`TP-TOLEKEM124_8D_TRONBO_3-4m²_MSK` → *"LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 3-4m²"*.
+
+Hệ quả cho đợt gộp mã: ba trục **màu · cách bán · bậc diện tích** gộp được vì chúng KHÔNG đổi
+lá — cùng một cái lá, khác cách bán. Trục **độ dày** thì không, vì đổi độ dày là đổi lá.
+
+### `TOLEKEM` = TÔN/TOLE **KẼM** — vật liệu, KHÔNG phải màu kem
+
+Nguồn tự chứng minh, `ms-lien/DANH-MỤC.md` dòng 58 và 59 — cùng một dòng ghi hai kiểu:
+
+| MÃ XUẤT (có dấu) | MÃ NHẬP (bỏ dấu) |
+|---|---|
+| `TP-V4_KẼM` | `NVL-V4-KEM_TOLE75_STD` |
+| `TP-V5_KẼM` | `NVL-V5_KEM_STD` |
+
+Cùng họ với `TOLE1.2` · `TOLE0.42` · `TOLE1.4` · `TOLE0.48` trong `ĐM.md`.
+
+Màu nằm ở đuôi khác: `- GS` · `- MSK` · `XN-VK` · `- THÔ`. `ALUMDOOR-PHIEN-29-07.md` §2 chốt
+**`MSK ≡ THÔ`**.
+
+### Số sau `TOLEKEM` là quy cách LÁ, không phải độ dày
+
+Độ dày nằm ở đuôi (`_8D` = 8 dem = 0,8 ly · `_1LY` · `_1.2LY`).
+
+| mã | tên lá trong nguồn | bảng giá gọi |
+|---|---|---|
+| `TOLEKEM70` | LÁ YẾM | — (lá hẹp nhất) |
+| `TOLEKEM124` | LÁ ĐÀI LOAN | §3 *bản 75* |
+| `TOLEKEM175` | LÁ SIÊU TRƯỜNG **175** | §5 *bảng 100* |
+
+Con số luôn LỚN HƠN bề rộng mặt lá (124 > 75 · 175 > 100), và chính xưởng viết nó vào tên lá.
+Đọc như **khổ tôn phẳng** cần để cán ra lá đó. **Đây là SUY LUẬN — không nguồn nào nói thẳng**,
+nên nó chưa được mã hoá thành luật ở đâu. Cần chủ xưởng xác nhận.
+
+### Token độ dày trong MÃ không tin được — lệch KHÔNG hệ thống
+
+`ĐM.md` cho thấy mã và tên nói khác nhau, và lệch theo **hai chiều ngược nhau**:
+
+```
+họ 124:  mã _6D  → tên 8D        mã _8D  → tên 1LY       mã _1LY → tên 1.2LY    (mã THẤP hơn)
+họ 175:  mã _1LY → tên 9D                                                        (mã CAO hơn)
+```
+
+Nên **đừng sửa bằng cách cộng một nấc**. Ánh xạ mã→cột giá khai TAY trong
+`server/scripts/lib/alumdoor-sealed-price-authority.mjs`, chốt bằng TÊN HÀNG + thang giá 8 bậc,
+và có cổng kiểm tự chết khi trôi.
+
+### Dữ liệu tự mâu thuẫn — cần chủ xưởng
+
+`ĐM.md` dòng 2027: một dòng mang **hai họ sản phẩm khác nhau**.
+
+```
+[2] TÊN VẬT TƯ     LÁ SIÊU TRƯỜNG STĐ 1.1LY_MSK
+[3] MÃ VẬT TƯ      NVL-TOLEKEM175_8D-9D_STD_MSK
+[4] TÊN THÀNH PHẨM LÁ ĐÀI LOAN 1.1LY_MSK          ← Đài Loan, không phải Siêu Trường
+[7] GIÁ            490.000
+```
+
+Thêm một chỗ đáng ngờ: mã mang tiền tố `NVL-` (nguyên vật liệu) nhưng dòng có STT và có GIÁ BÁN,
+tức đang được bán như thành phẩm.

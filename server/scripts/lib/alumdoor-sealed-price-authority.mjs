@@ -14,6 +14,37 @@
  * phần lớn giá. Nó chỉ **đè giá ở đúng những chỗ hai bên nói khác nhau**, và ghi lại từng chỗ đè.
  *
  * ─────────────────────────────────────────────────────────────────────────────
+ * KHOÁ ÁNH XẠ LÀ HỌ LÁ, VÌ LÁ MỚI LÀ THÀNH PHẨM CHÍNH CỦA CÁI CỬA
+ * ─────────────────────────────────────────────────────────────────────────────
+ *
+ * Chủ xưởng chốt 2026-08-20: **lá là TP chính của cửa**. Nguồn nói đúng như vậy — tên thành phẩm
+ * của cả BỘ CỬA vẫn bắt đầu bằng chữ LÁ:
+ *
+ *     TP-TOLEKEM124_8D_TRONBO_3-4m²_MSK → "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 3-4m²"
+ *
+ * Ray, trục, V4/V5, motor là CẤU PHẦN. Danh tính mặt hàng nằm ở LOẠI LÁ — vật liệu × bản × độ
+ * dày. Nên bảng dưới khoá theo họ lá, và đó cũng là lý do ba trục màu · cách bán · bậc diện tích
+ * gộp được: chúng không đổi lá, chỉ đổi cách bán cùng một cái lá.
+ *
+ * `TOLEKEM` = TÔN/TOLE **KẼM**, là VẬT LIỆU chứ không phải màu. Nguồn tự chứng minh ở
+ * `DANH-MỤC.md` dòng 58 và 59, cùng một dòng ghi hai kiểu:
+ *
+ *     [6] MÃ XUẤT  TP-V4_KẼM   ↔   [7] MÃ NHẬP  NVL-V4-KEM_TOLE75_STD
+ *     [6] MÃ XUẤT  TP-V5_KẼM   ↔   [7] MÃ NHẬP  NVL-V5_KEM_STD
+ *
+ * Màu nằm ở đuôi khác (`- GS`, `- MSK`, `XN-VK`); `ALUMDOOR-PHIEN-29-07.md` chốt `MSK ≡ THÔ`.
+ *
+ * Số sau `TOLEKEM` là quy cách LÁ, không phải độ dày (độ dày ở đuôi `_8D/_1LY`):
+ *
+ *     TOLEKEM70   → "LÁ YẾM"                    (lá hẹp nhất)
+ *     TOLEKEM124  → "LÁ ĐÀI LOAN"               §3 gọi là bản 75
+ *     TOLEKEM175  → "LÁ SIÊU TRƯỜNG 175"        §5 gọi là bảng 100
+ *
+ * Con số luôn LỚN HƠN bề rộng mặt lá (124>75, 175>100) và chính xưởng viết nó vào tên lá — đọc
+ * như KHỔ TÔN PHẲNG cần để cán ra lá đó. **Suy luận, KHÔNG có nguồn nào nói thẳng.** Vì thế nó
+ * không được mã hoá thành luật ở bất kỳ đâu; ghi ra để người sau khỏi phải suy lại từ đầu.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
  * VÌ SAO KHÔNG ÁNH XẠ MÃ→CỘT BẰNG CÁCH ĐỌC TOKEN ĐỘ DÀY TRONG MÃ
  * ─────────────────────────────────────────────────────────────────────────────
  *
@@ -34,6 +65,16 @@
  *
  * Mười một mã, mười mã khớp TUYỆT ĐỐI một cột và cột nhì luôn 0/8. Ánh xạ không mơ hồ — nhưng
  * nó là ánh xạ theo GIÁ và theo TÊN HÀNG, không theo chữ trong mã.
+ *
+ * `ĐM.md` xác nhận lại bằng TÊN, độc lập với bằng chứng giá:
+ *
+ *     TP-TOLEKEM124_6D_…_MSK  → "LÁ ĐÀI LOAN STĐ MSK 8D"
+ *     TP-TOLEKEM124_8D_…_MSK  → "LÁ ĐÀI LOAN STĐ MSK 1LY"
+ *     TP-TOLEKEM124_1LY_…_MSK → "LÁ ĐÀI LOAN STĐ MSK 1.2LY"
+ *
+ * Và độ lệch KHÔNG hệ thống, nên đừng ai định "sửa bằng cách cộng một nấc": ở họ 175 thì mã lại
+ * cao hơn tên — `NVL-TOLEKEM175_1LY_MSK` mang tên `LÁ SIÊU TRƯỜNG 175_XN-VK_9D` (mã 1LY, tên 9D),
+ * ngược chiều với họ 124. Token độ dày trong mã đơn giản là KHÔNG tin được.
  *
  * Nên bảng `CODE_TO_COLUMN` dưới đây khai TAY, kèm bằng chứng. Và có cổng `verifySealedMapping`
  * kiểm lại: mã nào tụt xuống dưới ngưỡng khớp thì CHẾT, không lặng lẽ gán giá của cột khác.
