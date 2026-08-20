@@ -1,3 +1,4 @@
+import { finishColorContextForItem } from "./color-scopes.js";
 import { inferDoorType } from "./door-formulas.js";
 
 /**
@@ -6,6 +7,32 @@ import { inferDoorType } from "./door-formulas.js";
  * Every read goes back through the platform callback with the caller identity. This method
  * does not reserve stock and does not replace the Delivery Note posting guard; it only lets
  * sales staff see the current answer before they promise it to a customer.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 2026-08-21 — mở danh mục ra tới màn bán hàng
+ * ─────────────────────────────────────────────────────────────────────────────
+ *
+ * Hợp đồng đầy đủ: `docs/audits/ALUMDOOR-BAN-HANG-PAYLOAD-CONTRACT-20260821.md`.
+ * Kiểm kê khoảng trống: `docs/audits/ALUMDOOR-BAN-HANG-DANH-MUC-GAP-20260821.md`.
+ *
+ * Ba luật chi phối mọi trường thêm vào dưới đây:
+ *
+ * 1. **`null` ≠ vắng mặt ≠ `0`.** Khoá vắng mặt = chưa đo / không áp dụng. Khoá có mặt mang
+ *    `null` = **CHƯA KHAI trong danh mục**, và phải đi kèm chỗ sửa. `0` là số thật. 33 mã ray/
+ *    trục `RT_` đang CỐ Ý chưa có hệ số quy đổi Mét→Cây; biến `null` thành `1` ở bất kỳ tầng
+ *    nào là ghi sai tồn của cả nhóm.
+ *
+ * 2. **Thà từ chối và báo lỗi còn hơn tính ra một con số sai trong im lặng.** Thiếu dữ liệu thì
+ *    trả trạng thái "chưa khai" kèm `fix_where`, không đoán, không fallback thầm.
+ *
+ * 3. **Mọi khâu thêm vào đều được phép hỏng riêng.** Người bán có thể không có vai đọc báo cáo
+ *    kho (`Batch Stock Balance` đòi `Stock Manager`/`Stock User`). Một khâu hỏng chỉ được làm
+ *    mất đúng khoá của nó (`*_error`), không được làm mất cả ngữ cảnh dòng hàng.
+ *
+ * Về ngân sách gọi: `APP_METHOD_TIMEOUT_MS = 10_000` cho CẢ lời gọi. Khâu danh mục được KHỞI
+ * ĐỘNG TRƯỚC lượt tra giá và chỉ `await` ở cuối, nên nó chạy chồng lên tra giá + đọc tồn thay
+ * vì nối đuôi. Đường 422 "ĐVT chưa khai" KHÔNG khởi động khâu nào — nó vẫn từ chối trước khi
+ * chạm tới bảng giá, đúng như hợp đồng cũ.
  */
 export type SalesPlatformCall = ((path: string, init?: RequestInit) => Promise<Response>) & { via?: string };
 
@@ -76,6 +103,8 @@ interface ItemPriceLookup {
   price: Json | null;
   name: string;
   sourceUom: string;
+  /** Đường nào đã dẫn tới bản ghi giá này — chính là phần "vì sao ra con số đó". */
+  resolution: "exact_uom" | "legacy_name" | "field_lookup" | "base_uom_fallback" | "disabled" | "not_found";
 }
 
 /**
@@ -106,11 +135,13 @@ async function resolveItemPriceRecord(
   } catch (error) {
     exactReadError = error instanceof Error ? error : new Error(String(error));
   }
-  if (exact && !truthy(exact.disabled)) return { price: exact, name: exactName, sourceUom: selectedUom };
+  if (exact && !truthy(exact.disabled)) {
+    return { price: exact, name: exactName, sourceUom: selectedUom, resolution: "exact_uom" };
+  }
   // Exact UOM là override. Nếu endpoint tên Unicode chưa route được, legacy hợp lệ vẫn là
   // fallback tương thích; lỗi probe không được làm mất giá đang dùng của dữ liệu cũ.
   if (compatibleLegacy && !truthy(compatibleLegacy.disabled)) {
-    return { price: compatibleLegacy, name: legacyName, sourceUom: selectedUom };
+    return { price: compatibleLegacy, name: legacyName, sourceUom: selectedUom, resolution: "legacy_name" };
   }
   let rows: Json[];
   try {
@@ -137,7 +168,12 @@ async function resolveItemPriceRecord(
   }
   if (active.length === 1) {
     const selected = active[0]!;
-    return { price: selected, name: normalizedText(selected.name) || exactName, sourceUom: selectedUom };
+    return {
+      price: selected,
+      name: normalizedText(selected.name) || exactName,
+      sourceUom: selectedUom,
+      resolution: "field_lookup",
+    };
   }
 
   if (baseUom && baseUom !== selectedUom) {
@@ -151,7 +187,12 @@ async function resolveItemPriceRecord(
     }
     if (activeBase.length === 1) {
       const selected = activeBase[0]!;
-      return { price: selected, name: normalizedText(selected.name) || `${priceList}:${itemCode}:${baseUom}`, sourceUom: baseUom };
+      return {
+        price: selected,
+        name: normalizedText(selected.name) || `${priceList}:${itemCode}:${baseUom}`,
+        sourceUom: baseUom,
+        resolution: "base_uom_fallback",
+      };
     }
   }
 
@@ -163,6 +204,7 @@ async function resolveItemPriceRecord(
       ? normalizedText(disabled.name) || (disabled === compatibleLegacy ? legacyName : exactName)
       : exactName,
     sourceUom: selectedUom,
+    resolution: disabled ? "disabled" : "not_found",
   };
 }
 
@@ -192,6 +234,391 @@ function quantityFromRow(row: Json): number {
 
 function cleanNumber(value: number): string {
   return Number(value.toFixed(6)).toLocaleString("vi-VN", { maximumFractionDigits: 6 });
+}
+
+// ────────────────────────────────────────────────────────────────────────────────────────────
+// Danh mục → màn bán hàng. Mọi thứ dưới đây là THÊM MỚI; không trường cũ nào đổi nghĩa.
+// ────────────────────────────────────────────────────────────────────────────────────────────
+
+/** Một chỗ trống trong danh mục, kèm đường đi tới nơi sửa. `code` ổn định để client tra icon. */
+interface CatalogGap {
+  code: string;
+  label: string;
+  where: string;
+}
+
+interface UomEntry {
+  uom: string;
+  roles: string[];
+  /** `null` = CHƯA KHAI. Không bao giờ được thay bằng 1. */
+  conversion_factor: number | null;
+  declared: boolean;
+  factor_source: "stock_uom" | "uom_conversions" | "dynamic_area" | "catch_weight" | null;
+}
+
+interface UomGap {
+  uom: string;
+  kind: "MISSING_CONVERSION" | "UNDECLARED_UOM";
+  message: string;
+  fix_where: string;
+  /** `true` = danh mục CỐ Ý để trống, chờ chủ xưởng chốt — không phải lỗi hệ thống. */
+  intentional: boolean;
+}
+
+function itemFix(itemCode: string, section: string): string {
+  return `Danh mục → Mặt hàng → ${itemCode} → ${section}`;
+}
+
+function pushRole(roles: Map<string, Set<string>>, uom: string, role: string): void {
+  if (!uom) return;
+  const existing = roles.get(uom);
+  if (existing) existing.add(role);
+  else roles.set(uom, new Set([role]));
+}
+
+/**
+ * Thang ĐVT THẬT của mặt hàng: mua · tồn · bán, cộng hệ số của từng bậc và bậc nào TRỐNG.
+ *
+ * `Kg` vắng mặt trong bảng quy đổi của hàng cân thực tế là ĐÚNG LUẬT, không phải thiếu dữ liệu:
+ * `validateCanonicalAluminumItem` (`item-catalog-invariants.ts`) từ chối thẳng mọi hệ số Kg↔Cây
+ * tĩnh — "số cây/lá và kg thực là hai quan sát độc lập". Không phân biệt hai thứ này thì màn bán
+ * hàng báo động giả trên toàn bộ nhóm nhôm, và cảnh báo kêu suốt là cảnh báo không ai đọc.
+ */
+function buildUomLadder(
+  itemCode: string,
+  item: Json,
+  stockUom: string,
+  defaultSalesUom: string,
+  selectedUom: string,
+  factorByUom: Map<string, number>,
+  dynamicSelectedUoms: Set<string>,
+  catchWeight: boolean,
+): { ladder: Json; missing: UomEntry[] } {
+  const purchaseUom = normalizedText(item.default_purchase_uom);
+  const weightUom = normalizedText(item.weight_uom);
+  const roles = new Map<string, Set<string>>();
+  pushRole(roles, purchaseUom, "purchase");
+  pushRole(roles, stockUom, "stock");
+  pushRole(roles, defaultSalesUom, "sales");
+  pushRole(roles, selectedUom, "selected");
+  for (const uom of factorByUom.keys()) pushRole(roles, uom, "convertible");
+
+  const entries: UomEntry[] = [...roles.entries()].map(([uom, roleSet]): UomEntry => {
+    const factor = factorByUom.get(uom);
+    const isCatchWeightUnit = catchWeight && weightUom && normalizedUom(uom) === normalizedUom(weightUom);
+    const dynamic = dynamicSelectedUoms.has(uom);
+    const declared = factor !== undefined && !dynamic;
+    return {
+      uom,
+      roles: [...roleSet].sort(),
+      conversion_factor: declared ? factor! : null,
+      declared,
+      factor_source: dynamic
+        ? "dynamic_area"
+        : uom === stockUom && declared
+          ? "stock_uom"
+          : declared
+            ? "uom_conversions"
+            : isCatchWeightUnit
+              ? "catch_weight"
+              : null,
+    };
+  }).sort((left, right) => left.uom.localeCompare(right.uom, "vi"));
+
+  // Chỉ tính là THIẾU khi bậc đó thật sự cần cho giao dịch (mua/tồn/bán/đang chọn) và không phải
+  // ĐVT cân thực tế — thứ CỐ Ý không có hệ số — cũng không phải hệ số động theo từng dòng.
+  const missing = entries.filter((entry) =>
+    !entry.declared
+    && entry.factor_source !== "catch_weight"
+    && entry.factor_source !== "dynamic_area"
+    && entry.roles.some((role) => ["purchase", "stock", "sales", "selected"].includes(role)));
+
+  return {
+    ladder: {
+      purchase_uom: purchaseUom || null,
+      stock_uom: stockUom || null,
+      sales_uom: defaultSalesUom || null,
+      selected_uom: selectedUom,
+      catch_weight: catchWeight,
+      weight_uom: weightUom || null,
+      entries,
+      missing_factors: missing.map((entry) => ({
+        uom: entry.uom,
+        roles: entry.roles.filter((role) => role !== "convertible"),
+        reason: `Chưa khai hệ số quy đổi ${entry.uom} → ${stockUom || "ĐVT tồn"}.`,
+        fix_where: itemFix(itemCode, "Đơn vị quy đổi khác"),
+      })),
+    },
+    missing,
+  };
+}
+
+/**
+ * 33 mã ray/trục `RT_` chốt 20/08/2026: mua Kg · tồn CÂY · bán Mét, và hệ số Mét→Cây CỐ Ý để
+ * trống. Nhận ra đúng cảnh đó để nói "chờ chủ xưởng chốt" thay vì "lỗi cấu hình".
+ */
+function intentionallyBlankFactor(item: Json, uom: string, stockUom: string): boolean {
+  if (!truthy(item.has_catch_weight)) return false;
+  if (normalizedUom(uom) === normalizedUom(stockUom)) return false;
+  return normalizedUom(item.default_purchase_uom) === "kg";
+}
+
+interface BatchDetail extends Json {
+  batch_no: string;
+  qty: number;
+  weight_kg: number | null;
+  length_m: number | null;
+  color: string | null;
+  condition: string | null;
+  is_offcut: boolean;
+  warehouse: string | null;
+}
+
+/** Số lô đọc chi tiết. Đủ để người bán chọn cây, không đủ để tiêu hết hạn giờ của lời gọi. */
+const BATCH_DETAIL_LIMIT = 12;
+
+/**
+ * Tồn theo LÔ, và trục cân song song.
+ *
+ * `Batch Stock Balance` trả sẵn `actual_qty` (cây) và `actual_weight` (kg) nên trục tiền và trục
+ * tồn lấy được mà không cần mở hồ sơ lô nào. Chỉ khi cần khổ/màu/tình trạng mới mở, và chỉ mở
+ * `BATCH_DETAIL_LIMIT` lô dài nhất — mở hết là đúng cách làm quá hạn cả lời gọi.
+ */
+async function readBatchStock(
+  call: SalesPlatformCall,
+  itemCode: string,
+  warehouse: string,
+): Promise<{ weight: number | null; count: number; batches: BatchDetail[] | null }> {
+  const rows = await reportRows(call, "Batch Stock Balance", {
+    item_code: itemCode,
+    ...(warehouse ? { warehouse } : {}),
+  });
+  const live = rows.filter((row) =>
+    normalizedText(row.batch_no)
+    && (!row.item_code || sameText(row.item_code, itemCode))
+    && (!warehouse || !row.warehouse || sameText(row.warehouse, warehouse))
+    && Number(row.actual_qty ?? 0) > 0);
+
+  // Không dòng nào cân được thì `weight` là `null` (chưa cân), KHÔNG phải 0 kg.
+  const weighed = live.filter((row) => Number.isFinite(Number(row.actual_weight)));
+  const weight = weighed.length
+    ? weighed.reduce((sum, row) => sum + Number(row.actual_weight), 0)
+    : null;
+
+  const top = live.slice(0, BATCH_DETAIL_LIMIT);
+  const details = await Promise.all(top.map(async (row) => {
+    const name = normalizedText(row.batch_no);
+    const batch = await readResource(call, "Batch", name).catch(() => null);
+    const length = positive(batch?.length_m);
+    const rowWeight = Number(row.actual_weight);
+    return {
+      batch_no: name,
+      qty: Number(row.actual_qty ?? 0),
+      weight_kg: Number.isFinite(rowWeight) ? rowWeight : null,
+      length_m: length,
+      color: normalizedText(batch?.color) || null,
+      condition: normalizedText(batch?.condition) || null,
+      is_offcut: truthy(batch?.is_offcut),
+      warehouse: normalizedText(row.warehouse) || null,
+    } satisfies BatchDetail;
+  }));
+  details.sort((left, right) => (right.length_m ?? 0) - (left.length_m ?? 0));
+  return { weight, count: live.length, batches: details };
+}
+
+interface CatalogExtras {
+  spec_context: Json;
+  /** VẮNG MẶT khi người gọi tắt khâu màu; `null` khi bật mà không dựng được. Hai nghĩa khác nhau. */
+  color_scope?: Json | null;
+  color_scope_error: string | null;
+  gaps: CatalogGap[];
+}
+
+/**
+ * Bộ theo dõi · bộ quy cách hình học · quy cách kỹ thuật · bản lá — bốn danh mục quyết định ô nào
+ * bắt buộc và số nào dùng được, mà trước nay màn bán hàng chỉ nhận được cái TÊN của chúng.
+ *
+ * `Quy cách cửa` (bản lá theo mã nhôm) KHÔNG có liên kết nào từ `Item`: nó khoá theo mã nhôm
+ * (`AL70`, `AL552N`…), còn mã hàng là một danh tính khác. Nên nó chỉ được tra khi người gọi
+ * truyền thẳng `slat_profile`. Suy mã nhôm từ mã hàng bằng chuỗi con là bịa ra một luật không có
+ * thật — đúng cái bẫy `TP-CUA` nằm trong `TP-CUADL1LY` mà đợt đổi mã đã ghi lại.
+ */
+async function readCatalogExtras(
+  call: SalesPlatformCall,
+  itemCode: string,
+  item: Json,
+  itemGroup: string,
+  doorType: string,
+  includeColorScope: boolean,
+  slatProfile: string,
+): Promise<CatalogExtras> {
+  const profileName = normalizedText(item.measurement_profile);
+  const geometryName = normalizedText(item.geometry_profile);
+  const specName = normalizedText(item.material_specification);
+
+  const [profile, geometry, spec, doorSpec, colorScope] = await Promise.all([
+    profileName ? readResource(call, "Measurement Profile", profileName).catch(() => null) : Promise.resolve(null),
+    geometryName ? readResource(call, "Geometry Profile", geometryName).catch(() => null) : Promise.resolve(null),
+    specName ? readResource(call, "Material Specification", specName).catch(() => null) : Promise.resolve(null),
+    slatProfile ? readResource(call, "Quy cách cửa", slatProfile).catch(() => null) : Promise.resolve(null),
+    includeColorScope
+      ? finishColorContextForItem(call, itemCode, undefined, "sales").then(
+        (value) => ({ ok: true as const, value }),
+        (error: unknown) => ({ ok: false as const, error }),
+      )
+      : Promise.resolve(null),
+  ]);
+
+  const gaps: CatalogGap[] = [];
+  if (!profileName) {
+    gaps.push({
+      code: "MEASUREMENT_PROFILE_MISSING",
+      label: "Mặt hàng chưa gắn bộ theo dõi vật tư",
+      where: itemFix(itemCode, "Bộ theo dõi vật tư"),
+    });
+  }
+  if (!geometryName) {
+    gaps.push({
+      code: "GEOMETRY_PROFILE_MISSING",
+      label: "Mặt hàng chưa có bộ quy cách hình học",
+      where: itemFix(itemCode, "Bộ quy cách hình học"),
+    });
+  }
+  if (!specName) {
+    gaps.push({
+      code: "SPEC_NOT_LINKED",
+      label: "Mặt hàng chưa gắn quy cách kỹ thuật",
+      where: itemFix(itemCode, "Quy cách kỹ thuật"),
+    });
+  } else if (spec) {
+    const specWhere = `Danh mục → Quy cách kỹ thuật vật tư → ${specName}`;
+    if (positive(spec.standard_length_m) === null) {
+      gaps.push({
+        code: "SPEC_MISSING_STANDARD_LENGTH",
+        label: "Chiều dài cây chuẩn chưa khai",
+        where: `${specWhere} → Chiều dài chuẩn (m)`,
+      });
+    }
+    if (positive(spec.theoretical_kg_per_m) === null) {
+      gaps.push({
+        code: "SPEC_MISSING_KG_PER_M",
+        label: "Kg/m lý thuyết chưa khai",
+        where: `${specWhere} → Kg/m lý thuyết`,
+      });
+    }
+  }
+
+  const itemDivisor = positive(item.leaf_divisor_m);
+  const specDivisor = positive(doorSpec?.buoc_la_m);
+  if (doorType && itemDivisor === null && specDivisor === null) {
+    gaps.push({
+      code: "LEAF_DIVISOR_MISSING",
+      label: `Mã bán theo công thức ${doorType} nhưng chưa có bản lá / ước số chia`,
+      where: itemFix(itemCode, "Bản lá / ước số chia (m)"),
+    });
+  }
+  if (slatProfile && !doorSpec) {
+    gaps.push({
+      code: "DOOR_SPEC_MISSING",
+      label: `Chưa có bản ghi Quy cách cửa cho mã nhôm ${slatProfile}`,
+      where: "Danh mục → Bản lá theo mã nhôm",
+    });
+  }
+
+  const geometryFields = Array.isArray(geometry?.fields)
+    ? geometry.fields
+      .filter((row): row is Json => Boolean(row) && typeof row === "object" && !Array.isArray(row))
+      .map((row) => normalizedText(row.geometry_field ?? row.field ?? row.fieldname))
+      .filter(Boolean)
+    : [];
+
+  const scopeOk = colorScope && colorScope.ok ? colorScope.value : null;
+  const scopeError = colorScope && !colorScope.ok
+    ? (colorScope.error instanceof Error ? colorScope.error.message : "Không lấy được Bề mặt/màu theo Nhóm hàng.")
+    : null;
+  if (scopeOk && scopeOk.allowed_finishes.length === 0) {
+    gaps.push({
+      code: "COLOR_SCOPE_EMPTY",
+      label: `Nhóm hàng ${itemGroup || "(chưa khai)"} chưa Bề mặt nào khai áp dụng`,
+      where: "Danh mục → Bề mặt → Nhóm SP áp dụng",
+    });
+  }
+
+  return {
+    spec_context: {
+      measurement_profile: profile
+        ? {
+          name: profileName,
+          inventory_mode: normalizedText(profile.inventory_mode) || null,
+          stock_uom: normalizedText(profile.stock_uom) || null,
+          track_dimension_lot: truthy(profile.track_dimension_lot),
+          require_color: truthy(profile.require_color),
+          require_condition: truthy(profile.require_condition),
+          require_length: truthy(profile.require_length),
+          require_width: truthy(profile.require_width),
+          require_piece_qty: truthy(profile.require_piece_qty),
+          track_bundle_qty: truthy(profile.track_bundle_qty),
+          weight_tolerance_pct: positive(profile.weight_tolerance_pct),
+        }
+        : null,
+      geometry_profile: geometry
+        ? {
+          code: normalizedText(geometry.profile_code ?? geometry.name) || geometryName,
+          name: normalizedText(geometry.profile_name) || geometryName,
+          fields: geometryFields,
+        }
+        : null,
+      material_specification: spec
+        ? {
+          spec_code: normalizedText(spec.spec_code ?? spec.name) || specName,
+          spec_type: normalizedText(spec.spec_type) || null,
+          standard_length_m: positive(spec.standard_length_m),
+          theoretical_kg_per_m: positive(spec.theoretical_kg_per_m),
+          thickness_mm: positive(spec.thickness_mm),
+          width_m: positive(spec.width_m),
+          effective_width_m: positive(spec.effective_width_m),
+          scrap_threshold_m: positive(spec.scrap_threshold_m),
+          profile_system: normalizedText(spec.profile_system) || null,
+          section_code: normalizedText(spec.section_code) || null,
+        }
+        : null,
+      door_spec: doorSpec
+        ? {
+          ma: normalizedText(doorSpec.ma ?? doorSpec.name) || slatProfile,
+          dong_cua: normalizedText(doorSpec.dong_cua) || null,
+          doi: normalizedText(doorSpec.doi) || null,
+          buoc_la_m: specDivisor,
+          be_rong_nan_mm: positive(doorSpec.be_rong_nan_mm),
+          rong_toi_da_mm: positive(doorSpec.rong_toi_da_mm),
+          tru_mot_la: truthy(doorSpec.tru_mot_la),
+          trong_luong_kg_m2: positive(doorSpec.trong_luong_kg_m2),
+          nguon: normalizedText(doorSpec.nguon) || null,
+        }
+        : null,
+      leaf_divisor_m: itemDivisor ?? specDivisor,
+      leaf_divisor_source: itemDivisor !== null
+        ? "Item.leaf_divisor_m"
+        : specDivisor !== null ? "Quy cách cửa" : null,
+      coverage_gaps: gaps,
+      read_error: null,
+    },
+    ...(includeColorScope
+      ? {
+        color_scope: scopeOk
+          ? {
+            item_group: scopeOk.item_group,
+            requires_color: truthy(profile?.require_color)
+              || scopeOk.allowed_finishes.some((finish) => finish.requires_color),
+            allowed_finishes: scopeOk.allowed_finishes,
+            allowed_colors: scopeOk.allowed_colors,
+            colors_by_finish: scopeOk.colors_by_finish,
+          }
+          : null,
+      }
+      : {}),
+    color_scope_error: scopeError,
+    gaps,
+  };
 }
 
 export async function salesItemContext(call: SalesPlatformCall, args: Json): Promise<Response> {
@@ -244,14 +671,83 @@ export async function salesItemContext(call: SalesPlatformCall, args: Json): Pro
   }
   const allowedUoms = [...factorByUom.keys()];
   const selectedUom = normalizedText(args.uom) || defaultSalesUom || stockUom;
+  const catchWeight = truthy(item.has_catch_weight);
+  const dynamicUoms = new Set<string>();
+  if (dynamicAreaToSet && defaultSalesUom) dynamicUoms.add(defaultSalesUom);
+
   if (!selectedUom || !factorByUom.has(selectedUom)) {
+    /**
+     * Vẫn TỪ CHỐI, và vẫn từ chối TRƯỚC khi chạm tới bảng giá hay báo cáo kho — hợp đồng cũ
+     * không đổi. Cái thêm vào là lý do và chỗ sửa: một mã ray/trục không bán được vì hệ số
+     * Mét→Cây đang CỐ Ý để trống chờ chủ xưởng, chứ không phải vì ai đó khai sai ĐVT. Thân 422
+     * chỉ dùng dữ liệu đã có trên hồ sơ Item, không thêm lượt đọc nào.
+     */
+    const rejected = buildUomLadder(
+      itemCode, item, stockUom, defaultSalesUom, selectedUom, factorByUom, dynamicUoms, catchWeight,
+    );
+    const intentional = intentionallyBlankFactor(item, selectedUom, stockUom);
+    const gap: UomGap = {
+      uom: selectedUom || "",
+      kind: selectedUom === defaultSalesUom ? "MISSING_CONVERSION" : "UNDECLARED_UOM",
+      message: selectedUom === defaultSalesUom
+        ? `Mặt hàng bán theo ${selectedUom} nhưng chưa khai hệ số quy đổi ${selectedUom} → ${stockUom || "ĐVT tồn"}.`
+        : `ĐVT "${selectedUom || "(trống)"}" chưa được khai trên mặt hàng ${itemCode}.`,
+      fix_where: itemFix(itemCode, "Đơn vị quy đổi khác"),
+      intentional,
+    };
     return json({
       message: `ĐVT "${selectedUom || "(trống)"}" chưa được khai trên mặt hàng ${itemCode}.`,
       allowed_uoms: allowedUoms,
+      item_code: itemCode,
+      uom_ladder: rejected.ladder,
+      uom_gap: gap,
+      readiness: {
+        ready: false,
+        blocking: [{
+          code: gap.kind === "MISSING_CONVERSION" ? "UOM_FACTOR_MISSING" : "UOM_UNDECLARED",
+          label: gap.message,
+          where: gap.fix_where,
+        }],
+        warnings: [],
+      },
     }, 422);
   }
   const conversionFactor = factorByUom.get(selectedUom) ?? 1;
   const dynamicSelectedUom = dynamicAreaToSet && AREA_UOMS.has(normalizedUom(selectedUom));
+  if (dynamicSelectedUom) dynamicUoms.add(selectedUom);
+
+  const { ladder: uomLadder, missing: missingFactors } = buildUomLadder(
+    itemCode, item, stockUom, defaultSalesUom, selectedUom, factorByUom, dynamicUoms, catchWeight,
+  );
+  // Chỗ trống nào được nêu lên đầu là chỗ chạm tới việc BÁN trước: ĐVT đang chọn, rồi ĐVT bán
+  // mặc định, rồi mới tới phần còn lại. Nêu nhầm bậc mua lên đầu là bắt người bán đi sửa một ô
+  // không liên quan tới dòng họ đang gõ.
+  const salesRelevantGap = missingFactors.find((entry) => entry.roles.includes("selected"))
+    ?? missingFactors.find((entry) => entry.roles.includes("sales"))
+    ?? missingFactors[0];
+  const uomGap: UomGap | null = salesRelevantGap
+    ? {
+      uom: salesRelevantGap.uom,
+      kind: "MISSING_CONVERSION",
+      message: `Chưa khai hệ số quy đổi ${salesRelevantGap.uom} → ${stockUom || "ĐVT tồn"}.`,
+      fix_where: itemFix(itemCode, "Đơn vị quy đổi khác"),
+      intentional: intentionallyBlankFactor(item, salesRelevantGap.uom, stockUom),
+    }
+    : null;
+
+  /**
+   * Khâu danh mục KHỞI ĐỘNG ở đây và chỉ được `await` ở cuối, nên nó chạy chồng lên lượt tra giá
+   * và lượt đọc tồn thay vì nối đuôi. Gắn `.catch` ngay tại chỗ tạo: một promise bị bỏ rơi mà
+   * reject là unhandled rejection giết cả isolate, trong khi thứ ta muốn chỉ là mất một khoá.
+   */
+  const includeColorScope = args.include_color_scope === undefined || truthy(args.include_color_scope);
+  const slatProfile = normalizedText(args.slat_profile);
+  const catalogPending = readCatalogExtras(
+    call, itemCode, item, normalizedText(item.item_group), effectiveDoorType, includeColorScope, slatProfile,
+  ).then(
+    (value) => ({ ok: true as const, value }),
+    (error: unknown) => ({ ok: false as const, error }),
+  );
 
   const priceList = normalizedText(args.price_list);
   const documentCurrency = normalizedText(args.currency ?? item.currency ?? "VND") || "VND";
@@ -260,6 +756,16 @@ export async function salesItemContext(call: SalesPlatformCall, args: Json): Pro
   let itemPrice: string | null = null;
   let priceMissing = false;
   let priceError: string | null = null;
+  // Phần giải trình đơn giá. Nó chỉ GHI LẠI những gì đường tra giá đã đi qua — không tra lại,
+  // không tự tính một con số thứ hai. Hai con số cùng nói về một đơn giá là mầm của mọi lần
+  // "xem trước một đằng, lưu một nẻo".
+  let priceResolution: ItemPriceLookup["resolution"] | "standard_rate" | "manual" | "error" = "manual";
+  let pricePriceUom: string | null = null;
+  let priceStoredRate: number | null = null;
+  let priceAreaTier: string | null = null;
+  let priceVariant: string | null = null;
+  let priceConvertedFrom: string | null = null;
+  let priceConversionApplied: number | null = null;
   if (priceList) {
     const expectedName = `${priceList}:${itemCode}:${selectedUom}`;
     try {
@@ -272,6 +778,15 @@ export async function salesItemContext(call: SalesPlatformCall, args: Json): Pro
       );
       const price = lookup.price;
       itemPrice = lookup.name;
+      priceResolution = lookup.resolution;
+      if (price) {
+        pricePriceUom = normalizedText(price.uom) || null;
+        priceAreaTier = normalizedText(price.area_tier) || null;
+        priceVariant = normalizedText(price.price_variant) || null;
+        const stored = Number(price.rate);
+        priceStoredRate = Number.isFinite(stored) ? stored : null;
+      }
+      if (lookup.sourceUom && lookup.sourceUom !== selectedUom) priceConvertedFrom = lookup.sourceUom;
       if (price && !truthy(price.disabled)) {
         const priceCurrency = normalizedText(price.currency);
         const parsed = Number(price.rate);
@@ -292,6 +807,7 @@ export async function salesItemContext(call: SalesPlatformCall, args: Json): Pro
             priceError = `ĐVT "${lookup.sourceUom}" chưa có hệ số quy đổi trên mặt hàng ${itemCode}.`;
           } else {
             rate = parsed * conversionFactor / sourceFactor;
+            priceConversionApplied = conversionFactor / sourceFactor;
           }
         }
       } else {
@@ -303,10 +819,16 @@ export async function salesItemContext(call: SalesPlatformCall, args: Json): Pro
       priceMissing = true;
       priceError = error instanceof Error ? error.message : `Không tra được đơn giá ${selectedUom}.`;
       itemPrice = expectedName;
+      priceResolution = "error";
     }
   } else {
+    // `Item.standard_rate` chỉ tồn tại ở brief đời 1; trên brief v2 nó đã bị gỡ, nên đường này
+    // gần như luôn rơi về "nhập tay". Giữ nguyên hành vi cũ, chỉ nói đúng tên trạng thái ra.
     const standard = Number(item.standard_rate);
-    if (Number.isFinite(standard) && standard >= 0) rate = standard;
+    if (Number.isFinite(standard) && standard >= 0) {
+      rate = standard;
+      priceResolution = "standard_rate";
+    }
   }
 
   const managedStock = !(item.is_stock_item === 0 || item.is_stock_item === false || normalizedText(item.item_nature) === "Dịch vụ");
@@ -345,6 +867,155 @@ export async function salesItemContext(call: SalesPlatformCall, args: Json): Pro
     ? (priceError ?? (priceMissing ? `Chưa khai giá ${selectedUom}` : `Giá ${selectedUom}: ${cleanNumber(rate ?? 0)} ${currency}`))
     : "Giá nhập tay";
 
+  // ── Tồn theo LÔ + trục cân, chạy song song với trục cây/bộ ở trên ───────────────────────────
+  // Chỉ chạy khi mặt hàng thật sự theo lô. Người bán có thể không có vai đọc báo cáo kho, nên
+  // hỏng ở đây chỉ được làm mất `stock_snapshot.batches`/`weight_qty`, không được làm mất tồn.
+  const batchTracked = truthy(item.has_batch_no);
+  let batchWeight: number | null = null;
+  let batchCount: number | null = null;
+  let batchDetails: BatchDetail[] | null = null;
+  let batchReadError: string | null = null;
+  if (managedStock && batchTracked && warehouse && !stockReadError) {
+    try {
+      const batchStock = await readBatchStock(call, itemCode, warehouse);
+      batchWeight = batchStock.weight;
+      batchCount = batchStock.count;
+      batchDetails = batchStock.batches;
+    } catch (error) {
+      batchReadError = error instanceof Error ? error.message : "Không đọc được tồn theo lô.";
+    }
+  }
+
+  const catalog = await catalogPending;
+  const catalogValue = catalog.ok ? catalog.value : null;
+  const catalogError = catalog.ok
+    ? null
+    : (catalog.error instanceof Error ? catalog.error.message : "Không đọc được ngữ cảnh danh mục.");
+
+  const weightUom = normalizedText(item.weight_uom) || null;
+  const selectedQtyBlocked = dynamicSelectedUom
+    ? "Cửa bán m² tồn Bộ — hệ số quy đổi theo kích thước của từng dòng, không có số tĩnh."
+    : uomGap && uomGap.uom === selectedUom
+      ? uomGap.message
+      : null;
+
+  const stockSnapshot: Json = {
+    warehouse: warehouse || null,
+    stock_uom: stockUom || null,
+    stock_qty: availableStockQty,
+    selected_uom: selectedUom,
+    selected_qty: availableQty,
+    selected_qty_blocked_reason: selectedQtyBlocked,
+    weight_uom: catchWeight ? weightUom : null,
+    weight_qty: batchWeight,
+    batch_tracked: batchTracked,
+    batch_count: batchCount,
+    batches: batchDetails,
+    source: batchDetails ? "Batch Stock Balance" : availableStockQty === null ? null : "Stock Balance",
+    read_error: stockReadError ?? batchReadError,
+  };
+
+  // ── Bán vượt tồn ───────────────────────────────────────────────────────────────────────────
+  // Chỉ so khi CÙNG MỘT TRỤC. Trục tồn là cây/bộ, trục bán có thể là Mét — không có hệ số thì
+  // `severity` là "unknown", không phải "ok". Vẽ "đủ hàng" cho một phép so chưa làm được là đúng
+  // kiểu hỏng im lặng mà cả đợt danh mục này đang chống.
+  const requestedQty = positive(args.qty);
+  let shortage: Json | null = null;
+  if (requestedQty !== null && managedStock) {
+    const sellable = dynamicSelectedUom ? null : availableQty;
+    const shortBy = sellable === null ? null : Math.max(0, requestedQty - sellable);
+    const comparable = sellable !== null;
+    shortage = {
+      requested_qty: requestedQty,
+      requested_uom: selectedUom,
+      available_qty: sellable ?? availableStockQty,
+      available_uom: comparable ? selectedUom : stockUom || selectedUom,
+      short_by: shortBy,
+      severity: !comparable ? "unknown" : shortBy && shortBy > 0 ? "over" : "ok",
+      message: !comparable
+        ? (stockReadError
+          ? `Không so được: ${stockReadError}`
+          : selectedQtyBlocked
+            ? `Không so được: ${selectedQtyBlocked}`
+            : "Không so được tồn với số lượng đang gõ.")
+        : shortBy && shortBy > 0
+          ? `Thiếu ${cleanNumber(shortBy)} ${selectedUom} so với tồn ở ${warehouse || "kho chưa chọn"}.`
+          : `Đủ hàng: còn ${cleanNumber(sellable ?? 0)} ${selectedUom}.`,
+    };
+  }
+
+  // ── Sẵn sàng của MÃ HÀNG ───────────────────────────────────────────────────────────────────
+  // `blocking` là cổng chặn thật (bán ra là ghi sai tiền hoặc sai tồn); `warnings` phải hiện
+  // nhưng không chặn. Xếp đúng chỗ quan trọng hơn là liệt kê nhiều: một cảnh báo kêu suốt ngày
+  // là một cảnh báo không ai đọc.
+  const blocking: CatalogGap[] = [];
+  const warnings: CatalogGap[] = [];
+  for (const entry of missingFactors) {
+    blocking.push({
+      code: "UOM_FACTOR_MISSING",
+      label: `Chưa khai hệ số quy đổi ${entry.uom} → ${stockUom || "ĐVT tồn"}`,
+      where: itemFix(itemCode, "Đơn vị quy đổi khác"),
+    });
+  }
+  if (priceList && priceError) {
+    blocking.push({
+      code: "PRICE_ERROR",
+      label: priceError,
+      where: `Danh mục → Đơn giá theo bảng giá → ${itemPrice ?? priceList}`,
+    });
+  } else if (priceList && priceMissing) {
+    blocking.push({
+      code: "PRICE_MISSING",
+      label: `Chưa khai đơn giá ${selectedUom} trong bảng giá ${priceList}`,
+      where: `Danh mục → Đơn giá theo bảng giá → ${itemPrice ?? `${priceList}:${itemCode}:${selectedUom}`}`,
+    });
+  }
+  if (shortage && shortage.severity === "over") {
+    blocking.push({
+      code: "STOCK_SHORT",
+      label: String(shortage.message),
+      where: `Kho ${warehouse || "(chưa chọn)"}`,
+    });
+  } else if (shortage && shortage.severity === "unknown") {
+    warnings.push({
+      code: "STOCK_UNKNOWN_VS_REQUESTED",
+      label: String(shortage.message),
+      where: `Kho ${warehouse || "(chưa chọn)"}`,
+    });
+  }
+  if (priceConvertedFrom) {
+    warnings.push({
+      code: "PRICE_CONVERTED_FROM_BASE_UOM",
+      label: `Đơn giá quy đổi từ ĐVT ${priceConvertedFrom}, không phải giá khai cho ${selectedUom}`,
+      where: `Danh mục → Đơn giá theo bảng giá → ${itemPrice ?? priceList}`,
+    });
+  }
+  if (stockReadError ?? batchReadError) {
+    warnings.push({
+      code: "STOCK_UNREADABLE",
+      label: String(stockReadError ?? batchReadError),
+      where: "Báo cáo kho — cần vai Thủ kho/Stock User",
+    });
+  }
+  if (catalogValue?.color_scope_error) {
+    warnings.push({
+      code: "COLOR_SCOPE_UNREADABLE",
+      label: catalogValue.color_scope_error,
+      where: "Danh mục → Bề mặt / Màu vật tư",
+    });
+  }
+  if (catalogError) {
+    warnings.push({
+      code: "CATALOG_CONTEXT_UNREADABLE",
+      label: catalogError,
+      where: "Danh mục → Bộ theo dõi / Quy cách kỹ thuật",
+    });
+  }
+  for (const gap of catalogValue?.gaps ?? []) {
+    if (gap.code === "COLOR_SCOPE_EMPTY") blocking.push(gap);
+    else warnings.push(gap);
+  }
+
   return json({
     item_code: itemCode,
     item_group: normalizedText(item.item_group),
@@ -371,5 +1042,76 @@ export async function salesItemContext(call: SalesPlatformCall, args: Json): Pro
     price_missing: priceMissing,
     price_error: priceError,
     stock_read_error: stockReadError,
+
+    // ── THÊM MỚI 2026-08-21 · tất cả optional, không trường cũ nào đổi nghĩa ─────────────────
+    uom_ladder: uomLadder,
+    uom_gap: uomGap,
+    stock_snapshot: stockSnapshot,
+    ...(shortage === null ? {} : { shortage }),
+    spec_context: catalogValue?.spec_context ?? null,
+    ...(catalogValue && "color_scope" in catalogValue
+      ? { color_scope: catalogValue.color_scope ?? null }
+      : {}),
+    color_scope_error: catalogValue?.color_scope_error ?? catalogError,
+    price_explain: {
+      price_list: priceList || null,
+      item_price: itemPrice,
+      resolution: priceResolution,
+      price_uom: pricePriceUom,
+      price_rate: priceStoredRate,
+      converted_from_uom: priceConvertedFrom,
+      conversion_applied: priceConversionApplied,
+      rate,
+      currency,
+      area_tier: priceAreaTier,
+      price_variant: priceVariant,
+      note: priceExplainNote({
+        priceList,
+        itemPrice,
+        resolution: priceResolution,
+        priceUom: pricePriceUom,
+        selectedUom,
+        convertedFrom: priceConvertedFrom,
+        areaTier: priceAreaTier,
+        rate,
+        currency,
+        priceError,
+      }),
+    },
+    readiness: {
+      ready: blocking.length === 0,
+      blocking,
+      warnings,
+    },
   });
+}
+
+/** Một câu tiếng Việt giải trình đúng con số đang hiện — người bán đọc được, không phải mã lỗi. */
+function priceExplainNote(input: {
+  priceList: string;
+  itemPrice: string | null;
+  resolution: string;
+  priceUom: string | null;
+  selectedUom: string;
+  convertedFrom: string | null;
+  areaTier: string | null;
+  rate: number | null;
+  currency: string;
+  priceError: string | null;
+}): string {
+  if (!input.priceList) return "Chứng từ không dùng bảng giá — đơn giá nhập tay.";
+  if (input.resolution === "error") return input.priceError ?? "Không tra được đơn giá.";
+  if (input.resolution === "not_found") {
+    return `Chưa khai đơn giá ${input.selectedUom} cho mặt hàng này trong bảng giá ${input.priceList}.`;
+  }
+  if (input.resolution === "disabled") {
+    return `Đơn giá ${input.itemPrice ?? input.selectedUom} đã ngừng áp dụng.`;
+  }
+  const tier = input.areaTier ? `, bậc ${input.areaTier}` : "";
+  const amount = input.rate === null ? "(chưa ra số)" : `${cleanNumber(input.rate)} ${input.currency}`;
+  if (input.resolution === "base_uom_fallback" && input.convertedFrom) {
+    return `Không có dòng giá cho ${input.selectedUom}; lấy giá ĐVT ${input.convertedFrom} từ `
+      + `${input.itemPrice} rồi quy đổi ⇒ ${amount}/${input.selectedUom}${tier}.`;
+  }
+  return `Giá lấy từ ${input.itemPrice} (${input.priceUom || input.selectedUom})${tier} ⇒ ${amount}/${input.selectedUom}.`;
 }

@@ -12,6 +12,54 @@ import type { FrappeRouterContext } from "./router.js";
 //
 // Hàm này từng nằm trong router.ts, kéo theo ba hàm mang tên khách hàng vào đúng khối import
 // của lõi nền tảng. Nó là luật của một vertical, nên ở đây.
+//
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// 2026-08-21 — giải trình được con số, không chỉ trả ra con số
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+//
+// Hợp đồng: `docs/audits/ALUMDOOR-BAN-HANG-PAYLOAD-CONTRACT-20260821.md` §B.
+//
+// `resolveServerPrice` (`clouderp-pricing`) TÍNH RA `uom` và `source_uom` — trong đó
+// `source_uom` là dấu hiệu duy nhất cho biết đơn giá đang hiện KHÔNG phải giá ai đó khai, mà là
+// giá của ĐVT khác đã nhân chéo hệ số quy đổi. Rồi `resolveCommercialLine`
+// (`clouderp-selling/src/commercial-line-resolver.ts`) dựng object trả về **không chép hai khoá
+// đó sang**, nên chúng chết ngay trên đường về. Người bán thấy một đơn giá lạ và không có đường
+// nào truy ra vì sao.
+//
+// Sửa đúng chỗ là sửa `commercial-line-resolver.ts`, nhưng đó là hợp đồng dùng chung của cả
+// controller `Sales Order` và nằm ngoài phạm vi đợt này. Nên ở đây ĐỌC LẠI đúng bản ghi
+// `Item Price` mà engine vừa chọn (`resolved.item_price`) và thuật lại. Không tính lại một con
+// số thứ hai: hai con số cùng nói về một đơn giá là mầm của mọi lần "xem trước một đằng, lưu một
+// nẻo".
+//
+// Phạm vi quyền: `Item` đã qua `loadReadable` ở đầu hàm. Ba bản ghi đọc thêm (`Item Price` đã
+// chọn, `Bậc diện tích` của chính nó, `Pricing Rule` đã áp) đều là những bản ghi VỪA tạo ra các
+// con số đang trả về — bề mặt hẹp hơn hẳn thứ đã trả. Mọi lượt đọc đều được phép hỏng riêng:
+// hỏng thì khoá giải trình vắng mặt, tiền vẫn đúng.
+
+interface CatalogWarning extends JsonObject {
+  code: string;
+  label: string;
+  where: string;
+}
+
+function catalogText(value: unknown): string {
+  return typeof value === "string" ? value.normalize("NFC").trim() : "";
+}
+
+function catalogNumber(value: unknown): number | null {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+async function readMaster(
+  context: FrappeRouterContext,
+  doctype: string,
+  name: string,
+): Promise<JsonObject | null> {
+  if (!name) return null;
+  return await context.documents.getMasterRecordData(context.tenantId, doctype, name).catch(() => null);
+}
 
 export async function previewSalesCommercialLine(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
   const line = args.object("line") ?? args.object("row") ?? {};
@@ -109,6 +157,53 @@ export async function previewSalesCommercialLine(args: FrappeArgs, context: Frap
     ...item.data,
     item_code: itemCode,
   });
+
+  // ── Giải trình đơn giá ───────────────────────────────────────────────────────────────────
+  const chosenPrice = await readMaster(context, "Item Price", catalogText(resolved.item_price));
+  const priceUom = catalogText(chosenPrice?.uom);
+  const lineUom = catalogText(line.uom);
+  // `source_uom` bị vứt trên đường về, nên suy lại từ đúng dữ kiện engine đã dùng: bản ghi giá
+  // khai một ĐVT khác ĐVT của dòng ⇒ đơn giá đang hiện là giá đã quy đổi chéo. Chỉ kết luận khi
+  // CẢ HAI đều có giá trị; thiếu một vế thì để `null` (chưa biết), không đoán là "không quy đổi".
+  const convertedFromUom = priceUom && lineUom && priceUom !== lineUom ? priceUom : null;
+  const areaTier = catalogText(chosenPrice?.area_tier);
+  const tier = areaTier && areaTier !== "ALL_AREA_TIER"
+    ? await readMaster(context, "Bậc diện tích", areaTier)
+    : null;
+  const rateChangedByRule = catalogText(resolved.base_rate) !== catalogText(resolved.selling_rate);
+
+  const catalogWarnings: CatalogWarning[] = [];
+  if (convertedFromUom) {
+    catalogWarnings.push({
+      code: "PRICE_CONVERTED_FROM_BASE_UOM",
+      label: `Đơn giá quy đổi từ ĐVT ${convertedFromUom}, không phải giá khai cho ${lineUom}`,
+      where: `Danh mục → Đơn giá theo bảng giá → ${resolved.item_price}`,
+    });
+  }
+
+  // ── Phạm vi áp dụng chính sách giá: vì sao luật này lọt vào dòng ─────────────────────────
+  // Chỉ tra đúng những luật ĐÃ ÁP. Quét cả danh mục `Pricing Rule` ở đây là dựng lại phép chọn
+  // luật lần thứ hai bên cạnh engine — đúng kiểu "luật viết hai lần rồi trôi dạt".
+  const appliedRuleNames = [...new Set([
+    ...pricingRuleSnapshots.map((snapshot) => catalogText(snapshot.rule_name)),
+    ...resolved.applied_adjustments.map((entry) => catalogText(entry.rule_name)),
+  ].filter(Boolean))];
+  const scopeEntries = await Promise.all(appliedRuleNames.map(async (ruleName) => {
+    const rule = await readMaster(context, "Pricing Rule", ruleName);
+    return [ruleName, catalogText(rule?.pricing_scope)] as const;
+  }));
+  const pricingScopeByRule: JsonObject = {};
+  for (const [ruleName, scope] of scopeEntries) if (scope) pricingScopeByRule[ruleName] = scope;
+
+  // ── Ngữ cảnh danh mục của dòng ───────────────────────────────────────────────────────────
+  // `min_area_sqm` là diện tích tối thiểu tính tiền của MỘT BỘ, và nó thật sự kéo tiền lên khi
+  // dòng nhỏ hơn (`document-validation.ts` chốt `max(rộng × cao, tối thiểu) × số bộ` lúc lưu).
+  // Người bán phải thấy điều đó, vì khách sẽ hỏi tại sao cửa nhỏ mà tiền không giảm thêm.
+  const minAreaSqm = catalogNumber(item.data.min_area_sqm);
+  const minAreaApplied = minAreaSqm !== null && minAreaSqm > 0 && previewAreaPerSet !== undefined
+    ? previewAreaPerSet <= minAreaSqm
+    : null;
+
   return {
     ...resolved,
     pricing_rule_snapshots: pricingRuleSnapshots,
@@ -116,5 +211,46 @@ export async function previewSalesCommercialLine(args: FrappeArgs, context: Frap
     rate: resolved.selling_rate,
     amount: resolved.net_before_tax,
     net_amount: resolved.net_before_tax,
+
+    // ── THÊM MỚI 2026-08-21 · tất cả optional, không trường cũ nào đổi nghĩa ────────────────
+    ...(chosenPrice === null ? {} : {
+      price_explain: {
+        price_list: priceList,
+        item_price: resolved.item_price,
+        price_variant: resolved.price_variant,
+        line_uom: lineUom || null,
+        price_uom: priceUom || null,
+        converted_from_uom: convertedFromUom,
+        price_rate: chosenPrice.rate === undefined || chosenPrice.rate === null
+          ? null
+          : String(chosenPrice.rate),
+        base_rate: resolved.base_rate,
+        selling_rate: resolved.selling_rate,
+        rate_changed_by_rule: rateChangedByRule,
+        area_tier: areaTier || null,
+        area_tier_basis_sqm: previewAreaPerSet ?? null,
+        area_tier_bounds: tier
+          ? { min_area_sqm: catalogNumber(tier.min_area_sqm), max_area_sqm: catalogNumber(tier.max_area_sqm) }
+          : null,
+        posting_date: postingDate,
+        currency,
+        note: convertedFromUom
+          ? `Không có dòng giá cho ${lineUom}; lấy ${resolved.item_price} (${priceUom}) rồi quy đổi `
+            + `⇒ ${resolved.selling_rate} ${currency}/${lineUom}.`
+          : `Đơn giá ${resolved.selling_rate} ${currency}/${priceUom || lineUom || "ĐVT dòng"} từ `
+            + `${resolved.item_price}${areaTier ? `, bậc ${areaTier}` : ""}.`,
+      },
+    }),
+    pricing_scope_by_rule: pricingScopeByRule,
+    catalog_context: {
+      item_group: catalogText(item.data.item_group) || null,
+      door_type: catalogText(item.data.door_type) || null,
+      inventory_mode: catalogText(item.data.inventory_mode) || null,
+      measurement_profile: catalogText(item.data.measurement_profile) || null,
+      material_specification: catalogText(item.data.material_specification) || null,
+      min_area_sqm: minAreaSqm,
+      min_area_applied: minAreaApplied,
+    },
+    catalog_warnings: catalogWarnings,
   };
 }

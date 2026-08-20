@@ -32,6 +32,7 @@
 | `warehouse` | string | cũ | kho của dòng/chứng từ |
 | **`qty`** | number | **MỚI** | SL đang gõ trên dòng, theo `uom`. Có thì server trả `shortage`; không có thì bỏ qua |
 | **`include_color_scope`** | boolean | **MỚI** | mặc định **`true`**. Đặt `false` để bỏ hẳn khâu màu (tiết kiệm ~30 lượt đọc) |
+| **`slat_profile`** | string | **MỚI** | mã nhôm (`AL70`, `AL552N`…) để tra `Quy cách cửa`. Không truyền ⇒ `spec_context.door_spec` là `null` — xem A.6 |
 
 ### A.1 Trường CŨ — giữ nguyên 100%
 
@@ -74,7 +75,8 @@
 |---|---|---|
 | `entries[].conversion_factor` | `number \| null` | **`null` = CHƯA KHAI.** Không được coi là 1 |
 | `entries[].declared` | boolean | `false` ⇔ `conversion_factor === null` |
-| `entries[].factor_source` | `"stock_uom" \| "uom_conversions" \| "dynamic_area" \| "catch_weight" \| null` | `"dynamic_area"` = cửa bán m² tồn Bộ, hệ số theo TỪNG dòng, không tĩnh. `"catch_weight"` = **cố ý không có hệ số** (xem A.7) |
+| `entries[].roles` | string[] | `"purchase"` · `"stock"` · `"sales"` · `"selected"` · `"convertible"` (chỉ nằm trong bảng quy đổi) |
+| `entries[].factor_source` | `"stock_uom" \| "uom_conversions" \| "dynamic_area" \| "catch_weight" \| null` | `"dynamic_area"` = cửa bán m² tồn Bộ, hệ số theo TỪNG dòng, không tĩnh. `"catch_weight"` = **cố ý không có hệ số** (xem §3 của bản kiểm kê) |
 | `missing_factors` | array | rỗng = đủ. Mỗi phần tử có `fix_where` — hiện nguyên văn cho người bán |
 
 ### A.3 `uom_gap` — vì sao ĐVT này không dùng được 🟥 P0
@@ -158,7 +160,7 @@ vẽ màu cảnh báo, KHÔNG vẽ màu "đủ".
     "thickness_mm": 1.8, "width_m": null, "effective_width_m": null,
     "scrap_threshold_m": null, "profile_system": null, "section_code": "114"
   },
-  "door_spec": null,                    // bản ghi `Quy cách cửa` khớp mã nhôm, nếu có
+  "door_spec": null,                    // chỉ có khi gọi kèm `slat_profile` — xem ghi chú dưới
   "leaf_divisor_m": null,
   "leaf_divisor_source": null,          // "Item.leaf_divisor_m" | "Quy cách cửa" | null
   "coverage_gaps": [
@@ -175,7 +177,14 @@ Mã `coverage_gaps[].code` ổn định (dùng làm khoá i18n/icon):
 
 `SPEC_NOT_LINKED` · `SPEC_MISSING_STANDARD_LENGTH` · `SPEC_MISSING_KG_PER_M` ·
 `GEOMETRY_PROFILE_MISSING` · `MEASUREMENT_PROFILE_MISSING` · `DOOR_SPEC_MISSING` ·
-`LEAF_DIVISOR_MISSING`
+`LEAF_DIVISOR_MISSING` · `COLOR_SCOPE_EMPTY`
+
+> **`door_spec` chỉ tra khi người gọi truyền `slat_profile`.** `Quy cách cửa` khoá theo **mã nhôm**
+> (`AL70`, `AL552N`…), còn mã hàng là một danh tính khác, và **không có trường liên kết nào** giữa
+> hai bên. Suy mã nhôm từ mã hàng bằng chuỗi con là bịa ra một luật không có thật — đúng cái bẫy
+> `TP-CUA` nằm trong `TP-CUADL1LY` mà đợt đổi mã 19/08 đã ghi lại. Server thà trả `null`.
+>
+> `spec_context` **là `null`** nếu cả khâu danh mục hỏng; lúc đó `color_scope_error` mang lý do.
 
 ### A.7 `color_scope` — màu theo PHẠM VI, không phải danh sách phẳng 🟨 P1
 
@@ -254,9 +263,13 @@ khai giá đã gõ.
 - `warnings` không chặn nhưng phải hiện.
 
 Mã `blocking[].code` ổn định: `UOM_FACTOR_MISSING` · `UOM_UNDECLARED` · `PRICE_MISSING` ·
-`PRICE_ERROR` · `STOCK_SHORT` · `COLOR_SCOPE_EMPTY` · `ITEM_NOT_SELLABLE`.
-Mã `warnings[].code`: mọi mã của `coverage_gaps` (A.6) cộng `STOCK_UNREADABLE` ·
-`PRICE_CONVERTED_FROM_BASE_UOM` · `COLOR_SCOPE_UNREADABLE` · `STOCK_UNKNOWN_VS_REQUESTED`.
+`PRICE_ERROR` · `STOCK_SHORT` · `COLOR_SCOPE_EMPTY`.
+Mã `warnings[].code`: mọi mã còn lại của `coverage_gaps` (A.6) cộng `STOCK_UNREADABLE` ·
+`PRICE_CONVERTED_FROM_BASE_UOM` · `COLOR_SCOPE_UNREADABLE` · `STOCK_UNKNOWN_VS_REQUESTED` ·
+`CATALOG_CONTEXT_UNREADABLE`.
+
+Mặt hàng không tồn tại / đã ngừng dùng / không được phép bán vẫn đi đường **422** cũ với đúng
+`message` cũ — không đổi thành một mã `readiness`.
 
 ### A.10 Thân lỗi 422 cũng được làm giàu
 
@@ -301,8 +314,13 @@ Toàn bộ `ResolvedCommercialLine` (`item_price`, `price_variant`, `base_rate`,
 }
 ```
 
-`price_explain` có thể **vắng mặt** nếu không đọc lại được bản ghi `Item Price` (không có quyền,
-bản ghi biến mất giữa chừng). Việc đó **không** làm hỏng preview — mọi trường tiền cũ vẫn đúng.
+`price_explain` **vắng mặt** nếu không đọc lại được bản ghi `Item Price` (không có quyền, bản ghi
+biến mất giữa chừng). Việc đó **không** làm hỏng preview — mọi trường tiền cũ vẫn đúng.
+`pricing_scope_by_rule`, `catalog_context` và `catalog_warnings` thì luôn có mặt.
+
+`converted_from_uom` được suy từ đúng dữ kiện engine đã dùng (`Item Price.uom` ≠ ĐVT của dòng) và
+chỉ kết luận khi **cả hai** đều có giá trị; thiếu một vế thì để `null` (chưa biết), không đoán là
+"không quy đổi".
 
 > `area_tier_basis_sqm` là **diện tích MỘT BỘ**, không phải cả dòng. Đây là chỗ đã cắn một lần:
 > 2 bộ × 4,5 m² tra nhầm bậc 8-9 thay vì 4-5, hụt 540.000 đ/dòng.
