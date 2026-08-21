@@ -83,7 +83,7 @@ async function normalizeDocument(context: ControllerContext<JsonObject>, meta: D
     if (isLayoutField(field)) continue;
     const provided = input[field.fieldname];
     const prior = context.existing?.data[field.fieldname];
-    const changed = provided !== undefined && !sameJsonValue(provided, prior);
+    const changed = provided !== undefined && !sameFieldValue(field, provided, prior);
     if (changed && !canWriteField(meta, field, context.command.actor, context.existing ? "save" : "create", context.existing?.owner ?? context.command.actor.user_id)) {
       throw errors.permission(`Field permission denied: ${field.fieldname}`);
     }
@@ -92,13 +92,28 @@ async function normalizeDocument(context: ControllerContext<JsonObject>, meta: D
     // A client is allowed to echo the declared default on create because blankDoc seeds
     // defaults before serialisation; accepting only that exact value keeps old clients
     // compatible without turning the hidden field into an input channel.
-    if (field.serverEnforced && field.editMode === "hidden") {
+    /**
+     * Ô CÔNG THỨC (`valueSource: "formula"`) KHÔNG đi lối "server-controlled" ở dưới.
+     *
+     * Hai loại ô đều là của server, nhưng khác nhau ở chỗ ai SINH ra giá trị: ô ẩn thường chỉ
+     * có `default` rồi đứng yên, còn ô công thức phải được TÍNH LẠI mỗi lượt ghi vì nguồn của
+     * nó thay đổi. Gộp chung thì lượt tính lại nào cũng bị chính kernel từ chối bằng "Field is
+     * server-controlled" — đo được trên `Item.purchase_stock_qty_field` ngày 21/08/2026: không
+     * tạo nổi một mã `Nhôm cây/lá` nào qua API, vì luật nhôm đòi ô đó bằng `qty_bar` còn kernel
+     * cấm mọi giá trị.
+     *
+     * Cho đi tiếp xuống nhánh chỉ-đọc, nơi `suyRaTuServer` đã có sẵn phép "giá trị đến từ
+     * server thì nhận" cho `fetch_from`. An toàn ngang nhau vì cùng một lý do: router GHI ĐÈ ô
+     * này trước mỗi lệnh, nên thứ client gửi lên bị thay chứ không được tin.
+     */
+    const suyRaTuCongThuc = field.valueSource === "formula";
+    if (field.serverEnforced && field.editMode === "hidden" && !suyRaTuCongThuc) {
       if (prior !== undefined) {
         if (changed) throw errors.validation(`Field is server-controlled: ${field.fieldname}`);
         output[field.fieldname] = structuredClone(prior);
         continue;
       }
-      if (provided !== undefined && (field.default === undefined || !sameJsonValue(provided, field.default))) {
+      if (provided !== undefined && (field.default === undefined || !sameFieldValue(field, provided, field.default))) {
         throw errors.validation(`Field is server-controlled: ${field.fieldname}`);
       }
       if (field.default !== undefined) output[field.fieldname] = structuredClone(field.default);
@@ -116,9 +131,9 @@ async function normalizeDocument(context: ControllerContext<JsonObject>, meta: D
      * luật kiểm so bộ MỚI với kiểu tồn CŨ rồi từ chối — lỗi trỏ vào đúng ô người dùng vừa sửa.
      * Cùng gốc với lỗi "Field is read-only: inventory_mode" lúc nhập liệu.
      */
-    const suyRaTuLienKet = typeof field.fetch_from === "string" && field.fetch_from.trim() !== "";
+    const suyRaTuServer = (typeof field.fetch_from === "string" && field.fetch_from.trim() !== "") || suyRaTuCongThuc;
     let value: JsonValue | undefined;
-    if (readOnly && suyRaTuLienKet && provided !== undefined) value = normalizeValue(field, provided, context.command.action);
+    if (readOnly && suyRaTuServer && provided !== undefined) value = normalizeValue(field, provided, context.command.action);
     else if (readOnly && prior !== undefined) value = structuredClone(prior);
     else if (readOnly && provided !== undefined && prior === undefined) throw errors.validation(`Field is read-only: ${field.fieldname}`);
     else if (provided !== undefined) value = normalizeValue(field, provided, context.command.action);
@@ -147,7 +162,43 @@ async function normalizeDocument(context: ControllerContext<JsonObject>, meta: D
       throw errors.validation(`${field.label} is required`, { fieldname: field.fieldname });
     }
     if (value !== undefined) output[field.fieldname] = value;
-    if (context.command.action === "submit") await validateReference(context, field, value);
+    /**
+     * Kiểm đích của Link lúc SUBMIT — và lúc GHI, nếu doctype này không bao giờ có SUBMIT.
+     *
+     * Trước đây chỉ kiểm lúc `submit`, với lập luận đúng cho chứng từ: bản nháp được phép trỏ
+     * tới thứ chưa có, cổng chặn là lúc chốt sổ. Nhưng DANH MỤC (`is_submittable` sai) không
+     * bao giờ đi qua cổng ấy — nên với chúng, "kiểm lúc submit" nghĩa là KHÔNG BAO GIỜ KIỂM, và
+     * một tham chiếu rác nằm lại vĩnh viễn. Đo trên 8810 ngày 21/08/2026: 57 doctype danh mục
+     * không chốt sổ mang 172 trường Link, cộng 173 trường Link trên 58 bảng con — 345/809 ô Link
+     * (43%) chưa từng được kiểm đích lần nào. Làn nhân sự đo được 6/6 ô Link BẮT BUỘC của
+     * `Employee` nhận giá trị không tồn tại, trả 201, và hồ sơ treo đó vẫn phân ca được.
+     *
+     * Đánh đổi đã cân: `validateReference` tốn 1–2 truy vấn cho mỗi ô Link có giá trị, nên bật
+     * cho mọi hành động ghi ở MỌI doctype sẽ cộng thêm hàng chục truy vấn cho mỗi chứng từ. Danh
+     * mục thì ghi thưa hơn chứng từ nhiều bậc, nên chỗ này trả giá đúng lúc đáng trả.
+     *
+     * CÒN LẠI, CHƯA KHÉP (cố ý, ghi ra để không ai tưởng đã xong): chứng từ chốt sổ được vẫn
+     * nhận Link rác ở bản nháp.
+     *
+     * Lý do KHÔNG phải là "thiếu bản ghi Company ALUMDOOR" — bản ghi đó CÓ thật trong
+     * `master_records` (default_currency VND), và `hasMasterRecord` hợp nhất
+     * `master_records ∪ documents ∪ roles ∪ users ∪ doctype_definitions` nên nó giải được
+     * bình thường. Lưu ý tra cứu PHÂN BIỆT HOA THƯỜNG (lược đồ không có `COLLATE NOCASE`):
+     * "ALUMDOOR" có, "Alumdoor" không.
+     *
+     * Lý do thật là một câu hỏi mà số đo KHÔNG trả lời thay được. Đo trên toàn D1 ngày
+     * 21/08/2026: nhóm chứng từ có 50/267 bản ghi mang link treo (51 ô), nhưng 46/51 là
+     * `responsible_person = dev@example.com` — một lỗi router ĐÃ vá — và 5 ô còn lại do chính
+     * đợt audit gieo. Tức trên dữ liệu đã có, bật kiểm lúc tạo sẽ không chặn lượt tạo hợp lệ
+     * nào. Nhưng phép đo ấy chạy trên corpus các chứng từ ĐÃ tạo thành công, nên nó không thể
+     * thấy luồng hợp lệ mà bản nháp cố ý trỏ tới bản ghi sẽ dựng sau — mà đó đúng là lý do gốc
+     * sinh ra luật "chỉ kiểm lúc submit". Bật hay không là quyết định kiến trúc của chủ dự án,
+     * không phải thứ suy ra được từ dữ liệu hiện có.
+     */
+    const khongBaoGioChotSo = meta.is_submittable !== true;
+    if (context.command.action === "submit" || khongBaoGioChotSo) {
+      await validateReference(context, field, value);
+    }
   }
   if (input.workflow_state !== undefined) output.workflow_state = input.workflow_state;
   output._metadata_revision = meta.revision;
@@ -383,5 +434,25 @@ function isAdministrator(context: ControllerContext<JsonObject>): boolean { retu
 
 function requireExisting(context: ControllerContext<JsonObject>): CanonicalDocument<JsonObject> { if (!context.existing) throw errors.notFound(); return context.existing; }
 function sameJsonValue(left: JsonValue | undefined, right: JsonValue | undefined): boolean { return JSON.stringify(left) === JSON.stringify(right); }
+/**
+ * `1` và `true` là CÙNG MỘT giá trị cho một ô Check — mọi client kiểu Frappe gửi 0/1.
+ *
+ * So bằng `JSON.stringify` thì `1 !== true`, và hậu quả rơi đúng vào ô ẩn server-enforced:
+ * `Item.is_stock_item` có `default: true`, client Frappe echo `1`, kernel ném "Field is
+ * server-controlled: is_stock_item" — một ô người dùng không nhìn thấy, không sửa được, và
+ * không hiểu vì sao bị chặn. Đo ngày 21/08/2026: mọi lượt nhập danh mục hàng loạt gửi `1`
+ * đều 417, trong khi cùng payload đổi thành `true` thì 201.
+ *
+ * Chính comment ở nhánh đó đã nói ý định: "accepting only that exact value keeps old clients
+ * compatible". Đây là làm cho ý định ấy đúng với kiểu dữ liệu Check.
+ */
+function checkValue(value: JsonValue | undefined): boolean {
+  return value === true || value === 1 || value === "1";
+}
+function sameFieldValue(field: DocFieldMeta, left: JsonValue | undefined, right: JsonValue | undefined): boolean {
+  if (field.fieldtype !== "Check") return sameJsonValue(left, right);
+  if (left === undefined || right === undefined) return left === right;
+  return checkValue(left) === checkValue(right);
+}
 function isEmpty(value: JsonValue | undefined): boolean { return value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0); }
 function slug(value: string): string { return value.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, ""); }

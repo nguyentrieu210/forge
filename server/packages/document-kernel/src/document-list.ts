@@ -1,5 +1,7 @@
 import type { Actor, JsonObject, JsonValue } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
+import { fromScaledInt, toScaledInt } from "../../money/src/index.js";
+import { deriveO2CStatus } from "./status.js";
 
 // ---------------------------------------------------------------------------
 // Narrow, server-owned document list/search for the four O2C doctypes.
@@ -18,6 +20,14 @@ export type FieldSource = { column: string } | { json: string };
 export interface FieldDef {
   type: FieldType;
   source: FieldSource;
+  /**
+   * Ô `Check` — CỜ nhị phân, vắng mặt nghĩa là 0.
+   *
+   * Cần đánh dấu riêng vì `type` của nó cũng là `"int"`, giống `Int` và `Duration`, mà hai loại
+   * kia thì vắng mặt KHÁC 0 (không khai số lượng ≠ số lượng bằng 0). Chỉ cờ mới được coi vắng
+   * mặt là 0, và chỉ ở vế so sánh của bộ lọc.
+   */
+  flag?: true;
 }
 
 export interface SortSpec {
@@ -373,6 +383,24 @@ function fieldExpression(definition: DocumentListDefinition, field: string): str
  * need no wrapper. (All json sort fields are date/string typed -> '' is a valid
  * sentinel that orders consistently.)
  */
+/**
+ * Vế trái của một so sánh trong bộ lọc. Với ô `Check`, vắng mặt phải đọc là 0.
+ *
+ * `json_extract` trả NULL khi bản ghi không có khoá ấy, và trong SQLite `NULL = 0` ra NULL chứ
+ * không ra false — dòng bị LOẠI. Mà `Check` phần lớn không khai `default` trong brief, nên bản
+ * ghi tạo qua API không hề có khoá `disabled`. Đo trên 8810 ngày 21/08/2026: `Item` có 430 bản
+ * ghi, `disabled = 1` đúng 6, nhưng `disabled = 0` chỉ ra 398 — 26 mặt hàng CÒN DÙNG biến mất
+ * khỏi mọi ô chọn mặt hàng có `link_filters {"disabled":0}`. `Item Group` mất 4/25,
+ * `Bậc diện tích` mất 2/13. Không lỗi nào hiện ra: danh sách vẫn có kết quả, chỉ thiếu.
+ *
+ * `is_null` KHÔNG đi qua đây — câu hỏi "khoá này có mặt không" phải giữ nguyên nghĩa đen.
+ */
+function filterExpression(definition: DocumentListDefinition, field: string): string {
+  const def = fieldDef(definition, field);
+  const raw = fieldExpression(definition, field);
+  return def.flag === true && !("column" in def.source) ? `COALESCE(${raw}, 0)` : raw;
+}
+
 function sortExpression(definition: DocumentListDefinition, field: string): string {
   const def = fieldDef(definition, field);
   if ("column" in def.source) return quoteIdentifier(def.source.column);
@@ -564,11 +592,11 @@ export class DocumentListCompiler {
   private selectionPredicate(params: JsonValue[], request: DocumentListRequest, definition: DocumentListDefinition, scope?: DocumentReadScope): string[] {
     const where = ["tenant_id=?1", "doctype=?2"];
     for (const filter of request.filters ?? []) {
-      const expression = fieldExpression(definition, filter.field);
       if (filter.operator === "is_null") {
-        where.push(`${expression} IS NULL`);
+        where.push(`${fieldExpression(definition, filter.field)} IS NULL`);
         continue;
       }
+      const expression = filterExpression(definition, filter.field);
       if (filter.operator === "in") {
         const values = filter.value as JsonValue[];
         const placeholders = values.map((value) => {
@@ -656,6 +684,37 @@ export class DocumentListCompiler {
   }
 }
 
+/**
+ * Ba doctype có số CÒN NỢ cộng được bằng MỘT phép cộng trên `payment_ledger_entries`.
+ *
+ * Giữ đúng một bản khai ở đây để nó không trôi khỏi `d1-store.ts::hydrateDerived` — hai nơi
+ * cùng nói một luật rồi lệch nhau là đúng kiểu lỗi đã sinh ra chênh lệch 8 triệu / 5 triệu.
+ */
+const SO_THANH_TOAN_THEO_DOCTYPE: Record<string, {
+  /** Ô gốc để so xem đã trả hết chưa: tổng phải thu / phải trả / thực lĩnh. */
+  base: string;
+  baseMinor: string;
+  fields: readonly string[];
+  status: (outstandingMinor: number, baseMinor: number) => string;
+}> = {
+  "Sales Invoice": {
+    base: "grand_total", baseMinor: "grand_total_minor",
+    fields: ["outstanding_amount", "outstanding_amount_minor"],
+    status: (outstanding, grand) => deriveO2CStatus("Sales Invoice", 1, { outstandingMinor: outstanding, grandTotalMinor: grand }),
+  },
+  "Purchase Invoice": {
+    base: "grand_total", baseMinor: "grand_total_minor",
+    fields: ["outstanding_amount", "outstanding_amount_minor"],
+    status: (outstanding, grand) => deriveO2CStatus("Purchase Invoice", 1, { outstandingMinor: outstanding, grandTotalMinor: grand }),
+  },
+  "Salary Slip": {
+    base: "net_pay", baseMinor: "net_pay_minor",
+    fields: ["outstanding_amount", "outstanding_amount_minor"],
+    // Cùng luật với `d1-store.ts::hydrateDerived` cho Salary Slip.
+    status: (outstanding, net) => (outstanding <= 0 ? "Paid" : outstanding < net ? "Partly Paid" : "Unpaid"),
+  },
+};
+
 // ---- store + service --------------------------------------------------------
 export interface DocumentListStore {
   list(tenantId: string, request: DocumentListRequest, definition: DocumentListDefinition, scope?: DocumentReadScope): Promise<DocumentListPage>;
@@ -679,7 +738,79 @@ export class D1DocumentListStore implements DocumentListStore {
     const rows = hasMore ? all.slice(0, compiled.limit) : all;
     const last = rows[rows.length - 1];
     const nextCursor = hasMore && last ? encodeCursor(compiled.effectiveSort, last) : null;
+    await this.hydrateOutstanding(tenantId, definition.doctype, rows);
     return { rows, next_cursor: nextCursor, has_more: hasMore };
+  }
+
+  /**
+   * Tính lại số CÒN NỢ và trạng thái thanh toán cho một TRANG danh sách.
+   *
+   * `payload_json` giữ con số lúc GHI chứng từ. Tiền thu về sau đó nằm ở `payment_ledger_entries`,
+   * và `d1-store.ts::hydrateDerived` cộng lại — nhưng nó CHỈ chạy khi đọc MỘT tài liệu. Đường
+   * danh sách đọc thẳng cột, nên nó trả con số đông cứng. Đo trên `HD-2026-0017` (hoá đơn 8 triệu,
+   * đã thu 3 triệu): mở hồ sơ ra "còn nợ 5.000.000", mà cùng lúc danh sách ghi "8.000.000" và
+   * trạng thái vẫn "Unpaid". Hai màn nói hai số, không màn nào báo lỗi.
+   *
+   * Không lặp từng dòng: MỘT câu truy vấn gộp cho cả trang (chia lô theo trần tham số của D1).
+   * Chỉ ba doctype này suy ra từ sổ thanh toán bằng một phép cộng — đủ rẻ để làm đúng ở đây.
+   *
+   * CHƯA khép: `Sales Order`/`Purchase Order` (%giao, %xuất hoá đơn), `Work Order`
+   * (`produced_qty`), `Asset` (khấu hao), `Project` (giờ/chi phí thực), `Bank Transaction`
+   * (đã đối chiếu) vẫn đông cứng trên đường danh sách — chúng cần cộng theo TỪNG DÒNG hàng,
+   * không gộp được bằng một câu như ở đây.
+   */
+  private async hydrateOutstanding(
+    tenantId: string, doctype: string, rows: Array<Record<string, JsonValue>>,
+  ): Promise<void> {
+    const luat = SO_THANH_TOAN_THEO_DOCTYPE[doctype];
+    if (!luat || rows.length === 0) return;
+    // Chỉ trả giá mở rộng khi trang này THỰC SỰ mang một trong các ô suy ra.
+    const mau = rows[0]!;
+    const canTinh = luat.fields.some((f) => Object.hasOwn(mau, f)) || Object.hasOwn(mau, "status");
+    if (!canTinh) return;
+
+    const names = rows.map((row) => String(row.name ?? "")).filter(Boolean);
+    if (names.length === 0) return;
+    const tong = new Map<string, { outstanding: number; base: number; docstatus: number; scale: number }>();
+    // D1 chặn ở 100 tham số cho mỗi câu; chia lô để một trang đầy không bao giờ dựng câu bị từ chối.
+    for (let i = 0; i < names.length; i += 80) {
+      const lo = names.slice(i, i + 80);
+      const cho = lo.map((_, k) => `?${k + 3}`).join(", ");
+      const result = await this.reader.prepare(
+        `SELECT d.name AS name, d.docstatus AS docstatus,
+                json_extract(d.payload_json, '$.currency_scale') AS currency_scale,
+                json_extract(d.payload_json, ${quoteJsonPath(`$.${luat.baseMinor}`)}) AS base_minor,
+                json_extract(d.payload_json, ${quoteJsonPath(`$.${luat.base}`)}) AS base_text,
+                COALESCE((SELECT SUM(p.amount_minor) FROM payment_ledger_entries p
+                          WHERE p.tenant_id = d.tenant_id
+                            AND p.against_voucher_type = d.doctype
+                            AND p.against_voucher_no = d.name), 0) AS outstanding_minor
+         FROM documents d
+         WHERE d.tenant_id = ?1 AND d.doctype = ?2 AND d.name IN (${cho})`,
+      ).bind(tenantId, doctype, ...lo).all<Record<string, JsonValue>>();
+      for (const row of result.results ?? []) {
+        const scale = typeof row.currency_scale === "number" ? row.currency_scale : 2;
+        const base = typeof row.base_minor === "number"
+          ? row.base_minor
+          : toScaledInt(String(row.base_text ?? "0"), scale);
+        tong.set(String(row.name), {
+          outstanding: Number(row.outstanding_minor ?? 0),
+          base,
+          docstatus: Number(row.docstatus ?? 0),
+          scale,
+        });
+      }
+    }
+
+    for (const row of rows) {
+      const so = tong.get(String(row.name ?? ""));
+      if (!so) continue;
+      if (Object.hasOwn(row, "outstanding_amount_minor")) row.outstanding_amount_minor = so.outstanding;
+      if (Object.hasOwn(row, "outstanding_amount")) row.outstanding_amount = fromScaledInt(so.outstanding, so.scale);
+      if (Object.hasOwn(row, "status") && so.docstatus === 1) {
+        row.status = luat.status(so.outstanding, so.base);
+      }
+    }
   }
 
   async count(tenantId: string, request: DocumentListRequest, definition: DocumentListDefinition, scope?: DocumentReadScope): Promise<number> {

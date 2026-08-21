@@ -12,7 +12,7 @@
  */
 
 import {
-  appMethodTarget, areaTierBasisSqm, assertItemPriceTierIsUnambiguous, blocksSelfApproval, combinedNavigation, dispatchAppMethod, errors, mergeCustomizations,
+  appMethodTarget, areaTierBasisSqm, assertItemPriceTierIsUnambiguous, blocksSelfApproval, combinedNavigation, derivePurchaseQuantityAxis, dispatchAppMethod, errors, mergeCustomizations,
   navItemPath, parseCsvImport, parseCustomField, parseDocTypeMeta, parsePropertySetter, parseQueryRequest,
   permissionAllows, renderPrintFormat, resolveAutoname, sha256Hex, validateWorkflow,
   type Actor, type AppInstaller, type AppMethodEnv, type AppReportService, type AppReportSpec,
@@ -669,6 +669,21 @@ async function listDocuments(doctype: string, args: FrappeArgs, context: FrappeR
  */
 async function resolveFetchFrom(
   doctype: string, payload: JsonObject, meta: DocTypeMeta, context: FrappeRouterContext,
+  /**
+   * Tên các ô do NGƯỜI GỬI thực sự khai. Bỏ trống = coi mọi ô đang có giá trị là lời người gửi
+   * (đường `save`, nơi payload là bản ghi đã lưu trộn với phần sửa).
+   *
+   * Vì sao phải phân biệt: `createDocument` áp `default` TRƯỚC khi gọi hàm này, nên một ô vừa có
+   * `default` vừa có `fetch_from` luôn "đã có giá trị" khi tới đây và nhánh suy ra không bao giờ
+   * chạy. Đo trên 8810 ngày 21/08/2026: `Purchase Receipt` tạo từ `against_purchase_order`
+   * (Đơn mua thuộc "CÔNG TY TNHH INTERNATIONAL ALUMINUM APPLICATION") ra `company = "ALUMDOOR"`
+   * — giá trị `default` của brief, mà "ALUMDOOR" KHÔNG phải một Company nào có thật trong dữ
+   * liệu. Bốn ô rơi vào đúng bẫy này: `Delivery Note.company`, `Delivery Note.currency`,
+   * `Purchase Receipt.company`, `Purchase Receipt.currency` — `fetch_from` của chúng là mã chết.
+   *
+   * Thứ tự đúng: lời người gửi > giá trị suy ra từ liên kết > `default`.
+   */
+  khaiTay?: ReadonlySet<string>,
 ): Promise<void> {
   const doc = new Map<string, JsonObject | null>();
   for (const field of meta.fields) {
@@ -708,9 +723,59 @@ async function resolveFetchFrom(
      */
     const chiDoc = field.read_only === true;
     const daGui = payload[field.fieldname];
-    const coGiaTri = daGui !== undefined && daGui !== null && daGui !== "";
+    const nguoiGuiKhai = khaiTay === undefined || khaiTay.has(field.fieldname);
+    const coGiaTri = nguoiGuiKhai && daGui !== undefined && daGui !== null && daGui !== "";
     if (!chiDoc && coGiaTri) continue;
     payload[field.fieldname] = value as JsonValue;
+  }
+}
+
+/**
+ * Nhân viên gắn với tài khoản đang đăng nhập, hoặc `null` nếu không có.
+ *
+ * `Sales Order.responsible_person` là `Link → Employee`. Router từng gán thẳng
+ * `actor.user_id` — một địa chỉ email — vào ô đó. Đo trên 8810 ngày 21/08/2026: 40/40 đơn bán
+ * mang `responsible_person = "dev@example.com"`, tức 100% liên kết TREO: không trỏ tới bản ghi
+ * `Employee` nào, và `link_filters` của ô còn đòi `employee_status = "Đang làm việc"`. Không lỗi
+ * nào hiện ra vì nền tảng không kiểm tra đích của Link khi ghi.
+ *
+ * `Employee.user_id` là `Link → User` và `unique`, nên tra ngược là một truy vấn đúng một dòng.
+ */
+async function employeeCuaNguoiDung(context: FrappeRouterContext): Promise<string | null> {
+  const userId = context.actor.user_id;
+  if (typeof userId !== "string" || !userId.trim()) return null;
+  try {
+    const page = await context.listService.list(context.actor, context.tenantId, {
+      doctype: "Employee",
+      fields: ["name"],
+      filters: [{ field: "user_id", operator: "eq", value: userId }] as unknown as JsonValue,
+      limit: 1,
+    });
+    const name = (page.rows[0] as JsonObject | undefined)?.name;
+    return typeof name === "string" && name ? name : null;
+  } catch {
+    // Doctype vắng mặt hoặc không có quyền đọc — thà để ô trống còn hơn ghi một liên kết treo.
+    return null;
+  }
+}
+
+/**
+ * Tính lại các ô `valueSource: "formula"` của `Item` sau khi `fetch_from` đã chạy.
+ *
+ * Thứ tự BẮT BUỘC: `inventory_mode` là ô suy ra từ `measurement_profile`, mà trục số lượng mua
+ * lại suy ra từ `inventory_mode`. Chạy trước `resolveFetchFrom` thì lượt TẠO nào cũng đọc phải
+ * `inventory_mode` rỗng và không mã nhôm nào có trục — đúng lỗi đang có.
+ *
+ * Ghi RỖNG chứ không xoá khoá: ô chỉ-đọc mà vắng mặt trong payload thì kernel giữ giá trị CŨ
+ * (xem `generic-controller.ts`), nên xoá khoá là cách để `qty_bar` sống sót sau khi mặt hàng
+ * đã thôi là nhôm.
+ */
+function resolveItemQuantityAxis(doctype: string, payload: JsonObject, meta: DocTypeMeta): void {
+  if (doctype !== "Item") return;
+  const axis = derivePurchaseQuantityAxis(payload);
+  for (const [fieldname, value] of Object.entries(axis)) {
+    if (!meta.fields.some((field) => field.fieldname === fieldname)) continue;
+    payload[fieldname] = value;
   }
 }
 
@@ -730,6 +795,9 @@ async function createDocument(doctype: string, args: FrappeArgs, context: Frappe
   });
 
   let payload = toKernelPayload(submitted, meta);
+  // Chụp lại các ô do NGƯỜI GỬI khai, TRƯỚC khi `default` chen vào. `resolveFetchFrom` cần biết
+  // ranh giới này: một ô có `default` mà không ai khai thì vẫn là ô TRỐNG đối với luật suy ra.
+  const khaiTay: ReadonlySet<string> = new Set(Object.keys(payload));
   // Frappe defaults are part of the server contract, not merely a UI convenience.
   // Applying them here also covers specialised ERP controllers, which run before the
   // generic metadata controller and therefore cannot otherwise see hidden defaults
@@ -744,12 +812,6 @@ async function createDocument(doctype: string, args: FrappeArgs, context: Frappe
       payload[field.fieldname] = structuredClone(field.default);
     }
   }
-  // Sales Order ownership follows the authenticated operator by default.  Keep
-  // the field editable for exceptional hand-offs, but never leave a new order
-  // without an accountable person when the client omits it.
-  if (doctype === "Sales Order" && (payload.responsible_person == null || payload.responsible_person === "")) {
-    payload.responsible_person = context.actor.user_id;
-  }
   if (amendedFrom) {
     const source = await loadReadable(doctype, amendedFrom, context);
     if (source.docstatus !== 2) throw errors.lifecycle("Only a cancelled document can be amended");
@@ -759,7 +821,20 @@ async function createDocument(doctype: string, args: FrappeArgs, context: Frappe
     payload = dropNoCopyFields(payload, meta);
   }
 
-  await resolveFetchFrom(doctype, payload, meta, context);
+  await resolveFetchFrom(doctype, payload, meta, context, khaiTay);
+  /**
+   * Người chịu trách nhiệm đơn bán: NHÂN VIÊN của người đang đăng nhập, không phải tài khoản.
+   *
+   * Chạy SAU `resolveFetchFrom` để `fetch_from = customer.account_manager` còn cửa nói trước —
+   * đặt trước thì ô luôn có sẵn giá trị và luật suy ra thành mã chết. Tra không ra Nhân viên thì
+   * để TRỐNG (ô không bắt buộc): một liên kết treo tệ hơn một ô trống, vì nó lọt lúc tạo rồi vỡ
+   * ở báo cáo hoặc màn khác, xa chỗ gây ra.
+   */
+  if (doctype === "Sales Order" && (payload.responsible_person == null || payload.responsible_person === "")) {
+    const nhanVien = await employeeCuaNguoiDung(context);
+    if (nhanVien) payload.responsible_person = nhanVien;
+  }
+  resolveItemQuantityAxis(doctype, payload, meta);
   await assertNoAmbiguousItemPrice(doctype, payload, "", context);
 
   const name = amendedFrom
@@ -868,6 +943,7 @@ async function saveDocument(doctype: string, name: string, args: FrappeArgs, con
   // are preserved, then convert the complete document back to the kernel payload.
   const payload = toKernelPayload({ ...toFrappeDoc(current), ...submitted }, meta);
   await resolveFetchFrom(doctype, payload, meta, context);
+  resolveItemQuantityAxis(doctype, payload, meta);
   await assertNoAmbiguousItemPrice(doctype, payload, name, context);
   await context.runCommand(await buildCommand({
     tenantId: context.tenantId, actor: context.actor, doctype, name,
@@ -3321,7 +3397,70 @@ async function assertNoAmbiguousItemPrice(
   context: FrappeRouterContext,
 ): Promise<void> {
   if (doctype !== "Item Price") return;
+  await assertItemPriceIsAnchored(payload, context);
   await assertItemPriceTierIsUnambiguous(context.documents, context.tenantId, payload, name);
+}
+
+/**
+ * Một dòng giá phải NEO được vào danh mục, nếu không nó là tiền không ai tra ra.
+ *
+ * Kernel chỉ kiểm đích của `Link` lúc CHỐT SỔ (`generic-controller.ts`), mà `Item Price` không
+ * chốt sổ — nên trước bản vá này, cả bốn kiểu dưới đây đều trả 201 trên cổng 8810 ngày
+ * 21/08/2026 và nằm im trong bảng giá:
+ *
+ *   · `item_code: "KHONG_CO_MA_NAY"` — dòng giá của một mặt hàng không tồn tại;
+ *   · `price_list: "KHONG_CO_BANG_GIA"` — bảng giá tự sinh ra từ một lỗi gõ phím;
+ *   · `rate: -5000` — đơn giá âm, cộng vào đơn hàng thành trừ tiền;
+ *   · `uom: "Lít"` trên một mã tồn Kg / bán Mét — dòng giá KHÔNG BAO GIỜ khớp, và vì engine
+ *     giá fail-closed nên người bán chỉ thấy "không tìm thấy Item Price", không thấy rằng giá
+ *     đã khai rồi nhưng khai sai đơn vị. Đo trên dữ liệu thật: `Alumdoor 2026:PKC_GIAT:Bộ` —
+ *     mặt hàng bán theo *Cặp*, dòng giá ghi theo *Bộ*.
+ *
+ * Đơn vị hợp lệ lấy đúng bộ mà `applyUomConversion` chấp nhận (ĐVT tồn/mua/bán + bảng quy đổi),
+ * nên khai giá và lập chứng từ không thể hiểu khác nhau.
+ */
+async function assertItemPriceIsAnchored(payload: JsonObject, context: FrappeRouterContext): Promise<void> {
+  const text = (value: JsonValue | undefined): string => (typeof value === "string" ? value.trim() : "");
+  const priceList = text(payload.price_list);
+  const itemCode = text(payload.item_code);
+  const tier = text(payload.area_tier);
+
+  if (priceList && !await context.documents.getMasterRecordData(context.tenantId, "Price List", priceList)) {
+    throw errors.validation(`Bảng giá ${priceList} không tồn tại hoặc đã ngừng dùng.`);
+  }
+  if (tier && !await context.documents.getMasterRecordData(context.tenantId, "Bậc diện tích", tier)) {
+    throw errors.validation(`Bậc diện tích ${tier} không tồn tại hoặc đã ngừng dùng.`);
+  }
+  const rate = payload.rate;
+  if (rate !== undefined && rate !== null && String(rate).trim() !== "" && Number(rate) < 0) {
+    throw errors.validation("Đơn giá không được âm.");
+  }
+  if (!itemCode) return;
+  const item = await context.documents.getMasterRecordData(context.tenantId, "Item", itemCode);
+  if (!item) throw errors.validation(`Mặt hàng ${itemCode} không tồn tại hoặc đã ngừng dùng.`);
+
+  const uom = text(payload.uom);
+  if (!uom) return;
+  const chapNhan = new Set<string>();
+  for (const fieldname of ["stock_uom", "default_purchase_uom", "default_sales_uom"]) {
+    const value = text((item as JsonObject)[fieldname]);
+    if (value) chapNhan.add(value);
+  }
+  const rows = (item as JsonObject).uom_conversions;
+  if (Array.isArray(rows)) {
+    for (const row of rows) {
+      if (!row || typeof row !== "object" || Array.isArray(row)) continue;
+      const value = text((row as JsonObject).uom);
+      if (value) chapNhan.add(value);
+    }
+  }
+  if (chapNhan.size && !chapNhan.has(uom)) {
+    throw errors.validation(
+      `Mặt hàng ${itemCode} không giao dịch theo ĐVT "${uom}", nên dòng giá này không bao giờ được dùng tới.`
+      + ` ĐVT hợp lệ: ${[...chapNhan].join(", ")}.`
+      + " Sửa ĐVT của dòng giá, hoặc khai thêm nó vào Quy đổi đơn vị của mặt hàng.",
+    );
+  }
 }
 
 async function resolveNewName(doctype: string, meta: DocTypeMeta, submitted: JsonObject, context: FrappeRouterContext): Promise<string> {

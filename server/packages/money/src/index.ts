@@ -80,6 +80,19 @@ export function compareDecimal(left: DecimalInput, right: DecimalInput, scale = 
 }
 
 function normalizeInput(input: DecimalInput, field: string): string {
+  /**
+   * Vắng số thì phải nói "thiếu ô nào", không ném TypeError trần.
+   *
+   * `DecimalInput` khai là `string | number`, nhưng dữ liệu đi qua đây đến từ thân JSON của yêu
+   * cầu, nơi kiểu chỉ là lời hứa. Một ô số vắng mặt thành `undefined`, rồi `undefined.trim()` ném
+   * `TypeError: Cannot read properties of undefined (reading 'trim')` — không tên ô, không mã lỗi
+   * nghiệp vụ, và Worker trả 417 kèm đúng câu tiếng Anh đó. Đo trên 8810 ngày 21/08/2026: tạo
+   * Phiếu giao mà dòng hàng không mang `rate` gãy đúng như vậy (`clouderp-selling` →
+   * `normalizeStockItems` → `toScaledInt`), và câu báo không hề nhắc tới `rate` lẫn Phiếu giao.
+   *
+   * Đây là hàm gốc mọi phép tính tiền/số lượng đi qua, nên chặn ở đây là chặn cho mọi phân hệ.
+   */
+  if (input === undefined || input === null) throw errors.validation(`${field} is required`);
   if (typeof input === "number") {
     if (!Number.isFinite(input)) throw errors.validation(`${field} must be finite`);
     const text = input.toString();

@@ -24,9 +24,14 @@ export const errors = {
   exists: (message = "Document already exists") => new CloudForgeError("DOCUMENT_ALREADY_EXISTS", message, 409),
   lifecycle: (message: string, details?: JsonObject) => new CloudForgeError("INVALID_LIFECYCLE_TRANSITION", message, 409, false, details),
   reference: (message: string, details?: JsonObject) => new CloudForgeError("REFERENCE_VALIDATION_FAILED", message, 422, false, details),
-  version: (currentVersion?: number) => new CloudForgeError(
+  /**
+   * `reason` chỉ thay lời văn để nói RÕ nguyên nhân xung đột; mã vẫn là
+   * VERSION_CONFLICT nên client tiếp tục đi đúng nhánh "tải lại bản mới"
+   * (exc_type TimestampMismatchError) như trước, không đổi hành vi.
+   */
+  version: (currentVersion?: number, reason?: string) => new CloudForgeError(
     "VERSION_CONFLICT",
-    "The document changed after it was loaded",
+    reason ?? "The document changed after it was loaded",
     409,
     false,
     currentVersion === undefined ? undefined : { current_version: currentVersion },

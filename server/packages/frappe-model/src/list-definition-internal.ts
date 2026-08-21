@@ -16,7 +16,12 @@ export function metadataToListDefinition(meta: DocTypeMeta): DocumentListDefinit
   for (const field of meta.fields) {
     const type = listType(field);
     if (!type) continue;
-    fields[field.fieldname] = { type, source: { json: `$.${field.fieldname}` } };
+    fields[field.fieldname] = {
+      type,
+      source: { json: `$.${field.fieldname}` },
+      // Cờ nhị phân: vắng mặt = 0. Xem `filterExpression` bên document-list.ts.
+      ...(field.fieldtype === "Check" ? { flag: true as const } : {}),
+    };
   }
   const listFields = meta.fields.filter((field) => field.in_list_view && Object.hasOwn(fields, field.fieldname)).map((field) => field.fieldname);
   const defaultFields = ["name", ...(meta.title_field && Object.hasOwn(fields, meta.title_field) ? [meta.title_field] : []), ...listFields, "status", "docstatus", "version", "modified_at"];
@@ -67,6 +72,24 @@ export function metadataToListDefinition(meta: DocTypeMeta): DocumentListDefinit
      * followed.
      */
     ...meta.fields.filter((field) => field.fieldtype === "Link" || field.fieldtype === "Dynamic Link").map((field) => field.fieldname),
+    /**
+     * Mọi ô `Check` cũng lọc được, vì cùng một lý do như Link và như trường cha của cây.
+     *
+     * Một `Check` là một CỜ. Thứ duy nhất người ta làm với cờ là hỏi "còn dùng / đã tắt",
+     * "bán được / không bán được" — tức là lọc. Bắt tác giả brief đánh thêm `in_list_view`
+     * mới cho lọc nghĩa là muốn lọc thì phải bày cờ đó thành một CỘT trong danh sách.
+     *
+     * Đo trên 8810 ngày 21/08/2026: `link_filters` khai trong metadata cho MỌI ô chọn Kho là
+     * `{"is_group":0,"disabled":0}`, mà `Warehouse.disabled` không có hai cờ kia. Gọi
+     * `frappe.desk.search.search_link` với đúng bộ lọc metadata tự khai trả
+     * `417 Filter field is not allowed: disabled`. 24 ô chọn Kho (Sales Order Item.warehouse,
+     * Stock Entry.source/target_warehouse, Work Order.source/target_warehouse, Purchase Receipt
+     * Item.warehouse …) cộng `Sales Order.bank_account` rơi vào đúng chỗ này: danh sách xổ xuống
+     * KHÔNG có bản ghi nào, mà không phải vì thiếu dữ liệu. Client còn ÉP `{is_group:0,
+     * disabled:0}` cho mọi Link → Warehouse / Item Group (`link-query.ts::applyTreeLeafDefaults`),
+     * nên vá ở một nơi khai báo cũng không đủ — phải cho lọc được ở tầng nền.
+     */
+    ...meta.fields.filter((field) => field.fieldtype === "Check").map((field) => field.fieldname),
     ...meta.fields.filter((field) => field.in_standard_filter || field.in_list_view).map((field) => field.fieldname),
   ].filter((field) => Object.hasOwn(fields, field));
   const sortField = meta.sort_field && Object.hasOwn(fields, meta.sort_field) ? meta.sort_field : "modified_at";
