@@ -261,7 +261,7 @@ const MIN_WIDTHS: Partial<Record<ColumnId, number>> = {
 
 // Tăng version khi thay cấu trúc cột để localStorage cũ không làm lệch vùng tiền.
 // v8: thêm "Quy ra tồn" + "Tồn khả dụng" (ĐVT bán ≠ ĐVT tồn của nhóm ray/trục).
-// v9: thêm "Cách bán" (biến thể giá) — cột chỉ hiện khi có dòng thật sự có nhiều cách bán.
+// v9: thêm "Mã giá" — cột chỉ hiện khi mặt hàng thật sự có nhiều hơn một dòng giá.
 const COLUMN_WIDTH_STORAGE_KEY = "alumdoor:sales-order:grid-widths:v9";
 const FROZEN_COLUMNS: ColumnId[] = ["select", "index", "item_code", "item_name"];
 
@@ -636,7 +636,7 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
     [activeLines],
   );
   /**
-   * Cột "Cách bán" đi theo cùng luật với cột thông số động: CÓ DỮ LIỆU MỚI XUẤT HIỆN.
+   * Cột "Mã giá" đi theo cùng luật với cột thông số động: CÓ DỮ LIỆU MỚI XUẤT HIỆN.
    *
    * 202/224 cặp (mã + ĐVT) chỉ có một cách bán — với chúng không có gì để chọn, và một cột luôn
    * hiện với đúng một lựa chọn là một cột chiếm chỗ mà không trả lời câu hỏi nào. Cột chỉ bật
@@ -784,7 +784,7 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
   };
 
   /**
-   * "Cách bán" — chọn DÒNG GIÁ nào, không phải giảm bao nhiêu.
+   * "Mã giá" — chọn DÒNG GIÁ nào, không phải giảm bao nhiêu.
    *
    * Ô này chỉ hiện lựa chọn mà mặt hàng THẬT SỰ có, kèm đúng đơn giá của từng cách. Đơn giá đi
    * kèm là phần quan trọng nhất: không có nó thì người bán phải tự dịch `TANG_RAY` và `CHI_LA`
@@ -801,7 +801,7 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
     const field = selectField(
       childFieldByName.get("price_variant"),
       "price_variant",
-      "Cách bán",
+      "Mã giá",
       options.map((option) => text(option.price_variant)).filter(Boolean),
     );
     const hint = options.map(priceVariantOptionLabel).join(" · ");
@@ -920,7 +920,7 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
             {head("item_code", "Mã hàng")}
             {head("item_name", "Tên hàng")}
             {head("color", "Màu")}
-            {showPriceVariant ? head("price_variant", "Cách bán") : null}
+            {showPriceVariant ? head("price_variant", "Mã giá") : null}
             {dynamicColumns.map((fieldname) => head(fieldname, dynamicHeaderLabel(fieldname), DYNAMIC_HEADER_UNITS[fieldname]))}
             {head("quantity", "SL")}
             {head("uom", "ĐVT")}

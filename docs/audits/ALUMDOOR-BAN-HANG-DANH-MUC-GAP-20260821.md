@@ -152,7 +152,26 @@ JSON. Mọi trường **optional và thêm mới**; không trường cũ nào đ
 Ba câu dưới đây **cố ý không tự trả lời**. Chúng là quyết định nghiệp vụ, và đoán hộ ở tầng code
 là đúng loại "luật ngủ im lặng" mà cả tập tài liệu này đang chống.
 
-### Q1 🟥 Ánh xạ `price_variant` ↔ `sales_mode` — CÂU HỎI SỐ MỘT
+### Q1 ~~Ánh xạ `price_variant` ↔ `sales_mode`~~ — ĐÃ HẾT HIỆU LỰC (chủ dự án chỉ ra 21/08/2026)
+
+> **Câu hỏi này hỏi về một khái niệm đã bị gỡ.** Commit `46cff2132` (14/08/2026) —
+> *"loại bỏ Cách bán / Gói bán hàng, bán thẳng theo Item Price"* — đã xoá cả tầng đó:
+> `sales-option-resolver.ts`, `sales-package-resolver.ts`, `sales-package-split-pricing.ts`,
+> `packaged-commercial-sales-order-controller.ts`, `sales-production-package-guard.ts`.
+>
+> Nên **không có ánh xạ nào phải chốt**. `price_variant` không phải phiên bản mới của Cách bán;
+> nó là đường bán thẳng theo `Item Price` mà chính commit đó chọn. Nhãn trên màn hình đã đổi từ
+> "Cách bán (biến thể giá)" sang **"Mã giá"** — trùng nhãn mà danh mục `Item Price` vẫn dùng cho
+> ô này — để không dựng lại một từ vựng đã khai tử.
+>
+> `sales_mode` còn sót trong brief ở 7 doctype (và `BOM Template` dùng nó làm cột điều kiện
+> BOM — **việc khác**, không phải tàn dư). Dọn phần tàn dư là một đợt riêng, phải soi từng chỗ
+> dùng chứ không xoá theo tên. Ghi lại tại đây để đợt sau không phải tìm lại.
+>
+> Q2 và Q3 bên dưới **vẫn còn hiệu lực** — chúng hỏi về dữ liệu bảng giá, không về Cách bán.
+
+<details><summary>Nguyên văn câu hỏi đã hết hiệu lực</summary>
+
 
 Dòng bán hiện có **hai** ô nói về "cách", và chúng KHÔNG phải một thứ:
 
@@ -175,6 +194,8 @@ chốt chúng có phải là một trục thứ ba hay không. Cụ thể phải
 **Trong lúc chờ:** hai ô độc lập, không ô nào suy ra ô nào, và không có phép kiểm chéo nào. Đây là
 lựa chọn an toàn — gộp sai là mất một bộ cấu phần khi giao (6 họ mã có đủ cả hai biến thể BOM), còn
 để rời thì chỉ tốn một lần soát tay.
+
+</details>
 
 ### Q2 🟧 Bảy mã thang bậc diện tích chỉ có `TRON_BO`
 

@@ -956,7 +956,7 @@ export function linePriceExplanation(line: SalesLine): PriceExplanationRow[] {
   if (variantOptions.length > 1) {
     const chosen = linePriceVariant(line);
     const option = variantOptions.find((entry) => text(entry.price_variant) === chosen);
-    push("price_variant", "Cách bán",
+    push("price_variant", "Mã giá",
       chosen
         ? (option ? priceVariantOptionLabel(option) : chosen)
         : `Chưa chọn — ${variantOptions.map(priceVariantOptionLabel).join(" · ")}`,

@@ -1140,7 +1140,7 @@ export async function salesItemContext(call: SalesPlatformCall, args: Json): Pro
   const priceStatus = priceList
     ? (priceError
       ?? (priceVariantRequired
-        ? "Chưa chọn cách bán"
+        ? "Chưa chọn mã giá"
         : priceTieredByArea
           ? `Giá ${selectedUom} theo bậc diện tích`
           : priceMissing

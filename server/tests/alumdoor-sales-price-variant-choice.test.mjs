@@ -152,7 +152,7 @@ test("hai cách bán mà chưa chọn: KHÔNG ra tiền, và trả về danh sá
   assert.match(blocking.where, /Dòng bán/);
   assert.equal(body.readiness.blocking.some((entry) => entry.code === "PRICE_MISSING"), false);
   assert.equal(body.readiness.blocking.some((entry) => entry.code === "PRICE_ERROR"), false);
-  assert.match(body.availability_status, /Chưa chọn cách bán/);
+  assert.match(body.availability_status, /Chưa chọn mã giá/);
 });
 
 test("chọn cách bán rồi thì ra ĐÚNG con số của cách đó — hai cách lệch 75.000 đ/m²", async () => {
