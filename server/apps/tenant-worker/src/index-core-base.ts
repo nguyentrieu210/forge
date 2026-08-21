@@ -30,6 +30,7 @@ import { AggregateCoordinator } from "./aggregate-do.js";
 import { askAssistant, readReceiptImage } from "./ai-assistant.js";
 import { publishPendingOutbox } from "../../../packages/outbox/src/index.js";
 import { AppReportService, D1ReportService } from "../../../packages/query/src/index.js";
+import { FinanceQueryCompiler } from "../../../packages/query/src/finance-aging.js";
 import { D1OrganizationSecurityGuard } from "../../../packages/organization-security/src/index.js";
 import type { TenantEnv } from "./env.js";
 import { routeAuthenticatedSocialRequest, routeInternalSocialRequest } from "./social-routes.js";
@@ -1260,7 +1261,11 @@ async function serveFrappeApiInner(
     apps: installedApps,
     users,
     search: new D1SearchStore(requestDb),
-    reports: new D1ReportService(requestDb),
+    // Trình biên dịch mặc định không biết các báo cáo tài chính, nên tuổi nợ chết bằng
+    // `Unknown report: Accounts Receivable Aging` dù SQL và view đã có đủ.
+    // FinanceQueryCompiler xử lý nhóm tài chính rồi mới `super.compile()` phần còn lại,
+    // nên đây là tập cha — thay vào không mất báo cáo nào đang chạy.
+    reports: new D1ReportService(requestDb, new FinanceQueryCompiler()),
     appReports: new AppReportService(requestDb),
     deskViews: new D1DeskViewStore(requestDb),
     organizationSecurity,
