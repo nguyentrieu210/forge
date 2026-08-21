@@ -2172,8 +2172,14 @@ async function operationsOverview(call: PlatformCall, args: Record<string, unkno
   if (toDate) dateFilters.push(["delivery_date", "<=", toDate]);
   try {
     const [orders, deliveries, production, claims, invoices] = await Promise.all([
+      /**
+       * KHÔNG hỏi `product_group` — Sales Order không có ô đó, và đường đọc danh sách trả 417
+       * "Field is not allowed" cho CẢ truy vấn chứ không bỏ qua ô lạ. Hệ quả: toàn bộ màn Vận
+       * hành chết, báo "không đọc được danh sách Sales Order (HTTP 417)" mà không nói ô nào.
+       * Mười một ô còn lại đều tồn tại; đã đối chiếu từng ô với metadata ngày 21/08/2026.
+       */
       listResource<Record<string, unknown>>(call, "Sales Order", [
-        "name", "transaction_date", "delivery_date", "customer", "customer_group", "responsible_person", "product_group",
+        "name", "transaction_date", "delivery_date", "customer", "customer_group", "responsible_person",
         "manual_note", "grand_total", "delivered_percentage", "billed_percentage", "status",
       ], dateFilters),
       listResource<Record<string, unknown>>(call, "Delivery Note", ["name", "against_sales_order", "posting_at", "docstatus"], [["docstatus", "=", 1]]).catch(() => []),

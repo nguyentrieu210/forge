@@ -64,6 +64,16 @@ export const SLAT_PROFILES: Record<string, SlatProfile> = {
  */
 export function profileKey(profile: string, generation: string, table: SlatProfileTable = SLAT_PROFILES): string {
   const code = profile.trim().toUpperCase().replace(/\s+/g, " ");
+  /**
+   * Bỏ trống mã hệ nhôm thì phải nói thẳng là bỏ trống. Không có dòng này, `code` rỗng đi tiếp
+   * và hàm trả về chuỗi `"N"` (vì nhánh cuối ghép `${code}N`), rồi lời gọi ném
+   * `Chưa có công thức chia lá cho "N". Mã có công thức: AL71N, AL71 (CŨ), …` — một thông báo
+   * gửi người đọc đi tìm hệ nhôm tên "N" không hề tồn tại, thay vì chỉ ra ô còn trống.
+   *
+   * Gặp thật khi thử `alumdoor.slats.compute` với `item_code` thay vì `profile`: đường này là
+   * MÁY TÍNH THUẦN, nó không tra mã hàng ra hệ nhôm, nên `profile` rỗng.
+   */
+  if (!code) throw new Error("Chưa khai mã hệ nhôm (profile) để tra bước lá. Đường alumdoor.slats.compute nhận `profile` như \"AL595\", không nhận `item_code`.");
   const old = generation.trim().toUpperCase() === "CŨ";
   const direct = table[code] ? code : undefined;
   if (direct && !table[`${code}N`]) return direct;

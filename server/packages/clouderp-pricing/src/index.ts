@@ -107,8 +107,21 @@ function itemPriceVariant(data: JsonObject): string {
  * ghi `Bậc diện tích` trùng mã đó và gán cận cho nó.
  */
 function areaWithinTier(tier: JsonObject, areaSqm: number): boolean {
-  const min = Number(tier.min_area_sqm);
-  const max = Number(tier.max_area_sqm);
+  /**
+   * `Number(null)` là **0**, không phải NaN — và `Number.isFinite(0)` là true. Nên một bậc để
+   * trống cận trên mà lưu thành `null` bị đọc thành "cận trên bằng 0", tức loại mọi diện tích.
+   *
+   * Đo trên dữ liệu Alumdoor 21/08/2026: bậc `DT-TREN-10M2` (trên 10 m², không có cận trên) lưu
+   * `max_area_sqm: null`, và cửa Đài Loan trọn bộ 12 m² ném "Item Price … does not exist".
+   * Bảy bậc có đủ hai cận thì chạy đúng, chỉ bậc trên cùng chết — nên lỗi nhìn như thiếu dòng
+   * giá chứ không lộ ra là lỗi đọc cận. Bậc `DT-TREN-4M2` cùng hình dạng lại chạy được, chỉ vì
+   * nó lưu thiếu HẲN khoá (`undefined` → NaN) thay vì lưu `null`.
+   *
+   * Ba cách viết "không có cận" đều phải hiểu như nhau: vắng khoá, `null`, và chuỗi rỗng.
+   */
+  const doCan = (value: unknown): number => (value === null || value === undefined || String(value).trim() === "" ? Number.NaN : Number(value));
+  const min = doCan(tier.min_area_sqm);
+  const max = doCan(tier.max_area_sqm);
   const hasMin = Number.isFinite(min);
   const hasMax = Number.isFinite(max);
   if (!hasMin && !hasMax) return false;
@@ -451,7 +464,7 @@ export async function resolveServerPrice(
   if (input.applyPricingRules !== false) {
     const rules = await context.reader.listMasterRecordData(context.command.tenant_id, "Pricing Rule");
     const matches = rules
-      .filter(({ data }) => matchesRule(data, input))
+      .filter(({ data }) => overridesRate(data) && matchesRule(data, input))
       .sort((a, b) => ruleScore(b.data) - ruleScore(a.data) || a.name.localeCompare(b.name));
     if (matches.length > 1) {
       const topScore = ruleScore(matches[0]!.data);
@@ -490,6 +503,26 @@ export async function resolveServerPrice(
     ...(selected ? { pricing_rule: selected.name } : {}),
     ...(discount ? { discount_percentage: discount } : {}),
   };
+}
+
+/**
+ * Đường tra giá này chỉ biết ĐÈ ĐƠN GIÁ (`rate`) hoặc GIẢM PHẦN TRĂM (`discount_percentage`) —
+ * xem ngay bên dưới chỗ dùng `selected`. Nó KHÔNG đọc `adjustment_rate`; phụ thu và phụ giảm
+ * theo dòng do `clouderp-selling` lo bằng một bộ so khớp khác, giàu hơn hẳn (bộ kia biết
+ * `item_group`, `pricing_scope` và `conditions`, còn `matchesRule` ở đây thì không).
+ *
+ * Nên phải LỌC RA TRƯỚC. Nếu để luật phụ thu lọt vào đây thì hai chuyện xảy ra, cả hai đều tệ:
+ * chọn trúng nó cũng không đổi được đồng nào (không có `rate` để đọc), mà hai luật phụ thu cùng
+ * mức ưu tiên là ném "Ambiguous Pricing Rule match" và CHẶN cả dòng hàng.
+ *
+ * Đo trên dữ liệu Alumdoor 21/08/2026: bán một bộ KHOÁ NGANG bị chặn bởi bốn luật —
+ * "Phụ thu cửa Úc trên 4m² dưới 7m²", "Phụ vận chuyển cửa dưới 8m² — Đức và Lưới",
+ * "Sơn vân gỗ — cửa", "Sơn vân gỗ — ray". Không luật nào trong bốn cái đó liên quan tới khoá
+ * ngang; chúng khớp chỉ vì `matchesRule` không nhìn `item_group` lẫn `pricing_scope`, rồi hoà
+ * điểm nhau ở mức ưu tiên 100.
+ */
+function overridesRate(rule: JsonObject): boolean {
+  return rule.rate !== undefined || rule.discount_percentage !== undefined;
 }
 
 function matchesRule(rule: JsonObject, input: PricingContext): boolean {

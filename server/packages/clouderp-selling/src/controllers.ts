@@ -1022,7 +1022,19 @@ async function applySellingPricing<T extends SalesItem>(context: ControllerConte
     // đơn hàng vẫn ra giá bình thường còn hoá đơn bán lẻ cùng mặt hàng đó ném
     // "Item Price … does not exist for variant STANDARD".
     const areaPerSet = areaTierBasisSqm(item as unknown as { area_per_set_sqm?: unknown; billable_area_sqm?: unknown; set_count?: unknown });
-    const price = await resolveServerPrice(context, { itemCode:item.item_code, qtyMicros, postingDate, priceList, documentCurrency:currency, ...(priceUom ? { uom:priceUom } : {}), ...(areaPerSet === undefined ? {} : { billableAreaSqm: areaPerSet }), partyType:"Customer", party:customer, ...(customerGroup?{customerGroup}:{}) });
+    /**
+     * BIẾN THỂ GIÁ phải đi cùng yêu cầu tra giá ở ĐÂY nữa. `commercial-line-resolver.ts:116`
+     * truyền `priceVariant`, đường này thì không — nên mọi dòng đi qua đây đều tra biến thể
+     * `STANDARD` bất kể người bán chọn gì.
+     *
+     * Không lộ ra chừng nào mặt hàng còn một dòng giá STANDARD. Ngày 21/08/2026, sau khi bảng
+     * giá cửa chuyển hẳn sang các biến thể theo ảnh (CHI_LA/TANG_RAY cho cửa Đức,
+     * KEO_TAY/MOTOR_NGOAI cho cửa Úc, TRON_BO/TACH_MON cho Đài Loan) và các dòng STANDARD cũ
+     * lấy từ sheet ĐM bị gỡ, thì KHÔNG cánh cửa nào bán được nữa: "Item Price … does not exist
+     * for variant STANDARD", kể cả khi dòng bán ghi rõ CHI_LA.
+     */
+    const bienThe = typeof item.price_variant === "string" && item.price_variant.trim() ? item.price_variant.trim() : "";
+    const price = await resolveServerPrice(context, { itemCode:item.item_code, qtyMicros, postingDate, priceList, documentCurrency:currency, ...(priceUom ? { uom:priceUom } : {}), ...(areaPerSet === undefined ? {} : { billableAreaSqm: areaPerSet }), ...(bienThe ? { priceVariant: bienThe } : {}), partyType:"Customer", party:customer, ...(customerGroup?{customerGroup}:{}) });
     const hasSubmittedRate = allowsManualOverride && item.rate !== undefined && item.rate !== null && String(item.rate).trim() !== "";
     const submittedRateMinor = hasSubmittedRate
       ? toScaledInt(item.rate, price.currency_scale, `${item.item_code}.rate`)
