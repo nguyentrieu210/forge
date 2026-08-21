@@ -14,6 +14,7 @@ import {
   D1MetadataStore,
   GenericMetadataController,
   MetadataPermissionService,
+  MetadataWorkflowGuard,
 } from "../../frappe-model/src/index.js";
 import { D1OrganizationSecurityGuard } from "../../organization-security/src/index.js";
 
@@ -199,7 +200,9 @@ function kernelBundle(db: D1Database): KernelBundle {
   const store = new D1RolloutPurchaseAllocationDomainStore(db);
   return {
     store,
-    kernel: new DocumentKernel(registry, store, permissions),
+    // Cùng một chốt workflow như tenant-worker: đơn hàng vào từ kênh social cũng phải đi
+    // qua chuyển trạng thái đã khai, chứ không được chốt sổ thẳng.
+    kernel: new DocumentKernel(registry, store, permissions, undefined, new MetadataWorkflowGuard(metadata)),
     organizationSecurity: new D1OrganizationSecurityGuard(db, metadata),
   };
 }

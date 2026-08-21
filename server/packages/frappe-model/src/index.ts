@@ -7,6 +7,7 @@ export * from "./list-definition.js";
 export * from "./list-definition-internal.js";
 export * from "./permission.js";
 export * from "./generic-controller.js";
+export * from "./workflow-guard.js";
 export * from "./services.js";
 export * from "./autoname.js";
 export * from "./field-condition.js";

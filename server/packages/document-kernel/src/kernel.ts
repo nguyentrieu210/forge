@@ -27,6 +27,31 @@ export interface MutationAuthorizer {
 }
 
 /**
+ * Chốt workflow ở tầng kernel — nơi DUY NHẤT mọi lệnh đều đi qua.
+ *
+ * Vì sao ở đây chứ không ở router: chốt "không tự duyệt" trước đây chỉ nằm trên đường
+ * `frappe.model.workflow.apply_workflow`. Ai gọi thẳng `frappe.client.submit` thì bỏ qua
+ * toàn bộ workflow, vì controller nghiệp vụ (`SuiteController`, `QuotationController`, …)
+ * đi thẳng từ hành động sang `docstatus` qua `nextDocStatus()` và không hề biết workflow
+ * tồn tại. Đo được ngày 21/08/2026 trên `Overtime Request`: apply_workflow "Phê duyệt" trả
+ * 403, còn `frappe.client.submit` trên ĐÚNG chứng từ đó trả 200 và `approved_minutes=150`.
+ * Người tạo đơn tăng ca tự duyệt tiền tăng ca cho chính mình, chỉ cần đổi cửa gọi.
+ *
+ * Kernel là điểm thắt nút cuối cùng: mọi lệnh — router Frappe, REST `/api/v1`, coordinator
+ * trong Durable Object — đều kết thúc ở `DocumentKernel.execute`. Đặt chốt ở đây thì không
+ * còn cửa nào để đi vòng, và không phải chép luật sang từng controller.
+ *
+ * Giao diện chứ không phải hàm cụ thể: workflow là siêu dữ liệu, nằm ở `frappe-model`, mà
+ * `frappe-model` đã phụ thuộc vào `document-kernel`. Đảo phụ thuộc để tránh vòng lặp.
+ */
+export interface CommandWorkflowGuard {
+  assertCommandAllowed(
+    command: MutationCommand<JsonObject>,
+    existing: CanonicalDocument<JsonObject> | null,
+  ): void | Promise<void>;
+}
+
+/**
  * Coordinates controller validation and persistence for canonical documents.
  *
  * `executeBundle` is deliberately ordered: a later command can build against
@@ -39,6 +64,7 @@ export class DocumentKernel {
     private readonly store: MutationStore,
     private readonly permissions: MutationAuthorizer = new PermissionService(),
     private readonly clock: () => string = () => new Date().toISOString(),
+    private readonly workflow: CommandWorkflowGuard | null = null,
   ) {}
 
   async execute<T extends JsonObject>(command: MutationCommand<T>): Promise<MutationReceipt> {
@@ -111,6 +137,13 @@ export class DocumentKernel {
       allowSubmittedSave: controller.allowSubmittedSave === true,
     });
     if (existing && command.expected_version !== existing.version) throw errors.version(existing.version);
+
+    // Sau `assertLifecycleTransition` nên docstatus hiện tại đã hợp lệ cho hành động này;
+    // trước `buildPlan` nên controller không bao giờ chạy cho một lượt duyệt không được phép.
+    await this.workflow?.assertCommandAllowed(
+      command as unknown as MutationCommand<JsonObject>,
+      existing as CanonicalDocument<JsonObject> | null,
+    );
 
     const nextVersion = (existing?.version ?? 0) + 1;
     const plan = await controller.buildPlan({ command, existing, now: this.clock(), nextVersion, reader });

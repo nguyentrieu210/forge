@@ -4,7 +4,7 @@ import { registerStockControllers } from "../../../packages/clouderp-stock/src/i
 import { registerErpNextCoreControllers } from "../../../packages/clouderp-erpnext/src/index.js";
 import { AppFactoryApprovalRuntime, registerAppFactoryControllers } from "../../../packages/app-registry/src/index.js";
 import { D1RolloutPurchaseAllocationDomainStore, DocumentKernel } from "../../../packages/document-kernel/src/index.js";
-import { D1DocumentAccessStore, D1MetadataStore, GenericMetadataController, MetadataPermissionService } from "../../../packages/frappe-model/src/index.js";
+import { D1DocumentAccessStore, D1MetadataStore, GenericMetadataController, MetadataPermissionService, MetadataWorkflowGuard } from "../../../packages/frappe-model/src/index.js";
 import { registerIntegrationHubControllers } from "../../../packages/integration-hub/src/registry.js";
 import { D1OrganizationSecurityGuard } from "../../../packages/organization-security/src/index.js";
 import type { TenantEnv } from "./env.js";
@@ -32,7 +32,10 @@ export function createAggregateCommandServices(env: TenantEnv): AggregateCommand
   );
   return {
     store,
-    kernel: new DocumentKernel(registry, store, permissionService),
+    // Chốt workflow cắm ở kernel chứ không ở router: mọi lệnh — router Frappe, REST
+    // `/api/v1`, coordinator trong Durable Object — đều đi qua đây, nên `frappe.client.submit`
+    // không còn cửa nào để vòng qua chốt duyệt nữa.
+    kernel: new DocumentKernel(registry, store, permissionService, undefined, new MetadataWorkflowGuard(metadata)),
   };
 }
 
