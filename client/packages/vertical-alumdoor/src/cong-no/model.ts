@@ -298,12 +298,23 @@ export function docstatusLabel(value: number | null): string {
  *
  * Đây là phép LỌC trên con số server đã trả, không phải phép tính. Ngưỡng lấy từ
  * ô người dùng gõ; để trống ⇒ ngưỡng 0.
+ *
+ * ƯU TIÊN SỔ PAYMENT LEDGER, KHÔNG ưu tiên `outstandingByInvoice`.
+ * `outstandingByInvoice` là `sum(outstanding_amount)` do báo cáo app gộp trên
+ * bảng `documents`, và nó sai theo HAI đường cùng lúc:
+ *   1. `compileAppReport` chỉ loại chứng từ đã huỷ (`docstatus<>2`) nên hoá đơn
+ *      NHÁP cũng được cộng vào;
+ *   2. giá trị đọc ra là bản đông cứng trong `payload_json`, không phải số dư
+ *      hiện tại (xem `data.ts::loadInvoices`).
+ * Đo thật ngày 21/08/2026 với khách "CỬA CUỐN MINH ĐỨC": báo cáo app nói
+ * 85.440.000, sổ Payment Ledger nói 2.000.000. Lọc "chỉ hiện còn nợ" theo con số
+ * thứ nhất là giữ lại những đối tác đã trả hết chỉ vì họ còn hoá đơn nháp.
  */
 export function applyOpenOnly(rows: PartyRow[], state: DebtFilterState): PartyRow[] {
   if (!state.onlyOpen) return rows;
   const threshold = numberValue(state.minBalance) ?? 0;
   return rows.filter((row) => {
-    const balance = row.outstandingByInvoice ?? row.outstandingByLedger;
+    const balance = row.outstandingByLedger ?? row.outstandingByInvoice;
     return typeof balance === "number" && balance > threshold;
   });
 }

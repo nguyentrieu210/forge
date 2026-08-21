@@ -132,13 +132,31 @@ export async function loadReceivableParties(
  * Báo cáo này KHÔNG nhận lọc theo ngày (`allowedFilters` chỉ có
  * party/currency/against_voucher_type/against_voucher_no/outstanding_amount),
  * nên nó luôn là số dư LŨY KẾ tới hiện tại — màn phải ghi rõ chỗ này.
+ *
+ * LỌC `outstanding_amount != 0` LÀ BẮT BUỘC, KHÔNG PHẢI TRANG TRÍ.
+ * Khung nhìn `receivable_outstanding`/`payable_outstanding`
+ * (`server/migrations/tenant/0003_commercial_accounting.sql`,
+ * `0005_erp_core.sql`) gộp TOÀN BỘ `payment_ledger_entries` theo chứng từ, nên
+ * một hoá đơn đã trả hết vẫn còn một dòng mang số 0. Chạy thật ngày 21/08/2026:
+ * `Accounts Payable` trả về `HDM-2026-0010 → 0` bên cạnh `HDM-2026-0011 →
+ * 3.000.000`. Bảng trên màn tự nhận là "còn dư theo từng chứng từ", mà lại in ra
+ * một chứng từ không còn dư, và `ledgerVoucherCount` đếm luôn nó — người bán đọc
+ * ra "còn 2 chứng từ phải đòi" trong khi chỉ còn 1.
+ *
+ * Dùng `!=` chứ không dùng `>`: tiền khách ứng trước nằm ở sổ dưới dạng số ÂM,
+ * và một khoản ứng trước là thứ phải hiện, không phải thứ được giấu.
+ * `outstanding_amount` nằm trong `allowedFilters` của cả hai báo cáo
+ * (`server/packages/query/src/index.ts`), nên đây là phép lọc của SERVER.
  */
 export async function loadLedgerRows(
   server: DebtServer,
   config: DebtSideConfig,
   party: string,
 ): Promise<LedgerRow[]> {
-  const filters: ReportFilter[] = party ? [{ field: "party", operator: "=", value: party }] : [];
+  const filters: ReportFilter[] = [
+    ...(party ? [{ field: "party", operator: "=" as const, value: party }] : []),
+    { field: "outstanding_amount", operator: "!=", value: 0 },
+  ];
   const result = await server.runReport(config.ledgerReport, filters);
   return reportRows(result)
     .map((row) => ({
@@ -270,7 +288,22 @@ function documentRow(
   };
 }
 
-/** Hoá đơn bán / hoá đơn mua của một đối tác trong kỳ. */
+/**
+ * Hoá đơn bán / hoá đơn mua của một đối tác trong kỳ.
+ *
+ * CẨN THẬN VỚI CỘT `outstanding_amount` Ở ĐÂY: nó là giá trị ĐÔNG CỨNG trong
+ * `payload_json`, KHÔNG phải số dư hiện tại. `hydrateDerived()`
+ * (`server/packages/document-kernel/src/d1-store.ts:1220`) chỉ chạy khi đọc MỘT
+ * tài liệu (`GET /api/resource/<DocType>/<name>`); tuyến danh sách đọc thẳng
+ * `payload_json`. Đo thật ngày 21/08/2026 trên `HDM-2026-0011` sau khi chi
+ * 2.000.000 đối trừ:
+ *
+ *   GET một tài liệu → outstanding_amount 3.000.000, status "Partly Paid"
+ *   GET danh sách    → outstanding_amount 5.000.000, status "Unpaid"
+ *
+ * Nên `outstanding` trả về từ đây là SỐ THÔ, và người gọi BẮT BUỘC chạy nó qua
+ * `applyLedgerOutstanding()` trước khi in ra dưới nhãn "Còn nợ".
+ */
 export async function loadInvoices(
   server: DebtServer,
   config: DebtSideConfig,
@@ -293,6 +326,87 @@ export async function loadInvoices(
     outstandingField: "outstanding_amount",
     extraField: "currency",
   }));
+}
+
+/**
+ * Thay cột "Còn nợ" của từng hoá đơn bằng số dư SỔ PAYMENT LEDGER của chính
+ * chứng từ đó.
+ *
+ * Đây KHÔNG phải phép tính: nó là phép TRA CỨU. Số dư lấy nguyên từ dòng sổ mà
+ * server trả về (`loadLedgerRows`), khớp theo `(voucherType, voucherNo)`.
+ *
+ * Hai trường hợp không có dòng sổ, và chúng khác nhau về nghĩa:
+ * - Hoá đơn ĐÃ GHI SỔ (`docstatus === 1`) mà sổ không còn dòng ⇒ đã trả hết.
+ *   Sổ đã lọc `outstanding_amount != 0`, nên "vắng mặt" chính là "bằng không";
+ *   đó là định nghĩa của sổ, không phải con số màn tự nghĩ ra.
+ * - Hoá đơn NHÁP hoặc ĐÃ HUỶ ⇒ chưa/không còn là một khoản nợ. Trả `null` để in
+ *   ra dấu "—", chứ không in số 0 (số 0 đọc thành "đã trả xong" — sai hẳn), và
+ *   càng không in con số đông cứng trong `payload_json`.
+ */
+export function applyLedgerOutstanding(
+  rows: SourceDocumentRow[],
+  ledger: LedgerRow[],
+): SourceDocumentRow[] {
+  const byVoucher = new Map<string, number | null>();
+  for (const row of ledger) byVoucher.set(`${row.voucherType}:${row.voucherNo}`, row.outstanding);
+  return rows.map((row) => {
+    if (row.docstatus !== 1) return { ...row, outstanding: null };
+    const found = byVoucher.get(`${row.doctype}:${row.name}`);
+    return { ...row, outstanding: found === undefined ? 0 : found };
+  });
+}
+
+/**
+ * BÚT TOÁN ĐIỀU CHỈNH — phần công nợ mà sổ Payment Ledger KHÔNG nhìn thấy.
+ *
+ * `JournalEntryController.ledger()`
+ * (`server/packages/clouderp-core/src/controllers.ts:50`) chỉ sinh `gl` — không
+ * sinh `payment` — nên một bút toán ghi Có tài khoản phải thu CỦA MỘT KHÁCH
+ * KHÔNG làm số dư trong `Accounts Receivable` nhúc nhích.
+ *
+ * Chạy thật ngày 21/08/2026: `JV-2026-00009` ghi Có 500.000 tài khoản
+ * "Phải thu khách hàng" đúng khách "CỬA CUỐN MINH ĐỨC" → sổ Payment Ledger vẫn
+ * báo 2.000.000, còn Sổ cái báo dư 1.500.000. Nếu màn chỉ đọc sổ Payment Ledger
+ * thì khoản điều chỉnh 500.000 đó BIẾN MẤT khỏi màn công nợ mà không có gì báo.
+ *
+ * Nên màn đọc thêm Sổ cái (`General Ledger`, `party_type`/`party`/`voucher_type`
+ * đều nằm trong `allowedFilters`) để CHỈ RA những bút toán đó. Màn không cộng
+ * chúng vào bất kỳ số dư nào — cộng vào là dựng một số dư thứ ba do client nghĩ
+ * ra. Nó chỉ nói: đây là các bút toán đã đụng vào công nợ đối tác này, hãy soát.
+ */
+export async function loadJournalAdjustments(
+  server: DebtServer,
+  config: DebtSideConfig,
+  input: { party: string; fromDate: string; toDate: string },
+): Promise<SourceDocumentRow[]> {
+  const filters: ReportFilter[] = [
+    { field: "voucher_type", operator: "=", value: "Journal Entry" },
+    { field: "party_type", operator: "=", value: config.paymentPartyType },
+    { field: "party", operator: "=", value: input.party },
+    ...periodFilters("posting_at", input.fromDate, input.toDate),
+  ];
+  const result = await server.runReport("General Ledger", filters);
+  return reportRows(result).map((row) => {
+    const debit = amount(row.debit);
+    const credit = amount(row.credit);
+    // Phải thu là tài khoản dư NỢ, phải trả là tài khoản dư CÓ — nên cùng một
+    // bên ghi sổ mang nghĩa ngược nhau ở hai mặt. Chọn bên nào có số, rồi gọi
+    // đúng tên tác dụng của nó; không trừ hai bên cho nhau.
+    const increases = config.side === "receivable" ? debit : credit;
+    const decreases = config.side === "receivable" ? credit : debit;
+    const raising = typeof increases === "number" && increases !== 0;
+    return {
+      doctype: "Journal Entry",
+      name: text(row.voucher_no),
+      postingAt: dateOnly(row.posting_at),
+      dueDate: "",
+      reference: text(row.account),
+      amount: raising ? increases : decreases,
+      outstanding: null,
+      extra: raising ? "Tăng nợ" : "Giảm nợ",
+      docstatus: 1,
+    };
+  }).filter((row) => row.name);
 }
 
 /** Phiếu thu / phiếu chi đã ghi cho đối tác trong kỳ. */

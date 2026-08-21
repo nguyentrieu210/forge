@@ -57,10 +57,12 @@ import {
 import { useMetaForge } from "@metaforge/views/provider";
 import { AlumdoorDebtField } from "./AlumdoorDebtField.js";
 import {
+  applyLedgerOutstanding,
   groupLedgerByParty,
   loadAging,
   loadCreditNotes,
   loadInvoices,
+  loadJournalAdjustments,
   loadLedgerRows,
   loadMovements,
   loadPayments,
@@ -270,16 +272,28 @@ export function AlumdoorDebtWorkbench(props: { onNavigate?: (path: string) => vo
       [side]: { party, loading: true, ledger: [], ledgerError: "", groups: [], dashboard: null, dashboardError: "" },
     }));
     const input = { party, fromDate: state.fromDate, toDate: state.toDate };
-    const [ledger, invoices, payments, credits, movements, dashboard] = await Promise.allSettled([
+    const [ledger, invoices, payments, credits, movements, journals, dashboard] = await Promise.allSettled([
       loadLedgerRows(server, targetConfig, party),
       loadInvoices(server, targetConfig, input),
       loadPayments(server, targetConfig, input),
       loadCreditNotes(server, targetConfig, input),
       loadMovements(server, targetConfig, input),
+      loadJournalAdjustments(server, targetConfig, input),
       targetConfig.side === "payable"
         ? loadSupplierDashboard(server, party)
         : Promise.resolve(null as SupplierDashboard | null),
     ]);
+
+    /**
+     * Cột "Còn nợ" của bảng hoá đơn phải là số dư SỔ, không phải trường
+     * `outstanding_amount` mà tuyến danh sách trả về — trường đó đông cứng từ lúc
+     * ghi sổ (xem `data.ts::loadInvoices`). Đây là chỗ DUY NHẤT hai nguồn gặp
+     * nhau, nên cũng là chỗ duy nhất được phép ghép.
+     */
+    const invoicesWithLedger: PromiseSettledResult<SourceDocumentRow[]> =
+      invoices.status === "fulfilled" && ledger.status === "fulfilled"
+        ? { status: "fulfilled", value: applyLedgerOutstanding(invoices.value, ledger.value) }
+        : invoices;
 
     const group = (
       key: string,
@@ -311,10 +325,12 @@ export function AlumdoorDebtWorkbench(props: { onNavigate?: (path: string) => vo
           group(
             "invoices",
             targetConfig.side === "receivable" ? "Hoá đơn bán" : "Hoá đơn mua",
-            "Nguồn LÀM PHÁT SINH nợ. Cột “Còn nợ” là trường server lưu trên chính chứng từ.",
+            "Nguồn LÀM PHÁT SINH nợ. Cột “Còn nợ” lấy từ sổ Payment Ledger của chính chứng từ đó, "
+              + "KHÔNG lấy trường `outstanding_amount` trên tuyến danh sách (trường đó đông cứng từ lúc ghi sổ). "
+              + "Hoá đơn nháp/đã huỷ để trống vì chưa/không còn là một khoản nợ.",
             "Tổng tiền",
             true,
-            invoices,
+            invoicesWithLedger,
           ),
           group(
             "payments",
@@ -341,6 +357,17 @@ export function AlumdoorDebtWorkbench(props: { onNavigate?: (path: string) => vo
             targetConfig.side === "receivable" ? "—" : "Tổng tiền hàng",
             false,
             movements,
+          ),
+          group(
+            "journals",
+            "Bút toán điều chỉnh (Journal Entry)",
+            "Bút toán ghi thẳng vào tài khoản công nợ của đối tác. Server KHÔNG đưa chúng vào sổ "
+              + "Payment Ledger (`JournalEntryController` chỉ sinh bút toán Sổ cái), nên số dư ở các bảng "
+              + "trên CHƯA gồm những dòng này. Nguồn: Sổ cái (`General Ledger`). Cột “Số tiền” là một bên "
+              + "ghi sổ do server trả về; màn KHÔNG cộng chúng vào bất kỳ số dư nào.",
+            "Số tiền",
+            false,
+            journals,
           ),
         ],
       },
@@ -382,20 +409,20 @@ export function AlumdoorDebtWorkbench(props: { onNavigate?: (path: string) => vo
   const exportParties = useCallback(() => {
     const headers = [
       config.partyLabel,
-      "Số chứng từ (server)",
-      "Tổng phát sinh (server)",
-      "Số dư theo hoá đơn (server)",
-      "Số dư theo sổ (tổng hiển thị)",
+      "Số chứng từ (báo cáo app, gồm nháp)",
+      "Tổng phát sinh (báo cáo app, gồm nháp)",
+      "Số dư theo sổ Payment Ledger (tổng hiển thị)",
       "Số chứng từ còn dư",
+      "Ghi trên hoá đơn — gồm nháp, KHÔNG phải số còn phải đòi",
       "Tiền tệ",
     ];
     const rows = visibleParties.map((row) => [
       row.party,
       row.documentCount ?? "",
       row.totalBilled ?? "",
-      row.outstandingByInvoice ?? "",
       row.outstandingByLedger ?? "",
       row.ledgerVoucherCount,
+      row.outstandingByInvoice ?? "",
       row.currencies.join(" "),
     ]);
     downloadCsv(`cong-no-${side}-${todayIso()}.csv`, toCsv(headers, rows));
@@ -673,9 +700,11 @@ function PartyTable(props: {
     <section className="rounded-xl border bg-card">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
         <h2 className="font-semibold">{props.config.partyLabel} · {props.rows.length} dòng</h2>
-        <span className="text-xs text-muted-foreground">
-          Cột “Số dư theo sổ” là tổng hiển thị các dòng Payment Ledger đang hiện, LŨY KẾ tới hiện tại
-          (báo cáo {props.config.ledgerReport} không nhận lọc theo ngày).
+        <span className="max-w-3xl text-xs text-muted-foreground">
+          Số dư CÔNG NỢ là cột “Số dư theo sổ” — tổng hiển thị các dòng Payment Ledger đang hiện, LŨY KẾ
+          tới hiện tại (báo cáo {props.config.ledgerReport} không nhận lọc theo ngày). Cột “Ghi trên hoá đơn”
+          là `sum(outstanding_amount)` của báo cáo app: nó CÓ tính hoá đơn nháp và đọc giá trị đông cứng
+          lúc ghi sổ, nên KHÔNG phải số còn phải đòi.
         </span>
       </div>
       <div className="overflow-x-auto">
@@ -685,8 +714,8 @@ function PartyTable(props: {
               <TableHead>{props.config.partyLabel}</TableHead>
               <TableHead className="text-right">Số chứng từ</TableHead>
               <TableHead className="text-right">Tổng phát sinh</TableHead>
-              <TableHead className="text-right">Số dư theo hoá đơn</TableHead>
               <TableHead className="text-right">Số dư theo sổ</TableHead>
+              <TableHead className="text-right">Ghi trên hoá đơn (gồm nháp)</TableHead>
               <TableHead className="text-center">Đối chiếu</TableHead>
             </TableRow>
           </TableHeader>
@@ -703,14 +732,14 @@ function PartyTable(props: {
                 </TableCell>
                 <TableCell className="text-right tabular-nums">{countOrDash(row.documentCount)}</TableCell>
                 <TableCell className="text-right tabular-nums">{moneyOrDash(row.totalBilled)}</TableCell>
-                <TableCell className="text-right font-medium tabular-nums">{moneyOrDash(row.outstandingByInvoice)}</TableCell>
-                <TableCell className="text-right tabular-nums">
+                <TableCell className="text-right font-medium tabular-nums">
                   {moneyOrDash(row.outstandingByLedger)}
-                  <div className="text-xs text-muted-foreground">{row.ledgerVoucherCount || 0} chứng từ</div>
+                  <div className="text-xs text-muted-foreground">{row.ledgerVoucherCount || 0} chứng từ còn dư</div>
                 </TableCell>
+                <TableCell className="text-right tabular-nums text-muted-foreground">{moneyOrDash(row.outstandingByInvoice)}</TableCell>
                 <TableCell className="text-center">
                   {partySourcesDisagree(row)
-                    ? <Badge variant="destructive">Hai nguồn lệch</Badge>
+                    ? <Badge variant="destructive" title="Thường là do hoá đơn nháp, hoặc do hoá đơn đã thu một phần nhưng trường trên chứng từ chưa cập nhật. Mở chi tiết để soát từng chứng từ.">Hai nguồn lệch</Badge>
                     : <Badge variant="outline">Khớp</Badge>}
                 </TableCell>
               </TableRow>
@@ -719,8 +748,8 @@ function PartyTable(props: {
               <TableCell>Tổng (đang hiện)</TableCell>
               <TableCell />
               <TableCell className="text-right tabular-nums">{moneyOrDash(totalBilled)}</TableCell>
-              <TableCell className="text-right tabular-nums">{moneyOrDash(totalInvoiceOutstanding)}</TableCell>
               <TableCell className="text-right tabular-nums">{moneyOrDash(totalLedgerOutstanding)}</TableCell>
+              <TableCell className="text-right tabular-nums text-muted-foreground">{moneyOrDash(totalInvoiceOutstanding)}</TableCell>
               <TableCell />
             </TableRow>
           </TableBody>
@@ -938,6 +967,10 @@ function referenceDoctype(row: SourceDocumentRow): string {
       return "Sales Invoice";
     case "Debit Note":
       return "Purchase Invoice";
+    // Bút toán điều chỉnh không có "chứng từ nguồn"; ô đó mang TÊN TÀI KHOẢN
+    // công nợ mà bút toán đã đụng vào, nên đường nhảy là danh mục tài khoản.
+    case "Journal Entry":
+      return "Account";
     default:
       return row.doctype;
   }
