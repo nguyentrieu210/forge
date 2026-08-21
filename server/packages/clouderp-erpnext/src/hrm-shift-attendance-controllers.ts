@@ -147,6 +147,23 @@ export class AttendanceController extends SuiteController<JsonObject> {
     H.assertEmployeeStateActive(employeeState, employeeName, attendanceDate);
     if (attendanceDate > context.now.slice(0, 10)) throw errors.validation("Attendance cannot be submitted for a future date");
 
+    /**
+     * Một nhân viên chỉ có MỘT phiếu công cho một ngày.
+     *
+     * Bất biến này đã được chốt ở tầng lưu trữ (`uq_hr_attendance_employee_date`,
+     * migrations/tenant/0035_organization_hrms_vn_accounting.sql) nhưng lỗi UNIQUE của SQLite
+     * không nằm trong bảng ánh xạ của `asCloudForgeError`, nên nó nổi lên thành HTTP 500
+     * "Storage operation failed" — người nhập không hề biết mình đang trùng ngày, và người
+     * trực hệ thống thì thấy một lỗi hạ tầng giả. Kiểm tại đây để câu lỗi nói đúng việc;
+     * chốt CSDL vẫn giữ nguyên vai trò chặn hai lượt ghi đồng thời.
+     */
+    const sameEmployeeDays = await context.reader.listDocumentsByDoctype<JsonObject>(context.command.tenant_id, this.doctype);
+    for (const record of sameEmployeeDays) {
+      if (record.name === context.command.aggregate.name || record.docstatus === 2) continue;
+      if (H.text(record.data.employee) !== employeeName || H.text(record.data.attendance_date) !== attendanceDate) continue;
+      throw errors.exists(`Attendance ${record.name} already records ${employeeName} on ${attendanceDate}`);
+    }
+
     const assignments = await context.reader.listDocumentsByDoctype<JsonObject>(context.command.tenant_id, "Shift Assignment");
     const activeAssignments = assignments.filter((assignment) =>
       assignment.docstatus === 1

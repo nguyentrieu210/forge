@@ -163,8 +163,19 @@ export function secondsOfDay(time: string): number {
   return h * 3600 + m * 60 + s;
 }
 
+/**
+ * Giờ-phút-giây của một mốc Datetime, chấp nhận CẢ HAI cách viết đang lưu hành.
+ *
+ * Frappe ghi Datetime là `YYYY-MM-DD HH:MM:SS` — dấu CÁCH. Đó chính là thứ control
+ * Datetime của client phát ra (`fromDatetimeLocal` ở client/packages/controls/src/controls.tsx
+ * đổi "T" thành " " trước khi gửi), nên mọi phiếu chấm công nhập từ form thật đều mang
+ * dấu cách. Mẫu cũ chỉ nhận chữ "T", mà `requiredDatetime`/`datetimeMs` lại nhận dấu cách
+ * (Date.parse hiểu cả hai) — nên chứng từ đi lọt hết các chốt trước rồi mới chết ở đây
+ * bằng một thông báo không chỉ đúng chỗ sai. Hệ quả đo được: KHÔNG thể lưu Attendance có
+ * giờ vào/giờ ra từ giao diện, tức không bao giờ tính được công thực tế, đi muộn, về sớm.
+ */
 export function hhmmss(datetime: string): string {
-  const match = /T(\d{2}):(\d{2})(?::(\d{2}))?/.exec(datetime);
+  const match = /[T ](\d{2}):(\d{2})(?::(\d{2}))?/.exec(datetime);
   if (!match) throw errors.validation("Attendance datetime must include a time component");
   return `${match[1]}:${match[2]}:${match[3] ?? "00"}`;
 }
