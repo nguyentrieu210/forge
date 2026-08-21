@@ -1,0 +1,146 @@
+{
+  "doctype": "Measurement Profile",
+  "trich_luc_luc": "2026-08-20T10:57:40.787Z",
+  "nguon": "D1 cục bộ — fixture app alumdoor 2.10.0 + seed canonical layer0",
+  "so_ban_ghi": 7,
+  "ban_ghi": [
+    {
+      "name": "Cuộn",
+      "payload": {
+        "profile_name": "Cuộn",
+        "inventory_mode": "Cuộn",
+        "stock_uom": "Kg",
+        "track_dimension_lot": true,
+        "require_color": false,
+        "require_condition": false,
+        "require_length": false,
+        "require_width": true,
+        "require_piece_qty": false,
+        "track_bundle_qty": false,
+        "disabled": false,
+        "_migration_source": "alumdoor-measurement-profile-canonical-2026-08-16"
+      },
+      "title": "Cuộn",
+      "content": "Cuộn Cuộn Kg"
+    },
+    {
+      "name": "Hàng thường",
+      "payload": {
+        "profile_name": "Hàng thường",
+        "inventory_mode": "Hàng thường",
+        "stock_uom": "Cái",
+        "track_dimension_lot": false,
+        "require_color": false,
+        "require_condition": false,
+        "require_length": false,
+        "require_width": false,
+        "require_piece_qty": false,
+        "track_bundle_qty": false,
+        "disabled": false,
+        "_migration_source": "alumdoor-measurement-profile-canonical-2026-08-16"
+      },
+      "title": "Hàng thường",
+      "content": "Hàng thường Hàng thường Cái"
+    },
+    {
+      "name": "Lô/Serial",
+      "payload": {
+        "profile_name": "Lô/Serial",
+        "inventory_mode": "Lô/Serial",
+        "stock_uom": "Cái",
+        "track_dimension_lot": false,
+        "require_color": false,
+        "require_condition": false,
+        "require_length": false,
+        "require_width": false,
+        "require_piece_qty": false,
+        "track_bundle_qty": false,
+        "disabled": false,
+        "_migration_source": "alumdoor-measurement-profile-canonical-2026-08-16"
+      },
+      "title": "Lô/Serial",
+      "content": "Lô/Serial Lô/Serial Cái"
+    },
+    {
+      "name": "Nhôm cây/lá",
+      "payload": {
+        "profile_name": "Nhôm cây/lá",
+        "inventory_mode": "Nhôm cây/lá",
+        "stock_uom": "Cây",
+        "track_dimension_lot": true,
+        "require_color": true,
+        "require_condition": true,
+        "require_length": true,
+        "require_width": false,
+        "require_piece_qty": true,
+        "track_bundle_qty": true,
+        "weight_tolerance_pct": 13,
+        "note": "Cây/Lá là đơn vị tồn; Kg là catch weight và đơn vị mua/định giá khi áp dụng.",
+        "disabled": false,
+        "_migration_source": "alumdoor-measurement-profile-canonical-2026-08-16"
+      },
+      "title": "Nhôm cây/lá",
+      "content": "Nhôm cây/lá Nhôm cây/lá Cây"
+    },
+    {
+      "name": "Thành phẩm theo m2",
+      "payload": {
+        "profile_name": "Thành phẩm theo m2",
+        "inventory_mode": "Thành phẩm theo m2",
+        "stock_uom": "Bộ",
+        "track_dimension_lot": false,
+        "require_color": true,
+        "require_condition": false,
+        "require_length": true,
+        "require_width": true,
+        "require_piece_qty": false,
+        "track_bundle_qty": false,
+        "note": "Tồn theo Bộ; kích thước bán/geometry không thuộc Measurement Profile.",
+        "disabled": false,
+        "_migration_source": "alumdoor-measurement-profile-canonical-2026-08-16"
+      },
+      "title": "Thành phẩm theo m2",
+      "content": "Thành phẩm theo m2 Thành phẩm theo m2 Bộ"
+    },
+    {
+      "name": "Tấm/Kính",
+      "payload": {
+        "profile_name": "Tấm/Kính",
+        "inventory_mode": "Tấm/Kính",
+        "stock_uom": "Tấm",
+        "track_dimension_lot": true,
+        "require_color": false,
+        "require_condition": false,
+        "require_length": true,
+        "require_width": true,
+        "require_piece_qty": true,
+        "track_bundle_qty": false,
+        "disabled": false,
+        "_migration_source": "alumdoor-measurement-profile-canonical-2026-08-16"
+      },
+      "title": "Tấm/Kính",
+      "content": "Tấm/Kính Tấm/Kính Tấm"
+    },
+    {
+      "name": "Ống/trục",
+      "payload": {
+        "profile_name": "Ống/trục",
+        "inventory_mode": "Nhôm cây/lá",
+        "stock_uom": "Kg",
+        "track_dimension_lot": true,
+        "require_color": false,
+        "require_condition": true,
+        "require_length": true,
+        "require_width": false,
+        "require_piece_qty": true,
+        "track_bundle_qty": true,
+        "weight_tolerance_pct": 13,
+        "note": "Mua và tồn theo Kg; chiều dài/số cây là đại lượng theo dõi giao nhận.",
+        "disabled": false,
+        "_migration_source": "alumdoor-measurement-profile-canonical-2026-08-16"
+      },
+      "title": "Ống/trục",
+      "content": "Ống/trục Nhôm cây/lá Kg"
+    }
+  ]
+}

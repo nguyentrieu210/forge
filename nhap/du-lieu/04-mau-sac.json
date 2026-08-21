@@ -1,0 +1,364 @@
+{
+  "doctype": "Item Color",
+  "trich_luc_luc": "2026-08-20T10:57:40.786Z",
+  "nguon": "D1 cục bộ — fixture app alumdoor 2.10.0 + seed canonical layer0",
+  "so_ban_ghi": 25,
+  "ban_ghi": [
+    {
+      "name": "CAFÉ",
+      "payload": {
+        "color_code": "CAFÉ",
+        "color_name": "CAFÉ",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      },
+      "title": "CAFÉ",
+      "content": "CAFÉ CAFÉ SON_TINH_DIEN"
+    },
+    {
+      "name": "CAM",
+      "payload": {
+        "color_code": "CAM",
+        "color_name": "CAM",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      },
+      "title": "CAM",
+      "content": "CAM CAM SON_TINH_DIEN"
+    },
+    {
+      "name": "GHI SẦN",
+      "payload": {
+        "color_code": "GHI SẦN",
+        "color_name": "GHI SẦN",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      },
+      "title": "GHI SẦN",
+      "content": "GHI SẦN GHI SẦN SON_TINH_DIEN"
+    },
+    {
+      "name": "GHI ÚC - KEM ÚC",
+      "payload": {
+        "color_code": "GHI ÚC - KEM ÚC",
+        "color_name": "GHI ÚC - KEM ÚC",
+        "surface_finish": "MA_MAU",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [
+          {
+            "row_id": "SCOPE-01",
+            "item_group": "Cửa tấm liền Úc"
+          }
+        ],
+        "disabled": false
+      },
+      "title": "GHI ÚC - KEM ÚC",
+      "content": "GHI ÚC - KEM ÚC GHI ÚC - KEM ÚC MA_MAU Cửa tấm liền Úc"
+    },
+    {
+      "name": "KEM SỮA",
+      "payload": {
+        "color_code": "KEM SỮA",
+        "color_name": "KEM SỮA",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      },
+      "title": "KEM SỮA",
+      "content": "KEM SỮA KEM SỮA SON_TINH_DIEN"
+    },
+    {
+      "name": "MIDNIGHT BLUE",
+      "payload": {
+        "color_code": "MIDNIGHT BLUE",
+        "color_name": "MIDNIGHT BLUE",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      },
+      "title": "MIDNIGHT BLUE",
+      "content": "MIDNIGHT BLUE MIDNIGHT BLUE SON_TINH_DIEN"
+    },
+    {
+      "name": "NÂU XINGFA",
+      "payload": {
+        "color_code": "NÂU XINGFA",
+        "color_name": "NÂU XINGFA",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      },
+      "title": "NÂU XINGFA",
+      "content": "NÂU XINGFA NÂU XINGFA SON_TINH_DIEN"
+    },
+    {
+      "name": "THÔ",
+      "payload": {
+        "color_code": "THÔ",
+        "color_name": "THÔ",
+        "surface_finish": "THO",
+        "usage_scope": "Mua hàng",
+        "applies_to_groups": [],
+        "disabled": false
+      },
+      "title": "THÔ",
+      "content": "THÔ THÔ THO"
+    },
+    {
+      "name": "TRẮNG",
+      "payload": {
+        "color_code": "TRẮNG",
+        "color_name": "TRẮNG",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "supplier_color_code": "9512",
+        "disabled": false
+      },
+      "title": "TRẮNG",
+      "content": "TRẮNG TRẮNG SON_TINH_DIEN"
+    },
+    {
+      "name": "VAN_GO",
+      "payload": {
+        "color_code": "VAN_GO",
+        "color_name": "VÂN GỖ",
+        "surface_finish": "SON_VAN_GO",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      },
+      "title": "VÂN GỖ",
+      "content": "VAN_GO VÂN GỖ SON_VAN_GO"
+    },
+    {
+      "name": "VÀNG KEM",
+      "payload": {
+        "color_code": "VÀNG KEM",
+        "color_name": "VÀNG KEM",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      },
+      "title": "VÀNG KEM",
+      "content": "VÀNG KEM VÀNG KEM SON_TINH_DIEN"
+    },
+    {
+      "name": "VÀNG KEM BÓNG",
+      "payload": {
+        "color_code": "VÀNG KEM BÓNG",
+        "color_name": "VÀNG KEM BÓNG",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      },
+      "title": "VÀNG KEM BÓNG",
+      "content": "VÀNG KEM BÓNG VÀNG KEM BÓNG SON_TINH_DIEN"
+    },
+    {
+      "name": "XANH DƯƠNG",
+      "payload": {
+        "color_code": "XANH DƯƠNG",
+        "color_name": "XANH DƯƠNG",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      },
+      "title": "XANH DƯƠNG",
+      "content": "XANH DƯƠNG XANH DƯƠNG SON_TINH_DIEN"
+    },
+    {
+      "name": "XANH LÁ CÂY",
+      "payload": {
+        "color_code": "XANH LÁ CÂY",
+        "color_name": "XANH LÁ CÂY",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      },
+      "title": "XANH LÁ CÂY",
+      "content": "XANH LÁ CÂY XANH LÁ CÂY SON_TINH_DIEN"
+    },
+    {
+      "name": "XANH NGỌC",
+      "payload": {
+        "color_code": "XANH NGỌC",
+        "color_name": "XANH NGỌC",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      },
+      "title": "XANH NGỌC",
+      "content": "XANH NGỌC XANH NGỌC SON_TINH_DIEN"
+    },
+    {
+      "name": "XANH NGỌC - VÀNG KEM",
+      "payload": {
+        "color_code": "XANH NGỌC - VÀNG KEM",
+        "color_name": "XANH NGỌC - VÀNG KEM",
+        "surface_finish": "MA_MAU",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [
+          {
+            "row_id": "SCOPE-01",
+            "item_group": "Cửa tấm liền Úc"
+          },
+          {
+            "row_id": "SCOPE-02",
+            "item_group": "Cửa Đài Loan"
+          }
+        ],
+        "disabled": false
+      },
+      "title": "XANH NGỌC - VÀNG KEM",
+      "content": "XANH NGỌC - VÀNG KEM XANH NGỌC - VÀNG KEM MA_MAU Cửa tấm liền Úc Cửa Đài Loan"
+    },
+    {
+      "name": "XANH NGỌC BÓNG",
+      "payload": {
+        "color_code": "XANH NGỌC BÓNG",
+        "color_name": "XANH NGỌC BÓNG",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      },
+      "title": "XANH NGỌC BÓNG",
+      "content": "XANH NGỌC BÓNG XANH NGỌC BÓNG SON_TINH_DIEN"
+    },
+    {
+      "name": "XANH RÊU - CAFÉ",
+      "payload": {
+        "color_code": "XANH RÊU - CAFÉ",
+        "color_name": "XANH RÊU - CAFÉ",
+        "surface_finish": "MA_MAU",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [
+          {
+            "row_id": "SCOPE-01",
+            "item_group": "Cửa tấm liền Úc"
+          }
+        ],
+        "disabled": false
+      },
+      "title": "XANH RÊU - CAFÉ",
+      "content": "XANH RÊU - CAFÉ XANH RÊU - CAFÉ MA_MAU Cửa tấm liền Úc"
+    },
+    {
+      "name": "XÁM - TRẮNG",
+      "payload": {
+        "color_code": "XÁM - TRẮNG",
+        "color_name": "XÁM - TRẮNG",
+        "surface_finish": "MA_MAU",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [
+          {
+            "row_id": "SCOPE-01",
+            "item_group": "Cửa tấm liền Úc"
+          }
+        ],
+        "disabled": false
+      },
+      "title": "XÁM - TRẮNG",
+      "content": "XÁM - TRẮNG XÁM - TRẮNG MA_MAU Cửa tấm liền Úc"
+    },
+    {
+      "name": "XÁM - XANH NGỌC",
+      "payload": {
+        "color_code": "XÁM - XANH NGỌC",
+        "color_name": "XÁM - XANH NGỌC",
+        "surface_finish": "MA_MAU",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [
+          {
+            "row_id": "SCOPE-01",
+            "item_group": "Cửa Đài Loan"
+          }
+        ],
+        "disabled": false
+      },
+      "title": "XÁM - XANH NGỌC",
+      "content": "XÁM - XANH NGỌC XÁM - XANH NGỌC MA_MAU Cửa Đài Loan"
+    },
+    {
+      "name": "XÁM LÔNG CHUỘT",
+      "payload": {
+        "color_code": "XÁM LÔNG CHUỘT",
+        "color_name": "XÁM LÔNG CHUỘT",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      },
+      "title": "XÁM LÔNG CHUỘT",
+      "content": "XÁM LÔNG CHUỘT XÁM LÔNG CHUỘT SON_TINH_DIEN"
+    },
+    {
+      "name": "XÁM MỜ",
+      "payload": {
+        "color_code": "XÁM MỜ",
+        "color_name": "XÁM MỜ",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      },
+      "title": "XÁM MỜ",
+      "content": "XÁM MỜ XÁM MỜ SON_TINH_DIEN"
+    },
+    {
+      "name": "XÁM XINGFA",
+      "payload": {
+        "color_code": "XÁM XINGFA",
+        "color_name": "XÁM XINGFA",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      },
+      "title": "XÁM XINGFA",
+      "content": "XÁM XINGFA XÁM XINGFA SON_TINH_DIEN"
+    },
+    {
+      "name": "ĐEN XINGFA",
+      "payload": {
+        "color_code": "ĐEN XINGFA",
+        "color_name": "ĐEN XINGFA",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      },
+      "title": "ĐEN XINGFA",
+      "content": "ĐEN XINGFA ĐEN XINGFA SON_TINH_DIEN"
+    },
+    {
+      "name": "ĐỎ ĐÔ",
+      "payload": {
+        "color_code": "ĐỎ ĐÔ",
+        "color_name": "ĐỎ ĐÔ",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "supplier_color_code": "4004",
+        "disabled": false
+      },
+      "title": "ĐỎ ĐÔ",
+      "content": "ĐỎ ĐÔ ĐỎ ĐÔ SON_TINH_DIEN"
+    }
+  ]
+}

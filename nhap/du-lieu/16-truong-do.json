@@ -1,0 +1,133 @@
+{
+ "doctype": "Geometry Field",
+ "so_ban_ghi": 9,
+ "nguon": "alumdoor-cong-thuc-cua-2026-08-20",
+ "ban_ghi": [
+  {
+   "name": "CAO-PB",
+   "payload": {
+    "field_code": "CAO-PB",
+    "field_name": "Cao phủ bì",
+    "axis": "HEIGHT",
+    "uom": "Mét",
+    "note": "Chiều cao phủ bì — số khách đặt.",
+    "disabled": false,
+    "_migration_source": "alumdoor-cong-thuc-cua-2026-08-20"
+   },
+   "title": "Cao phủ bì",
+   "content": "CAO-PB Cao phủ bì"
+  },
+  {
+   "name": "RONG-PB-RAY",
+   "payload": {
+    "field_code": "RONG-PB-RAY",
+    "field_name": "Rộng phủ bì ray",
+    "axis": "WIDTH",
+    "uom": "Mét",
+    "note": "Rộng đo hết mép ray.",
+    "disabled": false,
+    "_migration_source": "alumdoor-cong-thuc-cua-2026-08-20"
+   },
+   "title": "Rộng phủ bì ray",
+   "content": "RONG-PB-RAY Rộng phủ bì ray"
+  },
+  {
+   "name": "RONG-PB-NHUA",
+   "payload": {
+    "field_code": "RONG-PB-NHUA",
+    "field_name": "Rộng phủ bì nhựa",
+    "axis": "WIDTH",
+    "uom": "Mét",
+    "note": "Rộng đo hết nẹp nhựa. Đại lý cửa Đức nhập theo số này.",
+    "disabled": false,
+    "_migration_source": "alumdoor-cong-thuc-cua-2026-08-20"
+   },
+   "title": "Rộng phủ bì nhựa",
+   "content": "RONG-PB-NHUA Rộng phủ bì nhựa"
+  },
+  {
+   "name": "CAO-LUOI",
+   "payload": {
+    "field_code": "CAO-LUOI",
+    "field_name": "Cao lưới",
+    "axis": "HEIGHT",
+    "uom": "Mét",
+    "note": "Riêng cửa lưới và Đài Loan: chiều cao phần lưới.",
+    "disabled": false,
+    "_migration_source": "alumdoor-cong-thuc-cua-2026-08-20"
+   },
+   "title": "Cao lưới",
+   "content": "CAO-LUOI Cao lưới"
+  },
+  {
+   "name": "RONG-CAT-LA",
+   "payload": {
+    "field_code": "RONG-CAT-LA",
+    "field_name": "Rộng cắt lá",
+    "axis": "WIDTH",
+    "uom": "Mét",
+    "note": "TỰ TÍNH. Mọi chiều rộng khách đặt đều quy về số này trước khi cắt.",
+    "disabled": false,
+    "_migration_source": "alumdoor-cong-thuc-cua-2026-08-20"
+   },
+   "title": "Rộng cắt lá",
+   "content": "RONG-CAT-LA Rộng cắt lá"
+  },
+  {
+   "name": "DAI-RAY",
+   "payload": {
+    "field_code": "DAI-RAY",
+    "field_name": "Dài ray",
+    "axis": "LENGTH",
+    "uom": "Mét",
+    "note": "TỰ TÍNH khi bán trọn bộ hoặc tặng ray.",
+    "disabled": false,
+    "_migration_source": "alumdoor-cong-thuc-cua-2026-08-20"
+   },
+   "title": "Dài ray",
+   "content": "DAI-RAY Dài ray"
+  },
+  {
+   "name": "DAI-TRUC",
+   "payload": {
+    "field_code": "DAI-TRUC",
+    "field_name": "Dài trục",
+    "axis": "LENGTH",
+    "uom": "Mét",
+    "note": "TỰ TÍNH khi bán trọn bộ.",
+    "disabled": false,
+    "_migration_source": "alumdoor-cong-thuc-cua-2026-08-20"
+   },
+   "title": "Dài trục",
+   "content": "DAI-TRUC Dài trục"
+  },
+  {
+   "name": "DAI-V4",
+   "payload": {
+    "field_code": "DAI-V4",
+    "field_name": "Dài V4",
+    "axis": "LENGTH",
+    "uom": "Mét",
+    "note": "TỰ TÍNH khi bán trọn bộ.",
+    "disabled": false,
+    "_migration_source": "alumdoor-cong-thuc-cua-2026-08-20"
+   },
+   "title": "Dài V4",
+   "content": "DAI-V4 Dài V4"
+  },
+  {
+   "name": "DIEN-TICH",
+   "payload": {
+    "field_code": "DIEN-TICH",
+    "field_name": "Diện tích tính tiền",
+    "axis": "OTHER",
+    "uom": "m2",
+    "note": "TỰ TÍNH. Cao nhân Rộng, rộng lấy theo cơ sở bán của từng nhóm khách.",
+    "disabled": false,
+    "_migration_source": "alumdoor-cong-thuc-cua-2026-08-20"
+   },
+   "title": "Diện tích tính tiền",
+   "content": "DIEN-TICH Diện tích tính tiền"
+  }
+ ]
+}

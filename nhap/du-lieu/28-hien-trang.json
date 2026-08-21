@@ -1,0 +1,5594 @@
+{
+ "item": [
+  {
+   "name": "CDUC_DUC_KT_AL70_2_LOP",
+   "item_name": "CỬA ĐỨC KÉO TAY AL70 (2 LỚP)",
+   "item_group": "Cửa tấm liền Úc",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:27:13.542004"
+  },
+  {
+   "name": "CDUC_DUC_KT_AL70",
+   "item_name": "CỬA ĐỨC KÉO TAY AL70 (1 LỚP)",
+   "item_group": "Cửa tấm liền Úc",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:27:13.215004"
+  },
+  {
+   "name": "CDUC_AL70_1LOP",
+   "item_name": "ĐỨC AL70 (1 LỚP)",
+   "item_group": "Cửa CN Đức",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:20:19.514003"
+  },
+  {
+   "name": "CDUC_TD_AL70",
+   "item_name": "ĐỨC AL70 (2 LỚP)",
+   "item_group": "Cửa CN Đức",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:20:19.208003"
+  },
+  {
+   "name": "CDUC_AL75",
+   "item_name": "ĐỨC AL75",
+   "item_group": "Cửa CN Đức",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:20:18.906003"
+  },
+  {
+   "name": "CDUC_ALVIPST700",
+   "item_name": "ĐỨC AL-VIPST700",
+   "item_group": "Cửa CN Đức",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:20:18.583003"
+  },
+  {
+   "name": "CDUC_ALVIPST500",
+   "item_name": "ĐỨC AL-VIPST500",
+   "item_group": "Cửa CN Đức",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:20:18.276003"
+  },
+  {
+   "name": "CDUC_ALVIP50",
+   "item_name": "ĐỨC AL-VIP50",
+   "item_group": "Cửa CN Đức",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:20:17.946003"
+  },
+  {
+   "name": "CDUC_TD_AL50",
+   "item_name": "ĐỨC AL50",
+   "item_group": "Cửa CN Đức",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:20:17.630003"
+  },
+  {
+   "name": "CDUC_TD_AL752N",
+   "item_name": "ĐỨC AL752N",
+   "item_group": "Cửa CN Đức",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:20:17.317003"
+  },
+  {
+   "name": "CDUC_ALD_DL552",
+   "item_name": "ĐỨC AL552N",
+   "item_group": "Cửa CN Đức",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:20:17.009003"
+  },
+  {
+   "name": "CDUC_TD_AL652N",
+   "item_name": "ĐỨC AL652",
+   "item_group": "Cửa CN Đức",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:20:16.673003"
+  },
+  {
+   "name": "CDUC_TD_AL501N",
+   "item_name": "ĐỨC AL501N",
+   "item_group": "Cửa CN Đức",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:20:16.362003"
+  },
+  {
+   "name": "CDUC_ALD_548N",
+   "item_name": "ĐỨC AL548N",
+   "item_group": "Cửa CN Đức",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:20:16.059003"
+  },
+  {
+   "name": "CDUC_TD_AL503N26",
+   "item_name": "ĐỨC AL503N",
+   "item_group": "Cửa CN Đức",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:20:15.755003"
+  },
+  {
+   "name": "CDUC_TD_AL71N",
+   "item_name": "ĐỨC AL71N",
+   "item_group": "Cửa CN Đức",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:20:15.339003"
+  },
+  {
+   "name": "CDUC_TD_AL595",
+   "item_name": "ĐỨC AL595",
+   "item_group": "Cửa CN Đức",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:20:15.008003"
+  },
+  {
+   "name": "CUC_UC_KT_4D",
+   "item_name": "CỬA ÚC KT 4D",
+   "item_group": "Cửa tấm liền Úc",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:53:34.981002"
+  },
+  {
+   "name": "CUC_UC_MTN_4D",
+   "item_name": "CỬA ÚC MTN 4D",
+   "item_group": "Cửa tấm liền Úc",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:53:34.664002"
+  },
+  {
+   "name": "CUC_UC_KT_4_6D",
+   "item_name": "CỬA ÚC KT 4.6D",
+   "item_group": "Cửa tấm liền Úc",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:53:34.383002"
+  },
+  {
+   "name": "CUC_UC_KT_5_5D",
+   "item_name": "CỬA ÚC KT 5.5D",
+   "item_group": "Cửa tấm liền Úc",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:53:34.075002"
+  },
+  {
+   "name": "CUC_UC_MTN_4_6D",
+   "item_name": "CỬA ÚC MTN 4.6D",
+   "item_group": "Cửa tấm liền Úc",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:53:33.791002"
+  },
+  {
+   "name": "CUC_UC_MTN_5_5D",
+   "item_name": "CỬA ÚC MTN 5.5D",
+   "item_group": "Cửa tấm liền Úc",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:53:33.475002"
+  },
+  {
+   "name": "CUC_UC_MTN_6D",
+   "item_name": "CỬA ÚC MTN 6D",
+   "item_group": "Cửa tấm liền Úc",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:53:33.159002"
+  },
+  {
+   "name": "CUC_UC_KT_6D",
+   "item_name": "CỬA ÚC KT 6D",
+   "item_group": "Cửa tấm liền Úc",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:53:32.868002"
+  },
+  {
+   "name": "CLUOI_LUOI_MV_TRONBO",
+   "item_name": "CỬA LƯỚI MẮT VÕNG -Trọn bộ",
+   "item_group": "Cửa Lưới",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:53:31.905002"
+  },
+  {
+   "name": "CLUOI_LUOI_MV_TM",
+   "item_name": "CỬA LƯỚI MẮT VÕNG TÁCH MÓN",
+   "item_group": "Cửa Lưới",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:53:31.614002"
+  },
+  {
+   "name": "CLUOI_LUOI_SN_TM",
+   "item_name": "CỬA LƯỚI SN PHI 19 TÁCH MÓN",
+   "item_group": "Cửa Lưới",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:53:31.292002"
+  },
+  {
+   "name": "CLUOI_LUOI_SN_TRONBO",
+   "item_name": "CỬA LƯỚI SN PHI 19 TRỌN BỘ",
+   "item_group": "Cửa Lưới",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:53:31.012002"
+  },
+  {
+   "name": "CLUOI_LUOI_SN13X26_TRONBO",
+   "item_name": "CỬA LƯỚI SN PHI 13x26 TRỌN BỘ",
+   "item_group": "Cửa Lưới",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:53:30.699002"
+  },
+  {
+   "name": "CLUOI_LUOI_SN13X26_TACHMON",
+   "item_name": "CỬA LƯỚI SN PHI 13x26 TÁCH MÓN",
+   "item_group": "Cửa Lưới",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:53:30.389002"
+  },
+  {
+   "name": "CLUOI_LUOI_SN13X26_INOX_TACHMON",
+   "item_name": "CỬA LƯỚI SN PHI 13x26 INOX TÁCH MÓN",
+   "item_group": "Cửa Lưới",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:53:30.076002"
+  },
+  {
+   "name": "CLUOI_LUOI_SN13X26_INOX_TRONBO",
+   "item_name": "LƯỚI SN PHI 13X26 INOX TRỌN BỘ",
+   "item_group": "Cửa Lưới",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:53:29.755002"
+  },
+  {
+   "name": "CLUOI_LUOI_SNPHI19_INOX_TM",
+   "item_name": "CỬA LƯỚI SN PHI 19 INOX TÁCH MÓN",
+   "item_group": "Cửa Lưới",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:53:29.456002"
+  },
+  {
+   "name": "CLUOI_LUOI_SNPHI19_INOX_TRONBO",
+   "item_name": "CỬA LƯỚI SN PHI 19 INOX- TRỌN BỘ",
+   "item_group": "Cửa Lưới",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:53:29.157002"
+  },
+  {
+   "name": "CLUOI_LUOIMV_INOX_TM",
+   "item_name": "CỬA LƯỚI MẮT VÕNG INOX TÁCH MÓN",
+   "item_group": "Cửa Lưới",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:53:28.853002"
+  },
+  {
+   "name": "CLUOI_LUOIMV_INOX_TRONBO",
+   "item_name": "CỬA LƯỚI MẮT VÕNG INOX TRỌN BỘ",
+   "item_group": "Cửa Lưới",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:53:28.556002"
+  },
+  {
+   "name": "CDL_DLM_6D",
+   "item_name": "CỬA ĐL6D TRỌN BỘ",
+   "item_group": "Cửa Đài Loan",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:53:28.244002"
+  },
+  {
+   "name": "CDL_DLM_7D",
+   "item_name": "CỬA ĐL7D TRỌN BỘ",
+   "item_group": "Cửa Đài Loan",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:53:27.930002"
+  },
+  {
+   "name": "CDL_DLM_8D",
+   "item_name": "CỬA ĐL8D TRỌN BỘ",
+   "item_group": "Cửa Đài Loan",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:53:27.576002"
+  },
+  {
+   "name": "CDL_DLM_1LY",
+   "item_name": "CỬA ĐL1LY TRỌN BỘ",
+   "item_group": "Cửa Đài Loan",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:53:27.216002"
+  },
+  {
+   "name": "CKDL_CUAKEODL",
+   "item_name": "CỬA KÉO ĐL",
+   "item_group": "Cửa kéo Đài Loan",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:53:26.905002"
+  },
+  {
+   "name": "LA_DLM_1LY_K175",
+   "item_name": "LÁ SIÊU TRƯỜNG 1LY",
+   "item_group": "Cửa Siêu Trường",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:53:26.606004"
+  },
+  {
+   "name": "INOX_1LY",
+   "item_name": "LÁ ĐL7.5 INOX 1LY",
+   "item_group": "Cửa Đài Loan Inox",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:53:26.283004"
+  },
+  {
+   "name": "INOX_8D",
+   "item_name": "LÁ ĐL7.5 INOX 8D",
+   "item_group": "Cửa Đài Loan Inox",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:53:25.965004"
+  },
+  {
+   "name": "INOX_7D",
+   "item_name": "LÁ ĐL7.5 INOX 7D",
+   "item_group": "Cửa Đài Loan Inox",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:53:25.664004"
+  },
+  {
+   "name": "INOX_6D",
+   "item_name": "LÁ ĐL7.5 INOX 6D",
+   "item_group": "Cửa Đài Loan Inox",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:53:25.358012"
+  },
+  {
+   "name": "TON_DLM_6D_K124",
+   "item_name": "TP LÁ ĐÀI LOAN 6D",
+   "item_group": "Nan/lá cửa",
+   "stock_uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:34:33.618002"
+  },
+  {
+   "name": "TON_DLM_7D_K124",
+   "item_name": "TP LÁ ĐÀI LOAN 7D",
+   "item_group": "Nan/lá cửa",
+   "stock_uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:34:33.328002"
+  },
+  {
+   "name": "TON_DLM_8D_K124",
+   "item_name": "TP LÁ ĐÀI LOAN 8D",
+   "item_group": "Nan/lá cửa",
+   "stock_uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:34:33.053002"
+  },
+  {
+   "name": "TON_DLM_1LY_K124",
+   "item_name": "TP LÁ ĐÀI LOAN 1LY",
+   "item_group": "Nan/lá cửa",
+   "stock_uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:34:32.748002"
+  },
+  {
+   "name": "LA_DLK_8D",
+   "item_name": "TP LÁ ĐÀI LOAN 8D",
+   "item_group": "Nan/lá cửa",
+   "stock_uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:34:32.471002"
+  },
+  {
+   "name": "LA_DLK_1LY",
+   "item_name": "LÁ ĐÀI LOAN 1LY",
+   "item_group": "Nan/lá cửa",
+   "stock_uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:34:32.193002"
+  },
+  {
+   "name": "LA_DLK_1_2LY",
+   "item_name": "LÁ ĐÀI LOAN 1.2LY K124",
+   "item_group": "Nan/lá cửa",
+   "stock_uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:34:31.900002"
+  },
+  {
+   "name": "LA_DLK_8D_TRONBO",
+   "item_name": "LÁ ĐÀI LOAN 8D TRỌN BỘ",
+   "item_group": "Nan/lá cửa",
+   "stock_uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:34:31.658002"
+  },
+  {
+   "name": "LA_DLK_1LY_TRONBO",
+   "item_name": "LÁ ĐÀI LOAN 1LY TRỌN BỘ",
+   "item_group": "Nan/lá cửa",
+   "stock_uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:34:31.412002"
+  },
+  {
+   "name": "LA_DLK_1_2LY_TRONBO",
+   "item_name": "LÁ ĐÀI LOAN 1.2LY TRỌN BỘ",
+   "item_group": "Nan/lá cửa",
+   "stock_uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:34:31.148002"
+  },
+  {
+   "name": "LA_DLK_1_1LY",
+   "item_name": "LÁ ĐÀI LOAN 1.1LY",
+   "item_group": "Nan/lá cửa",
+   "stock_uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:34:30.903002"
+  },
+  {
+   "name": "LA_DLK_1_2LY_K175",
+   "item_name": "LÁ ĐÀI LOAN 1.2LY K175",
+   "item_group": "Nan/lá cửa",
+   "stock_uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:34:30.632002"
+  },
+  {
+   "name": "LA_RUOT_AL71N",
+   "item_name": "TP LÁ RUỘT AL71N",
+   "item_group": "Nan/lá cửa",
+   "stock_uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:34:30.386002"
+  },
+  {
+   "name": "LA_DUC_AL70_2_LOP",
+   "item_name": "TP LÁ ĐỨC AL70 (2 lớp)",
+   "item_group": "Nan/lá cửa",
+   "stock_uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:34:30.138002"
+  },
+  {
+   "name": "RT_RNHUA_DR",
+   "item_name": "RON NHỰA ĐÁY RAY",
+   "item_group": "Ray và trục",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:11:31.884009"
+  },
+  {
+   "name": "RT_TD87A1",
+   "item_name": "RAY ĐƠN TD U76",
+   "item_group": "Ray và trục",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:11:31.541009"
+  },
+  {
+   "name": "RT_RAYHOP",
+   "item_name": "RAY HỘP TD U76",
+   "item_group": "Ray và trục",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:11:31.198008"
+  },
+  {
+   "name": "RT_RAY_HOP_TD_U100",
+   "item_name": "RAY HỘP TD U100",
+   "item_group": "Ray và trục",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:11:30.878008"
+  },
+  {
+   "name": "RT_RAY_U100_RON",
+   "item_name": "RAY SẮT U100 (CÓ RON)",
+   "item_group": "Ray và trục",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:11:30.563008"
+  },
+  {
+   "name": "RT_RAY_U100_KRON",
+   "item_name": "RAY SẮT U100 (KHÔNG RON)",
+   "item_group": "Ray và trục",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:11:30.234008"
+  },
+  {
+   "name": "RT_RAY_U100_1.4LY_RON",
+   "item_name": "RAY SẮT U100-1.4ly (CÓ RON)",
+   "item_group": "Ray và trục",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:11:29.868009"
+  },
+  {
+   "name": "RT_RAY_U100_1.4LY_RON_TD",
+   "item_name": "RAY SẮT U100-1.4ly (CÓ RON+TỰ DỪNG)",
+   "item_group": "Ray và trục",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:11:29.528008"
+  },
+  {
+   "name": "RT_RAY_U100_1.4LY_KRON",
+   "item_name": "RAY SẮT U100-1.4ly (KHÔNG RON)",
+   "item_group": "Ray và trục",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:11:29.187008"
+  },
+  {
+   "name": "RT_RAY_U100_1.2LY_RON",
+   "item_name": "RAY SẮT U100-1.2ly (CÓ RON)",
+   "item_group": "Ray và trục",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:11:28.880008"
+  },
+  {
+   "name": "RT_RAY_U100_1.2LY_KRON",
+   "item_name": "RAY SẮT U100-1.2ly (KHÔNG RON)",
+   "item_group": "Ray và trục",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:11:28.531008"
+  },
+  {
+   "name": "RT_RAY_U70_KRON",
+   "item_name": "RAY SẮT U70 (KHÔNG RON)",
+   "item_group": "Ray và trục",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:11:28.198007"
+  },
+  {
+   "name": "RT_TRUC168_5LY",
+   "item_name": "TRỤC168 5LY",
+   "item_group": "Ray và trục",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:11:27.860007"
+  },
+  {
+   "name": "RT_TRUC114_2.4LY",
+   "item_name": "TRỤC 114 2.4LY",
+   "item_group": "Ray và trục",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:11:27.533008"
+  },
+  {
+   "name": "RT_TRUC_114_2.1LY",
+   "item_name": "TRỤC 114 2.1LY",
+   "item_group": "Ray và trục",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:11:27.160007"
+  },
+  {
+   "name": "RT_TR114_2.1",
+   "item_name": "TRỤC 114 (2.1 mm)",
+   "item_group": "Ray và trục",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:11:26.832007"
+  },
+  {
+   "name": "RT_TRUC_114_1.8LY",
+   "item_name": "TRỤC 114 1.8LY",
+   "item_group": "Ray và trục",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:11:26.499008"
+  },
+  {
+   "name": "RT_TR114_1.8",
+   "item_name": "TRỤC 114 (1.8 mm)",
+   "item_group": "Ray và trục",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:11:26.171007"
+  },
+  {
+   "name": "RT_TRUC34",
+   "item_name": "TRỤC PHI 34",
+   "item_group": "Ray và trục",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:11:25.820007"
+  },
+  {
+   "name": "RT_ONGKEM34",
+   "item_name": "TRỤC 34",
+   "item_group": "Ray và trục",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:11:25.502007"
+  },
+  {
+   "name": "RT_TR168",
+   "item_name": "TRỤC 168 (4.0 mm)",
+   "item_group": "Ray và trục",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:11:25.186007"
+  },
+  {
+   "name": "RT_TR140",
+   "item_name": "TRỤC 140 (2.5 mm)",
+   "item_group": "Ray và trục",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:11:24.863007"
+  },
+  {
+   "name": "RT_RAYINOX_7P_KHONGRON",
+   "item_name": "RAY INOX 7P KHÔNG RON",
+   "item_group": "Ray và trục",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:11:24.531008"
+  },
+  {
+   "name": "RT_RAYINOX_8P_RON",
+   "item_name": "RAY INOX 8P CÓ RON",
+   "item_group": "Ray và trục",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:11:24.203008"
+  },
+  {
+   "name": "RT_RAYINOX_6P_RON",
+   "item_name": "RAY INOX 6P CÓ RON",
+   "item_group": "Ray và trục",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:11:23.882009"
+  },
+  {
+   "name": "RT_TRUC168",
+   "item_name": "TRỤC 168",
+   "item_group": "Ray và trục",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:11:23.556008"
+  },
+  {
+   "name": "RT_TRUC140",
+   "item_name": "TRỤC 140",
+   "item_group": "Ray và trục",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:11:23.212008"
+  },
+  {
+   "name": "RT_TRUC90",
+   "item_name": "TRỤC PHI 90",
+   "item_group": "Ray và trục",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:11:22.897008"
+  },
+  {
+   "name": "RT_RAYNHOMUC",
+   "item_name": "RAY NHÔM ÚC",
+   "item_group": "Ray và trục",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:11:22.535008"
+  },
+  {
+   "name": "RT_PHOTLONG12_5X5X120M",
+   "item_name": "RON LÔNG CẠNH RAY",
+   "item_group": "Ray và trục",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:11:22.194010"
+  },
+  {
+   "name": "RT_RAY_U70_RON",
+   "item_name": "RAY SẮT U70 (CÓ RON)",
+   "item_group": "Ray và trục",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:11:21.857009"
+  },
+  {
+   "name": "RT_RINOX_DR",
+   "item_name": "RON INOX ĐÁY RAY",
+   "item_group": "Ray và trục",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:11:21.525009"
+  },
+  {
+   "name": "RT_RNHUA_CR",
+   "item_name": "RON NHỰA CẠNH RAY",
+   "item_group": "Ray và trục",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:11:21.174009"
+  },
+  {
+   "name": "PKC_TIINOX",
+   "item_name": "TI KHÓA NGANG",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:07:14.031005"
+  },
+  {
+   "name": "PKC_VDAY_TDU",
+   "item_name": "V ĐÁY (THANH ĐÁY ÚC)",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:07:13.720004"
+  },
+  {
+   "name": "PKC_RONNHUAVANGCANHAY_RSU70",
+   "item_name": "RONNHUAVANGCANHAY RSU70",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:07:13.407004"
+  },
+  {
+   "name": "PKC_RONNHUAVANGCANHAY_RSU100",
+   "item_name": "RONNHUAVANGCANHAY RSU100",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:07:13.093004"
+  },
+  {
+   "name": "PKC_RON_DD",
+   "item_name": "RON ĐÁY ĐỨC",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:07:12.739006"
+  },
+  {
+   "name": "PKC_BANBUOM_FE",
+   "item_name": "BẮN BƯỚM (SẮT)",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Mét",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:03:30.875003"
+  },
+  {
+   "name": "PKC_BANBUOM_INOX",
+   "item_name": "BẮN BƯỚM (INOX)",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Mét",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:03:30.597003"
+  },
+  {
+   "name": "PKC_VAIHAMXO",
+   "item_name": "VAI HÃM XO",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 20:03:30.321005"
+  },
+  {
+   "name": "TON_DLK_1LY_K175",
+   "item_name": "TÔN KẼM ĐÀI LOAN 1LY K175",
+   "item_group": "Tôn & nhôm cây",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:58:27.187003"
+  },
+  {
+   "name": "TON_DLK_1LY_K124",
+   "item_name": "TÔN KẼM ĐÀI LOAN 1LY K124",
+   "item_group": "Tôn & nhôm cây",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:58:26.918003"
+  },
+  {
+   "name": "NHOM_AL75",
+   "item_name": "AL75",
+   "item_group": "Tôn & nhôm cây",
+   "stock_uom": "Cây",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:19:34.660002"
+  },
+  {
+   "name": "NHOM_AL70_2LOP",
+   "item_name": "AL70 ( 2 LỚP)",
+   "item_group": "Tôn & nhôm cây",
+   "stock_uom": "Cây",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:19:34.365002"
+  },
+  {
+   "name": "NHOM_AL70_1LOP",
+   "item_name": "AL70 ( 1 LỚP)",
+   "item_group": "Tôn & nhôm cây",
+   "stock_uom": "Cây",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:19:34.088002"
+  },
+  {
+   "name": "NHOM_ALVIPST700",
+   "item_name": "ALVIPST700",
+   "item_group": "Tôn & nhôm cây",
+   "stock_uom": "Cây",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:19:33.808002"
+  },
+  {
+   "name": "NHOM_ALVIPST500",
+   "item_name": "ALVIPST500",
+   "item_group": "Tôn & nhôm cây",
+   "stock_uom": "Cây",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:19:33.483002"
+  },
+  {
+   "name": "NHOM_ALVIP50",
+   "item_name": "ALVIP50",
+   "item_group": "Tôn & nhôm cây",
+   "stock_uom": "Cây",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:19:33.162002"
+  },
+  {
+   "name": "NHOM_AL50",
+   "item_name": "AL50",
+   "item_group": "Tôn & nhôm cây",
+   "stock_uom": "Cây",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:19:32.848002"
+  },
+  {
+   "name": "NHOM_AL752",
+   "item_name": "AL752",
+   "item_group": "Tôn & nhôm cây",
+   "stock_uom": "Cây",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:19:32.522002"
+  },
+  {
+   "name": "NHOM_AL552",
+   "item_name": "AL552",
+   "item_group": "Tôn & nhôm cây",
+   "stock_uom": "Cây",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:19:32.222002"
+  },
+  {
+   "name": "NHOM_AL652",
+   "item_name": "AL652",
+   "item_group": "Tôn & nhôm cây",
+   "stock_uom": "Cây",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:19:31.941002"
+  },
+  {
+   "name": "NHOM_AL501",
+   "item_name": "AL501",
+   "item_group": "Tôn & nhôm cây",
+   "stock_uom": "Cây",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:19:31.620002"
+  },
+  {
+   "name": "NHOM_AL548",
+   "item_name": "AL548",
+   "item_group": "Tôn & nhôm cây",
+   "stock_uom": "Cây",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:19:31.324002"
+  },
+  {
+   "name": "NHOM_AL503",
+   "item_name": "AL503",
+   "item_group": "Tôn & nhôm cây",
+   "stock_uom": "Cây",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:19:30.977002"
+  },
+  {
+   "name": "NHOM_AL71",
+   "item_name": "AL71",
+   "item_group": "Tôn & nhôm cây",
+   "stock_uom": "Cây",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:19:30.674002"
+  },
+  {
+   "name": "NHOM_AL595",
+   "item_name": "AL595",
+   "item_group": "Tôn & nhôm cây",
+   "stock_uom": "Cây",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:19:30.354002"
+  },
+  {
+   "name": "PKC_V4_INOX_3LY",
+   "item_name": "V4 INOX 3ly",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:10:50.425006"
+  },
+  {
+   "name": "PKC_V4_INOX",
+   "item_name": "V4 INOX 2ly",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:10:50.127005"
+  },
+  {
+   "name": "PKC_V4_STD",
+   "item_name": "V4 STĐ (SƠN TĨNH ĐIỆN)",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:10:49.767004"
+  },
+  {
+   "name": "PKC_V4_KEM",
+   "item_name": "V4 KẼM",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:10:49.440006"
+  },
+  {
+   "name": "PKC_V4",
+   "item_name": "V4",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:10:49.066008"
+  },
+  {
+   "name": "LA_MAU_PHE",
+   "item_name": "LÁ MẪU ĐỨC (MẪU CHO KHÁCH XEM)",
+   "item_group": "Tôn & nhôm cây",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:01:36.469002"
+  },
+  {
+   "name": "TON_DLK_1_3LY_K175",
+   "item_name": "TÔN KẼM ĐÀI LOAN 1.3LY",
+   "item_group": "Tôn & nhôm cây",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:01:36.131002"
+  },
+  {
+   "name": "TON_DLK_1_2LY_K175",
+   "item_name": "TÔN KẼM ĐÀI LOAN 1.2LY",
+   "item_group": "Tôn & nhôm cây",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:01:35.829002"
+  },
+  {
+   "name": "TON_DLK_9D_K175",
+   "item_name": "TÔN KẼM ĐÀI LOAN 8-9D",
+   "item_group": "Tôn & nhôm cây",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:01:35.548002"
+  },
+  {
+   "name": "TON_DLK_1_2LY_K124",
+   "item_name": "TÔN KẼM ĐÀI LOAN 1LY2",
+   "item_group": "Tôn & nhôm cây",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:01:35.023002"
+  },
+  {
+   "name": "TON_DLK_8D_K124",
+   "item_name": "TÔN KẼM ĐÀI LOAN 8D",
+   "item_group": "Tôn & nhôm cây",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:01:34.477002"
+  },
+  {
+   "name": "TON_DLK_6D_K124",
+   "item_name": "TÔN KẼM ĐÀI LOAN 6D",
+   "item_group": "Tôn & nhôm cây",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:01:34.210002"
+  },
+  {
+   "name": "TON_YEM_MVSN",
+   "item_name": "LÁ YẾM (TÔN LÁ YẾM)",
+   "item_group": "Tôn & nhôm cây",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:01:33.942002"
+  },
+  {
+   "name": "TON_UC_4_8D_K598",
+   "item_name": "TÔN ÚC 4.8D-5.5D",
+   "item_group": "Tôn & nhôm cây",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:01:33.659002"
+  },
+  {
+   "name": "TON_UC_4_4D_K598",
+   "item_name": "TÔN ÚC 4.4D",
+   "item_group": "Tôn & nhôm cây",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:01:33.385002"
+  },
+  {
+   "name": "TON_UC_3_8D_K598",
+   "item_name": "TÔN ÚC 3.8D",
+   "item_group": "Tôn & nhôm cây",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:01:33.117002"
+  },
+  {
+   "name": "PKC_BAT_SN",
+   "item_name": "BÁT SONG NGANG (BẮT VÀO LÁ YẾM)",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:01:01.789001"
+  },
+  {
+   "name": "PKC_BAT_MV",
+   "item_name": "BÁT MẮT VÕNG (BẮT VÀO LÁ YẾM)",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:01:01.516001"
+  },
+  {
+   "name": "PKC_BO_1VIS_AL503C",
+   "item_name": "BỌ 1VIS AL503C",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Con",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:00:56.186001"
+  },
+  {
+   "name": "PKC_BO_2VIS_AL50_VIP50_548_ST500",
+   "item_name": "BỌ 2VIS-AL50-VIP50-AL548-ST500",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:00:56.008001"
+  },
+  {
+   "name": "PKC_BO_1VIS_AL75",
+   "item_name": "BỌ 1VIS-AL75",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:00:55.828001"
+  },
+  {
+   "name": "PKC_BO_1VIS_AL701LOP",
+   "item_name": "BỌ 1 VIS-AL701LOP",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:00:55.641001"
+  },
+  {
+   "name": "PKC_BO_1VIS_AL702LOP",
+   "item_name": "BỌ 1 VIS-AL702LOP",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:00:55.475001"
+  },
+  {
+   "name": "PKC_BO_2VIS_752_VIPST700",
+   "item_name": "BỌ 2VIS 752-VIPST700",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Con",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:00:55.293001"
+  },
+  {
+   "name": "LA_TD325",
+   "item_name": "LÁ ĐÁY LỚN",
+   "item_group": "Nan/lá cửa",
+   "stock_uom": "Mét",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:00:55.118001"
+  },
+  {
+   "name": "LA_TD326",
+   "item_name": "LÁ TRUNG GIAN",
+   "item_group": "Nan/lá cửa",
+   "stock_uom": "Mét",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:00:54.922001"
+  },
+  {
+   "name": "LA_TD327",
+   "item_name": "LÁ YẾM",
+   "item_group": "Nan/lá cửa",
+   "stock_uom": "Mét",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:00:54.739001"
+  },
+  {
+   "name": "LA_A282",
+   "item_name": "LÁ ĐẦU",
+   "item_group": "Nan/lá cửa",
+   "stock_uom": "Mét",
+   "docstatus": 0,
+   "modified": "2026-08-20 19:00:54.557001"
+  },
+  {
+   "name": "PKS_TAY_NHOM",
+   "item_name": "TẨY NHÔM",
+   "item_group": "Phụ kiện cần sơn tĩnh điện",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:47:23.960010"
+  },
+  {
+   "name": "PKDUC_VIS",
+   "item_name": "Vis",
+   "item_group": "Phụ kiện CN Đức",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:07.301004"
+  },
+  {
+   "name": "PKDUC_PULY_DEN",
+   "item_name": "PULY ĐEN CUỘN CỬA ĐỨC",
+   "item_group": "Phụ kiện CN Đức",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:07.233004"
+  },
+  {
+   "name": "PKDUC_PULY_168",
+   "item_name": "PULY 168",
+   "item_group": "Phụ kiện CN Đức",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:07.172004"
+  },
+  {
+   "name": "PKDUC_PULY_140",
+   "item_name": "PULY 140",
+   "item_group": "Phụ kiện CN Đức",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:07.120004"
+  },
+  {
+   "name": "PKDUC_PULY_114N",
+   "item_name": "PULY 114N",
+   "item_group": "Phụ kiện CN Đức",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:07.058004"
+  },
+  {
+   "name": "PKDUC_PULY_114L",
+   "item_name": "PULY 114L",
+   "item_group": "Phụ kiện CN Đức",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:06.995004"
+  },
+  {
+   "name": "PKDUC_PL114_NHO",
+   "item_name": "PULY 114 NHỎ",
+   "item_group": "Phụ kiện CN Đức",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:06.926004"
+  },
+  {
+   "name": "PKDUC_PL114_LON",
+   "item_name": "PULY 114 LỚN",
+   "item_group": "Phụ kiện CN Đức",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:06.859004"
+  },
+  {
+   "name": "PKDUC_PHOTLONG5X6",
+   "item_name": "LÔNG NHEO LỚN",
+   "item_group": "Phụ kiện CN Đức",
+   "stock_uom": "Mét",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:06.798005"
+  },
+  {
+   "name": "PKDUC_PHOTLONG4X5",
+   "item_name": "LÔNG NHEO NHỎ",
+   "item_group": "Phụ kiện CN Đức",
+   "stock_uom": "Mét",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:06.723005"
+  },
+  {
+   "name": "PKDUC_HTTD",
+   "item_name": "HỆ THỐNG TỰ DỪNG",
+   "item_group": "Phụ kiện CN Đức",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:06.647002"
+  },
+  {
+   "name": "PKDUC_CON_LAN",
+   "item_name": "CON LĂN",
+   "item_group": "Phụ kiện CN Đức",
+   "stock_uom": "Cặp",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:06.531006"
+  },
+  {
+   "name": "PKDUC_COI",
+   "item_name": "CÒI",
+   "item_group": "Phụ kiện CN Đức",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:06.461004"
+  },
+  {
+   "name": "PKDUC_CLNHUA",
+   "item_name": "CON LĂN NHỰA",
+   "item_group": "Phụ kiện CN Đức",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:06.386004"
+  },
+  {
+   "name": "PKDUC_CBD",
+   "item_name": "CÒI BÁO ĐỘNG",
+   "item_group": "Phụ kiện CN Đức",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:06.327004"
+  },
+  {
+   "name": "PKDUC_BO2VIS_752_ST700",
+   "item_name": "BỌ 2VIS 752 ST700",
+   "item_group": "Phụ kiện CN Đức",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:06.268003"
+  },
+  {
+   "name": "PKDUC_BO1VIS_503C",
+   "item_name": "BỌ 1VIS 503C",
+   "item_group": "Phụ kiện CN Đức",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:06.198003"
+  },
+  {
+   "name": "PKDUC_BO_2VIS_652_548C",
+   "item_name": "BỌ 2VIS-652-548C",
+   "item_group": "Phụ kiện CN Đức",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:06.123005"
+  },
+  {
+   "name": "PKDUC_BO_2VIS_501_552",
+   "item_name": "BỌ 2VIS 501N-552",
+   "item_group": "Phụ kiện CN Đức",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:06.049006"
+  },
+  {
+   "name": "PKDUC_BO_1VIS_503N_71_595",
+   "item_name": "BỌ 1VIS 503N-71-595",
+   "item_group": "Phụ kiện CN Đức",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:05.989006"
+  },
+  {
+   "name": "PKDUC_BATSAT",
+   "item_name": "BÁT SẮT",
+   "item_group": "Phụ kiện CN Đức",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:05.929004"
+  },
+  {
+   "name": "PKC_XOP_N95",
+   "item_name": "XỐP LỚN (90cm)",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Tấm",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:05.863004"
+  },
+  {
+   "name": "PKC_XOP_N90",
+   "item_name": "XỐP LỚN",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Tấm",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:05.803004"
+  },
+  {
+   "name": "PKC_XOP_N45",
+   "item_name": "XỐP NHỎ",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Tấm",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:05.736004"
+  },
+  {
+   "name": "PKC_VISDD_BANLO",
+   "item_name": "VIS ĐẦU DÙ BẮN LÔ",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Con",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:05.675006"
+  },
+  {
+   "name": "PKC_VIS_BANLO2P",
+   "item_name": "VIS BẮN LÔ 2P",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Con",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:05.610006"
+  },
+  {
+   "name": "PKC_VDAY_TDU_KTD",
+   "item_name": "THANH ĐÁY ÚC KTD",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:05.525002"
+  },
+  {
+   "name": "PKC_TDKMTDOI_CH",
+   "item_name": "TAY ĐIỀU KHIỂN TAIWAN",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:04.910004"
+  },
+  {
+   "name": "PKC_TDKDT",
+   "item_name": "TAY ĐIỀU KHIỂN ĐIỆN THOẠI",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:04.846004"
+  },
+  {
+   "name": "PKC_BOS",
+   "item_name": "TAY ĐIỀU KHIỂN BOSTECH",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:04.785004"
+  },
+  {
+   "name": "PKC_RONNHUA_INOX",
+   "item_name": "RON NHỰA + INOX",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:04.572005"
+  },
+  {
+   "name": "PKC_RONDAYUC",
+   "item_name": "RON ĐÁY ÚC",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:04.510005"
+  },
+  {
+   "name": "PKC_PULYUC34",
+   "item_name": "PULY ÚC 34",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:04.371004"
+  },
+  {
+   "name": "PKC_PULYUC114_DEN",
+   "item_name": "PULY ÚC 114 ĐEN",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:04.303004"
+  },
+  {
+   "name": "PKC_PULYUC114_CAM",
+   "item_name": "PULY ÚC 114 CAM",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:04.241004"
+  },
+  {
+   "name": "PKC_PULYUC114",
+   "item_name": "PULY ÚC 114",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:04.184004"
+  },
+  {
+   "name": "PKC_PULYGAI",
+   "item_name": "PULY GAI",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:04.130005"
+  },
+  {
+   "name": "PKC_PHOTLONG5X6X400M",
+   "item_name": "LÔNG NHEO 5X6",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Mét",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:04.068004"
+  },
+  {
+   "name": "PKC_PHOTLONG4X5X400M",
+   "item_name": "LÔNG NHEO 4X5",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Mét",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:04.007004"
+  },
+  {
+   "name": "PKC_PE50",
+   "item_name": "Màng PE 50 CM",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cuộn",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:03.951004"
+  },
+  {
+   "name": "PKC_PE3X1.05X100CAT4",
+   "item_name": "MÀNG PE FOAM 3x1.05x100 (CẮT 4)",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cuộn",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:03.882004"
+  },
+  {
+   "name": "PKC_PE3X1.05X100CAT2",
+   "item_name": "MÀNG PE FOAM 3x1.05x100 (CẮT 2)",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cuộn",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:03.826004"
+  },
+  {
+   "name": "PKC_PE2X1.05X150CAT2",
+   "item_name": "MÀNG PE FOAM 2x1.05x150 (CẮT 2)",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cuộn",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:03.757004"
+  },
+  {
+   "name": "PKC_PE2X1.05X150",
+   "item_name": "MÀNG PE FOAM 2x1.05x150 (CẮT 4)",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cuộn",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:03.698004"
+  },
+  {
+   "name": "PKC_PE25",
+   "item_name": "Màng PE 25 CM",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cuộn",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:03.633004"
+  },
+  {
+   "name": "PKC_PAT_BOS",
+   "item_name": "PHÍM ÂM TƯỜNG ÚC BOSTECH",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:03.571005"
+  },
+  {
+   "name": "PKC_OTPHI19",
+   "item_name": "ỐNG THÉP PHI 19",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:03.509002"
+  },
+  {
+   "name": "PKC_OTPHI13.8",
+   "item_name": "ỐNG THÉP PHI 13.8",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:03.447002"
+  },
+  {
+   "name": "PKC_OKHOA",
+   "item_name": "Ổ KHÓA NGANG",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:03.385007"
+  },
+  {
+   "name": "PKC_NHAN",
+   "item_name": "NHẪN",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:03.321004"
+  },
+  {
+   "name": "PKC_NAPCHUP_BACDAN",
+   "item_name": "BẠC ĐẠN + NẮP CHỤP",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:03.230002"
+  },
+  {
+   "name": "PKC_MUI_MAI_HOP_KIM",
+   "item_name": "MŨI MÀI HỘP KIM",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:03.169004"
+  },
+  {
+   "name": "PKC_LX7.0X90X83",
+   "item_name": "LÒ XO 83 V",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:03.107004"
+  },
+  {
+   "name": "PKC_LX7.0X90X73",
+   "item_name": "LÒ XO 73 V",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:03.049004"
+  },
+  {
+   "name": "PKC_LX7.0X90X65",
+   "item_name": "LÒ XO 65 V",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:02.984004"
+  },
+  {
+   "name": "PKC_LX6.5X80X68V",
+   "item_name": "LÒ XO 68 V",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:02.919004"
+  },
+  {
+   "name": "PKC_LX6.5X80X63V",
+   "item_name": "LÒ XO 63 V",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:02.840004"
+  },
+  {
+   "name": "PKC_LX6.5X80X62V",
+   "item_name": "LÒ XO 62 V",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:02.787004"
+  },
+  {
+   "name": "PKC_LX6.0X70X53V",
+   "item_name": "LÒ XO 53 V",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:02.720004"
+  },
+  {
+   "name": "PKC_LX5.5X70X50V",
+   "item_name": "LÒ XO 50 V",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:02.659006"
+  },
+  {
+   "name": "PKC_LX5.5X70X46V",
+   "item_name": "LÒ XO 46 V",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:02.584004"
+  },
+  {
+   "name": "PKC_LX_5.5_X_70_X_50V",
+   "item_name": "HH LÒ XO 50V",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:02.488003"
+  },
+  {
+   "name": "PKC_LX_5.5_X_70_X_46V",
+   "item_name": "HH LÒ XO 46V",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:02.416003"
+  },
+  {
+   "name": "PKC_LV_7.0_X_90_X_83V",
+   "item_name": "HH LÒ XO 83V",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:02.330003"
+  },
+  {
+   "name": "PKC_LV_7.0_X_90_X_73V",
+   "item_name": "HH LÒ XO 73V",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:02.255003"
+  },
+  {
+   "name": "PKC_LV_7.0_X_90_X_65V",
+   "item_name": "HH LÒ XO 65V",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:02.197003"
+  },
+  {
+   "name": "PKC_LV_6.5_X_80_X_68V",
+   "item_name": "HH LÒ XO 68V",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:02.133003"
+  },
+  {
+   "name": "PKC_LV_6.5_X_80_X_63V",
+   "item_name": "HH LÒ XO 63V",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:02.069003"
+  },
+  {
+   "name": "PKC_LV_6.0_X_70_X_53V",
+   "item_name": "HH LÒ XO 53V",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:02.008003"
+  },
+  {
+   "name": "PKC_LUOISNPHI19_INOX",
+   "item_name": "LƯỚI SN TRÒN PHI 19 INOX",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:01.944004"
+  },
+  {
+   "name": "PKC_LUOISN13X26_INOX",
+   "item_name": "LƯỚI SN VUÔNG PHI 13X26 INOX",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:01.885004"
+  },
+  {
+   "name": "PKC_LUOIMV_INOX",
+   "item_name": "LƯỚI MV INOX",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:01.834004"
+  },
+  {
+   "name": "PKC_LACPHU40_L168",
+   "item_name": "LẮC PHỤ 40 LỖ 168",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:01.767004"
+  },
+  {
+   "name": "PKC_LACPHU40",
+   "item_name": "LẮC PHỤ 40",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:01.712004"
+  },
+  {
+   "name": "PKC_LACPHU36",
+   "item_name": "LẮC PHỤ 36",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:01.652004"
+  },
+  {
+   "name": "PKC_LACPHU33_3L",
+   "item_name": "LẮC PHỤ 33 (3 LỖ)",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:01.586004"
+  },
+  {
+   "name": "PKC_LACPHU33",
+   "item_name": "LẮC PHỤ 33",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:01.529004"
+  },
+  {
+   "name": "PKC_KN",
+   "item_name": "KHÓA NGANG",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:01.465002"
+  },
+  {
+   "name": "PKC_INOX",
+   "item_name": "INOX KÉO TAY 6mét",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:01.402003"
+  },
+  {
+   "name": "PKC_HOPKEM_1.2LY",
+   "item_name": "HỘP KẼM VUÔNG 30X30X1.2LY",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:01.345004"
+  },
+  {
+   "name": "PKC_HDKMTDON_CH",
+   "item_name": "HỘP ĐIỀU KHIỂN TAIWAN",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:01.278002"
+  },
+  {
+   "name": "PKC_HDKMT_BOS",
+   "item_name": "HỘP ĐIỀU KHIỂN BOSTECH",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:01.205002"
+  },
+  {
+   "name": "PKC_HDKDT",
+   "item_name": "BỘ ĐIỀU KHIỂN ĐIỆN THOẠI",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:01.132002"
+  },
+  {
+   "name": "PKC_MULLER",
+   "item_name": "HỘP ĐIỀU KHIỂN MULLER",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:01.064002"
+  },
+  {
+   "name": "PKC_GOIGANG",
+   "item_name": "GỐI GANG",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:00.998010"
+  },
+  {
+   "name": "PKC_GOIFE",
+   "item_name": "GỐI SẮT",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:00.935002"
+  },
+  {
+   "name": "PKC_GIAT",
+   "item_name": "GIÁ T",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cặp",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:00.873002"
+  },
+  {
+   "name": "PKC_DINHTAN_SN",
+   "item_name": "ĐINH TÁN SONG NGANG",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:00.816004"
+  },
+  {
+   "name": "PKC_DINHTAN_MV",
+   "item_name": "ĐINH TÁN MẮT VÕNG",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:00.749004"
+  },
+  {
+   "name": "PKC_CONTAN_MV",
+   "item_name": "CON TÁN",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:00.685003"
+  },
+  {
+   "name": "PKC_CHONGXOLO",
+   "item_name": "CHỐNG XỔ LÔ",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:00.625002"
+  },
+  {
+   "name": "PKC_CHNHUA",
+   "item_name": "VÒNG NHỰA HÃM TRỤC",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:00.569006"
+  },
+  {
+   "name": "PKC_BUOMFE_ST",
+   "item_name": "BƯỚM SẮT SIÊU TRƯỜNG",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:00.487003"
+  },
+  {
+   "name": "PKC_BUOMFE_DL",
+   "item_name": "BƯỚM SẮT ĐÀI LOAN",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:00.421003"
+  },
+  {
+   "name": "PKC_BOMV",
+   "item_name": "BỌ MẮT VÕNG",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:00.363005"
+  },
+  {
+   "name": "PKC_BOLSN",
+   "item_name": "BỌ LUỚI SONG NGANG MÓNG NGỰA SONG NGANG",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:00.299003"
+  },
+  {
+   "name": "PKC_BKAN",
+   "item_name": "BÁT KHÓA ÂM NỀN",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:00.238011"
+  },
+  {
+   "name": "PKC_BANGKT_5P",
+   "item_name": "BĂNG KEO TRONG",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:44:00.180003"
+  },
+  {
+   "name": "PKC_3X6M",
+   "item_name": "SẮT VUÔNG 3X6M",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Mét",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:59.985002"
+  },
+  {
+   "name": "PKS_LUOISNPHI19",
+   "item_name": "LƯỚI SN TRÒN PHI 19",
+   "item_group": "Phụ kiện cần sơn tĩnh điện",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:59.865004"
+  },
+  {
+   "name": "PKS_LUOISN13X26",
+   "item_name": "LƯỚI SN VUÔNG PHI 13X26",
+   "item_group": "Phụ kiện cần sơn tĩnh điện",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:59.802004"
+  },
+  {
+   "name": "PKS_LUOIMV",
+   "item_name": "LƯỚI MV",
+   "item_group": "Phụ kiện cần sơn tĩnh điện",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:59.740003"
+  },
+  {
+   "name": "PKS_CROMATE_3",
+   "item_name": "CROMATE 3+",
+   "item_group": "Phụ kiện cần sơn tĩnh điện",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:59.661006"
+  },
+  {
+   "name": "MT_TANKER_NHONG",
+   "item_name": "NHÔNG MOTOR TANKER",
+   "item_group": "Motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:59.598002"
+  },
+  {
+   "name": "MT_YHTAIWAN_CH_800KG",
+   "item_name": "MOTOR YHTAIWAN CH 800KG",
+   "item_group": "Motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:59.536002"
+  },
+  {
+   "name": "MT_YHTAIWAN_CH_700KG",
+   "item_name": "MOTOR YHTAIWAN CH 700KG",
+   "item_group": "Motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:59.472002"
+  },
+  {
+   "name": "MT_YHTAIWAN_CH_600KG",
+   "item_name": "MOTOR YHTAIWAN CH 600KG",
+   "item_group": "Motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:59.414002"
+  },
+  {
+   "name": "MT_YHTAIWAN_CH_500KG",
+   "item_name": "MOTOR YHTAIWAN CH 500KG",
+   "item_group": "Motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:59.351002"
+  },
+  {
+   "name": "MT_YHTAIWAN_CH_400KG",
+   "item_name": "MOTOR YHTAIWAN CH 400KG",
+   "item_group": "Motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:59.286002"
+  },
+  {
+   "name": "MT_YHTAIWAN_CH_300KG",
+   "item_name": "MOTOR YHTAIWAN CH 300KG",
+   "item_group": "Motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:59.228002"
+  },
+  {
+   "name": "MT_YHTAIWAN_CH_1000KG",
+   "item_name": "MOTOR YHTAIWAN CH 1000KG",
+   "item_group": "Motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:59.162002"
+  },
+  {
+   "name": "MT_YHLD800KG",
+   "item_name": "MOTOR YHLD 800KG",
+   "item_group": "Motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:59.106002"
+  },
+  {
+   "name": "MT_YHLD500KG",
+   "item_name": "MOTOR YHLD 500KG",
+   "item_group": "Motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:59.012002"
+  },
+  {
+   "name": "MT_YHLD300KG",
+   "item_name": "MOTOR YHLD 300KG",
+   "item_group": "Motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:58.944002"
+  },
+  {
+   "name": "MT_YHLD1000KG",
+   "item_name": "MOTOR YHLD 1000KG",
+   "item_group": "Motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:58.874002"
+  },
+  {
+   "name": "MT_TANKER600KG",
+   "item_name": "MOTOR TANKER 600KG",
+   "item_group": "Motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:58.803002"
+  },
+  {
+   "name": "MT_TANKER400KG",
+   "item_name": "MOTOR TANKER 400KG",
+   "item_group": "Motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:58.727002"
+  },
+  {
+   "name": "MT_TANKER1000KG",
+   "item_name": "MOTOR TANKER 1000KG",
+   "item_group": "Motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:58.665002"
+  },
+  {
+   "name": "MT_TANKE800KG",
+   "item_name": "MOTOR TANKER 800KG",
+   "item_group": "Motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:58.606002"
+  },
+  {
+   "name": "MT_JG800KG",
+   "item_name": "MOTOR JG 800KG",
+   "item_group": "Motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:58.545002"
+  },
+  {
+   "name": "MT_JG600KG",
+   "item_name": "MOTOR JG 600KG",
+   "item_group": "Motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:58.483002"
+  },
+  {
+   "name": "MT_JG500KG",
+   "item_name": "MOTOR JG 500KG",
+   "item_group": "Motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:58.418002"
+  },
+  {
+   "name": "MT_JG400KG",
+   "item_name": "MOTOR JG 400KG",
+   "item_group": "Motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:58.357002"
+  },
+  {
+   "name": "MT_JG300KG",
+   "item_name": "MOTOR JG 300KG",
+   "item_group": "Motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:58.310002"
+  },
+  {
+   "name": "MT_JG1500KG",
+   "item_name": "MOTOR JG 1500KG",
+   "item_group": "Motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:58.251002"
+  },
+  {
+   "name": "MT_JG1000KG",
+   "item_name": "MOTOR JG 1000KG",
+   "item_group": "Motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:58.187002"
+  },
+  {
+   "name": "MT_ALUMAX600KG",
+   "item_name": "MOTOR ALUMAX 600KG",
+   "item_group": "Motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:58.111002"
+  },
+  {
+   "name": "MT_ALUMAX400KG",
+   "item_name": "MOTOR ALUMAX 400KG",
+   "item_group": "Motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:58.047002"
+  },
+  {
+   "name": "LKMT_YHTAIWAN_THAN800KG",
+   "item_name": "YHTAIWAN Thân 800KG",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:57.986002"
+  },
+  {
+   "name": "LKMT_YHTAIWAN_THAN700KG",
+   "item_name": "YHTAIWAN Thân 700KG",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:57.923002"
+  },
+  {
+   "name": "LKMT_YHTAIWAN_THAN600KG",
+   "item_name": "YHTAIWAN Thân 600KG",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:57.855002"
+  },
+  {
+   "name": "LKMT_YHTAIWAN_THAN500KG",
+   "item_name": "YHTAIWAN Thân 500KG",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:57.781002"
+  },
+  {
+   "name": "LKMT_YHTAIWAN_THAN400KG",
+   "item_name": "YHTAIWAN Thân 400KG",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:57.717002"
+  },
+  {
+   "name": "LKMT_YHTAIWAN_THAN300KG",
+   "item_name": "YHTAIWAN Thân 300KG",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:57.657002"
+  },
+  {
+   "name": "LKMT_YHTAIWAN_THAN1000KG",
+   "item_name": "YHTAIWAN Thân 1000KG",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:57.602002"
+  },
+  {
+   "name": "LKMT_YHTAIWAN_PATCD",
+   "item_name": "YHTAIWAN PHÍM ÂM TƯỜNG CÓ DÂY",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:57.549002"
+  },
+  {
+   "name": "LKMT_YHTAIWAN_LAYHTW600_700_800KG",
+   "item_name": "YHTAIWAN LẮC 600-700-800KG",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:57.486002"
+  },
+  {
+   "name": "LKMT_YHTAIWAN_LAYHTW300_400_500KG",
+   "item_name": "YHTAIWAN LẮC 300-400-500KG",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:57.426002"
+  },
+  {
+   "name": "LKMT_YHTAIWAN_LAYHTW1000_1200KG",
+   "item_name": "YHTAIWAN LẮC 1000-1200KG",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:57.363002"
+  },
+  {
+   "name": "LKMT_YHTAIWAN",
+   "item_name": "YHTAIWAN HopDK",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:57.300002"
+  },
+  {
+   "name": "LKMT_YHLD_PATCD",
+   "item_name": "YHLD PHÍM ÂM TƯỜNG CÓ DÂY",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:57.235003"
+  },
+  {
+   "name": "LKMT_UPS_ALE800",
+   "item_name": "ALUMAX UPS E-800KG",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:57.178002"
+  },
+  {
+   "name": "LKMT_UPS_ALE1000",
+   "item_name": "ALUMAX UPS E-1000KG",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:57.115002"
+  },
+  {
+   "name": "LKMT_TMTDON_CH",
+   "item_name": "THÂN MOTOR CH TAIWAN",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:57.050002"
+  },
+  {
+   "name": "LKMT_TMTDON_BOS_TRAI",
+   "item_name": "THÂN MOTOR BOSTECH ĐƠN TRÁI",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:56.978002"
+  },
+  {
+   "name": "LKMT_TMTDON_BOS_PHAI",
+   "item_name": "THÂN MOTOR BOSTECH ĐƠN PHẢI",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:56.914002"
+  },
+  {
+   "name": "LKMT_TMTDOI_BOS_TRAI",
+   "item_name": "THÂN MOTOR BOSTECH ĐÔI TRÁI",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:56.853002"
+  },
+  {
+   "name": "LKMT_TMTDOI_BOS_PHAI",
+   "item_name": "THÂN MOTOR BOSTECH ĐÔI PHẢI",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:56.791002"
+  },
+  {
+   "name": "LKMT_TMT_YHLD800",
+   "item_name": "THÂN MOTOR YH LD 800KG LOẠI 1 (DÂY ĐỒNG)",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:56.728002"
+  },
+  {
+   "name": "LKMT_TMT_YHLD500",
+   "item_name": "THÂN MOTOR YH LD 500KG LOẠI 1 (DÂY ĐỒNG)",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:56.664002"
+  },
+  {
+   "name": "LKMT_TMT_YHLD300",
+   "item_name": "THÂN MOTOR YH LD 300KG LOẠI 1 (DÂY ĐỒNG)",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:56.603002"
+  },
+  {
+   "name": "LKMT_TMT_YHLD1200",
+   "item_name": "THÂN MOTOR YH LD 1200KG LOẠI 1 (DÂY ĐỒNG)",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:56.542002"
+  },
+  {
+   "name": "LKMT_TMT_YHLD1000",
+   "item_name": "THÂN MOTOR YH LD 1000KG LOẠI 1 (DÂY ĐỒNG)",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:56.482002"
+  },
+  {
+   "name": "LKMT_TMT_TK800",
+   "item_name": "THÂN MOTOR TANKER 800 KG",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:56.420002"
+  },
+  {
+   "name": "LKMT_TMT_TK600",
+   "item_name": "THÂN MOTOR TANKER 600 KG",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:56.358002"
+  },
+  {
+   "name": "LKMT_TMT_TK400",
+   "item_name": "THÂN MOTOR TANKER 400 KG",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:56.292002"
+  },
+  {
+   "name": "LKMT_TMT_TK1000",
+   "item_name": "THÂN MOTOR TANKER 1000 KG",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:56.232002"
+  },
+  {
+   "name": "LKMT_TMT_JG800",
+   "item_name": "THÂN MOTOR JG 800KG (CHÍNH HÃNG)",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:56.168002"
+  },
+  {
+   "name": "LKMT_TMT_JG600",
+   "item_name": "THÂN MOTOR JG 600KG (CHÍNH HÃNG)",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:56.105002"
+  },
+  {
+   "name": "LKMT_TMT_JG500",
+   "item_name": "THÂN MOTOR JG 500KG (CHÍNH HÃNG)",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:56.046002"
+  },
+  {
+   "name": "LKMT_TMT_JG400",
+   "item_name": "THÂN MOTOR JG 400KG (CHÍNH HÃNG)",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:55.982002"
+  },
+  {
+   "name": "LKMT_TMT_JG300",
+   "item_name": "THÂN MOTOR JG 300KG (CHÍNH HÃNG)",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:55.923002"
+  },
+  {
+   "name": "LKMT_TMT_JG1500",
+   "item_name": "THÂN MOTOR JG 1500KG (CHÍNH HÃNG)",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:55.858002"
+  },
+  {
+   "name": "LKMT_TMT_JG1000",
+   "item_name": "THÂN MOTOR JG 1000KG (CHÍNH HÃNG)",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:55.782002"
+  },
+  {
+   "name": "LKMT_TMT_AL600",
+   "item_name": "THÂN MOTOR ALUMAX 600 KG",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:55.715002"
+  },
+  {
+   "name": "LKMT_TMT_AL400",
+   "item_name": "THÂN MOTOR ALUMAX 400 KG",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:55.657002"
+  },
+  {
+   "name": "LKMT_TDKMT_YH",
+   "item_name": "TAY ĐIỀU KHIỂN YH",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:55.600002"
+  },
+  {
+   "name": "LKMT_TDKMT_TANKER",
+   "item_name": "TAY ĐIỀU KHIỂN MOTOR TANKER",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:55.504002"
+  },
+  {
+   "name": "LKMT_TDKMT_JG",
+   "item_name": "TAY ĐIỀU KHIỂN MOTOR JG",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:55.438002"
+  },
+  {
+   "name": "LKMT_TDKMT_AL",
+   "item_name": "TAY ĐIỀU KHIỂN MOTOR ALUMAX",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:55.378002"
+  },
+  {
+   "name": "LKMT_TANKER_PATCD",
+   "item_name": "TANKER PHÍM ÂM TƯỜNG CÓ DÂY",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:55.305002"
+  },
+  {
+   "name": "LKMT_TANKER_LAC800_1000KG",
+   "item_name": "LẮC TANKER 800-1000KG",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:55.225002"
+  },
+  {
+   "name": "LKMT_TANKER_ALUMAX_LAC36",
+   "item_name": "LẮC TANKER ALUMAX 36",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:55.162002"
+  },
+  {
+   "name": "LKMT_TANKER_ALUMAX_LAC33",
+   "item_name": "LẮC TANKER ALUMAX 33",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:55.103002"
+  },
+  {
+   "name": "LKMT_TANKER_ALUMAX",
+   "item_name": "HỘP ĐK TANKER ALUMAX",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:55.041002"
+  },
+  {
+   "name": "LKMT_PAT_KHONGDAY",
+   "item_name": "PHÍM ÂM TƯỜNG KHÔNG DÂY",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:54.966003"
+  },
+  {
+   "name": "LKMT_PAT_CODAY",
+   "item_name": "PHÍM ÂM TƯỜNG CÓ DÂY",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:54.903002"
+  },
+  {
+   "name": "LKMT_PAT_CH",
+   "item_name": "PHÍM ÂM TƯỜNG CH ÚC (Motor trong)",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:54.843003"
+  },
+  {
+   "name": "LKMT_NAPNHIN",
+   "item_name": "NẮP NHÌN",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:54.781002"
+  },
+  {
+   "name": "LKMT_NAPCHUP",
+   "item_name": "NẮP CHỤP MOTOR",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:54.715002"
+  },
+  {
+   "name": "LKMT_CHTAIWAN_PAT",
+   "item_name": "CHTAIWAN-PHÍM ÂM TƯỜNG",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:54.645003"
+  },
+  {
+   "name": "LKMT_CHTAIWAN_DON_T",
+   "item_name": "MTT CHTAIWAN ĐƠN TRÁI",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:54.582002"
+  },
+  {
+   "name": "LKMT_CHTAIWAN_DON_P",
+   "item_name": "MTT CHTAIWAN ĐƠN PHẢI",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:54.520002"
+  },
+  {
+   "name": "LKMT_CHTAIWAN_DOI_T",
+   "item_name": "MTT CHTAIWAN ĐÔI TRÁI",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:54.446002"
+  },
+  {
+   "name": "LKMT_CHTAIWAN_DOI_P",
+   "item_name": "MTT CHTAIWAN ĐÔI PHẢI",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:54.380002"
+  },
+  {
+   "name": "LKMT_BOSTEC_PAT",
+   "item_name": "BOSTEC PHÍM ÂM TƯỜNG",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:54.307003"
+  },
+  {
+   "name": "LKMT_BOSTEC_DON_T",
+   "item_name": "MTT BOSTEC ĐƠN TRÁI",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:54.238002"
+  },
+  {
+   "name": "LKMT_BOSTEC_DON_P",
+   "item_name": "MTT BOSTEC ĐƠN PHẢI",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:54.177002"
+  },
+  {
+   "name": "LKMT_BOSTEC_DOI_T",
+   "item_name": "MTT BOSTEC ĐÔI TRÁI",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:54.115002"
+  },
+  {
+   "name": "LKMT_BOSTEC_DOI_P",
+   "item_name": "MTT BOSTEC ĐÔI PHẢI",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:54.053002"
+  },
+  {
+   "name": "LKMT_LONGDEN",
+   "item_name": "LÔNG ĐỀN",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:53.988002"
+  },
+  {
+   "name": "LKMT_LMT36_TK400_600",
+   "item_name": "LẮC 36 MOTOR TANKER 400 KG 600 KG",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:53.926002"
+  },
+  {
+   "name": "LKMT_LMT33_TK400_600",
+   "item_name": "LẮC 32-33 MOTOR TANKER 400 KG 600 KG",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:53.866002"
+  },
+  {
+   "name": "LKMT_LMT_YHLD800",
+   "item_name": "LẮC MOTOR YH LD 800KG LOẠI 1 (DÂY ĐỒNG)",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:53.804002"
+  },
+  {
+   "name": "LKMT_LMT_YHLD300_500",
+   "item_name": "LẮC MOTOR YH LD 300/500KG LOẠI 1 (DÂY ĐỒNG)",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:53.740002"
+  },
+  {
+   "name": "LKMT_LMT_YHLD1200",
+   "item_name": "LẮC MOTOR YH LD 1200KG LOẠI 1 (DÂY ĐỒNG)",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:53.675002"
+  },
+  {
+   "name": "LKMT_LMT_YHLD1000",
+   "item_name": "LẮC MOTOR YH LD 1000KG LOẠI 1 (DÂY ĐỒNG)",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:53.614002"
+  },
+  {
+   "name": "LKMT_LMT_TK800_1000",
+   "item_name": "LẮC MOTOR TANKER 800 KG -1000 KG",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:53.555002"
+  },
+  {
+   "name": "LKMT_LMT_JG800_1000",
+   "item_name": "LẮC MOTOR JG 800KG-1000KG (CHÍNH HÃNG)",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:53.492002"
+  },
+  {
+   "name": "LKMT_LMT_JG600",
+   "item_name": "LẮC MOTOR JG 600KG (CHÍNH HÃNG)",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:53.433002"
+  },
+  {
+   "name": "LKMT_LMT_JG500",
+   "item_name": "LẮC MOTOR JG 500KG (CHÍNH HÃNG)",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:53.366002"
+  },
+  {
+   "name": "LKMT_LMT_JG300_600",
+   "item_name": "LẮC MOTOR JG 300KG-600KG (CHÍNH HÃNG)",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:53.290002"
+  },
+  {
+   "name": "LKMT_LMT_JG1500",
+   "item_name": "LẮC MOTOR JG 1500KG (CHÍNH HÃNG)",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:53.230002"
+  },
+  {
+   "name": "LKMT_LMT_JG1000",
+   "item_name": "LẮC MOTOR JG 1000KG (CHÍNH HÃNG)",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:53.164002"
+  },
+  {
+   "name": "LKMT_LMT_AL600",
+   "item_name": "LẮC MOTOR ALUMAX 600 KG",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:53.105002"
+  },
+  {
+   "name": "LKMT_LMT_AL400",
+   "item_name": "LẮC MOTOR ALUMAX 400 KG",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:53.043002"
+  },
+  {
+   "name": "LKMT_LACYHLD800_1000KG",
+   "item_name": "LẮC YH 800 1000KG",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:52.984002"
+  },
+  {
+   "name": "LKMT_LACYHLD300_500KG",
+   "item_name": "LẮC YH 300 500KG",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:52.921002"
+  },
+  {
+   "name": "LKMT_LACPHU36_3LO",
+   "item_name": "LẮC PHỤ 36-3 LỔ (ĐÀI LOAN)",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:52.854002"
+  },
+  {
+   "name": "LKMT_LACPHU36_1LO",
+   "item_name": "LẮC PHỤ 36-1 LỔ",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:52.784002"
+  },
+  {
+   "name": "LKMT_LACPHU33_3LO",
+   "item_name": "LẮC PHỤ 33-3 LỔ (ĐÀI LOAN)",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:52.707002"
+  },
+  {
+   "name": "LKMT_LACPHU33_1LO",
+   "item_name": "LẮC PHỤ 33-1 LỔ",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:52.642002"
+  },
+  {
+   "name": "LKMT_LACJG33",
+   "item_name": "JG LacJG33",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:52.578002"
+  },
+  {
+   "name": "LKMT_LACJG1000_1500KG",
+   "item_name": "JG LacJG1000-1500KG",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:52.515002"
+  },
+  {
+   "name": "LKMT_JG_PATCD",
+   "item_name": "JG PHÍM ÂM TƯỜNG CÓ DÂY",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:52.455003"
+  },
+  {
+   "name": "LKMT_JG_BDN",
+   "item_name": "JG BẠC ĐẠN",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:52.391002"
+  },
+  {
+   "name": "LKMT_HOAKHE",
+   "item_name": "HOA KHẾ (3 CHẤU)",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:52.326002"
+  },
+  {
+   "name": "LKMT_HDKMT_YH",
+   "item_name": "HỘP ĐIỀU KHIỂN YH",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:52.249002"
+  },
+  {
+   "name": "LKMT_HDKMT_TANKER",
+   "item_name": "HỘP ĐIỀU KHIỂN MOTOR TANKER",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:52.187002"
+  },
+  {
+   "name": "LKMT_HDKMT_JG",
+   "item_name": "HỘP ĐIỀU KHIỂN MOTOR JG",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:52.137002"
+  },
+  {
+   "name": "LKMT_HDKMT_AL",
+   "item_name": "HỘP ĐIỀU KHIỂN MOTOR ALUMAX",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:52.084002"
+  },
+  {
+   "name": "LKMT_DAYDIEN_PATCD",
+   "item_name": "DÂY ĐIỆN PHÍM ÂM TƯỜNG",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Mét",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:52.035002"
+  },
+  {
+   "name": "LKMT_COT",
+   "item_name": "CỐT",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:51.971003"
+  },
+  {
+   "name": "LKMT_BACDAN",
+   "item_name": "BẠC ĐẠN MOTOR",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:51.904003"
+  },
+  {
+   "name": "LKMT_ALUMAX_PATCD",
+   "item_name": "ALUMAX PHÍM ÂM TƯỜNG CÓ DÂY",
+   "item_group": "Linh kiện motor",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:51.848002"
+  },
+  {
+   "name": "PKD_TAY_YHTAIWAN",
+   "item_name": "YHTAIWAN TAY ĐIỀU KHIỂN",
+   "item_group": "Điều khiển & phụ kiện điện",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:51.784002"
+  },
+  {
+   "name": "DK_YHTAIWAN",
+   "item_name": "YHTAIWAN BỘ ĐIỀU KHIỂN",
+   "item_group": "Điều khiển & phụ kiện điện",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:51.724002"
+  },
+  {
+   "name": "PKD_TAY_YHLD",
+   "item_name": "YHLD TAY ĐIỀU KHIỂN",
+   "item_group": "Điều khiển & phụ kiện điện",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:51.629002"
+  },
+  {
+   "name": "PKD_HOP_YHLD",
+   "item_name": "HỘP ĐIỀU KHIỂN YHLD",
+   "item_group": "Điều khiển & phụ kiện điện",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:51.565002"
+  },
+  {
+   "name": "DK_YHLD",
+   "item_name": "BỘ ĐIỀU KHIỂN YHLD",
+   "item_group": "Điều khiển & phụ kiện điện",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:51.473002"
+  },
+  {
+   "name": "PKD_TAY_MULLER",
+   "item_name": "TAY ĐIỀU KHIỂN ĐIỆN THOẠI MULLER",
+   "item_group": "Điều khiển & phụ kiện điện",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:51.410002"
+  },
+  {
+   "name": "PKD_TAY_TANKER_ALUMAX",
+   "item_name": "TAY ĐIỀU KHIỂN TANKER",
+   "item_group": "Điều khiển & phụ kiện điện",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:51.319002"
+  },
+  {
+   "name": "DK_TANKER_ALUMAX_BODK",
+   "item_name": "BỘ ĐK TANKER ALUMAX",
+   "item_group": "Điều khiển & phụ kiện điện",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:51.214002"
+  },
+  {
+   "name": "PKD_TAY_CHTAIWAN",
+   "item_name": "CHTAIWAN-TAY ĐIỀU KHIỂN",
+   "item_group": "Điều khiển & phụ kiện điện",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:51.152002"
+  },
+  {
+   "name": "PKD_TAY_BOSTEC",
+   "item_name": "BOSTEC TAY ĐIỀU KHIỂN",
+   "item_group": "Điều khiển & phụ kiện điện",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:51.070002"
+  },
+  {
+   "name": "PKD_TAY_JG",
+   "item_name": "JG TAY ĐIỀU KHIỂN",
+   "item_group": "Điều khiển & phụ kiện điện",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:50.974002"
+  },
+  {
+   "name": "DK_JG",
+   "item_name": "JG BỘ ĐIỀU KHIỂN",
+   "item_group": "Điều khiển & phụ kiện điện",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:50.881002"
+  },
+  {
+   "name": "DK_CHTAIWAN",
+   "item_name": "CHTAIWAN BỘ ĐIỀU KHIỂN",
+   "item_group": "Điều khiển & phụ kiện điện",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:50.814002"
+  },
+  {
+   "name": "DK_BOSTEC",
+   "item_name": "BOSTEC BỘ ĐIỀU KHIỂN",
+   "item_group": "Điều khiển & phụ kiện điện",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:50.746004"
+  },
+  {
+   "name": "DK_MULLER",
+   "item_name": "BỘ ĐIỀU KHIỂN ĐIỆN THOẠI MULLER",
+   "item_group": "Điều khiển & phụ kiện điện",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:50.659002"
+  },
+  {
+   "name": "DK_BDK_TANKER_ALUMAX",
+   "item_name": "BỘ ĐIỀU KHIỂN TANKER ALUMAX",
+   "item_group": "Điều khiển & phụ kiện điện",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:50.602002"
+  },
+  {
+   "name": "BLD_UPS_YH2000",
+   "item_name": "Bình lưu điện YH2000",
+   "item_group": "Bình lưu điện",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:50.537003"
+  },
+  {
+   "name": "BLD_UPS_YH1000",
+   "item_name": "Bình lưu điện YH1000",
+   "item_group": "Bình lưu điện",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:50.476002"
+  },
+  {
+   "name": "BLD_UPS_E800I",
+   "item_name": "Bình lưu điện Alumax E800i",
+   "item_group": "Bình lưu điện",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:50.406003"
+  },
+  {
+   "name": "BLD_UPS_E1000I",
+   "item_name": "Bình lưu điện Alumax E1000i",
+   "item_group": "Bình lưu điện",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:50.347003"
+  },
+  {
+   "name": "PKC_BACDAN",
+   "item_name": "BẠC ĐẠN",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:50.274004"
+  },
+  {
+   "name": "PKC_CONTAN12",
+   "item_name": "CON TÁN 12",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:50.204007"
+  },
+  {
+   "name": "PKC_BULON12.12",
+   "item_name": "BÙ LON 12x12",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Kg",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:50.135004"
+  },
+  {
+   "name": "PKC_CNHUA",
+   "item_name": "CỤC NHỰA",
+   "item_group": "Phụ kiện chung",
+   "stock_uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 16:43:50.071004"
+  }
+ ],
+ "gia": [
+  {
+   "name": "Alumdoor 2026:PKDUC_CON_LAN:Cặp:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKDUC_CON_LAN",
+   "price_variant": "STANDARD",
+   "rate": "100000",
+   "uom": "Cặp",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:25.895001"
+  },
+  {
+   "name": "Alumdoor 2026:PKDUC_PULY_114L:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKDUC_PULY_114L",
+   "price_variant": "STANDARD",
+   "rate": "30000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:25.726001"
+  },
+  {
+   "name": "Alumdoor 2026:PKDUC_PULY_114N:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKDUC_PULY_114N",
+   "price_variant": "STANDARD",
+   "rate": "22000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:25.565001"
+  },
+  {
+   "name": "Alumdoor 2026:PKDUC_PULY_140:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKDUC_PULY_140",
+   "price_variant": "STANDARD",
+   "rate": "33000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:25.424001"
+  },
+  {
+   "name": "Alumdoor 2026:PKDUC_PULY_168:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKDUC_PULY_168",
+   "price_variant": "STANDARD",
+   "rate": "43000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:25.279001"
+  },
+  {
+   "name": "Alumdoor 2026:PKDUC_COI:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKDUC_COI",
+   "price_variant": "STANDARD",
+   "rate": "70000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:25.110001"
+  },
+  {
+   "name": "Alumdoor 2026:PKDUC_HTTD:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKDUC_HTTD",
+   "price_variant": "STANDARD",
+   "rate": "80000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:24.949001"
+  },
+  {
+   "name": "Alumdoor 2026:RT_RAYHOP:Mét:STANDARD:MOI-DIEN-TICH",
+   "item_code": "RT_RAYHOP",
+   "price_variant": "STANDARD",
+   "rate": "190000",
+   "uom": "Mét",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:24.791001"
+  },
+  {
+   "name": "Alumdoor 2026:RT_TD87A1:Mét:STANDARD:MOI-DIEN-TICH",
+   "item_code": "RT_TD87A1",
+   "price_variant": "STANDARD",
+   "rate": "145000",
+   "uom": "Mét",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:24.619001"
+  },
+  {
+   "name": "Alumdoor 2026:RT_RAY_HOP_TD_U100:Mét:STANDARD:MOI-DIEN-TICH",
+   "item_code": "RT_RAY_HOP_TD_U100",
+   "price_variant": "STANDARD",
+   "rate": "250000",
+   "uom": "Mét",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:24.459001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL595:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CDUC_TD_AL595",
+   "price_variant": "STANDARD",
+   "rate": "1095000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:24.296001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_A282:Mét:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LA_A282",
+   "price_variant": "STANDARD",
+   "rate": "170000",
+   "uom": "Mét",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:24.140001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_TD327:Mét:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LA_TD327",
+   "price_variant": "STANDARD",
+   "rate": "46000",
+   "uom": "Mét",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:23.984001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_TD326:Mét:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LA_TD326",
+   "price_variant": "STANDARD",
+   "rate": "80000",
+   "uom": "Mét",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:23.830001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_TD325:Mét:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LA_TD325",
+   "price_variant": "STANDARD",
+   "rate": "130000",
+   "uom": "Mét",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:23.680001"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_PHOTLONG4X5X400M:Mét:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKC_PHOTLONG4X5X400M",
+   "price_variant": "STANDARD",
+   "rate": "2000",
+   "uom": "Mét",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:23.511001"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_PHOTLONG5X6X400M:Mét:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKC_PHOTLONG5X6X400M",
+   "price_variant": "STANDARD",
+   "rate": "2000",
+   "uom": "Mét",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:23.375001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL70:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CDUC_TD_AL70",
+   "price_variant": "STANDARD",
+   "rate": "909000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:23.209001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_AL70_1LOP:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CDUC_AL70_1LOP",
+   "price_variant": "STANDARD",
+   "rate": "1242000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:22.992001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL71N:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CDUC_TD_AL71N",
+   "price_variant": "STANDARD",
+   "rate": "1178000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:22.825001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL503N26:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CDUC_TD_AL503N26",
+   "price_variant": "STANDARD",
+   "rate": "1295000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:22.649001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_ALD_548N:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CDUC_ALD_548N",
+   "price_variant": "STANDARD",
+   "rate": "1390000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:22.470001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL501N:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CDUC_TD_AL501N",
+   "price_variant": "STANDARD",
+   "rate": "1471000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:22.285001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_ALD_DL552:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CDUC_ALD_DL552",
+   "price_variant": "STANDARD",
+   "rate": "1666000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:22.115001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL752N:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CDUC_TD_AL752N",
+   "price_variant": "STANDARD",
+   "rate": "1686000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:21.950001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL652N:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CDUC_TD_AL652N",
+   "price_variant": "STANDARD",
+   "rate": "1548000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:21.732001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL50:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CDUC_TD_AL50",
+   "price_variant": "STANDARD",
+   "rate": "1815000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:21.549001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_ALVIP50:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CDUC_ALVIP50",
+   "price_variant": "STANDARD",
+   "rate": "1912000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:21.386001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_ALVIPST500:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CDUC_ALVIPST500",
+   "price_variant": "STANDARD",
+   "rate": "2268000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:21.231001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_ALVIPST700:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CDUC_ALVIPST700",
+   "price_variant": "STANDARD",
+   "rate": "2392000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:21.082001"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_BO_2VIS_752_VIPST700:Con:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKC_BO_2VIS_752_VIPST700",
+   "price_variant": "STANDARD",
+   "rate": "2500",
+   "uom": "Con",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:20.926001"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_BO_1VIS_AL702LOP:Con:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKC_BO_1VIS_AL702LOP",
+   "price_variant": "STANDARD",
+   "rate": "1500",
+   "uom": "Con",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:20.769001"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_BO_1VIS_AL701LOP:Con:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKC_BO_1VIS_AL701LOP",
+   "price_variant": "STANDARD",
+   "rate": "1500",
+   "uom": "Con",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:20.613001"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_BO_1VIS_AL75:Con:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKC_BO_1VIS_AL75",
+   "price_variant": "STANDARD",
+   "rate": "1500",
+   "uom": "Con",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:20.447001"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_BO_2VIS_AL50_VIP50_548_ST500:Con:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKC_BO_2VIS_AL50_VIP50_548_ST500",
+   "price_variant": "STANDARD",
+   "rate": "2500",
+   "uom": "Con",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:20.292001"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_BO_1VIS_AL503C:Con:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKC_BO_1VIS_AL503C",
+   "price_variant": "STANDARD",
+   "rate": "1500",
+   "uom": "Con",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:20.140001"
+  },
+  {
+   "name": "Alumdoor 2026:PKDUC_BO_1VIS_503N_71_595:Con:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKDUC_BO_1VIS_503N_71_595",
+   "price_variant": "STANDARD",
+   "rate": "1500",
+   "uom": "Con",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:19.999001"
+  },
+  {
+   "name": "Alumdoor 2026:PKDUC_BO_2VIS_652_548C:Con:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKDUC_BO_2VIS_652_548C",
+   "price_variant": "STANDARD",
+   "rate": "2500",
+   "uom": "Con",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:19.853001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_AL75:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CDUC_AL75",
+   "price_variant": "STANDARD",
+   "rate": "1403000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:19.682001"
+  },
+  {
+   "name": "Alumdoor 2026:MT_TANKER400KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "MT_TANKER400KG",
+   "price_variant": "STANDARD",
+   "rate": "1750000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:19.522001"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_TANKER_ALUMAX_LAC33:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LKMT_TANKER_ALUMAX_LAC33",
+   "price_variant": "STANDARD",
+   "rate": "450000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:19.377001"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_TANKER_ALUMAX_LAC36:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LKMT_TANKER_ALUMAX_LAC36",
+   "price_variant": "STANDARD",
+   "rate": "500000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:19.228001"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_TANKER_LAC800_1000KG:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LKMT_TANKER_LAC800_1000KG",
+   "price_variant": "STANDARD",
+   "rate": "600000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:19.068001"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_LACYHLD300_500KG:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LKMT_LACYHLD300_500KG",
+   "price_variant": "STANDARD",
+   "rate": "650000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:18.902001"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_LACYHLD800_1000KG:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LKMT_LACYHLD800_1000KG",
+   "price_variant": "STANDARD",
+   "rate": "750000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:18.743001"
+  },
+  {
+   "name": "Alumdoor 2026:PKD_TAY_YHLD:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKD_TAY_YHLD",
+   "price_variant": "STANDARD",
+   "rate": "180000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:18.588001"
+  },
+  {
+   "name": "Alumdoor 2026:MT_TANKER_NHONG:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "MT_TANKER_NHONG",
+   "price_variant": "STANDARD",
+   "rate": "70000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:18.406001"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_LONGDEN:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LKMT_LONGDEN",
+   "price_variant": "STANDARD",
+   "rate": "50000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:18.251001"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_HOAKHE:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LKMT_HOAKHE",
+   "price_variant": "STANDARD",
+   "rate": "50000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:18.091001"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_COT:Cây:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LKMT_COT",
+   "price_variant": "STANDARD",
+   "rate": "80000",
+   "uom": "Cây",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:17.933001"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_NAPCHUP_BACDAN:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKC_NAPCHUP_BACDAN",
+   "price_variant": "STANDARD",
+   "rate": "100000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:17.773001"
+  },
+  {
+   "name": "Alumdoor 2026:DK_BDK_TANKER_ALUMAX:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "DK_BDK_TANKER_ALUMAX",
+   "price_variant": "STANDARD",
+   "rate": "270000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:17.626001"
+  },
+  {
+   "name": "Alumdoor 2026:MT_YHLD300KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "MT_YHLD300KG",
+   "price_variant": "STANDARD",
+   "rate": "2750000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:17.465001"
+  },
+  {
+   "name": "Alumdoor 2026:MT_YHLD500KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "MT_YHLD500KG",
+   "price_variant": "STANDARD",
+   "rate": "2850000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:17.314001"
+  },
+  {
+   "name": "Alumdoor 2026:MT_YHLD800KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "MT_YHLD800KG",
+   "price_variant": "STANDARD",
+   "rate": "5900000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:17.155001"
+  },
+  {
+   "name": "Alumdoor 2026:MT_YHLD1000KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "MT_YHLD1000KG",
+   "price_variant": "STANDARD",
+   "rate": "7000000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:17.007001"
+  },
+  {
+   "name": "Alumdoor 2026:MT_JG300KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "MT_JG300KG",
+   "price_variant": "STANDARD",
+   "rate": "3650000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:16.859001"
+  },
+  {
+   "name": "Alumdoor 2026:MT_JG400KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "MT_JG400KG",
+   "price_variant": "STANDARD",
+   "rate": "4150000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:16.714001"
+  },
+  {
+   "name": "Alumdoor 2026:MT_JG500KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "MT_JG500KG",
+   "price_variant": "STANDARD",
+   "rate": "4200000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:16.556001"
+  },
+  {
+   "name": "Alumdoor 2026:MT_JG600KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "MT_JG600KG",
+   "price_variant": "STANDARD",
+   "rate": "4300000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:16.394001"
+  },
+  {
+   "name": "Alumdoor 2026:MT_JG800KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "MT_JG800KG",
+   "price_variant": "STANDARD",
+   "rate": "5250000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:16.227001"
+  },
+  {
+   "name": "Alumdoor 2026:MT_JG1000KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "MT_JG1000KG",
+   "price_variant": "STANDARD",
+   "rate": "7650000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:16.079001"
+  },
+  {
+   "name": "Alumdoor 2026:MT_JG1500KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "MT_JG1500KG",
+   "price_variant": "STANDARD",
+   "rate": "8050000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:15.900001"
+  },
+  {
+   "name": "Alumdoor 2026:MT_TANKER600KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "MT_TANKER600KG",
+   "price_variant": "STANDARD",
+   "rate": "1850000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:15.747001"
+  },
+  {
+   "name": "Alumdoor 2026:MT_TANKE800KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "MT_TANKE800KG",
+   "price_variant": "STANDARD",
+   "rate": "3700000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:15.600001"
+  },
+  {
+   "name": "Alumdoor 2026:MT_TANKER1000KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "MT_TANKER1000KG",
+   "price_variant": "STANDARD",
+   "rate": "3900000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:15.454001"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_LACPHU33_1LO:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LKMT_LACPHU33_1LO",
+   "price_variant": "STANDARD",
+   "rate": "65000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:15.296001"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_LACPHU36_1LO:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LKMT_LACPHU36_1LO",
+   "price_variant": "STANDARD",
+   "rate": "70000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:15.151001"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_LACPHU33_3LO:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LKMT_LACPHU33_3LO",
+   "price_variant": "STANDARD",
+   "rate": "65000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:15.011001"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_LACPHU36_3LO:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LKMT_LACPHU36_3LO",
+   "price_variant": "STANDARD",
+   "rate": "70000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:14.832001"
+  },
+  {
+   "name": "Alumdoor 2026:DK_MULLER:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "DK_MULLER",
+   "price_variant": "STANDARD",
+   "rate": "750000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:14.679001"
+  },
+  {
+   "name": "Alumdoor 2026:PKD_TAY_MULLER:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKD_TAY_MULLER",
+   "price_variant": "STANDARD",
+   "rate": "280000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:14.516001"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_GOIGANG:Cặp:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKC_GOIGANG",
+   "price_variant": "STANDARD",
+   "rate": "90000",
+   "uom": "Cặp",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:14.370001"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_BANBUOM_INOX:Mét:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKC_BANBUOM_INOX",
+   "price_variant": "STANDARD",
+   "rate": "60000",
+   "uom": "Mét",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:14.199001"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_LX_5.5_X_70_X_46V:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKC_LX_5.5_X_70_X_46V",
+   "price_variant": "STANDARD",
+   "rate": "45000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:14.053001"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_LX_5.5_X_70_X_50V:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKC_LX_5.5_X_70_X_50V",
+   "price_variant": "STANDARD",
+   "rate": "45000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:13.891001"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_LV_6.0_X_70_X_53V:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKC_LV_6.0_X_70_X_53V",
+   "price_variant": "STANDARD",
+   "rate": "45000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:13.728001"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_LV_6.5_X_80_X_63V:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKC_LV_6.5_X_80_X_63V",
+   "price_variant": "STANDARD",
+   "rate": "45000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:13.535001"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_LV_6.5_X_80_X_68V:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKC_LV_6.5_X_80_X_68V",
+   "price_variant": "STANDARD",
+   "rate": "45000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:13.354001"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_LV_7.0_X_90_X_65V:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKC_LV_7.0_X_90_X_65V",
+   "price_variant": "STANDARD",
+   "rate": "45000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:13.199001"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_LV_7.0_X_90_X_73V:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKC_LV_7.0_X_90_X_73V",
+   "price_variant": "STANDARD",
+   "rate": "45000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:13.019001"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_LV_7.0_X_90_X_83V:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKC_LV_7.0_X_90_X_83V",
+   "price_variant": "STANDARD",
+   "rate": "45000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:12.871001"
+  },
+  {
+   "name": "Alumdoor 2026:RT_RAYNHOMUC:Mét:STANDARD:MOI-DIEN-TICH",
+   "item_code": "RT_RAYNHOMUC",
+   "price_variant": "STANDARD",
+   "rate": "195000",
+   "uom": "Mét",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:12.702001"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_TANKER_ALUMAX:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LKMT_TANKER_ALUMAX",
+   "price_variant": "STANDARD",
+   "rate": "150000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:12.550001"
+  },
+  {
+   "name": "Alumdoor 2026:DK_TANKER_ALUMAX_BODK:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "DK_TANKER_ALUMAX_BODK",
+   "price_variant": "STANDARD",
+   "rate": "270000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:12.397001"
+  },
+  {
+   "name": "Alumdoor 2026:PKD_TAY_TANKER_ALUMAX:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKD_TAY_TANKER_ALUMAX",
+   "price_variant": "STANDARD",
+   "rate": "120000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:12.252001"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_PAT_CODAY:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LKMT_PAT_CODAY",
+   "price_variant": "STANDARD",
+   "rate": "150000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:12.090001"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_PAT_KHONGDAY:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LKMT_PAT_KHONGDAY",
+   "price_variant": "STANDARD",
+   "rate": "80000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:11.934001"
+  },
+  {
+   "name": "Alumdoor 2026:MT_ALUMAX400KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "MT_ALUMAX400KG",
+   "price_variant": "STANDARD",
+   "rate": "2200000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:11.783001"
+  },
+  {
+   "name": "Alumdoor 2026:MT_ALUMAX600KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "MT_ALUMAX600KG",
+   "price_variant": "STANDARD",
+   "rate": "2300000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:11.620001"
+  },
+  {
+   "name": "Alumdoor 2026:BLD_UPS_E800I:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "BLD_UPS_E800I",
+   "price_variant": "STANDARD",
+   "rate": "1800000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:11.463001"
+  },
+  {
+   "name": "Alumdoor 2026:BLD_UPS_E1000I:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "BLD_UPS_E1000I",
+   "price_variant": "STANDARD",
+   "rate": "2700000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:11.294001"
+  },
+  {
+   "name": "Alumdoor 2026:BLD_UPS_YH1000:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "BLD_UPS_YH1000",
+   "price_variant": "STANDARD",
+   "rate": "1800000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:11.141001"
+  },
+  {
+   "name": "Alumdoor 2026:BLD_UPS_YH2000:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "BLD_UPS_YH2000",
+   "price_variant": "STANDARD",
+   "rate": "2700000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:10.988001"
+  },
+  {
+   "name": "Alumdoor 2026:PKD_TAY_JG:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKD_TAY_JG",
+   "price_variant": "STANDARD",
+   "rate": "190000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:10.832001"
+  },
+  {
+   "name": "Alumdoor 2026:DK_JG:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "DK_JG",
+   "price_variant": "STANDARD",
+   "rate": "460000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:10.670001"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_NAPNHIN:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LKMT_NAPNHIN",
+   "price_variant": "STANDARD",
+   "rate": "170000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:10.516001"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_GOIFE:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKC_GOIFE",
+   "price_variant": "STANDARD",
+   "rate": "65000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:10.367001"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_GIAT:Cặp:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKC_GIAT",
+   "price_variant": "STANDARD",
+   "rate": "120000",
+   "uom": "Cặp",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:10.220001"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_BOSTEC_PAT:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LKMT_BOSTEC_PAT",
+   "price_variant": "STANDARD",
+   "rate": "250000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:10.035001"
+  },
+  {
+   "name": "Alumdoor 2026:PKD_TAY_BOSTEC:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKD_TAY_BOSTEC",
+   "price_variant": "STANDARD",
+   "rate": "270000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:09.881001"
+  },
+  {
+   "name": "Alumdoor 2026:DK_BOSTEC:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "DK_BOSTEC",
+   "price_variant": "STANDARD",
+   "rate": "1850000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:09.730001"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_CHTAIWAN_PAT:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LKMT_CHTAIWAN_PAT",
+   "price_variant": "STANDARD",
+   "rate": "600000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:09.583001"
+  },
+  {
+   "name": "Alumdoor 2026:PKD_TAY_CHTAIWAN:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKD_TAY_CHTAIWAN",
+   "price_variant": "STANDARD",
+   "rate": "320000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:09.417001"
+  },
+  {
+   "name": "Alumdoor 2026:DK_CHTAIWAN:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "DK_CHTAIWAN",
+   "price_variant": "STANDARD",
+   "rate": "2400000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:09.273001"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_BOSTEC_DOI_P:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LKMT_BOSTEC_DOI_P",
+   "price_variant": "STANDARD",
+   "rate": "3800000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:09.122001"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_BOSTEC_DOI_T:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LKMT_BOSTEC_DOI_T",
+   "price_variant": "STANDARD",
+   "rate": "3800000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:08.954001"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_BOSTEC_DON_P:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LKMT_BOSTEC_DON_P",
+   "price_variant": "STANDARD",
+   "rate": "3300000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:08.805001"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_BOSTEC_DON_T:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LKMT_BOSTEC_DON_T",
+   "price_variant": "STANDARD",
+   "rate": "3300000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:08.647001"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_CHTAIWAN_DOI_T:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LKMT_CHTAIWAN_DOI_T",
+   "price_variant": "STANDARD",
+   "rate": "5300000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:08.500001"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_CHTAIWAN_DOI_P:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LKMT_CHTAIWAN_DOI_P",
+   "price_variant": "STANDARD",
+   "rate": "5300000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:08.320001"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_CHTAIWAN_DON_P:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LKMT_CHTAIWAN_DON_P",
+   "price_variant": "STANDARD",
+   "rate": "4950000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:08.149001"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_CHTAIWAN_DON_T:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LKMT_CHTAIWAN_DON_T",
+   "price_variant": "STANDARD",
+   "rate": "4950000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:07.995001"
+  },
+  {
+   "name": "Alumdoor 2026:MT_YHTAIWAN_CH_300KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "MT_YHTAIWAN_CH_300KG",
+   "price_variant": "STANDARD",
+   "rate": "6350000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:07.846001"
+  },
+  {
+   "name": "Alumdoor 2026:MT_YHTAIWAN_CH_500KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "MT_YHTAIWAN_CH_500KG",
+   "price_variant": "STANDARD",
+   "rate": "7900000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:07.692001"
+  },
+  {
+   "name": "Alumdoor 2026:MT_YHTAIWAN_CH_400KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "MT_YHTAIWAN_CH_400KG",
+   "price_variant": "STANDARD",
+   "rate": "7000000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:07.546001"
+  },
+  {
+   "name": "Alumdoor 2026:MT_YHTAIWAN_CH_600KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "MT_YHTAIWAN_CH_600KG",
+   "price_variant": "STANDARD",
+   "rate": "11900000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:07.391001"
+  },
+  {
+   "name": "Alumdoor 2026:MT_YHTAIWAN_CH_700KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "MT_YHTAIWAN_CH_700KG",
+   "price_variant": "STANDARD",
+   "rate": "12900000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:07.237001"
+  },
+  {
+   "name": "Alumdoor 2026:MT_YHTAIWAN_CH_800KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "MT_YHTAIWAN_CH_800KG",
+   "price_variant": "STANDARD",
+   "rate": "13600000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:07.074001"
+  },
+  {
+   "name": "Alumdoor 2026:MT_YHTAIWAN_CH_1000KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "MT_YHTAIWAN_CH_1000KG",
+   "price_variant": "STANDARD",
+   "rate": "13600000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:06.916001"
+  },
+  {
+   "name": "Alumdoor 2026:DK_YHTAIWAN:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "DK_YHTAIWAN",
+   "price_variant": "STANDARD",
+   "rate": "1050000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:06.739001"
+  },
+  {
+   "name": "Alumdoor 2026:PKD_TAY_YHTAIWAN:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKD_TAY_YHTAIWAN",
+   "price_variant": "STANDARD",
+   "rate": "350000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:06.577001"
+  },
+  {
+   "name": "Alumdoor 2026:CUC_UC_KT_4D:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CUC_UC_KT_4D",
+   "price_variant": "STANDARD",
+   "rate": "365000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:06.428001"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_VAIHAMXO:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKC_VAIHAMXO",
+   "price_variant": "STANDARD",
+   "rate": "2",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:06.279001"
+  },
+  {
+   "name": "Alumdoor 2026:CUC_UC_MTN_4D:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CUC_UC_MTN_4D",
+   "price_variant": "STANDARD",
+   "rate": "345000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:06.117001"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_KN:Bộ:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKC_KN",
+   "price_variant": "STANDARD",
+   "rate": "250000",
+   "uom": "Bộ",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:05.966001"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_BKAN:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKC_BKAN",
+   "price_variant": "STANDARD",
+   "rate": "88000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:05.802001"
+  },
+  {
+   "name": "Alumdoor 2026:CUC_UC_KT_4_6D:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CUC_UC_KT_4_6D",
+   "price_variant": "STANDARD",
+   "rate": "395000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:05.637001"
+  },
+  {
+   "name": "Alumdoor 2026:CUC_UC_KT_5_5D:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CUC_UC_KT_5_5D",
+   "price_variant": "STANDARD",
+   "rate": "425000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:05.492001"
+  },
+  {
+   "name": "Alumdoor 2026:CUC_UC_MTN_4_6D:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CUC_UC_MTN_4_6D",
+   "price_variant": "STANDARD",
+   "rate": "375000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:05.329001"
+  },
+  {
+   "name": "Alumdoor 2026:CUC_UC_MTN_5_5D:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CUC_UC_MTN_5_5D",
+   "price_variant": "STANDARD",
+   "rate": "405000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:05.167001"
+  },
+  {
+   "name": "Alumdoor 2026:CUC_UC_MTN_6D:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CUC_UC_MTN_6D",
+   "price_variant": "STANDARD",
+   "rate": "465000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:05.020001"
+  },
+  {
+   "name": "Alumdoor 2026:CUC_UC_KT_6D:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CUC_UC_KT_6D",
+   "price_variant": "STANDARD",
+   "rate": "465000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:04.858001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_DUC_KT_AL70_2_LOP:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CDUC_DUC_KT_AL70_2_LOP",
+   "price_variant": "STANDARD",
+   "rate": "890000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:04.707001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_DUC_KT_AL70:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CDUC_DUC_KT_AL70",
+   "price_variant": "STANDARD",
+   "rate": "890000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:04.565001"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_BANBUOM_FE:Mét:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKC_BANBUOM_FE",
+   "price_variant": "STANDARD",
+   "rate": "30000",
+   "uom": "Mét",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:04.404001"
+  },
+  {
+   "name": "Alumdoor 2026:RT_TRUC140:Mét:STANDARD:MOI-DIEN-TICH",
+   "item_code": "RT_TRUC140",
+   "price_variant": "STANDARD",
+   "rate": "180000",
+   "uom": "Mét",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:04.247001"
+  },
+  {
+   "name": "Alumdoor 2026:RT_TRUC168:Mét:STANDARD:MOI-DIEN-TICH",
+   "item_code": "RT_TRUC168",
+   "price_variant": "STANDARD",
+   "rate": "500000",
+   "uom": "Mét",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:04.073001"
+  },
+  {
+   "name": "Alumdoor 2026:RT_RAY_U70_RON:Mét:STANDARD:MOI-DIEN-TICH",
+   "item_code": "RT_RAY_U70_RON",
+   "price_variant": "STANDARD",
+   "rate": "75000",
+   "uom": "Mét",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:03.810001"
+  },
+  {
+   "name": "Alumdoor 2026:INOX_6D:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "INOX_6D",
+   "price_variant": "STANDARD",
+   "rate": "1040000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:03.646001"
+  },
+  {
+   "name": "Alumdoor 2026:INOX_7D:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "INOX_7D",
+   "price_variant": "STANDARD",
+   "rate": "1160000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:03.492001"
+  },
+  {
+   "name": "Alumdoor 2026:INOX_8D:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "INOX_8D",
+   "price_variant": "STANDARD",
+   "rate": "1290000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:03.305001"
+  },
+  {
+   "name": "Alumdoor 2026:INOX_1LY:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "INOX_1LY",
+   "price_variant": "STANDARD",
+   "rate": "1650000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:03.145001"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_V4_INOX:Mét:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKC_V4_INOX",
+   "price_variant": "STANDARD",
+   "rate": "180000",
+   "uom": "Mét",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:02.994001"
+  },
+  {
+   "name": "Alumdoor 2026:RT_RAYINOX_6P_RON:Mét:STANDARD:MOI-DIEN-TICH",
+   "item_code": "RT_RAYINOX_6P_RON",
+   "price_variant": "STANDARD",
+   "rate": "220000",
+   "uom": "Mét",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:02.817001"
+  },
+  {
+   "name": "Alumdoor 2026:RT_RAYINOX_8P_RON:Mét:STANDARD:MOI-DIEN-TICH",
+   "item_code": "RT_RAYINOX_8P_RON",
+   "price_variant": "STANDARD",
+   "rate": "270000",
+   "uom": "Mét",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:02.625001"
+  },
+  {
+   "name": "Alumdoor 2026:RT_RAYINOX_7P_KHONGRON:Mét:STANDARD:MOI-DIEN-TICH",
+   "item_code": "RT_RAYINOX_7P_KHONGRON",
+   "price_variant": "STANDARD",
+   "rate": "250000",
+   "uom": "Mét",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:02.442001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_8D:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LA_DLK_8D",
+   "price_variant": "STANDARD",
+   "rate": "410000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:02.256001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1LY:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LA_DLK_1LY",
+   "price_variant": "STANDARD",
+   "rate": "460000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:02.113001"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_CHONGXOLO:Cái:STANDARD:MOI-DIEN-TICH",
+   "item_code": "PKC_CHONGXOLO",
+   "price_variant": "STANDARD",
+   "rate": "65000",
+   "uom": "Cái",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:01.941001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_RUOT_AL71N:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LA_RUOT_AL71N",
+   "price_variant": "STANDARD",
+   "rate": "1178000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:01.779001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DUC_AL70_2_LOP:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LA_DUC_AL70_2_LOP",
+   "price_variant": "STANDARD",
+   "rate": "909000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:01.628001"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_6D:m2:TRON_BO:DT-TREN-10M2",
+   "item_code": "CDL_DLM_6D",
+   "price_variant": "TRON_BO",
+   "rate": "380000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:01.449001"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_6D:m2:TRON_BO:DT-9-10M2",
+   "item_code": "CDL_DLM_6D",
+   "price_variant": "TRON_BO",
+   "rate": "390000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:01.264001"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_6D:m2:TRON_BO:DT-8-9M2",
+   "item_code": "CDL_DLM_6D",
+   "price_variant": "TRON_BO",
+   "rate": "400000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:01.073001"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_6D:m2:TRON_BO:DT-7-8M2",
+   "item_code": "CDL_DLM_6D",
+   "price_variant": "TRON_BO",
+   "rate": "410000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:00.905001"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_6D:m2:TRON_BO:DT-6-7M2",
+   "item_code": "CDL_DLM_6D",
+   "price_variant": "TRON_BO",
+   "rate": "420000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:00.739001"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_6D:m2:TRON_BO:DT-5-6M2",
+   "item_code": "CDL_DLM_6D",
+   "price_variant": "TRON_BO",
+   "rate": "430000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:00.552001"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_6D:m2:TRON_BO:DT-4-5M2",
+   "item_code": "CDL_DLM_6D",
+   "price_variant": "TRON_BO",
+   "rate": "440000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:00.380001"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_6D:m2:TRON_BO:DT-3-4M2",
+   "item_code": "CDL_DLM_6D",
+   "price_variant": "TRON_BO",
+   "rate": "450000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:00.206001"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_7D:m2:TRON_BO:DT-TREN-10M2",
+   "item_code": "CDL_DLM_7D",
+   "price_variant": "TRON_BO",
+   "rate": "410000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:47:00.055001"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_7D:m2:TRON_BO:DT-9-10M2",
+   "item_code": "CDL_DLM_7D",
+   "price_variant": "TRON_BO",
+   "rate": "420000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:59.850001"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_7D:m2:TRON_BO:DT-8-9M2",
+   "item_code": "CDL_DLM_7D",
+   "price_variant": "TRON_BO",
+   "rate": "430000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:59.598001"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_7D:m2:TRON_BO:DT-7-8M2",
+   "item_code": "CDL_DLM_7D",
+   "price_variant": "TRON_BO",
+   "rate": "440000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:59.325001"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_7D:m2:TRON_BO:DT-6-7M2",
+   "item_code": "CDL_DLM_7D",
+   "price_variant": "TRON_BO",
+   "rate": "450000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:59.039001"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_7D:m2:TRON_BO:DT-5-6M2",
+   "item_code": "CDL_DLM_7D",
+   "price_variant": "TRON_BO",
+   "rate": "460000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:58.812001"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_7D:m2:TRON_BO:DT-4-5M2",
+   "item_code": "CDL_DLM_7D",
+   "price_variant": "TRON_BO",
+   "rate": "470000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:58.499001"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_7D:m2:TRON_BO:DT-3-4M2",
+   "item_code": "CDL_DLM_7D",
+   "price_variant": "TRON_BO",
+   "rate": "480000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:58.272001"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_8D:m2:TRON_BO:DT-TREN-10M2",
+   "item_code": "CDL_DLM_8D",
+   "price_variant": "TRON_BO",
+   "rate": "440000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:58.052001"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_8D:m2:TRON_BO:DT-9-10M2",
+   "item_code": "CDL_DLM_8D",
+   "price_variant": "TRON_BO",
+   "rate": "450000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:57.786001"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_8D:m2:TRON_BO:DT-8-9M2",
+   "item_code": "CDL_DLM_8D",
+   "price_variant": "TRON_BO",
+   "rate": "460000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:57.562001"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_8D:m2:TRON_BO:DT-7-8M2",
+   "item_code": "CDL_DLM_8D",
+   "price_variant": "TRON_BO",
+   "rate": "470000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:57.344001"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_8D:m2:TRON_BO:DT-6-7M2",
+   "item_code": "CDL_DLM_8D",
+   "price_variant": "TRON_BO",
+   "rate": "480000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:57.152001"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_8D:m2:TRON_BO:DT-5-6M2",
+   "item_code": "CDL_DLM_8D",
+   "price_variant": "TRON_BO",
+   "rate": "490000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:56.968001"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_8D:m2:TRON_BO:DT-4-5M2",
+   "item_code": "CDL_DLM_8D",
+   "price_variant": "TRON_BO",
+   "rate": "500000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:56.789001"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_8D:m2:TRON_BO:DT-3-4M2",
+   "item_code": "CDL_DLM_8D",
+   "price_variant": "TRON_BO",
+   "rate": "520000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:56.594001"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_1LY:m2:TRON_BO:DT-TREN-10M2",
+   "item_code": "CDL_DLM_1LY",
+   "price_variant": "TRON_BO",
+   "rate": "520000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:56.409001"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_1LY:m2:TRON_BO:DT-9-10M2",
+   "item_code": "CDL_DLM_1LY",
+   "price_variant": "TRON_BO",
+   "rate": "530000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:56.210001"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_1LY:m2:TRON_BO:DT-8-9M2",
+   "item_code": "CDL_DLM_1LY",
+   "price_variant": "TRON_BO",
+   "rate": "540000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:56.035001"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_1LY:m2:TRON_BO:DT-7-8M2",
+   "item_code": "CDL_DLM_1LY",
+   "price_variant": "TRON_BO",
+   "rate": "550000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:55.840001"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_1LY:m2:TRON_BO:DT-6-7M2",
+   "item_code": "CDL_DLM_1LY",
+   "price_variant": "TRON_BO",
+   "rate": "560000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:55.646001"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_1LY:m2:TRON_BO:DT-5-6M2",
+   "item_code": "CDL_DLM_1LY",
+   "price_variant": "TRON_BO",
+   "rate": "570000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:55.459001"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_1LY:m2:TRON_BO:DT-4-5M2",
+   "item_code": "CDL_DLM_1LY",
+   "price_variant": "TRON_BO",
+   "rate": "580000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:55.290001"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_1LY:m2:TRON_BO:DT-3-4M2",
+   "item_code": "CDL_DLM_1LY",
+   "price_variant": "TRON_BO",
+   "rate": "590000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:55.116001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_8D_TRONBO:m2:TRON_BO:DT-TREN-10M2",
+   "item_code": "LA_DLK_8D_TRONBO",
+   "price_variant": "TRON_BO",
+   "rate": "500000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:54.943001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_8D_TRONBO:m2:TRON_BO:DT-9-10M2",
+   "item_code": "LA_DLK_8D_TRONBO",
+   "price_variant": "TRON_BO",
+   "rate": "510000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:54.769001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_8D_TRONBO:m2:TRON_BO:DT-8-9M2",
+   "item_code": "LA_DLK_8D_TRONBO",
+   "price_variant": "TRON_BO",
+   "rate": "520000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:54.558001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_8D_TRONBO:m2:TRON_BO:DT-7-8M2",
+   "item_code": "LA_DLK_8D_TRONBO",
+   "price_variant": "TRON_BO",
+   "rate": "530000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:54.377001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_8D_TRONBO:m2:TRON_BO:DT-6-7M2",
+   "item_code": "LA_DLK_8D_TRONBO",
+   "price_variant": "TRON_BO",
+   "rate": "540000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:54.180001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_8D_TRONBO:m2:TRON_BO:DT-5-6M2",
+   "item_code": "LA_DLK_8D_TRONBO",
+   "price_variant": "TRON_BO",
+   "rate": "550000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:53.997001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_8D_TRONBO:m2:TRON_BO:DT-4-5M2",
+   "item_code": "LA_DLK_8D_TRONBO",
+   "price_variant": "TRON_BO",
+   "rate": "560000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:53.829001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_8D_TRONBO:m2:TRON_BO:DT-3-4M2",
+   "item_code": "LA_DLK_8D_TRONBO",
+   "price_variant": "TRON_BO",
+   "rate": "570000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:53.667001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1LY_TRONBO:m2:TRON_BO:DT-TREN-10M2",
+   "item_code": "LA_DLK_1LY_TRONBO",
+   "price_variant": "TRON_BO",
+   "rate": "560000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:53.476001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1LY_TRONBO:m2:TRON_BO:DT-9-10M2",
+   "item_code": "LA_DLK_1LY_TRONBO",
+   "price_variant": "TRON_BO",
+   "rate": "570000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:53.284001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1LY_TRONBO:m2:TRON_BO:DT-8-9M2",
+   "item_code": "LA_DLK_1LY_TRONBO",
+   "price_variant": "TRON_BO",
+   "rate": "580000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:53.080001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1LY_TRONBO:m2:TRON_BO:DT-7-8M2",
+   "item_code": "LA_DLK_1LY_TRONBO",
+   "price_variant": "TRON_BO",
+   "rate": "590000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:52.894001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1LY_TRONBO:m2:TRON_BO:DT-6-7M2",
+   "item_code": "LA_DLK_1LY_TRONBO",
+   "price_variant": "TRON_BO",
+   "rate": "600000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:52.716001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1LY_TRONBO:m2:TRON_BO:DT-5-6M2",
+   "item_code": "LA_DLK_1LY_TRONBO",
+   "price_variant": "TRON_BO",
+   "rate": "610000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:52.528001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1LY_TRONBO:m2:TRON_BO:DT-4-5M2",
+   "item_code": "LA_DLK_1LY_TRONBO",
+   "price_variant": "TRON_BO",
+   "rate": "620000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:52.321001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1LY_TRONBO:m2:TRON_BO:DT-3-4M2",
+   "item_code": "LA_DLK_1LY_TRONBO",
+   "price_variant": "TRON_BO",
+   "rate": "630000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:52.135001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1_2LY_TRONBO:m2:TRON_BO:DT-TREN-10M2",
+   "item_code": "LA_DLK_1_2LY_TRONBO",
+   "price_variant": "TRON_BO",
+   "rate": "620000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:51.944001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1_2LY_TRONBO:m2:TRON_BO:DT-9-10M2",
+   "item_code": "LA_DLK_1_2LY_TRONBO",
+   "price_variant": "TRON_BO",
+   "rate": "630000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:51.739001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1_2LY_TRONBO:m2:TRON_BO:DT-8-9M2",
+   "item_code": "LA_DLK_1_2LY_TRONBO",
+   "price_variant": "TRON_BO",
+   "rate": "640000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:51.532001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1_2LY_TRONBO:m2:TRON_BO:DT-7-8M2",
+   "item_code": "LA_DLK_1_2LY_TRONBO",
+   "price_variant": "TRON_BO",
+   "rate": "650000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:51.327001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1_2LY_TRONBO:m2:TRON_BO:DT-6-7M2",
+   "item_code": "LA_DLK_1_2LY_TRONBO",
+   "price_variant": "TRON_BO",
+   "rate": "660000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:51.154001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1_2LY_TRONBO:m2:TRON_BO:DT-5-6M2",
+   "item_code": "LA_DLK_1_2LY_TRONBO",
+   "price_variant": "TRON_BO",
+   "rate": "670000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:50.964001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1_2LY_TRONBO:m2:TRON_BO:DT-4-5M2",
+   "item_code": "LA_DLK_1_2LY_TRONBO",
+   "price_variant": "TRON_BO",
+   "rate": "680000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:50.786001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1_2LY_TRONBO:m2:TRON_BO:DT-3-4M2",
+   "item_code": "LA_DLK_1_2LY_TRONBO",
+   "price_variant": "TRON_BO",
+   "rate": "690000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:50.601001"
+  },
+  {
+   "name": "Alumdoor 2026:TON_DLM_6D_K124:m2:TACH_MON:MOI-DIEN-TICH",
+   "item_code": "TON_DLM_6D_K124",
+   "price_variant": "TACH_MON",
+   "rate": "280000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:50.428001"
+  },
+  {
+   "name": "Alumdoor 2026:TON_DLM_7D_K124:m2:TACH_MON:MOI-DIEN-TICH",
+   "item_code": "TON_DLM_7D_K124",
+   "price_variant": "TACH_MON",
+   "rate": "300000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:50.264001"
+  },
+  {
+   "name": "Alumdoor 2026:TON_DLM_8D_K124:m2:TACH_MON:MOI-DIEN-TICH",
+   "item_code": "TON_DLM_8D_K124",
+   "price_variant": "TACH_MON",
+   "rate": "320000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:50.111001"
+  },
+  {
+   "name": "Alumdoor 2026:TON_DLM_1LY_K124:m2:TACH_MON:MOI-DIEN-TICH",
+   "item_code": "TON_DLM_1LY_K124",
+   "price_variant": "TACH_MON",
+   "rate": "380000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:49.937001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_8D:m2:TACH_MON:MOI-DIEN-TICH",
+   "item_code": "LA_DLK_8D",
+   "price_variant": "TACH_MON",
+   "rate": "410000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:49.791001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1LY:m2:TACH_MON:MOI-DIEN-TICH",
+   "item_code": "LA_DLK_1LY",
+   "price_variant": "TACH_MON",
+   "rate": "460000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:49.619001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1_2LY:m2:TACH_MON:MOI-DIEN-TICH",
+   "item_code": "LA_DLK_1_2LY",
+   "price_variant": "TACH_MON",
+   "rate": "510000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:49.425001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL595:m2:CHI_LA:MOI-DIEN-TICH",
+   "item_code": "CDUC_TD_AL595",
+   "price_variant": "CHI_LA",
+   "rate": "1020000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:49.239001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL595:m2:TANG_RAY:MOI-DIEN-TICH",
+   "item_code": "CDUC_TD_AL595",
+   "price_variant": "TANG_RAY",
+   "rate": "1095000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:49.019001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL71N:m2:CHI_LA:MOI-DIEN-TICH",
+   "item_code": "CDUC_TD_AL71N",
+   "price_variant": "CHI_LA",
+   "rate": "1095000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:48.865001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL71N:m2:TANG_RAY:MOI-DIEN-TICH",
+   "item_code": "CDUC_TD_AL71N",
+   "price_variant": "TANG_RAY",
+   "rate": "1170000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:48.665001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL503N26:m2:CHI_LA:MOI-DIEN-TICH",
+   "item_code": "CDUC_TD_AL503N26",
+   "price_variant": "CHI_LA",
+   "rate": "1200000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:48.511001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL503N26:m2:TANG_RAY:MOI-DIEN-TICH",
+   "item_code": "CDUC_TD_AL503N26",
+   "price_variant": "TANG_RAY",
+   "rate": "1275000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:48.353001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_ALD_548N:m2:CHI_LA:MOI-DIEN-TICH",
+   "item_code": "CDUC_ALD_548N",
+   "price_variant": "CHI_LA",
+   "rate": "1287000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:48.124001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_ALD_548N:m2:TANG_RAY:MOI-DIEN-TICH",
+   "item_code": "CDUC_ALD_548N",
+   "price_variant": "TANG_RAY",
+   "rate": "1362000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:47.938001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL501N:m2:CHI_LA:MOI-DIEN-TICH",
+   "item_code": "CDUC_TD_AL501N",
+   "price_variant": "CHI_LA",
+   "rate": "1371000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:47.771001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL501N:m2:TANG_RAY:MOI-DIEN-TICH",
+   "item_code": "CDUC_TD_AL501N",
+   "price_variant": "TANG_RAY",
+   "rate": "1446000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:47.591001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL652N:m2:CHI_LA:MOI-DIEN-TICH",
+   "item_code": "CDUC_TD_AL652N",
+   "price_variant": "CHI_LA",
+   "rate": "1431000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:47.416001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL652N:m2:TANG_RAY:MOI-DIEN-TICH",
+   "item_code": "CDUC_TD_AL652N",
+   "price_variant": "TANG_RAY",
+   "rate": "1506000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:47.257001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_ALD_DL552:m2:CHI_LA:MOI-DIEN-TICH",
+   "item_code": "CDUC_ALD_DL552",
+   "price_variant": "CHI_LA",
+   "rate": "1540000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:47.092001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_ALD_DL552:m2:TANG_RAY:MOI-DIEN-TICH",
+   "item_code": "CDUC_ALD_DL552",
+   "price_variant": "TANG_RAY",
+   "rate": "1615000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:46.909001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL752N:m2:CHI_LA:MOI-DIEN-TICH",
+   "item_code": "CDUC_TD_AL752N",
+   "price_variant": "CHI_LA",
+   "rate": "1566000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:46.752001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL752N:m2:TANG_RAY:MOI-DIEN-TICH",
+   "item_code": "CDUC_TD_AL752N",
+   "price_variant": "TANG_RAY",
+   "rate": "1641000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:46.590001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL50:m2:CHI_LA:MOI-DIEN-TICH",
+   "item_code": "CDUC_TD_AL50",
+   "price_variant": "CHI_LA",
+   "rate": "1685000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:46.424001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL50:m2:TANG_RAY:MOI-DIEN-TICH",
+   "item_code": "CDUC_TD_AL50",
+   "price_variant": "TANG_RAY",
+   "rate": "1760000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:46.258001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_ALVIP50:m2:CHI_LA:MOI-DIEN-TICH",
+   "item_code": "CDUC_ALVIP50",
+   "price_variant": "CHI_LA",
+   "rate": "1778000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:46.091001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_ALVIP50:m2:TANG_RAY:MOI-DIEN-TICH",
+   "item_code": "CDUC_ALVIP50",
+   "price_variant": "TANG_RAY",
+   "rate": "1853000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:45.926001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_ALVIPST500:m2:CHI_LA:MOI-DIEN-TICH",
+   "item_code": "CDUC_ALVIPST500",
+   "price_variant": "CHI_LA",
+   "rate": "2108000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:45.757001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_ALVIPST500:m2:TANG_RAY:MOI-DIEN-TICH",
+   "item_code": "CDUC_ALVIPST500",
+   "price_variant": "TANG_RAY",
+   "rate": "2183000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:45.600001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_ALVIPST700:m2:CHI_LA:MOI-DIEN-TICH",
+   "item_code": "CDUC_ALVIPST700",
+   "price_variant": "CHI_LA",
+   "rate": "2223000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:45.435001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_ALVIPST700:m2:TANG_RAY:MOI-DIEN-TICH",
+   "item_code": "CDUC_ALVIPST700",
+   "price_variant": "TANG_RAY",
+   "rate": "2298000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:45.273001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL70:m2:CHI_LA:MOI-DIEN-TICH",
+   "item_code": "CDUC_TD_AL70",
+   "price_variant": "CHI_LA",
+   "rate": "843000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:45.108001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL70:m2:TANG_RAY:MOI-DIEN-TICH",
+   "item_code": "CDUC_TD_AL70",
+   "price_variant": "TANG_RAY",
+   "rate": "918000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:44.930001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_AL70_1LOP:m2:CHI_LA:MOI-DIEN-TICH",
+   "item_code": "CDUC_AL70_1LOP",
+   "price_variant": "CHI_LA",
+   "rate": "1146000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:44.770001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_AL70_1LOP:m2:TANG_RAY:MOI-DIEN-TICH",
+   "item_code": "CDUC_AL70_1LOP",
+   "price_variant": "TANG_RAY",
+   "rate": "1221000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:44.568001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_AL75:m2:CHI_LA:MOI-DIEN-TICH",
+   "item_code": "CDUC_AL75",
+   "price_variant": "CHI_LA",
+   "rate": "1303000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:44.408001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_AL75:m2:TANG_RAY:MOI-DIEN-TICH",
+   "item_code": "CDUC_AL75",
+   "price_variant": "TANG_RAY",
+   "rate": "1378000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:44.229001"
+  },
+  {
+   "name": "Alumdoor 2026:CUC_UC_KT_4D:m2:KEO_TAY:MOI-DIEN-TICH",
+   "item_code": "CUC_UC_KT_4D",
+   "price_variant": "KEO_TAY",
+   "rate": "365000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:44.072001"
+  },
+  {
+   "name": "Alumdoor 2026:CUC_UC_MTN_4D:m2:MOTOR_NGOAI:MOI-DIEN-TICH",
+   "item_code": "CUC_UC_MTN_4D",
+   "price_variant": "MOTOR_NGOAI",
+   "rate": "345000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:43.896001"
+  },
+  {
+   "name": "Alumdoor 2026:CUC_UC_KT_4_6D:m2:KEO_TAY:MOI-DIEN-TICH",
+   "item_code": "CUC_UC_KT_4_6D",
+   "price_variant": "KEO_TAY",
+   "rate": "395000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:43.731001"
+  },
+  {
+   "name": "Alumdoor 2026:CUC_UC_MTN_4_6D:m2:MOTOR_NGOAI:MOI-DIEN-TICH",
+   "item_code": "CUC_UC_MTN_4_6D",
+   "price_variant": "MOTOR_NGOAI",
+   "rate": "375000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:43.557001"
+  },
+  {
+   "name": "Alumdoor 2026:CUC_UC_KT_5_5D:m2:KEO_TAY:MOI-DIEN-TICH",
+   "item_code": "CUC_UC_KT_5_5D",
+   "price_variant": "KEO_TAY",
+   "rate": "425000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:43.390001"
+  },
+  {
+   "name": "Alumdoor 2026:CUC_UC_MTN_5_5D:m2:MOTOR_NGOAI:MOI-DIEN-TICH",
+   "item_code": "CUC_UC_MTN_5_5D",
+   "price_variant": "MOTOR_NGOAI",
+   "rate": "405000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:43.208001"
+  },
+  {
+   "name": "Alumdoor 2026:CUC_UC_KT_6D:m2:KEO_TAY:MOI-DIEN-TICH",
+   "item_code": "CUC_UC_KT_6D",
+   "price_variant": "KEO_TAY",
+   "rate": "485000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:42.991001"
+  },
+  {
+   "name": "Alumdoor 2026:CUC_UC_MTN_6D:m2:MOTOR_NGOAI:MOI-DIEN-TICH",
+   "item_code": "CUC_UC_MTN_6D",
+   "price_variant": "MOTOR_NGOAI",
+   "rate": "465000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:42.820001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_DUC_KT_AL70:m2:KEO_TAY:MOI-DIEN-TICH",
+   "item_code": "CDUC_DUC_KT_AL70",
+   "price_variant": "KEO_TAY",
+   "rate": "830000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:42.644001"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_DUC_KT_AL70_2_LOP:m2:KEO_TAY:MOI-DIEN-TICH",
+   "item_code": "CDUC_DUC_KT_AL70_2_LOP",
+   "price_variant": "KEO_TAY",
+   "rate": "830000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:42.485001"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOI_MV_TM:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CLUOI_LUOI_MV_TM",
+   "price_variant": "STANDARD",
+   "rate": "450000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:42.310001"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOI_MV_TRONBO:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CLUOI_LUOI_MV_TRONBO",
+   "price_variant": "STANDARD",
+   "rate": "590000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:42.138001"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOIMV_INOX_TM:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CLUOI_LUOIMV_INOX_TM",
+   "price_variant": "STANDARD",
+   "rate": "1290000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:41.957001"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOIMV_INOX_TRONBO:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CLUOI_LUOIMV_INOX_TRONBO",
+   "price_variant": "STANDARD",
+   "rate": "1530000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:41.764001"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOI_SN13X26_TACHMON:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CLUOI_LUOI_SN13X26_TACHMON",
+   "price_variant": "STANDARD",
+   "rate": "570000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:41.602001"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOI_SN13X26_TRONBO:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CLUOI_LUOI_SN13X26_TRONBO",
+   "price_variant": "STANDARD",
+   "rate": "750000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:41.442001"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOI_SN13X26_INOX_TACHMON:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CLUOI_LUOI_SN13X26_INOX_TACHMON",
+   "price_variant": "STANDARD",
+   "rate": "1500000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:41.218001"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOI_SN13X26_INOX_TRONBO:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CLUOI_LUOI_SN13X26_INOX_TRONBO",
+   "price_variant": "STANDARD",
+   "rate": "1710000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:41.056001"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOI_SN_TM:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CLUOI_LUOI_SN_TM",
+   "price_variant": "STANDARD",
+   "rate": "490000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:40.895001"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOI_SN_TRONBO:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CLUOI_LUOI_SN_TRONBO",
+   "price_variant": "STANDARD",
+   "rate": "630000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:40.697001"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOI_SNPHI19_INOX_TM:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CLUOI_LUOI_SNPHI19_INOX_TM",
+   "price_variant": "STANDARD",
+   "rate": "1290000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:40.530001"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOI_SNPHI19_INOX_TRONBO:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "CLUOI_LUOI_SNPHI19_INOX_TRONBO",
+   "price_variant": "STANDARD",
+   "rate": "1530000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:40.357001"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLM_1LY_K175:m2:STANDARD:MOI-DIEN-TICH",
+   "item_code": "LA_DLM_1LY_K175",
+   "price_variant": "STANDARD",
+   "rate": "440000",
+   "uom": "m2",
+   "docstatus": 0,
+   "modified": "2026-08-20 21:46:40.143001"
+  }
+ ]
+}

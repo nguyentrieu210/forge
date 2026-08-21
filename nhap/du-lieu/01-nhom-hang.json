@@ -1,0 +1,247 @@
+{
+  "doctype": "Item Group",
+  "trich_luc_luc": "2026-08-20T10:57:40.778Z",
+  "nguon": "D1 cục bộ — fixture app alumdoor 2.10.0 + seed canonical layer0",
+  "so_ban_ghi": 20,
+  "ban_ghi": [
+    {
+      "name": "Bình lưu điện",
+      "payload": {
+        "item_group_name": "Bình lưu điện",
+        "parent_item_group": "Motor & điện",
+        "is_group": false,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Bình lưu điện",
+      "content": "Bình lưu điện Motor & điện"
+    },
+    {
+      "name": "Cửa CN Đức",
+      "payload": {
+        "item_group_name": "Cửa CN Đức",
+        "parent_item_group": "Cửa thành phẩm",
+        "is_group": false,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Cửa CN Đức",
+      "content": "Cửa CN Đức Cửa thành phẩm"
+    },
+    {
+      "name": "Cửa Lưới",
+      "payload": {
+        "item_group_name": "Cửa Lưới",
+        "parent_item_group": "Cửa thành phẩm",
+        "is_group": false,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Cửa Lưới",
+      "content": "Cửa Lưới Cửa thành phẩm"
+    },
+    {
+      "name": "Cửa Siêu Trường",
+      "payload": {
+        "item_group_name": "Cửa Siêu Trường",
+        "parent_item_group": "Cửa thành phẩm",
+        "is_group": false,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Cửa Siêu Trường",
+      "content": "Cửa Siêu Trường Cửa thành phẩm"
+    },
+    {
+      "name": "Cửa kéo Đài Loan",
+      "payload": {
+        "item_group_name": "Cửa kéo Đài Loan",
+        "parent_item_group": "Cửa thành phẩm",
+        "is_group": false,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Cửa kéo Đài Loan",
+      "content": "Cửa kéo Đài Loan Cửa thành phẩm"
+    },
+    {
+      "name": "Cửa thành phẩm",
+      "payload": {
+        "item_group_name": "Cửa thành phẩm",
+        "parent_item_group": "Tất cả mặt hàng",
+        "is_group": true,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Cửa thành phẩm",
+      "content": "Cửa thành phẩm Tất cả mặt hàng"
+    },
+    {
+      "name": "Cửa tấm liền Úc",
+      "payload": {
+        "item_group_name": "Cửa tấm liền Úc",
+        "parent_item_group": "Cửa thành phẩm",
+        "is_group": false,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Cửa tấm liền Úc",
+      "content": "Cửa tấm liền Úc Cửa thành phẩm"
+    },
+    {
+      "name": "Cửa Đài Loan",
+      "payload": {
+        "item_group_name": "Cửa Đài Loan",
+        "parent_item_group": "Cửa thành phẩm",
+        "is_group": false,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Cửa Đài Loan",
+      "content": "Cửa Đài Loan Cửa thành phẩm"
+    },
+    {
+      "name": "Cửa Đài Loan Inox",
+      "payload": {
+        "item_group_name": "Cửa Đài Loan Inox",
+        "parent_item_group": "Cửa thành phẩm",
+        "is_group": false,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Cửa Đài Loan Inox",
+      "content": "Cửa Đài Loan Inox Cửa thành phẩm"
+    },
+    {
+      "name": "Linh kiện motor",
+      "payload": {
+        "item_group_name": "Linh kiện motor",
+        "parent_item_group": "Motor & điện",
+        "is_group": false,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Linh kiện motor",
+      "content": "Linh kiện motor Motor & điện"
+    },
+    {
+      "name": "Motor",
+      "payload": {
+        "item_group_name": "Motor",
+        "parent_item_group": "Motor & điện",
+        "is_group": false,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Motor",
+      "content": "Motor Motor & điện"
+    },
+    {
+      "name": "Motor & điện",
+      "payload": {
+        "item_group_name": "Motor & điện",
+        "parent_item_group": "Tất cả mặt hàng",
+        "is_group": true,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Motor & điện",
+      "content": "Motor & điện Tất cả mặt hàng"
+    },
+    {
+      "name": "Nan/lá cửa",
+      "payload": {
+        "item_group_name": "Nan/lá cửa",
+        "parent_item_group": "Phụ kiện & vật tư",
+        "is_group": false,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Nan/lá cửa",
+      "content": "Nan/lá cửa Phụ kiện & vật tư"
+    },
+    {
+      "name": "Phụ kiện & vật tư",
+      "payload": {
+        "item_group_name": "Phụ kiện & vật tư",
+        "parent_item_group": "Tất cả mặt hàng",
+        "is_group": true,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Phụ kiện & vật tư",
+      "content": "Phụ kiện & vật tư Tất cả mặt hàng"
+    },
+    {
+      "name": "Phụ kiện CN Đức",
+      "payload": {
+        "item_group_name": "Phụ kiện CN Đức",
+        "parent_item_group": "Phụ kiện & vật tư",
+        "is_group": false,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Phụ kiện CN Đức",
+      "content": "Phụ kiện CN Đức Phụ kiện & vật tư"
+    },
+    {
+      "name": "Phụ kiện chung",
+      "payload": {
+        "item_group_name": "Phụ kiện chung",
+        "parent_item_group": "Phụ kiện & vật tư",
+        "is_group": false,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Phụ kiện chung",
+      "content": "Phụ kiện chung Phụ kiện & vật tư"
+    },
+    {
+      "name": "Phụ kiện cần sơn tĩnh điện",
+      "payload": {
+        "item_group_name": "Phụ kiện cần sơn tĩnh điện",
+        "parent_item_group": "Phụ kiện & vật tư",
+        "is_group": false,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Phụ kiện cần sơn tĩnh điện",
+      "content": "Phụ kiện cần sơn tĩnh điện Phụ kiện & vật tư"
+    },
+    {
+      "name": "Ray và trục",
+      "payload": {
+        "item_group_name": "Ray và trục",
+        "parent_item_group": "Phụ kiện & vật tư",
+        "is_group": false,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Ray và trục",
+      "content": "Ray và trục Phụ kiện & vật tư"
+    },
+    {
+      "name": "Tất cả mặt hàng",
+      "payload": {
+        "item_group_name": "Tất cả mặt hàng",
+        "is_group": true,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Tất cả mặt hàng",
+      "content": "Tất cả mặt hàng "
+    },
+    {
+      "name": "Điều khiển & phụ kiện điện",
+      "payload": {
+        "item_group_name": "Điều khiển & phụ kiện điện",
+        "parent_item_group": "Motor & điện",
+        "is_group": false,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Điều khiển & phụ kiện điện",
+      "content": "Điều khiển & phụ kiện điện Motor & điện"
+    }
+  ]
+}

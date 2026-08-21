@@ -1,0 +1,3358 @@
+{
+ "doctype": "Customer",
+ "so_ban_ghi": 258,
+ "nguon": "alumdoor-khach-hang-2026-08-20",
+ "ban_ghi": [
+  {
+   "name": "AN KHANG WINDOW",
+   "payload": {
+    "customer_name": "AN KHANG WINDOW",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "AN KHANG WINDOW",
+   "content": "AN KHANG WINDOW"
+  },
+  {
+   "name": "ANH HIẾU CẦN THƠ",
+   "payload": {
+    "customer_name": "ANH HIẾU CẦN THƠ",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH HIẾU CẦN THƠ",
+   "content": "ANH HIẾU CẦN THƠ"
+  },
+  {
+   "name": "ANH HOÁ",
+   "payload": {
+    "customer_name": "ANH HOÁ",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH HOÁ",
+   "content": "ANH HOÁ"
+  },
+  {
+   "name": "ANH HÙNG CỬA CUỐN MIỀN NAM",
+   "payload": {
+    "customer_name": "ANH HÙNG CỬA CUỐN MIỀN NAM",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH HÙNG CỬA CUỐN MIỀN NAM",
+   "content": "ANH HÙNG CỬA CUỐN MIỀN NAM"
+  },
+  {
+   "name": "ANH KHÔI DOOR",
+   "payload": {
+    "customer_name": "ANH KHÔI DOOR",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH KHÔI DOOR",
+   "content": "ANH KHÔI DOOR"
+  },
+  {
+   "name": "ANH QUÂN",
+   "payload": {
+    "customer_name": "ANH QUÂN",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH QUÂN",
+   "content": "ANH QUÂN"
+  },
+  {
+   "name": "ANH SỬ",
+   "payload": {
+    "customer_name": "ANH SỬ",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH SỬ",
+   "content": "ANH SỬ"
+  },
+  {
+   "name": "ANH THUYẾT",
+   "payload": {
+    "customer_name": "ANH THUYẾT",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH THUYẾT",
+   "content": "ANH THUYẾT"
+  },
+  {
+   "name": "ANH TIẾN CẦN THƠ",
+   "payload": {
+    "customer_name": "ANH TIẾN CẦN THƠ",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH TIẾN CẦN THƠ",
+   "content": "ANH TIẾN CẦN THƠ"
+  },
+  {
+   "name": "ANH TÍNH BẠC LIÊU",
+   "payload": {
+    "customer_name": "ANH TÍNH BẠC LIÊU",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH TÍNH BẠC LIÊU",
+   "content": "ANH TÍNH BẠC LIÊU"
+  },
+  {
+   "name": "ANH XUÂN NICEDOOR",
+   "payload": {
+    "customer_name": "ANH XUÂN NICEDOOR",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH XUÂN NICEDOOR",
+   "content": "ANH XUÂN NICEDOOR"
+  },
+  {
+   "name": "CHÍNH ĐẠO VƯƠNG GIA LAI",
+   "payload": {
+    "customer_name": "CHÍNH ĐẠO VƯƠNG GIA LAI",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CHÍNH ĐẠO VƯƠNG GIA LAI",
+   "content": "CHÍNH ĐẠO VƯƠNG GIA LAI"
+  },
+  {
+   "name": "CƠ KHÍ THÀNH TÀI",
+   "payload": {
+    "customer_name": "CƠ KHÍ THÀNH TÀI",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CƠ KHÍ THÀNH TÀI",
+   "content": "CƠ KHÍ THÀNH TÀI"
+  },
+  {
+   "name": "CỬA CUỐN CÔNG THÀNH",
+   "payload": {
+    "customer_name": "CỬA CUỐN CÔNG THÀNH",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CỬA CUỐN CÔNG THÀNH",
+   "content": "CỬA CUỐN CÔNG THÀNH"
+  },
+  {
+   "name": "CỬA CUỐN HẬU TÍN",
+   "payload": {
+    "customer_name": "CỬA CUỐN HẬU TÍN",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CỬA CUỐN HẬU TÍN",
+   "content": "CỬA CUỐN HẬU TÍN"
+  },
+  {
+   "name": "CỬA CUỐN HOÀNG PHÁT",
+   "payload": {
+    "customer_name": "CỬA CUỐN HOÀNG PHÁT",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CỬA CUỐN HOÀNG PHÁT",
+   "content": "CỬA CUỐN HOÀNG PHÁT"
+  },
+  {
+   "name": "CỬA CUỐN PHÚC TÍN",
+   "payload": {
+    "customer_name": "CỬA CUỐN PHÚC TÍN",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CỬA CUỐN PHÚC TÍN",
+   "content": "CỬA CUỐN PHÚC TÍN"
+  },
+  {
+   "name": "CỬA CUỐN TRUNG NGHĨA BÌNH ĐỊNH",
+   "payload": {
+    "customer_name": "CỬA CUỐN TRUNG NGHĨA BÌNH ĐỊNH",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CỬA CUỐN TRUNG NGHĨA BÌNH ĐỊNH",
+   "content": "CỬA CUỐN TRUNG NGHĨA BÌNH ĐỊNH"
+  },
+  {
+   "name": "ĐẠT THÀNH VĨNH LONG",
+   "payload": {
+    "customer_name": "ĐẠT THÀNH VĨNH LONG",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ĐẠT THÀNH VĨNH LONG",
+   "content": "ĐẠT THÀNH VĨNH LONG"
+  },
+  {
+   "name": "ĐĂNG LƯU ĐẮK LẮK",
+   "payload": {
+    "customer_name": "ĐĂNG LƯU ĐẮK LẮK",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ĐĂNG LƯU ĐẮK LẮK",
+   "content": "ĐĂNG LƯU ĐẮK LẮK"
+  },
+  {
+   "name": "GIA ĐẠT KIÊN GIANG",
+   "payload": {
+    "customer_name": "GIA ĐẠT KIÊN GIANG",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "GIA ĐẠT KIÊN GIANG",
+   "content": "GIA ĐẠT KIÊN GIANG"
+  },
+  {
+   "name": "GIA TẤN PHÁT",
+   "payload": {
+    "customer_name": "GIA TẤN PHÁT",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "GIA TẤN PHÁT",
+   "content": "GIA TẤN PHÁT"
+  },
+  {
+   "name": "MINH TÂM LONG",
+   "payload": {
+    "customer_name": "MINH TÂM LONG",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "MINH TÂM LONG",
+   "content": "MINH TÂM LONG"
+  },
+  {
+   "name": "MINH TÂM WINDOW",
+   "payload": {
+    "customer_name": "MINH TÂM WINDOW",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "MINH TÂM WINDOW",
+   "content": "MINH TÂM WINDOW"
+  },
+  {
+   "name": "NGUYỄN MINH DOOR",
+   "payload": {
+    "customer_name": "NGUYỄN MINH DOOR",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "NGUYỄN MINH DOOR",
+   "content": "NGUYỄN MINH DOOR"
+  },
+  {
+   "name": "NHÔM KÍNH VIỆT TRUNG",
+   "payload": {
+    "customer_name": "NHÔM KÍNH VIỆT TRUNG",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "NHÔM KÍNH VIỆT TRUNG",
+   "content": "NHÔM KÍNH VIỆT TRUNG"
+  },
+  {
+   "name": "PHÚC GIÀU LONG XUYÊN",
+   "payload": {
+    "customer_name": "PHÚC GIÀU LONG XUYÊN",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "PHÚC GIÀU LONG XUYÊN",
+   "content": "PHÚC GIÀU LONG XUYÊN"
+  },
+  {
+   "name": "TÀI LỘC WINDOW",
+   "payload": {
+    "customer_name": "TÀI LỘC WINDOW",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "TÀI LỘC WINDOW",
+   "content": "TÀI LỘC WINDOW"
+  },
+  {
+   "name": "THIÊN ANH DOOR",
+   "payload": {
+    "customer_name": "THIÊN ANH DOOR",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "THIÊN ANH DOOR",
+   "content": "THIÊN ANH DOOR"
+  },
+  {
+   "name": "TOÀN PHÁT TÂY NINH",
+   "payload": {
+    "customer_name": "TOÀN PHÁT TÂY NINH",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "TOÀN PHÁT TÂY NINH",
+   "content": "TOÀN PHÁT TÂY NINH"
+  },
+  {
+   "name": "TRUNG TÂM CỬA CUỐN GIA LAI",
+   "payload": {
+    "customer_name": "TRUNG TÂM CỬA CUỐN GIA LAI",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "TRUNG TÂM CỬA CUỐN GIA LAI",
+   "content": "TRUNG TÂM CỬA CUỐN GIA LAI"
+  },
+  {
+   "name": "VIỆT ĐÔNG BẾN TRE",
+   "payload": {
+    "customer_name": "VIỆT ĐÔNG BẾN TRE",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "VIỆT ĐÔNG BẾN TRE",
+   "content": "VIỆT ĐÔNG BẾN TRE"
+  },
+  {
+   "name": "ANH LỘC PHÁT - ĐÀ NẴNG",
+   "payload": {
+    "customer_name": "ANH LỘC PHÁT - ĐÀ NẴNG",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH LỘC PHÁT - ĐÀ NẴNG",
+   "content": "ANH LỘC PHÁT - ĐÀ NẴNG"
+  },
+  {
+   "name": "AN ANH KHANG",
+   "payload": {
+    "customer_name": "AN ANH KHANG",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "AN ANH KHANG",
+   "content": "AN ANH KHANG"
+  },
+  {
+   "name": "ANH DANH",
+   "payload": {
+    "customer_name": "ANH DANH",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH DANH",
+   "content": "ANH DANH"
+  },
+  {
+   "name": "ANH DUY LONG XUYÊN",
+   "payload": {
+    "customer_name": "ANH DUY LONG XUYÊN",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH DUY LONG XUYÊN",
+   "content": "ANH DUY LONG XUYÊN"
+  },
+  {
+   "name": "ANH DUY AN GIANG",
+   "payload": {
+    "customer_name": "ANH DUY AN GIANG",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH DUY AN GIANG",
+   "content": "ANH DUY AN GIANG"
+  },
+  {
+   "name": "ÁNH DƯƠNG ĐỨC TRỌNG",
+   "payload": {
+    "customer_name": "ÁNH DƯƠNG ĐỨC TRỌNG",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ÁNH DƯƠNG ĐỨC TRỌNG",
+   "content": "ÁNH DƯƠNG ĐỨC TRỌNG"
+  },
+  {
+   "name": "ANH KHÁNH DĨ AN",
+   "payload": {
+    "customer_name": "ANH KHÁNH DĨ AN",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH KHÁNH DĨ AN",
+   "content": "ANH KHÁNH DĨ AN"
+  },
+  {
+   "name": "ANH PHÁT VĨNH LONG",
+   "payload": {
+    "customer_name": "ANH PHÁT VĨNH LONG",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH PHÁT VĨNH LONG",
+   "content": "ANH PHÁT VĨNH LONG"
+  },
+  {
+   "name": "ANH THUẬN CAM LÂM",
+   "payload": {
+    "customer_name": "ANH THUẬN CAM LÂM",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH THUẬN CAM LÂM",
+   "content": "ANH THUẬN CAM LÂM"
+  },
+  {
+   "name": "ÁNH TRĂNG PHAN THIẾT",
+   "payload": {
+    "customer_name": "ÁNH TRĂNG PHAN THIẾT",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ÁNH TRĂNG PHAN THIẾT",
+   "content": "ÁNH TRĂNG PHAN THIẾT"
+  },
+  {
+   "name": "ANH TUẤN ANH GÒ VẤP",
+   "payload": {
+    "customer_name": "ANH TUẤN ANH GÒ VẤP",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH TUẤN ANH GÒ VẤP",
+   "content": "ANH TUẤN ANH GÒ VẤP"
+  },
+  {
+   "name": "CTY LONG VĨ",
+   "payload": {
+    "customer_name": "CTY LONG VĨ",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CTY LONG VĨ",
+   "content": "CTY LONG VĨ"
+  },
+  {
+   "name": "CƯỜNG THỊNH Q7",
+   "payload": {
+    "customer_name": "CƯỜNG THỊNH Q7",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CƯỜNG THỊNH Q7",
+   "content": "CƯỜNG THỊNH Q7"
+  },
+  {
+   "name": "DK WINDOW",
+   "payload": {
+    "customer_name": "DK WINDOW",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "DK WINDOW",
+   "content": "DK WINDOW"
+  },
+  {
+   "name": "HOÀNG GIA NHÀ BÈ",
+   "payload": {
+    "customer_name": "HOÀNG GIA NHÀ BÈ",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "HOÀNG GIA NHÀ BÈ",
+   "content": "HOÀNG GIA NHÀ BÈ"
+  },
+  {
+   "name": "HOÀNG QUÂN ALUDOOR",
+   "payload": {
+    "customer_name": "HOÀNG QUÂN ALUDOOR",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "HOÀNG QUÂN ALUDOOR",
+   "content": "HOÀNG QUÂN ALUDOOR"
+  },
+  {
+   "name": "HOÀNG THỊNH PHÁT",
+   "payload": {
+    "customer_name": "HOÀNG THỊNH PHÁT",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "HOÀNG THỊNH PHÁT",
+   "content": "HOÀNG THỊNH PHÁT"
+  },
+  {
+   "name": "HỒNG PHÁT BÌNH DƯƠNG",
+   "payload": {
+    "customer_name": "HỒNG PHÁT BÌNH DƯƠNG",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "HỒNG PHÁT BÌNH DƯƠNG",
+   "content": "HỒNG PHÁT BÌNH DƯƠNG"
+  },
+  {
+   "name": "HỒNG QUANG ALUDOOR",
+   "payload": {
+    "customer_name": "HỒNG QUANG ALUDOOR",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "HỒNG QUANG ALUDOOR",
+   "content": "HỒNG QUANG ALUDOOR"
+  },
+  {
+   "name": "HỮU TẤN",
+   "payload": {
+    "customer_name": "HỮU TẤN",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "HỮU TẤN",
+   "content": "HỮU TẤN"
+  },
+  {
+   "name": "KHÁCH LẺ",
+   "payload": {
+    "customer_name": "KHÁCH LẺ",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "KHÁCH LẺ",
+   "content": "KHÁCH LẺ"
+  },
+  {
+   "name": "MAI LÂM BÙ ĐĂNG",
+   "payload": {
+    "customer_name": "MAI LÂM BÙ ĐĂNG",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "MAI LÂM BÙ ĐĂNG",
+   "content": "MAI LÂM BÙ ĐĂNG"
+  },
+  {
+   "name": "NAM HÙNG ĐÀ LẠT",
+   "payload": {
+    "customer_name": "NAM HÙNG ĐÀ LẠT",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "NAM HÙNG ĐÀ LẠT",
+   "content": "NAM HÙNG ĐÀ LẠT"
+  },
+  {
+   "name": "NGÂN PHÁT CỦ CHI",
+   "payload": {
+    "customer_name": "NGÂN PHÁT CỦ CHI",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "NGÂN PHÁT CỦ CHI",
+   "content": "NGÂN PHÁT CỦ CHI"
+  },
+  {
+   "name": "NGỌC BẢO PHAN THIẾT",
+   "payload": {
+    "customer_name": "NGỌC BẢO PHAN THIẾT",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "NGỌC BẢO PHAN THIẾT",
+   "content": "NGỌC BẢO PHAN THIẾT"
+  },
+  {
+   "name": "PHI HÙNG",
+   "payload": {
+    "customer_name": "PHI HÙNG",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "PHI HÙNG",
+   "content": "PHI HÙNG"
+  },
+  {
+   "name": "QUANG TRUNG BÙ ĐĂNG",
+   "payload": {
+    "customer_name": "QUANG TRUNG BÙ ĐĂNG",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "QUANG TRUNG BÙ ĐĂNG",
+   "content": "QUANG TRUNG BÙ ĐĂNG"
+  },
+  {
+   "name": "QUỐC PHONG HƯNG THỊNH",
+   "payload": {
+    "customer_name": "QUỐC PHONG HƯNG THỊNH",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "QUỐC PHONG HƯNG THỊNH",
+   "content": "QUỐC PHONG HƯNG THỊNH"
+  },
+  {
+   "name": "TÂM BÌNH NHƠN TRẠCH",
+   "payload": {
+    "customer_name": "TÂM BÌNH NHƠN TRẠCH",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "TÂM BÌNH NHƠN TRẠCH",
+   "content": "TÂM BÌNH NHƠN TRẠCH"
+  },
+  {
+   "name": "THÀNH CÔNG TÂY NINH",
+   "payload": {
+    "customer_name": "THÀNH CÔNG TÂY NINH",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "THÀNH CÔNG TÂY NINH",
+   "content": "THÀNH CÔNG TÂY NINH"
+  },
+  {
+   "name": "TIẾN PHÁT VĨNH LONG",
+   "payload": {
+    "customer_name": "TIẾN PHÁT VĨNH LONG",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "TIẾN PHÁT VĨNH LONG",
+   "content": "TIẾN PHÁT VĨNH LONG"
+  },
+  {
+   "name": "TRUNG THẢO GÒ VẤP",
+   "payload": {
+    "customer_name": "TRUNG THẢO GÒ VẤP",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "TRUNG THẢO GÒ VẤP",
+   "content": "TRUNG THẢO GÒ VẤP"
+  },
+  {
+   "name": "TUẤN DU PHÁT",
+   "payload": {
+    "customer_name": "TUẤN DU PHÁT",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "TUẤN DU PHÁT",
+   "content": "TUẤN DU PHÁT"
+  },
+  {
+   "name": "XUÂN HÙNG BÌNH DƯƠNG",
+   "payload": {
+    "customer_name": "XUÂN HÙNG BÌNH DƯƠNG",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "XUÂN HÙNG BÌNH DƯƠNG",
+   "content": "XUÂN HÙNG BÌNH DƯƠNG"
+  },
+  {
+   "name": "ANH CHÍNH LÂM HÀ",
+   "payload": {
+    "customer_name": "ANH CHÍNH LÂM HÀ",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH CHÍNH LÂM HÀ",
+   "content": "ANH CHÍNH LÂM HÀ"
+  },
+  {
+   "name": "ANH BI Q12",
+   "payload": {
+    "customer_name": "ANH BI Q12",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THUÝ",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THUÝ\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH BI Q12",
+   "content": "ANH BI Q12"
+  },
+  {
+   "name": "ANH BIỂN",
+   "payload": {
+    "customer_name": "ANH BIỂN",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH BIỂN",
+   "content": "ANH BIỂN"
+  },
+  {
+   "name": "ANH CÔNG BA GÁC",
+   "payload": {
+    "customer_name": "ANH CÔNG BA GÁC",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THUÝ",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THUÝ\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH CÔNG BA GÁC",
+   "content": "ANH CÔNG BA GÁC"
+  },
+  {
+   "name": "ANH DIỆN",
+   "payload": {
+    "customer_name": "ANH DIỆN",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH DIỆN",
+   "content": "ANH DIỆN"
+  },
+  {
+   "name": "ANH DUY TIỀN GIANG",
+   "payload": {
+    "customer_name": "ANH DUY TIỀN GIANG",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH DUY TIỀN GIANG",
+   "content": "ANH DUY TIỀN GIANG"
+  },
+  {
+   "name": "ANH DƯƠNG KHÁCH LẺ",
+   "payload": {
+    "customer_name": "ANH DƯƠNG KHÁCH LẺ",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH DƯƠNG KHÁCH LẺ",
+   "content": "ANH DƯƠNG KHÁCH LẺ"
+  },
+  {
+   "name": "ANH DƯƠNG TATADOOR",
+   "payload": {
+    "customer_name": "ANH DƯƠNG TATADOOR",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH DƯƠNG TATADOOR",
+   "content": "ANH DƯƠNG TATADOOR"
+  },
+  {
+   "name": "ANH ĐẠO ĐẮK LẮK",
+   "payload": {
+    "customer_name": "ANH ĐẠO ĐẮK LẮK",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH ĐẠO ĐẮK LẮK",
+   "content": "ANH ĐẠO ĐẮK LẮK"
+  },
+  {
+   "name": "ANH ĐỨC - 0938459977",
+   "payload": {
+    "customer_name": "ANH ĐỨC - 0938459977",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH ĐỨC - 0938459977",
+   "content": "ANH ĐỨC - 0938459977"
+  },
+  {
+   "name": "ANH ĐƯỢC",
+   "payload": {
+    "customer_name": "ANH ĐƯỢC",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH ĐƯỢC",
+   "content": "ANH ĐƯỢC"
+  },
+  {
+   "name": "ANH HẢI ĐẠI NAM",
+   "payload": {
+    "customer_name": "ANH HẢI ĐẠI NAM",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH HẢI ĐẠI NAM",
+   "content": "ANH HẢI ĐẠI NAM"
+  },
+  {
+   "name": "ANH HIỆP CỬA CUỐN MINH HIẾU",
+   "payload": {
+    "customer_name": "ANH HIỆP CỬA CUỐN MINH HIẾU",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH HIỆP CỬA CUỐN MINH HIẾU",
+   "content": "ANH HIỆP CỬA CUỐN MINH HIẾU"
+  },
+  {
+   "name": "ANH HOÀI",
+   "payload": {
+    "customer_name": "ANH HOÀI",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THUÝ",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THUÝ\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH HOÀI",
+   "content": "ANH HOÀI"
+  },
+  {
+   "name": "ANH HUỆ BẢO LÂM",
+   "payload": {
+    "customer_name": "ANH HUỆ BẢO LÂM",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH HUỆ BẢO LÂM",
+   "content": "ANH HUỆ BẢO LÂM"
+  },
+  {
+   "name": "ANH HÙNG - THUÝ",
+   "payload": {
+    "customer_name": "ANH HÙNG - THUÝ",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH HÙNG - THUÝ",
+   "content": "ANH HÙNG - THUÝ"
+  },
+  {
+   "name": "ANH HÙNG CỬA CUỐN HÙNG PHÁT",
+   "payload": {
+    "customer_name": "ANH HÙNG CỬA CUỐN HÙNG PHÁT",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH HÙNG CỬA CUỐN HÙNG PHÁT",
+   "content": "ANH HÙNG CỬA CUỐN HÙNG PHÁT"
+  },
+  {
+   "name": "ANH HƯỞNG - KHÁCH LẺ",
+   "payload": {
+    "customer_name": "ANH HƯỞNG - KHÁCH LẺ",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THUÝ",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THUÝ\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH HƯỞNG - KHÁCH LẺ",
+   "content": "ANH HƯỞNG - KHÁCH LẺ"
+  },
+  {
+   "name": "ANH KẾ ĐẠI NAM",
+   "payload": {
+    "customer_name": "ANH KẾ ĐẠI NAM",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH KẾ ĐẠI NAM",
+   "content": "ANH KẾ ĐẠI NAM"
+  },
+  {
+   "name": "ANH LÊ NGỌC ANH",
+   "payload": {
+    "customer_name": "ANH LÊ NGỌC ANH",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THUÝ",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THUÝ\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH LÊ NGỌC ANH",
+   "content": "ANH LÊ NGỌC ANH"
+  },
+  {
+   "name": "ANH LỘC NHÔM KÍNH",
+   "payload": {
+    "customer_name": "ANH LỘC NHÔM KÍNH",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THUÝ",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THUÝ\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH LỘC NHÔM KÍNH",
+   "content": "ANH LỘC NHÔM KÍNH"
+  },
+  {
+   "name": "ANH LƯƠNG",
+   "payload": {
+    "customer_name": "ANH LƯƠNG",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH LƯƠNG",
+   "content": "ANH LƯƠNG"
+  },
+  {
+   "name": "ANH LƯƠNG ĐẮK LẮK",
+   "payload": {
+    "customer_name": "ANH LƯƠNG ĐẮK LẮK",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH LƯƠNG ĐẮK LẮK",
+   "content": "ANH LƯƠNG ĐẮK LẮK"
+  },
+  {
+   "name": "ANH MƯỜI ĐÀ LẠT",
+   "payload": {
+    "customer_name": "ANH MƯỜI ĐÀ LẠT",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH MƯỜI ĐÀ LẠT",
+   "content": "ANH MƯỜI ĐÀ LẠT"
+  },
+  {
+   "name": "CỬA THẾ GIỚI MỚI",
+   "payload": {
+    "customer_name": "CỬA THẾ GIỚI MỚI",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CỬA THẾ GIỚI MỚI",
+   "content": "CỬA THẾ GIỚI MỚI"
+  },
+  {
+   "name": "ĐỨC TRÍ",
+   "payload": {
+    "customer_name": "ĐỨC TRÍ",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THUÝ",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THUÝ\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ĐỨC TRÍ",
+   "content": "ĐỨC TRÍ"
+  },
+  {
+   "name": "GIA BẢO TÂY NINH",
+   "payload": {
+    "customer_name": "GIA BẢO TÂY NINH",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THUÝ",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THUÝ\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "GIA BẢO TÂY NINH",
+   "content": "GIA BẢO TÂY NINH"
+  },
+  {
+   "name": "HOÀNG ANH ĐẮK LẮK",
+   "payload": {
+    "customer_name": "HOÀNG ANH ĐẮK LẮK",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THUÝ",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THUÝ\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "HOÀNG ANH ĐẮK LẮK",
+   "content": "HOÀNG ANH ĐẮK LẮK"
+  },
+  {
+   "name": "HOÀNG LONG ĐỨC TRỌNG",
+   "payload": {
+    "customer_name": "HOÀNG LONG ĐỨC TRỌNG",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THUÝ",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THUÝ\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "HOÀNG LONG ĐỨC TRỌNG",
+   "content": "HOÀNG LONG ĐỨC TRỌNG"
+  },
+  {
+   "name": "HOÀNG PHÚ KIÊN GIANG",
+   "payload": {
+    "customer_name": "HOÀNG PHÚ KIÊN GIANG",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "HOÀNG PHÚ KIÊN GIANG",
+   "content": "HOÀNG PHÚ KIÊN GIANG"
+  },
+  {
+   "name": "HỮU THÁI",
+   "payload": {
+    "customer_name": "HỮU THÁI",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THUÝ",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THUÝ\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "HỮU THÁI",
+   "content": "HỮU THÁI"
+  },
+  {
+   "name": "KÍNH THÀNH DANH",
+   "payload": {
+    "customer_name": "KÍNH THÀNH DANH",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THUÝ",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THUÝ\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "KÍNH THÀNH DANH",
+   "content": "KÍNH THÀNH DANH"
+  },
+  {
+   "name": "LƯƠNG GIA BÌNH PHƯỚC",
+   "payload": {
+    "customer_name": "LƯƠNG GIA BÌNH PHƯỚC",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THUÝ",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THUÝ\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "LƯƠNG GIA BÌNH PHƯỚC",
+   "content": "LƯƠNG GIA BÌNH PHƯỚC"
+  },
+  {
+   "name": "MINH THANH",
+   "payload": {
+    "customer_name": "MINH THANH",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THUÝ",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THUÝ\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "MINH THANH",
+   "content": "MINH THANH"
+  },
+  {
+   "name": "PHAN LÊ ĐÀ NẴNG",
+   "payload": {
+    "customer_name": "PHAN LÊ ĐÀ NẴNG",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THUÝ",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THUÝ\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "PHAN LÊ ĐÀ NẴNG",
+   "content": "PHAN LÊ ĐÀ NẴNG"
+  },
+  {
+   "name": "QUÁCH TĨNH",
+   "payload": {
+    "customer_name": "QUÁCH TĨNH",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THUÝ",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THUÝ\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "QUÁCH TĨNH",
+   "content": "QUÁCH TĨNH"
+  },
+  {
+   "name": "QUÁCH TĨNH ( HỢI TIẾN PHÁT)",
+   "payload": {
+    "customer_name": "QUÁCH TĨNH ( HỢI TIẾN PHÁT)",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THUÝ",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THUÝ\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "QUÁCH TĨNH ( HỢI TIẾN PHÁT)",
+   "content": "QUÁCH TĨNH ( HỢI TIẾN PHÁT)"
+  },
+  {
+   "name": "QUANG LUẬN",
+   "payload": {
+    "customer_name": "QUANG LUẬN",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THUÝ",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THUÝ\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "QUANG LUẬN",
+   "content": "QUANG LUẬN"
+  },
+  {
+   "name": "QUỐC CƯỜNG ĐỨC TRỌNG",
+   "payload": {
+    "customer_name": "QUỐC CƯỜNG ĐỨC TRỌNG",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THUÝ",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THUÝ\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "QUỐC CƯỜNG ĐỨC TRỌNG",
+   "content": "QUỐC CƯỜNG ĐỨC TRỌNG"
+  },
+  {
+   "name": "SÁU HỒNG",
+   "payload": {
+    "customer_name": "SÁU HỒNG",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THUÝ",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THUÝ\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "SÁU HỒNG",
+   "content": "SÁU HỒNG"
+  },
+  {
+   "name": "TÂN THÀNH CÔNG",
+   "payload": {
+    "customer_name": "TÂN THÀNH CÔNG",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THUÝ",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THUÝ\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "TÂN THÀNH CÔNG",
+   "content": "TÂN THÀNH CÔNG"
+  },
+  {
+   "name": "THÁI PHÚC LONG AN",
+   "payload": {
+    "customer_name": "THÁI PHÚC LONG AN",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "THÁI PHÚC LONG AN",
+   "content": "THÁI PHÚC LONG AN"
+  },
+  {
+   "name": "THÀNH CÔNG KIÊN GIANG",
+   "payload": {
+    "customer_name": "THÀNH CÔNG KIÊN GIANG",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THUÝ",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THUÝ\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "THÀNH CÔNG KIÊN GIANG",
+   "content": "THÀNH CÔNG KIÊN GIANG"
+  },
+  {
+   "name": "THÀNH NGÂN",
+   "payload": {
+    "customer_name": "THÀNH NGÂN",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "THÀNH NGÂN",
+   "content": "THÀNH NGÂN"
+  },
+  {
+   "name": "VƯƠNG THÀNH VŨ",
+   "payload": {
+    "customer_name": "VƯƠNG THÀNH VŨ",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "VƯƠNG THÀNH VŨ",
+   "content": "VƯƠNG THÀNH VŨ"
+  },
+  {
+   "name": "ANH NGUYỄN MINH QUÂN - KHÁCH LẺ",
+   "payload": {
+    "customer_name": "ANH NGUYỄN MINH QUÂN - KHÁCH LẺ",
+    "price_group": "Lẻ",
+    "contact_person": "LÊ THUÝ",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH LẺ\", người phụ trách \"LÊ THUÝ\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH NGUYỄN MINH QUÂN - KHÁCH LẺ",
+   "content": "ANH NGUYỄN MINH QUÂN - KHÁCH LẺ"
+  },
+  {
+   "name": "KIM SA",
+   "payload": {
+    "customer_name": "KIM SA",
+    "price_group": "Lẻ",
+    "contact_person": "LÊ THUÝ",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH LẺ\", người phụ trách \"LÊ THUÝ\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "KIM SA",
+   "content": "KIM SA"
+  },
+  {
+   "name": "ANH BÙI MÙI BH",
+   "payload": {
+    "customer_name": "ANH BÙI MÙI BH",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH BÙI MÙI BH",
+   "content": "ANH BÙI MÙI BH"
+  },
+  {
+   "name": "ANH HƯỞNG - KHÁCH LẺ",
+   "payload": {
+    "customer_name": "ANH HƯỞNG - KHÁCH LẺ",
+    "price_group": "Lẻ",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH LẺ\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH HƯỞNG - KHÁCH LẺ",
+   "content": "ANH HƯỞNG - KHÁCH LẺ"
+  },
+  {
+   "name": "ANH HÙYNH UY - KHÁCH LẺ",
+   "payload": {
+    "customer_name": "ANH HÙYNH UY - KHÁCH LẺ",
+    "price_group": "Lẻ",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH LẺ\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH HÙYNH UY - KHÁCH LẺ",
+   "content": "ANH HÙYNH UY - KHÁCH LẺ"
+  },
+  {
+   "name": "ANH THẾ GIANG",
+   "payload": {
+    "customer_name": "ANH THẾ GIANG",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH THẾ GIANG",
+   "content": "ANH THẾ GIANG"
+  },
+  {
+   "name": "LÒ CHẢ HỒNG HƯƠNG",
+   "payload": {
+    "customer_name": "LÒ CHẢ HỒNG HƯƠNG",
+    "price_group": "Lẻ",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH LẺ\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "LÒ CHẢ HỒNG HƯƠNG",
+   "content": "LÒ CHẢ HỒNG HƯƠNG"
+  },
+  {
+   "name": "ANH PHÓNG THỢ",
+   "payload": {
+    "customer_name": "ANH PHÓNG THỢ",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH PHÓNG THỢ",
+   "content": "ANH PHÓNG THỢ"
+  },
+  {
+   "name": "NHÔM KÍNH TÀI LỘC",
+   "payload": {
+    "customer_name": "NHÔM KÍNH TÀI LỘC",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "NHÔM KÍNH TÀI LỘC",
+   "content": "NHÔM KÍNH TÀI LỘC"
+  },
+  {
+   "name": "ANH LONG VỸ",
+   "payload": {
+    "customer_name": "ANH LONG VỸ",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH LONG VỸ",
+   "content": "ANH LONG VỸ"
+  },
+  {
+   "name": "ANH MINH KHÁCH LẺ",
+   "payload": {
+    "customer_name": "ANH MINH KHÁCH LẺ",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH MINH KHÁCH LẺ",
+   "content": "ANH MINH KHÁCH LẺ"
+  },
+  {
+   "name": "ANH TUẤN BẠC LIÊU",
+   "payload": {
+    "customer_name": "ANH TUẤN BẠC LIÊU",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH TUẤN BẠC LIÊU",
+   "content": "ANH TUẤN BẠC LIÊU"
+  },
+  {
+   "name": "VUA CỬA CUỐN",
+   "payload": {
+    "customer_name": "VUA CỬA CUỐN",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "VUA CỬA CUỐN",
+   "content": "VUA CỬA CUỐN"
+  },
+  {
+   "name": "HOVADOOR CHỊ VÂN",
+   "payload": {
+    "customer_name": "HOVADOOR CHỊ VÂN",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "HOVADOOR CHỊ VÂN",
+   "content": "HOVADOOR CHỊ VÂN"
+  },
+  {
+   "name": "ANH PHẠM PHONG -0902454866",
+   "payload": {
+    "customer_name": "ANH PHẠM PHONG -0902454866",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH PHẠM PHONG -0902454866",
+   "content": "ANH PHẠM PHONG -0902454866"
+  },
+  {
+   "name": "CỬA CUỐN BA SNAG",
+   "payload": {
+    "customer_name": "CỬA CUỐN BA SNAG",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CỬA CUỐN BA SNAG",
+   "content": "CỬA CUỐN BA SNAG"
+  },
+  {
+   "name": "TIẾN DUY ĐẮKNÔNG",
+   "payload": {
+    "customer_name": "TIẾN DUY ĐẮKNÔNG",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "TIẾN DUY ĐẮKNÔNG",
+   "content": "TIẾN DUY ĐẮKNÔNG"
+  },
+  {
+   "name": "CỬA CUỐN TÂM ĐỨC",
+   "payload": {
+    "customer_name": "CỬA CUỐN TÂM ĐỨC",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CỬA CUỐN TÂM ĐỨC",
+   "content": "CỬA CUỐN TÂM ĐỨC"
+  },
+  {
+   "name": "MINH HOÀNG KIÊN GIANG",
+   "payload": {
+    "customer_name": "MINH HOÀNG KIÊN GIANG",
+    "price_group": "Đại lý",
+    "contact_person": "CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "MINH HOÀNG KIÊN GIANG",
+   "content": "MINH HOÀNG KIÊN GIANG"
+  },
+  {
+   "name": "ANH ĐỨC",
+   "payload": {
+    "customer_name": "ANH ĐỨC",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH ĐỨC",
+   "content": "ANH ĐỨC"
+  },
+  {
+   "name": "DƯƠNG PHI LONG - CHỊ HƯƠNG",
+   "payload": {
+    "customer_name": "DƯƠNG PHI LONG - CHỊ HƯƠNG",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "DƯƠNG PHI LONG - CHỊ HƯƠNG",
+   "content": "DƯƠNG PHI LONG - CHỊ HƯƠNG"
+  },
+  {
+   "name": "THANH THỊNH WINDOW",
+   "payload": {
+    "customer_name": "THANH THỊNH WINDOW",
+    "price_group": "Đại lý",
+    "contact_person": "CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "THANH THỊNH WINDOW",
+   "content": "THANH THỊNH WINDOW"
+  },
+  {
+   "name": "NGA QUỐC CƯỜNG",
+   "payload": {
+    "customer_name": "NGA QUỐC CƯỜNG",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "NGA QUỐC CƯỜNG",
+   "content": "NGA QUỐC CƯỜNG"
+  },
+  {
+   "name": "TẤN ĐẠI HƯNG - CHỊ HÀ",
+   "payload": {
+    "customer_name": "TẤN ĐẠI HƯNG - CHỊ HÀ",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "TẤN ĐẠI HƯNG - CHỊ HÀ",
+   "content": "TẤN ĐẠI HƯNG - CHỊ HÀ"
+  },
+  {
+   "name": "CỬA CUỐN THÚY VINH",
+   "payload": {
+    "customer_name": "CỬA CUỐN THÚY VINH",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CỬA CUỐN THÚY VINH",
+   "content": "CỬA CUỐN THÚY VINH"
+  },
+  {
+   "name": "ĐĂNG KHOA",
+   "payload": {
+    "customer_name": "ĐĂNG KHOA",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ĐĂNG KHOA",
+   "content": "ĐĂNG KHOA"
+  },
+  {
+   "name": "CHÂU AN PHÁT",
+   "payload": {
+    "customer_name": "CHÂU AN PHÁT",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CHÂU AN PHÁT",
+   "content": "CHÂU AN PHÁT"
+  },
+  {
+   "name": "ANH THIỆU TAM KÌ",
+   "payload": {
+    "customer_name": "ANH THIỆU TAM KÌ",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH THIỆU TAM KÌ",
+   "content": "ANH THIỆU TAM KÌ"
+  },
+  {
+   "name": "TẤN DU PHÁT",
+   "payload": {
+    "customer_name": "TẤN DU PHÁT",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "TẤN DU PHÁT",
+   "content": "TẤN DU PHÁT"
+  },
+  {
+   "name": "ANH THUẤN TAVIDOOR",
+   "payload": {
+    "customer_name": "ANH THUẤN TAVIDOOR",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH THUẤN TAVIDOOR",
+   "content": "ANH THUẤN TAVIDOOR"
+  },
+  {
+   "name": "DUY DƯ",
+   "payload": {
+    "customer_name": "DUY DƯ",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "DUY DƯ",
+   "content": "DUY DƯ"
+  },
+  {
+   "name": "ANH ĐẠI",
+   "payload": {
+    "customer_name": "ANH ĐẠI",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH ĐẠI",
+   "content": "ANH ĐẠI"
+  },
+  {
+   "name": "MTDOOR",
+   "payload": {
+    "customer_name": "MTDOOR",
+    "price_group": "Đại lý",
+    "contact_person": "CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "MTDOOR",
+   "content": "MTDOOR"
+  },
+  {
+   "name": "CỬA CUỐN PHƯƠNG THÚY",
+   "payload": {
+    "customer_name": "CỬA CUỐN PHƯƠNG THÚY",
+    "price_group": "Đại lý",
+    "contact_person": "CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CỬA CUỐN PHƯƠNG THÚY",
+   "content": "CỬA CUỐN PHƯƠNG THÚY"
+  },
+  {
+   "name": "CỬA CUỐN HÒA PHÁT",
+   "payload": {
+    "customer_name": "CỬA CUỐN HÒA PHÁT",
+    "price_group": "Đại lý",
+    "contact_person": "CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CỬA CUỐN HÒA PHÁT",
+   "content": "CỬA CUỐN HÒA PHÁT"
+  },
+  {
+   "name": "ANH PHONG NGUYỄN",
+   "payload": {
+    "customer_name": "ANH PHONG NGUYỄN",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH PHONG NGUYỄN",
+   "content": "ANH PHONG NGUYỄN"
+  },
+  {
+   "name": "HOÀNG TIẾN PHÚC",
+   "payload": {
+    "customer_name": "HOÀNG TIẾN PHÚC",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "HOÀNG TIẾN PHÚC",
+   "content": "HOÀNG TIẾN PHÚC"
+  },
+  {
+   "name": "CỬA CUỐN MẠNH HÙNG",
+   "payload": {
+    "customer_name": "CỬA CUỐN MẠNH HÙNG",
+    "price_group": "Đại lý",
+    "contact_person": "CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CỬA CUỐN MẠNH HÙNG",
+   "content": "CỬA CUỐN MẠNH HÙNG"
+  },
+  {
+   "name": "ANH BI NEWDOOR",
+   "payload": {
+    "customer_name": "ANH BI NEWDOOR",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH BI NEWDOOR",
+   "content": "ANH BI NEWDOOR"
+  },
+  {
+   "name": "TRƯỜNG THỊNH",
+   "payload": {
+    "customer_name": "TRƯỜNG THỊNH",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "TRƯỜNG THỊNH",
+   "content": "TRƯỜNG THỊNH"
+  },
+  {
+   "name": "CTY HẢI THÀNH Q9",
+   "payload": {
+    "customer_name": "CTY HẢI THÀNH Q9",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CTY HẢI THÀNH Q9",
+   "content": "CTY HẢI THÀNH Q9"
+  },
+  {
+   "name": "ANH TIẾN LONG THÀNH",
+   "payload": {
+    "customer_name": "ANH TIẾN LONG THÀNH",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH TIẾN LONG THÀNH",
+   "content": "ANH TIẾN LONG THÀNH"
+  },
+  {
+   "name": "TRƯỜNG SANH DI LINH",
+   "payload": {
+    "customer_name": "TRƯỜNG SANH DI LINH",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "TRƯỜNG SANH DI LINH",
+   "content": "TRƯỜNG SANH DI LINH"
+  },
+  {
+   "name": "MẠNH HÀO BẢO LỘC",
+   "payload": {
+    "customer_name": "MẠNH HÀO BẢO LỘC",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "MẠNH HÀO BẢO LỘC",
+   "content": "MẠNH HÀO BẢO LỘC"
+  },
+  {
+   "name": "HƯƠNG SƠN VŨNG TÀU",
+   "payload": {
+    "customer_name": "HƯƠNG SƠN VŨNG TÀU",
+    "price_group": "Đại lý",
+    "contact_person": "CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "HƯƠNG SƠN VŨNG TÀU",
+   "content": "HƯƠNG SƠN VŨNG TÀU"
+  },
+  {
+   "name": "NHÔM KÍNH HÒA LỘC",
+   "payload": {
+    "customer_name": "NHÔM KÍNH HÒA LỘC",
+    "price_group": "Đại lý",
+    "contact_person": "CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "NHÔM KÍNH HÒA LỘC",
+   "content": "NHÔM KÍNH HÒA LỘC"
+  },
+  {
+   "name": "CỬA CUỐN A BÁ",
+   "payload": {
+    "customer_name": "CỬA CUỐN A BÁ",
+    "price_group": "Đại lý",
+    "contact_person": "CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CỬA CUỐN A BÁ",
+   "content": "CỬA CUỐN A BÁ"
+  },
+  {
+   "name": "VIỆT WINDOW",
+   "payload": {
+    "customer_name": "VIỆT WINDOW",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "VIỆT WINDOW",
+   "content": "VIỆT WINDOW"
+  },
+  {
+   "name": "CƠ KHÍ XUÂN TRUNG",
+   "payload": {
+    "customer_name": "CƠ KHÍ XUÂN TRUNG",
+    "price_group": "Đại lý",
+    "contact_person": "CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CƠ KHÍ XUÂN TRUNG",
+   "content": "CƠ KHÍ XUÂN TRUNG"
+  },
+  {
+   "name": "HOÀNG CUNG WINDOW",
+   "payload": {
+    "customer_name": "HOÀNG CUNG WINDOW",
+    "price_group": "Đại lý",
+    "contact_person": "CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "HOÀNG CUNG WINDOW",
+   "content": "HOÀNG CUNG WINDOW"
+  },
+  {
+   "name": "ANH DŨNG ĐẮKLẮK",
+   "payload": {
+    "customer_name": "ANH DŨNG ĐẮKLẮK",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH DŨNG ĐẮKLẮK",
+   "content": "ANH DŨNG ĐẮKLẮK"
+  },
+  {
+   "name": "ANH ĐÌNH LONG",
+   "payload": {
+    "customer_name": "ANH ĐÌNH LONG",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH ĐÌNH LONG",
+   "content": "ANH ĐÌNH LONG"
+  },
+  {
+   "name": "QUANG DANH",
+   "payload": {
+    "customer_name": "QUANG DANH",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "QUANG DANH",
+   "content": "QUANG DANH"
+  },
+  {
+   "name": "ANH HIỆP",
+   "payload": {
+    "customer_name": "ANH HIỆP",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH HIỆP",
+   "content": "ANH HIỆP"
+  },
+  {
+   "name": "KỶ NGUYÊN LONG XUYÊN",
+   "payload": {
+    "customer_name": "KỶ NGUYÊN LONG XUYÊN",
+    "price_group": "Đại lý",
+    "contact_person": "CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "KỶ NGUYÊN LONG XUYÊN",
+   "content": "KỶ NGUYÊN LONG XUYÊN"
+  },
+  {
+   "name": "ANH VINH - 090 6955379",
+   "payload": {
+    "customer_name": "ANH VINH - 090 6955379",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH VINH - 090 6955379",
+   "content": "ANH VINH - 090 6955379"
+  },
+  {
+   "name": "ANH THANH - 093 2689848",
+   "payload": {
+    "customer_name": "ANH THANH - 093 2689848",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH THANH - 093 2689848",
+   "content": "ANH THANH - 093 2689848"
+  },
+  {
+   "name": "ANH QUANG GIA LAI",
+   "payload": {
+    "customer_name": "ANH QUANG GIA LAI",
+    "price_group": "Đại lý",
+    "contact_person": "CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH QUANG GIA LAI",
+   "content": "ANH QUANG GIA LAI"
+  },
+  {
+   "name": "VIỆT MINH LONG",
+   "payload": {
+    "customer_name": "VIỆT MINH LONG",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "VIỆT MINH LONG",
+   "content": "VIỆT MINH LONG"
+  },
+  {
+   "name": "TÂM QUANG MINH",
+   "payload": {
+    "customer_name": "TÂM QUANG MINH",
+    "price_group": "Đại lý",
+    "contact_person": "CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "TÂM QUANG MINH",
+   "content": "TÂM QUANG MINH"
+  },
+  {
+   "name": "ANH SINH THỦ ĐỨC",
+   "payload": {
+    "customer_name": "ANH SINH THỦ ĐỨC",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH SINH THỦ ĐỨC",
+   "content": "ANH SINH THỦ ĐỨC"
+  },
+  {
+   "name": "CỬA CUỐN THÀNH PHÁT",
+   "payload": {
+    "customer_name": "CỬA CUỐN THÀNH PHÁT",
+    "price_group": "Đại lý",
+    "contact_person": "CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CỬA CUỐN THÀNH PHÁT",
+   "content": "CỬA CUỐN THÀNH PHÁT"
+  },
+  {
+   "name": "PHAN SƠN ĐẢ TẺH",
+   "payload": {
+    "customer_name": "PHAN SƠN ĐẢ TẺH",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "PHAN SƠN ĐẢ TẺH",
+   "content": "PHAN SƠN ĐẢ TẺH"
+  },
+  {
+   "name": "ANH TÚ TÂN PHÚ",
+   "payload": {
+    "customer_name": "ANH TÚ TÂN PHÚ",
+    "price_group": "Đại lý",
+    "contact_person": "CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH TÚ TÂN PHÚ",
+   "content": "ANH TÚ TÂN PHÚ"
+  },
+  {
+   "name": "ANH HÙNG",
+   "payload": {
+    "customer_name": "ANH HÙNG",
+    "price_group": "Đại lý",
+    "contact_person": "CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH HÙNG",
+   "content": "ANH HÙNG"
+  },
+  {
+   "name": "ANH HẢI",
+   "payload": {
+    "customer_name": "ANH HẢI",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH HẢI",
+   "content": "ANH HẢI"
+  },
+  {
+   "name": "ANH SƠN - 0937735818",
+   "payload": {
+    "customer_name": "ANH SƠN - 0937735818",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH SƠN - 0937735818",
+   "content": "ANH SƠN - 0937735818"
+  },
+  {
+   "name": "ANH CƯỜNG DOOR",
+   "payload": {
+    "customer_name": "ANH CƯỜNG DOOR",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH CƯỜNG DOOR",
+   "content": "ANH CƯỜNG DOOR"
+  },
+  {
+   "name": "CTY CỔ PHẦN XÂY DỰNG ALPHA",
+   "payload": {
+    "customer_name": "CTY CỔ PHẦN XÂY DỰNG ALPHA",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CTY CỔ PHẦN XÂY DỰNG ALPHA",
+   "content": "CTY CỔ PHẦN XÂY DỰNG ALPHA"
+  },
+  {
+   "name": "ANH MẠNH HIỆP",
+   "payload": {
+    "customer_name": "ANH MẠNH HIỆP",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH MẠNH HIỆP",
+   "content": "ANH MẠNH HIỆP"
+  },
+  {
+   "name": "ANH TOÀN - 077 6111234",
+   "payload": {
+    "customer_name": "ANH TOÀN - 077 6111234",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH TOÀN - 077 6111234",
+   "content": "ANH TOÀN - 077 6111234"
+  },
+  {
+   "name": "ĐỨC TIN",
+   "payload": {
+    "customer_name": "ĐỨC TIN",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ĐỨC TIN",
+   "content": "ĐỨC TIN"
+  },
+  {
+   "name": "NAM THÀNH THẮNG - TU PHONG",
+   "payload": {
+    "customer_name": "NAM THÀNH THẮNG - TU PHONG",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "NAM THÀNH THẮNG - TU PHONG",
+   "content": "NAM THÀNH THẮNG - TU PHONG"
+  },
+  {
+   "name": "ANH DŨNG BÌNH DƯƠNG",
+   "payload": {
+    "customer_name": "ANH DŨNG BÌNH DƯƠNG",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH DŨNG BÌNH DƯƠNG",
+   "content": "ANH DŨNG BÌNH DƯƠNG"
+  },
+  {
+   "name": "NHỨT BẢO PHÁT",
+   "payload": {
+    "customer_name": "NHỨT BẢO PHÁT",
+    "price_group": "Đại lý",
+    "contact_person": "CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "NHỨT BẢO PHÁT",
+   "content": "NHỨT BẢO PHÁT"
+  },
+  {
+   "name": "ANH QUANG CỬA CUỐN",
+   "payload": {
+    "customer_name": "ANH QUANG CỬA CUỐN",
+    "price_group": "Đại lý",
+    "contact_person": "CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH QUANG CỬA CUỐN",
+   "content": "ANH QUANG CỬA CUỐN"
+  },
+  {
+   "name": "MINH ĐƯƠNG",
+   "payload": {
+    "customer_name": "MINH ĐƯƠNG",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "MINH ĐƯƠNG",
+   "content": "MINH ĐƯƠNG"
+  },
+  {
+   "name": "TIẾN HOÀNG BIÊN HÒA",
+   "payload": {
+    "customer_name": "TIẾN HOÀNG BIÊN HÒA",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "TIẾN HOÀNG BIÊN HÒA",
+   "content": "TIẾN HOÀNG BIÊN HÒA"
+  },
+  {
+   "name": "TIẾN DƯƠNG PHÚ MỸ",
+   "payload": {
+    "customer_name": "TIẾN DƯƠNG PHÚ MỸ",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "TIẾN DƯƠNG PHÚ MỸ",
+   "content": "TIẾN DƯƠNG PHÚ MỸ"
+  },
+  {
+   "name": "NHẤT TÂM DOOR",
+   "payload": {
+    "customer_name": "NHẤT TÂM DOOR",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "NHẤT TÂM DOOR",
+   "content": "NHẤT TÂM DOOR"
+  },
+  {
+   "name": "ANH PHÚC CẦN THƠ",
+   "payload": {
+    "customer_name": "ANH PHÚC CẦN THƠ",
+    "price_group": "Đại lý",
+    "contact_person": "CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH PHÚC CẦN THƠ",
+   "content": "ANH PHÚC CẦN THƠ"
+  },
+  {
+   "name": "LINH PHỤNG",
+   "payload": {
+    "customer_name": "LINH PHỤNG",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "LINH PHỤNG",
+   "content": "LINH PHỤNG"
+  },
+  {
+   "name": "THÀNH LÂM BÌNH CHÁNH",
+   "payload": {
+    "customer_name": "THÀNH LÂM BÌNH CHÁNH",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "THÀNH LÂM BÌNH CHÁNH",
+   "content": "THÀNH LÂM BÌNH CHÁNH"
+  },
+  {
+   "name": "BẢO VIỆT WINDOW",
+   "payload": {
+    "customer_name": "BẢO VIỆT WINDOW",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "BẢO VIỆT WINDOW",
+   "content": "BẢO VIỆT WINDOW"
+  },
+  {
+   "name": "ANH HÙNG - 0904651632",
+   "payload": {
+    "customer_name": "ANH HÙNG - 0904651632",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH HÙNG - 0904651632",
+   "content": "ANH HÙNG - 0904651632"
+  },
+  {
+   "name": "ANH NHẬT",
+   "payload": {
+    "customer_name": "ANH NHẬT",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH NHẬT",
+   "content": "ANH NHẬT"
+  },
+  {
+   "name": "ANH THẮNG BIÊN HÒA",
+   "payload": {
+    "customer_name": "ANH THẮNG BIÊN HÒA",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH THẮNG BIÊN HÒA",
+   "content": "ANH THẮNG BIÊN HÒA"
+  },
+  {
+   "name": "ANH THÁI - 0988603785",
+   "payload": {
+    "customer_name": "ANH THÁI - 0988603785",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH THÁI - 0988603785",
+   "content": "ANH THÁI - 0988603785"
+  },
+  {
+   "name": "HOÀNG THÀNH TÍN - BẢO LỘC",
+   "payload": {
+    "customer_name": "HOÀNG THÀNH TÍN - BẢO LỘC",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "HOÀNG THÀNH TÍN - BẢO LỘC",
+   "content": "HOÀNG THÀNH TÍN - BẢO LỘC"
+  },
+  {
+   "name": "CÔNG TY ĐĂNG TẤN PHÁT",
+   "payload": {
+    "customer_name": "CÔNG TY ĐĂNG TẤN PHÁT",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CÔNG TY ĐĂNG TẤN PHÁT",
+   "content": "CÔNG TY ĐĂNG TẤN PHÁT"
+  },
+  {
+   "name": "ANH PHONG 0397443787",
+   "payload": {
+    "customer_name": "ANH PHONG 0397443787",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH PHONG 0397443787",
+   "content": "ANH PHONG 0397443787"
+  },
+  {
+   "name": "LÂM NHẬT TUỆ",
+   "payload": {
+    "customer_name": "LÂM NHẬT TUỆ",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "LÂM NHẬT TUỆ",
+   "content": "LÂM NHẬT TUỆ"
+  },
+  {
+   "name": "CỬA HÀ NỘI",
+   "payload": {
+    "customer_name": "CỬA HÀ NỘI",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CỬA HÀ NỘI",
+   "content": "CỬA HÀ NỘI"
+  },
+  {
+   "name": "PHƯỚC YÊN ĐÀ LẠT",
+   "payload": {
+    "customer_name": "PHƯỚC YÊN ĐÀ LẠT",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "PHƯỚC YÊN ĐÀ LẠT",
+   "content": "PHƯỚC YÊN ĐÀ LẠT"
+  },
+  {
+   "name": "CHỊ NHÀN KHÁCH LẺ",
+   "payload": {
+    "customer_name": "CHỊ NHÀN KHÁCH LẺ",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CHỊ NHÀN KHÁCH LẺ",
+   "content": "CHỊ NHÀN KHÁCH LẺ"
+  },
+  {
+   "name": "TRẦN TIỆP",
+   "payload": {
+    "customer_name": "TRẦN TIỆP",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "TRẦN TIỆP",
+   "content": "TRẦN TIỆP"
+  },
+  {
+   "name": "ANH TÁM TÔN",
+   "payload": {
+    "customer_name": "ANH TÁM TÔN",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH TÁM TÔN",
+   "content": "ANH TÁM TÔN"
+  },
+  {
+   "name": "ANH TÀI",
+   "payload": {
+    "customer_name": "ANH TÀI",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH TÀI",
+   "content": "ANH TÀI"
+  },
+  {
+   "name": "ANH THẮNG CẦN THƠ",
+   "payload": {
+    "customer_name": "ANH THẮNG CẦN THƠ",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH THẮNG CẦN THƠ",
+   "content": "ANH THẮNG CẦN THƠ"
+  },
+  {
+   "name": "ANH THIỆN KHÁCH LẺ",
+   "payload": {
+    "customer_name": "ANH THIỆN KHÁCH LẺ",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH THIỆN KHÁCH LẺ",
+   "content": "ANH THIỆN KHÁCH LẺ"
+  },
+  {
+   "name": "LÂM ĐÔ",
+   "payload": {
+    "customer_name": "LÂM ĐÔ",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "LÂM ĐÔ",
+   "content": "LÂM ĐÔ"
+  },
+  {
+   "name": "ANH THÔNG CỬA SẮT",
+   "payload": {
+    "customer_name": "ANH THÔNG CỬA SẮT",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH THÔNG CỬA SẮT",
+   "content": "ANH THÔNG CỬA SẮT"
+  },
+  {
+   "name": "LỘC THÀNH PHÁT",
+   "payload": {
+    "customer_name": "LỘC THÀNH PHÁT",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THỂ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THỂ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "LỘC THÀNH PHÁT",
+   "content": "LỘC THÀNH PHÁT"
+  },
+  {
+   "name": "NAM CƯỜNG ĐOÀN KẾT",
+   "payload": {
+    "customer_name": "NAM CƯỜNG ĐOÀN KẾT",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "NAM CƯỜNG ĐOÀN KẾT",
+   "content": "NAM CƯỜNG ĐOÀN KẾT"
+  },
+  {
+   "name": "NHẬT PHÁT",
+   "payload": {
+    "customer_name": "NHẬT PHÁT",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "NHẬT PHÁT",
+   "content": "NHẬT PHÁT"
+  },
+  {
+   "name": "MÁI BẠT XẾP HOÀNG KIM",
+   "payload": {
+    "customer_name": "MÁI BẠT XẾP HOÀNG KIM",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "MÁI BẠT XẾP HOÀNG KIM",
+   "content": "MÁI BẠT XẾP HOÀNG KIM"
+  },
+  {
+   "name": "ANH LONG",
+   "payload": {
+    "customer_name": "ANH LONG",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH LONG",
+   "content": "ANH LONG"
+  },
+  {
+   "name": "CHỊ TRANG ĐỨC TRỌNG",
+   "payload": {
+    "customer_name": "CHỊ TRANG ĐỨC TRỌNG",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CHỊ TRANG ĐỨC TRỌNG",
+   "content": "CHỊ TRANG ĐỨC TRỌNG"
+  },
+  {
+   "name": "ANH THÁI BÌNH CHÁNH",
+   "payload": {
+    "customer_name": "ANH THÁI BÌNH CHÁNH",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH THÁI BÌNH CHÁNH",
+   "content": "ANH THÁI BÌNH CHÁNH"
+  },
+  {
+   "name": "ANH NAM",
+   "payload": {
+    "customer_name": "ANH NAM",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH NAM",
+   "content": "ANH NAM"
+  },
+  {
+   "name": "ANH BẢO NAM",
+   "payload": {
+    "customer_name": "ANH BẢO NAM",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH BẢO NAM",
+   "content": "ANH BẢO NAM"
+  },
+  {
+   "name": "CỬA MINH CHÂU",
+   "payload": {
+    "customer_name": "CỬA MINH CHÂU",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CỬA MINH CHÂU",
+   "content": "CỬA MINH CHÂU"
+  },
+  {
+   "name": "ANH THUẬT",
+   "payload": {
+    "customer_name": "ANH THUẬT",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH THUẬT",
+   "content": "ANH THUẬT"
+  },
+  {
+   "name": "ANH HỒNG CỬA SẮT",
+   "payload": {
+    "customer_name": "ANH HỒNG CỬA SẮT",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH HỒNG CỬA SẮT",
+   "content": "ANH HỒNG CỬA SẮT"
+  },
+  {
+   "name": "ANH BIÊN",
+   "payload": {
+    "customer_name": "ANH BIÊN",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH BIÊN",
+   "content": "ANH BIÊN"
+  },
+  {
+   "name": "ANH TRƯỜNG MÁI XẾP",
+   "payload": {
+    "customer_name": "ANH TRƯỜNG MÁI XẾP",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH TRƯỜNG MÁI XẾP",
+   "content": "ANH TRƯỜNG MÁI XẾP"
+  },
+  {
+   "name": "ANH TIỆP ĐẮKLẮK",
+   "payload": {
+    "customer_name": "ANH TIỆP ĐẮKLẮK",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH TIỆP ĐẮKLẮK",
+   "content": "ANH TIỆP ĐẮKLẮK"
+  },
+  {
+   "name": "TIẾN DŨNG DOOR",
+   "payload": {
+    "customer_name": "TIẾN DŨNG DOOR",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "TIẾN DŨNG DOOR",
+   "content": "TIẾN DŨNG DOOR"
+  },
+  {
+   "name": "DƯƠNG THÀNH ĐỨC",
+   "payload": {
+    "customer_name": "DƯƠNG THÀNH ĐỨC",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "DƯƠNG THÀNH ĐỨC",
+   "content": "DƯƠNG THÀNH ĐỨC"
+  },
+  {
+   "name": "ĐỨC THẮNG VŨNG TÀU",
+   "payload": {
+    "customer_name": "ĐỨC THẮNG VŨNG TÀU",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ĐỨC THẮNG VŨNG TÀU",
+   "content": "ĐỨC THẮNG VŨNG TÀU"
+  },
+  {
+   "name": "ANH VŨ ĐỒNG XOÀI",
+   "payload": {
+    "customer_name": "ANH VŨ ĐỒNG XOÀI",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH VŨ ĐỒNG XOÀI",
+   "content": "ANH VŨ ĐỒNG XOÀI"
+  },
+  {
+   "name": "GIA KHANG Q9",
+   "payload": {
+    "customer_name": "GIA KHANG Q9",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "GIA KHANG Q9",
+   "content": "GIA KHANG Q9"
+  },
+  {
+   "name": "NHÔM KÍNH ANH TRÍ",
+   "payload": {
+    "customer_name": "NHÔM KÍNH ANH TRÍ",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "NHÔM KÍNH ANH TRÍ",
+   "content": "NHÔM KÍNH ANH TRÍ"
+  },
+  {
+   "name": "ANH LẬP VŨNG TÀU",
+   "payload": {
+    "customer_name": "ANH LẬP VŨNG TÀU",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH LẬP VŨNG TÀU",
+   "content": "ANH LẬP VŨNG TÀU"
+  },
+  {
+   "name": "HUYNH ĐỆ PHÁT - BIÊN HÒA",
+   "payload": {
+    "customer_name": "HUYNH ĐỆ PHÁT - BIÊN HÒA",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "HUYNH ĐỆ PHÁT - BIÊN HÒA",
+   "content": "HUYNH ĐỆ PHÁT - BIÊN HÒA"
+  },
+  {
+   "name": "THÀNH ĐẠT BẢO LỘC",
+   "payload": {
+    "customer_name": "THÀNH ĐẠT BẢO LỘC",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "THÀNH ĐẠT BẢO LỘC",
+   "content": "THÀNH ĐẠT BẢO LỘC"
+  },
+  {
+   "name": "THÀNH TÂM TIẾN",
+   "payload": {
+    "customer_name": "THÀNH TÂM TIẾN",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THẾ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THẾ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "THÀNH TÂM TIẾN",
+   "content": "THÀNH TÂM TIẾN"
+  },
+  {
+   "name": "ANH QUỐC THỢ",
+   "payload": {
+    "customer_name": "ANH QUỐC THỢ",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH QUỐC THỢ",
+   "content": "ANH QUỐC THỢ"
+  },
+  {
+   "name": "ANH QUANG LV",
+   "payload": {
+    "customer_name": "ANH QUANG LV",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH QUANG LV",
+   "content": "ANH QUANG LV"
+  },
+  {
+   "name": "ANH HƯNG",
+   "payload": {
+    "customer_name": "ANH HƯNG",
+    "price_group": "Đại lý",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"THÁI SƠN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH HƯNG",
+   "content": "ANH HƯNG"
+  },
+  {
+   "name": "ANH VINH CẦN THƠ - ANH THẠCH",
+   "payload": {
+    "customer_name": "ANH VINH CẦN THƠ - ANH THẠCH",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH VINH CẦN THƠ - ANH THẠCH",
+   "content": "ANH VINH CẦN THƠ - ANH THẠCH"
+  },
+  {
+   "name": "ANH LỘC BÌNH DƯƠNG",
+   "payload": {
+    "customer_name": "ANH LỘC BÌNH DƯƠNG",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH LỘC BÌNH DƯƠNG",
+   "content": "ANH LỘC BÌNH DƯƠNG"
+  },
+  {
+   "name": "SAODOOR",
+   "payload": {
+    "customer_name": "SAODOOR",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "SAODOOR",
+   "content": "SAODOOR"
+  },
+  {
+   "name": "NHÔM SẮT VĂN LỢI GIA LAI",
+   "payload": {
+    "customer_name": "NHÔM SẮT VĂN LỢI GIA LAI",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "NHÔM SẮT VĂN LỢI GIA LAI",
+   "content": "NHÔM SẮT VĂN LỢI GIA LAI"
+  },
+  {
+   "name": "ANH TÚC CỦ CHI",
+   "payload": {
+    "customer_name": "ANH TÚC CỦ CHI",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH TÚC CỦ CHI",
+   "content": "ANH TÚC CỦ CHI"
+  },
+  {
+   "name": "CỬA CUỐN ĐỨC VIỆT",
+   "payload": {
+    "customer_name": "CỬA CUỐN ĐỨC VIỆT",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CỬA CUỐN ĐỨC VIỆT",
+   "content": "CỬA CUỐN ĐỨC VIỆT"
+  },
+  {
+   "name": "KT DOOR",
+   "payload": {
+    "customer_name": "KT DOOR",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "KT DOOR",
+   "content": "KT DOOR"
+  },
+  {
+   "name": "HOÀNG SƠN AN GIANG",
+   "payload": {
+    "customer_name": "HOÀNG SƠN AN GIANG",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "HOÀNG SƠN AN GIANG",
+   "content": "HOÀNG SƠN AN GIANG"
+  },
+  {
+   "name": "ANH PHONG KHÁCH LẺ",
+   "payload": {
+    "customer_name": "ANH PHONG KHÁCH LẺ",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH PHONG KHÁCH LẺ",
+   "content": "ANH PHONG KHÁCH LẺ"
+  },
+  {
+   "name": "CHÚ HIẾU XE",
+   "payload": {
+    "customer_name": "CHÚ HIẾU XE",
+    "price_group": "Đại lý",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CHÚ HIẾU XE",
+   "content": "CHÚ HIẾU XE"
+  },
+  {
+   "name": "CHÚ DŨNG XE Ô",
+   "payload": {
+    "customer_name": "CHÚ DŨNG XE Ô",
+    "price_group": "Đại lý",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CHÚ DŨNG XE Ô",
+   "content": "CHÚ DŨNG XE Ô"
+  },
+  {
+   "name": "ANH CÔNG BA GÁC",
+   "payload": {
+    "customer_name": "ANH CÔNG BA GÁC",
+    "price_group": "Đại lý",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH CÔNG BA GÁC",
+   "content": "ANH CÔNG BA GÁC"
+  },
+  {
+   "name": "THANH BÌNH",
+   "payload": {
+    "customer_name": "THANH BÌNH",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ THÚY",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ THÚY\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "THANH BÌNH",
+   "content": "THANH BÌNH"
+  },
+  {
+   "name": "ANH MINH TUẤN",
+   "payload": {
+    "customer_name": "ANH MINH TUẤN",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH MINH TUẤN",
+   "content": "ANH MINH TUẤN"
+  },
+  {
+   "name": "QUANG VINH",
+   "payload": {
+    "customer_name": "QUANG VINH",
+    "price_group": "Đại lý",
+    "contact_person": "LÊ  QUÝ ĐÔN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LÊ  QUÝ ĐÔN\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "QUANG VINH",
+   "content": "QUANG VINH"
+  },
+  {
+   "name": "ANH NGỌC AUSTDOOR",
+   "payload": {
+    "customer_name": "ANH NGỌC AUSTDOOR",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH NGỌC AUSTDOOR",
+   "content": "ANH NGỌC AUSTDOOR"
+  },
+  {
+   "name": "CỬA CUỐN MINH ĐỨC",
+   "payload": {
+    "customer_name": "CỬA CUỐN MINH ĐỨC",
+    "price_group": "Đại lý",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"KH\", người phụ trách \"LƯ CHÍ CƯỜNG\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CỬA CUỐN MINH ĐỨC",
+   "content": "CỬA CUỐN MINH ĐỨC"
+  }
+ ]
+}

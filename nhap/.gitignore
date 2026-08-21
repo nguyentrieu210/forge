@@ -1,0 +1,3 @@
+# 118 bản sao lưu SQLite trước mỗi lần ghi thẳng D1 — ~581 MB, là lưới an toàn cục bộ
+# chứ không phải thứ để chia sẻ. Đường dẫn tương đối với chính thư mục này.
+.sao-luu/

@@ -1,0 +1,67 @@
+{
+ "doctype": "Material Grade",
+ "so_ban_ghi": 5,
+ "nguon": "suy từ tên hàng nhóm Ray và trục",
+ "ban_ghi": [
+  {
+   "name": "THEP",
+   "payload": {
+    "grade_code": "THEP",
+    "grade_name": "Thép",
+    "material_family": "Thép",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-ray-truc-2026-08-20"
+   },
+   "title": "Thép",
+   "content": "THEP Thép"
+  },
+  {
+   "name": "NHUA",
+   "payload": {
+    "grade_code": "NHUA",
+    "grade_name": "Nhựa",
+    "material_family": "Nhựa",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-ray-truc-2026-08-20"
+   },
+   "title": "Nhựa",
+   "content": "NHUA Nhựa"
+  },
+  {
+   "name": "LONG",
+   "payload": {
+    "grade_code": "LONG",
+    "grade_name": "Sợi lông",
+    "material_family": "Khác",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-ray-truc-2026-08-20"
+   },
+   "title": "Sợi lông",
+   "content": "LONG Sợi lông"
+  },
+  {
+   "name": "NHOM",
+   "payload": {
+    "grade_code": "NHOM",
+    "grade_name": "Nhôm",
+    "material_family": "Nhôm",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-ray-truc-2026-08-20"
+   },
+   "title": "Nhôm",
+   "content": "NHOM Nhôm"
+  },
+  {
+   "name": "INOX",
+   "payload": {
+    "grade_code": "INOX",
+    "grade_name": "Inox",
+    "material_family": "Inox",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-ray-truc-2026-08-20"
+   },
+   "title": "Inox",
+   "content": "INOX Inox"
+  }
+ ]
+}

@@ -1,0 +1,383 @@
+{
+ "doctype": "Material Specification",
+ "so_ban_ghi": 23,
+ "nguon": "suy từ tên + mã hàng nhóm Ray và trục; Kg/m để trống chờ xưởng",
+ "ban_ghi": [
+  {
+   "name": "QC-TRUC-THEP-PHI114-1_8",
+   "payload": {
+    "spec_code": "QC-TRUC-THEP-PHI114-1_8",
+    "spec_name": "Trục thép PHI114 dày 1.8 mm",
+    "material_grade": "THEP",
+    "spec_type": "Ống/trục",
+    "item_group": "Ray và trục",
+    "section_code": "PHI114",
+    "thickness_mm": 1.8,
+    "note": "Kg/m lý thuyết CHƯA có — đây là con số cho ra hệ số quy đổi Mét↔Kg của mọi mã dùng quy cách này.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-ray-truc-2026-08-20"
+   },
+   "title": "Trục PHI114",
+   "content": "QC-TRUC-THEP-PHI114-1_8 PHI114 Thép"
+  },
+  {
+   "name": "QC-TRUC-THEP-PHI114-2_1",
+   "payload": {
+    "spec_code": "QC-TRUC-THEP-PHI114-2_1",
+    "spec_name": "Trục thép PHI114 dày 2.1 mm",
+    "material_grade": "THEP",
+    "spec_type": "Ống/trục",
+    "item_group": "Ray và trục",
+    "section_code": "PHI114",
+    "thickness_mm": 2.1,
+    "note": "Kg/m lý thuyết CHƯA có — đây là con số cho ra hệ số quy đổi Mét↔Kg của mọi mã dùng quy cách này.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-ray-truc-2026-08-20"
+   },
+   "title": "Trục PHI114",
+   "content": "QC-TRUC-THEP-PHI114-2_1 PHI114 Thép"
+  },
+  {
+   "name": "QC-RAY-THEP-U76",
+   "payload": {
+    "spec_code": "QC-RAY-THEP-U76",
+    "spec_name": "Ray thép U76",
+    "material_grade": "THEP",
+    "spec_type": "Vật tư tuyến tính",
+    "item_group": "Ray và trục",
+    "section_code": "U76",
+    "note": "Kg/m lý thuyết CHƯA có — đây là con số cho ra hệ số quy đổi Mét↔Kg của mọi mã dùng quy cách này.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-ray-truc-2026-08-20"
+   },
+   "title": "Ray U76",
+   "content": "QC-RAY-THEP-U76 U76 Thép"
+  },
+  {
+   "name": "QC-RAY-THEP-U100",
+   "payload": {
+    "spec_code": "QC-RAY-THEP-U100",
+    "spec_name": "Ray thép U100",
+    "material_grade": "THEP",
+    "spec_type": "Vật tư tuyến tính",
+    "item_group": "Ray và trục",
+    "section_code": "U100",
+    "note": "Kg/m lý thuyết CHƯA có — đây là con số cho ra hệ số quy đổi Mét↔Kg của mọi mã dùng quy cách này.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-ray-truc-2026-08-20"
+   },
+   "title": "Ray U100",
+   "content": "QC-RAY-THEP-U100 U100 Thép"
+  },
+  {
+   "name": "QC-RON-NHUA-DAY",
+   "payload": {
+    "spec_code": "QC-RON-NHUA-DAY",
+    "spec_name": "Ron nhựa đáy ray",
+    "material_grade": "NHUA",
+    "spec_type": "Vật tư tuyến tính",
+    "item_group": "Ray và trục",
+    "section_code": "DAY",
+    "note": "Kg/m lý thuyết CHƯA có — đây là con số cho ra hệ số quy đổi Mét↔Kg của mọi mã dùng quy cách này.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-ray-truc-2026-08-20"
+   },
+   "title": "Ron DAY",
+   "content": "QC-RON-NHUA-DAY DAY Nhựa"
+  },
+  {
+   "name": "QC-RON-LONG-CANH",
+   "payload": {
+    "spec_code": "QC-RON-LONG-CANH",
+    "spec_name": "Ron sợi lông cạnh ray",
+    "material_grade": "LONG",
+    "spec_type": "Vật tư tuyến tính",
+    "item_group": "Ray và trục",
+    "section_code": "CANH",
+    "note": "Kg/m lý thuyết CHƯA có — đây là con số cho ra hệ số quy đổi Mét↔Kg của mọi mã dùng quy cách này.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-ray-truc-2026-08-20"
+   },
+   "title": "Ron CANH",
+   "content": "QC-RON-LONG-CANH CANH Sợi lông"
+  },
+  {
+   "name": "QC-RAY-NHOM-THUONG",
+   "payload": {
+    "spec_code": "QC-RAY-NHOM-THUONG",
+    "spec_name": "Ray nhôm",
+    "material_grade": "NHOM",
+    "spec_type": "Vật tư tuyến tính",
+    "item_group": "Ray và trục",
+    "section_code": "THUONG",
+    "note": "Kg/m lý thuyết CHƯA có — đây là con số cho ra hệ số quy đổi Mét↔Kg của mọi mã dùng quy cách này.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-ray-truc-2026-08-20"
+   },
+   "title": "Ray THUONG",
+   "content": "QC-RAY-NHOM-THUONG THUONG Nhôm"
+  },
+  {
+   "name": "QC-TRUC-THEP-PHI34",
+   "payload": {
+    "spec_code": "QC-TRUC-THEP-PHI34",
+    "spec_name": "Trục thép PHI34",
+    "material_grade": "THEP",
+    "spec_type": "Ống/trục",
+    "item_group": "Ray và trục",
+    "section_code": "PHI34",
+    "note": "Kg/m lý thuyết CHƯA có — đây là con số cho ra hệ số quy đổi Mét↔Kg của mọi mã dùng quy cách này.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-ray-truc-2026-08-20"
+   },
+   "title": "Trục PHI34",
+   "content": "QC-TRUC-THEP-PHI34 PHI34 Thép"
+  },
+  {
+   "name": "QC-TRUC-THEP-PHI90",
+   "payload": {
+    "spec_code": "QC-TRUC-THEP-PHI90",
+    "spec_name": "Trục thép PHI90",
+    "material_grade": "THEP",
+    "spec_type": "Ống/trục",
+    "item_group": "Ray và trục",
+    "section_code": "PHI90",
+    "note": "Kg/m lý thuyết CHƯA có — đây là con số cho ra hệ số quy đổi Mét↔Kg của mọi mã dùng quy cách này.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-ray-truc-2026-08-20"
+   },
+   "title": "Trục PHI90",
+   "content": "QC-TRUC-THEP-PHI90 PHI90 Thép"
+  },
+  {
+   "name": "QC-TRUC-THEP-PHI140",
+   "payload": {
+    "spec_code": "QC-TRUC-THEP-PHI140",
+    "spec_name": "Trục thép PHI140",
+    "material_grade": "THEP",
+    "spec_type": "Ống/trục",
+    "item_group": "Ray và trục",
+    "section_code": "PHI140",
+    "note": "Kg/m lý thuyết CHƯA có — đây là con số cho ra hệ số quy đổi Mét↔Kg của mọi mã dùng quy cách này.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-ray-truc-2026-08-20"
+   },
+   "title": "Trục PHI140",
+   "content": "QC-TRUC-THEP-PHI140 PHI140 Thép"
+  },
+  {
+   "name": "QC-TRUC-THEP-PHI114-2_4",
+   "payload": {
+    "spec_code": "QC-TRUC-THEP-PHI114-2_4",
+    "spec_name": "Trục thép PHI114 dày 2.4 mm",
+    "material_grade": "THEP",
+    "spec_type": "Ống/trục",
+    "item_group": "Ray và trục",
+    "section_code": "PHI114",
+    "thickness_mm": 2.4,
+    "note": "Kg/m lý thuyết CHƯA có — đây là con số cho ra hệ số quy đổi Mét↔Kg của mọi mã dùng quy cách này.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-ray-truc-2026-08-20"
+   },
+   "title": "Trục PHI114",
+   "content": "QC-TRUC-THEP-PHI114-2_4 PHI114 Thép"
+  },
+  {
+   "name": "QC-TRUC-THEP-PHI168",
+   "payload": {
+    "spec_code": "QC-TRUC-THEP-PHI168",
+    "spec_name": "Trục thép PHI168",
+    "material_grade": "THEP",
+    "spec_type": "Ống/trục",
+    "item_group": "Ray và trục",
+    "section_code": "PHI168",
+    "note": "Kg/m lý thuyết CHƯA có — đây là con số cho ra hệ số quy đổi Mét↔Kg của mọi mã dùng quy cách này.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-ray-truc-2026-08-20"
+   },
+   "title": "Trục PHI168",
+   "content": "QC-TRUC-THEP-PHI168 PHI168 Thép"
+  },
+  {
+   "name": "QC-TRUC-THEP-PHI168-5",
+   "payload": {
+    "spec_code": "QC-TRUC-THEP-PHI168-5",
+    "spec_name": "Trục thép PHI168 dày 5 mm",
+    "material_grade": "THEP",
+    "spec_type": "Ống/trục",
+    "item_group": "Ray và trục",
+    "section_code": "PHI168",
+    "thickness_mm": 5,
+    "note": "Kg/m lý thuyết CHƯA có — đây là con số cho ra hệ số quy đổi Mét↔Kg của mọi mã dùng quy cách này.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-ray-truc-2026-08-20"
+   },
+   "title": "Trục PHI168",
+   "content": "QC-TRUC-THEP-PHI168-5 PHI168 Thép"
+  },
+  {
+   "name": "QC-RAY-THEP-U70",
+   "payload": {
+    "spec_code": "QC-RAY-THEP-U70",
+    "spec_name": "Ray thép U70",
+    "material_grade": "THEP",
+    "spec_type": "Vật tư tuyến tính",
+    "item_group": "Ray và trục",
+    "section_code": "U70",
+    "note": "Kg/m lý thuyết CHƯA có — đây là con số cho ra hệ số quy đổi Mét↔Kg của mọi mã dùng quy cách này.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-ray-truc-2026-08-20"
+   },
+   "title": "Ray U70",
+   "content": "QC-RAY-THEP-U70 U70 Thép"
+  },
+  {
+   "name": "QC-RAY-THEP-U100-1_2",
+   "payload": {
+    "spec_code": "QC-RAY-THEP-U100-1_2",
+    "spec_name": "Ray thép U100 dày 1.2 mm",
+    "material_grade": "THEP",
+    "spec_type": "Vật tư tuyến tính",
+    "item_group": "Ray và trục",
+    "section_code": "U100",
+    "thickness_mm": 1.2,
+    "note": "Kg/m lý thuyết CHƯA có — đây là con số cho ra hệ số quy đổi Mét↔Kg của mọi mã dùng quy cách này.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-ray-truc-2026-08-20"
+   },
+   "title": "Ray U100",
+   "content": "QC-RAY-THEP-U100-1_2 U100 Thép"
+  },
+  {
+   "name": "QC-RAY-THEP-U100-1_4",
+   "payload": {
+    "spec_code": "QC-RAY-THEP-U100-1_4",
+    "spec_name": "Ray thép U100 dày 1.4 mm",
+    "material_grade": "THEP",
+    "spec_type": "Vật tư tuyến tính",
+    "item_group": "Ray và trục",
+    "section_code": "U100",
+    "thickness_mm": 1.4,
+    "note": "Kg/m lý thuyết CHƯA có — đây là con số cho ra hệ số quy đổi Mét↔Kg của mọi mã dùng quy cách này.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-ray-truc-2026-08-20"
+   },
+   "title": "Ray U100",
+   "content": "QC-RAY-THEP-U100-1_4 U100 Thép"
+  },
+  {
+   "name": "QC-RAY-INOX-6P",
+   "payload": {
+    "spec_code": "QC-RAY-INOX-6P",
+    "spec_name": "Ray inox 6P",
+    "material_grade": "INOX",
+    "spec_type": "Vật tư tuyến tính",
+    "item_group": "Ray và trục",
+    "section_code": "6P",
+    "note": "Kg/m lý thuyết CHƯA có — đây là con số cho ra hệ số quy đổi Mét↔Kg của mọi mã dùng quy cách này.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-ray-truc-2026-08-20"
+   },
+   "title": "Ray 6P",
+   "content": "QC-RAY-INOX-6P 6P Inox"
+  },
+  {
+   "name": "QC-RAY-INOX-8P",
+   "payload": {
+    "spec_code": "QC-RAY-INOX-8P",
+    "spec_name": "Ray inox 8P",
+    "material_grade": "INOX",
+    "spec_type": "Vật tư tuyến tính",
+    "item_group": "Ray và trục",
+    "section_code": "8P",
+    "note": "Kg/m lý thuyết CHƯA có — đây là con số cho ra hệ số quy đổi Mét↔Kg của mọi mã dùng quy cách này.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-ray-truc-2026-08-20"
+   },
+   "title": "Ray 8P",
+   "content": "QC-RAY-INOX-8P 8P Inox"
+  },
+  {
+   "name": "QC-RAY-INOX-7P",
+   "payload": {
+    "spec_code": "QC-RAY-INOX-7P",
+    "spec_name": "Ray inox 7P",
+    "material_grade": "INOX",
+    "spec_type": "Vật tư tuyến tính",
+    "item_group": "Ray và trục",
+    "section_code": "7P",
+    "note": "Kg/m lý thuyết CHƯA có — đây là con số cho ra hệ số quy đổi Mét↔Kg của mọi mã dùng quy cách này.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-ray-truc-2026-08-20"
+   },
+   "title": "Ray 7P",
+   "content": "QC-RAY-INOX-7P 7P Inox"
+  },
+  {
+   "name": "QC-RON-NHUA-CANH",
+   "payload": {
+    "spec_code": "QC-RON-NHUA-CANH",
+    "spec_name": "Ron nhựa cạnh ray",
+    "material_grade": "NHUA",
+    "spec_type": "Vật tư tuyến tính",
+    "item_group": "Ray và trục",
+    "section_code": "CANH",
+    "note": "Kg/m lý thuyết CHƯA có — đây là con số cho ra hệ số quy đổi Mét↔Kg của mọi mã dùng quy cách này.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-ray-truc-2026-08-20"
+   },
+   "title": "Ron CANH",
+   "content": "QC-RON-NHUA-CANH CANH Nhựa"
+  },
+  {
+   "name": "QC-RON-INOX-DAY",
+   "payload": {
+    "spec_code": "QC-RON-INOX-DAY",
+    "spec_name": "Ron inox đáy ray",
+    "material_grade": "INOX",
+    "spec_type": "Vật tư tuyến tính",
+    "item_group": "Ray và trục",
+    "section_code": "DAY",
+    "note": "Kg/m lý thuyết CHƯA có — đây là con số cho ra hệ số quy đổi Mét↔Kg của mọi mã dùng quy cách này.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-ray-truc-2026-08-20"
+   },
+   "title": "Ron DAY",
+   "content": "QC-RON-INOX-DAY DAY Inox"
+  },
+  {
+   "name": "QC-TRUC-THEP-PHI140-2_5",
+   "payload": {
+    "spec_code": "QC-TRUC-THEP-PHI140-2_5",
+    "spec_name": "Trục thép PHI140 dày 2.5 mm",
+    "material_grade": "THEP",
+    "spec_type": "Ống/trục",
+    "item_group": "Ray và trục",
+    "section_code": "PHI140",
+    "thickness_mm": 2.5,
+    "note": "Kg/m lý thuyết CHƯA có — đây là con số cho ra hệ số quy đổi Mét↔Kg của mọi mã dùng quy cách này.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-ray-truc-2026-08-20"
+   },
+   "title": "Trục PHI140",
+   "content": "QC-TRUC-THEP-PHI140-2_5 PHI140 Thép"
+  },
+  {
+   "name": "QC-TRUC-THEP-PHI168-4",
+   "payload": {
+    "spec_code": "QC-TRUC-THEP-PHI168-4",
+    "spec_name": "Trục thép PHI168 dày 4 mm",
+    "material_grade": "THEP",
+    "spec_type": "Ống/trục",
+    "item_group": "Ray và trục",
+    "section_code": "PHI168",
+    "thickness_mm": 4,
+    "note": "Kg/m lý thuyết CHƯA có — đây là con số cho ra hệ số quy đổi Mét↔Kg của mọi mã dùng quy cách này.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-ray-truc-2026-08-20"
+   },
+   "title": "Trục PHI168",
+   "content": "QC-TRUC-THEP-PHI168-4 PHI168 Thép"
+  }
+ ]
+}

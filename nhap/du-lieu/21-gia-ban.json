@@ -1,0 +1,2795 @@
+{
+ "doctype": "Item Price",
+ "so_ban_ghi": 164,
+ "nguon": "alumdoor-gia-ban-dm-2026-08-20",
+ "ban_ghi": [
+  {
+   "name": "Alumdoor 2026:PKDUC_CON_LAN:Cặp:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKDUC_CON_LAN",
+    "item_group": "Phụ kiện CN Đức",
+    "uom": "Cặp",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "100000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "CON LĂN",
+   "content": "PKDUC_CON_LAN CON LĂN"
+  },
+  {
+   "name": "Alumdoor 2026:PKDUC_PULY_114L:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKDUC_PULY_114L",
+    "item_group": "Phụ kiện CN Đức",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "30000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "PULY 114L",
+   "content": "PKDUC_PULY_114L PULY 114L"
+  },
+  {
+   "name": "Alumdoor 2026:PKDUC_PULY_114N:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKDUC_PULY_114N",
+    "item_group": "Phụ kiện CN Đức",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "22000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "PULY 114N",
+   "content": "PKDUC_PULY_114N PULY 114N"
+  },
+  {
+   "name": "Alumdoor 2026:PKDUC_PULY_140:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKDUC_PULY_140",
+    "item_group": "Phụ kiện CN Đức",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "33000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "PULY 140",
+   "content": "PKDUC_PULY_140 PULY 140"
+  },
+  {
+   "name": "Alumdoor 2026:PKDUC_PULY_168:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKDUC_PULY_168",
+    "item_group": "Phụ kiện CN Đức",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "43000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "PULY 168",
+   "content": "PKDUC_PULY_168 PULY 168"
+  },
+  {
+   "name": "Alumdoor 2026:PKDUC_COI:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKDUC_COI",
+    "item_group": "Phụ kiện CN Đức",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "70000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "CÒI",
+   "content": "PKDUC_COI CÒI"
+  },
+  {
+   "name": "Alumdoor 2026:PKDUC_HTTD:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKDUC_HTTD",
+    "item_group": "Phụ kiện CN Đức",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "80000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "HỆ THỐNG TỰ DỪNG",
+   "content": "PKDUC_HTTD HỆ THỐNG TỰ DỪNG"
+  },
+  {
+   "name": "Alumdoor 2026:RT_RAYHOP:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "RT_RAYHOP",
+    "item_group": "Ray và trục",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "190000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "RAY HỘP TD U76",
+   "content": "RT_RAYHOP RAY HỘP TD U76"
+  },
+  {
+   "name": "Alumdoor 2026:RT_TD87A1:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "RT_TD87A1",
+    "item_group": "Ray và trục",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "145000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "RAY ĐƠN TD U76",
+   "content": "RT_TD87A1 RAY ĐƠN TD U76"
+  },
+  {
+   "name": "Alumdoor 2026:RT_RAY_HOP_TD_U100:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "RT_RAY_HOP_TD_U100",
+    "item_group": "Ray và trục",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "250000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "RAY HỘP TD U100",
+   "content": "RT_RAY_HOP_TD_U100 RAY HỘP TD U100"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL595:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_TD_AL595",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1095000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "ĐỨC AL595",
+   "content": "CDUC_TD_AL595 ĐỨC AL595"
+  },
+  {
+   "name": "Alumdoor 2026:LA_A282:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_A282",
+    "item_group": "Nan/lá cửa",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "170000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "LÁ ĐẦU",
+   "content": "LA_A282 LÁ ĐẦU"
+  },
+  {
+   "name": "Alumdoor 2026:LA_TD327:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_TD327",
+    "item_group": "Nan/lá cửa",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "46000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "LÁ YẾM",
+   "content": "LA_TD327 LÁ YẾM"
+  },
+  {
+   "name": "Alumdoor 2026:LA_TD326:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_TD326",
+    "item_group": "Nan/lá cửa",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "80000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "LÁ TRUNG GIAN",
+   "content": "LA_TD326 LÁ TRUNG GIAN"
+  },
+  {
+   "name": "Alumdoor 2026:LA_TD325:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_TD325",
+    "item_group": "Nan/lá cửa",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "130000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "LÁ ĐÁY LỚN",
+   "content": "LA_TD325 LÁ ĐÁY LỚN"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_PHOTLONG4X5X400M:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKC_PHOTLONG4X5X400M",
+    "item_group": "Phụ kiện chung",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "2000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "LÔNG NHEO 4X5",
+   "content": "PKC_PHOTLONG4X5X400M LÔNG NHEO 4X5"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_PHOTLONG5X6X400M:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKC_PHOTLONG5X6X400M",
+    "item_group": "Phụ kiện chung",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "2000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "LÔNG NHEO 5X6",
+   "content": "PKC_PHOTLONG5X6X400M LÔNG NHEO 5X6"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL70:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_TD_AL70",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "909000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "ĐỨC AL70 (2 LỚP)",
+   "content": "CDUC_TD_AL70 ĐỨC AL70 (2 LỚP)"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_AL70_1LOP:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_AL70_1LOP",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1242000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "ĐỨC AL70 (1 LỚP)",
+   "content": "CDUC_AL70_1LOP ĐỨC AL70 (1 LỚP)"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL71N:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_TD_AL71N",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1178000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "ĐỨC AL71N",
+   "content": "CDUC_TD_AL71N ĐỨC AL71N"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL503N26:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_TD_AL503N26",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1295000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "ĐỨC AL503N",
+   "content": "CDUC_TD_AL503N26 ĐỨC AL503N"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_ALD_548N:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_ALD_548N",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1390000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "ĐỨC AL548N",
+   "content": "CDUC_ALD_548N ĐỨC AL548N"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL501N:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_TD_AL501N",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1471000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "ĐỨC AL501N",
+   "content": "CDUC_TD_AL501N ĐỨC AL501N"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_ALD_DL552:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_ALD_DL552",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1666000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "ĐỨC AL552N",
+   "content": "CDUC_ALD_DL552 ĐỨC AL552N"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL752N:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_TD_AL752N",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1686000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "ĐỨC AL752N",
+   "content": "CDUC_TD_AL752N ĐỨC AL752N"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL652N:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_TD_AL652N",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1548000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "ĐỨC AL652",
+   "content": "CDUC_TD_AL652N ĐỨC AL652"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL50:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_TD_AL50",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1815000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "ĐỨC AL50",
+   "content": "CDUC_TD_AL50 ĐỨC AL50"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_ALVIP50:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_ALVIP50",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1912000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "ĐỨC AL-VIP50",
+   "content": "CDUC_ALVIP50 ĐỨC AL-VIP50"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_ALVIPST500:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_ALVIPST500",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "2268000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "ĐỨC AL-VIPST500",
+   "content": "CDUC_ALVIPST500 ĐỨC AL-VIPST500"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_ALVIPST700:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_ALVIPST700",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "2392000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "ĐỨC AL-VIPST700",
+   "content": "CDUC_ALVIPST700 ĐỨC AL-VIPST700"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_BO_2VIS_752_VIPST700:Con:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKC_BO_2VIS_752_VIPST700",
+    "item_group": "Phụ kiện chung",
+    "uom": "Con",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "2500",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "BỌ 2VIS 752-VIPST700",
+   "content": "PKC_BO_2VIS_752_VIPST700 BỌ 2VIS 752-VIPST700"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_BO_1VIS_AL702LOP:Con:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKC_BO_1VIS_AL702LOP",
+    "item_group": "Phụ kiện chung",
+    "uom": "Con",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1500",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "BỌ 1 VIS-AL702LOP",
+   "content": "PKC_BO_1VIS_AL702LOP BỌ 1 VIS-AL702LOP"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_BO_1VIS_AL701LOP:Con:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKC_BO_1VIS_AL701LOP",
+    "item_group": "Phụ kiện chung",
+    "uom": "Con",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1500",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "BỌ 1 VIS-AL701LOP",
+   "content": "PKC_BO_1VIS_AL701LOP BỌ 1 VIS-AL701LOP"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_BO_1VIS_AL75:Con:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKC_BO_1VIS_AL75",
+    "item_group": "Phụ kiện chung",
+    "uom": "Con",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1500",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "BỌ 1VIS-AL75",
+   "content": "PKC_BO_1VIS_AL75 BỌ 1VIS-AL75"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_BO_2VIS_AL50_VIP50_548_ST500:Con:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKC_BO_2VIS_AL50_VIP50_548_ST500",
+    "item_group": "Phụ kiện chung",
+    "uom": "Con",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "2500",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "BỌ 2VIS-AL50-VIP50-AL548-ST500",
+   "content": "PKC_BO_2VIS_AL50_VIP50_548_ST500 BỌ 2VIS-AL50-VIP50-AL548-ST500"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_BO_1VIS_AL503C:Con:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKC_BO_1VIS_AL503C",
+    "item_group": "Phụ kiện chung",
+    "uom": "Con",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1500",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "BỌ 1VIS AL503C",
+   "content": "PKC_BO_1VIS_AL503C BỌ 1VIS AL503C"
+  },
+  {
+   "name": "Alumdoor 2026:PKDUC_BO_1VIS_503N_71_595:Con:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKDUC_BO_1VIS_503N_71_595",
+    "item_group": "Phụ kiện CN Đức",
+    "uom": "Con",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1500",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "BỌ 1VIS 503N-71-595",
+   "content": "PKDUC_BO_1VIS_503N_71_595 BỌ 1VIS 503N-71-595"
+  },
+  {
+   "name": "Alumdoor 2026:PKDUC_BO_2VIS_652_548C:Con:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKDUC_BO_2VIS_652_548C",
+    "item_group": "Phụ kiện CN Đức",
+    "uom": "Con",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "2500",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "BỌ 2VIS-652-548C",
+   "content": "PKDUC_BO_2VIS_652_548C BỌ 2VIS-652-548C"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_AL75:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_AL75",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1403000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "ĐỨC AL75",
+   "content": "CDUC_AL75 ĐỨC AL75"
+  },
+  {
+   "name": "Alumdoor 2026:MT_TANKER400KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "MT_TANKER400KG",
+    "item_group": "Motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1750000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "MOTOR TANKER 400KG",
+   "content": "MT_TANKER400KG MOTOR TANKER 400KG"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_TANKER_ALUMAX_LAC33:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LKMT_TANKER_ALUMAX_LAC33",
+    "item_group": "Linh kiện motor",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "450000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "LẮC TANKER ALUMAX 33",
+   "content": "LKMT_TANKER_ALUMAX_LAC33 LẮC TANKER ALUMAX 33"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_TANKER_ALUMAX_LAC36:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LKMT_TANKER_ALUMAX_LAC36",
+    "item_group": "Linh kiện motor",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "500000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "LẮC TANKER ALUMAX 36",
+   "content": "LKMT_TANKER_ALUMAX_LAC36 LẮC TANKER ALUMAX 36"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_TANKER_LAC800_1000KG:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LKMT_TANKER_LAC800_1000KG",
+    "item_group": "Linh kiện motor",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "600000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "LẮC TANKER 800-1000KG",
+   "content": "LKMT_TANKER_LAC800_1000KG LẮC TANKER 800-1000KG"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_LACYHLD300_500KG:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LKMT_LACYHLD300_500KG",
+    "item_group": "Linh kiện motor",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "650000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "LẮC YH 300 500KG",
+   "content": "LKMT_LACYHLD300_500KG LẮC YH 300 500KG"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_LACYHLD800_1000KG:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LKMT_LACYHLD800_1000KG",
+    "item_group": "Linh kiện motor",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "750000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "LẮC YH 800 1000KG",
+   "content": "LKMT_LACYHLD800_1000KG LẮC YH 800 1000KG"
+  },
+  {
+   "name": "Alumdoor 2026:PKD_TAY_YHLD:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKD_TAY_YHLD",
+    "item_group": "Điều khiển & phụ kiện điện",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "180000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "YHLD TAY ĐIỀU KHIỂN",
+   "content": "PKD_TAY_YHLD YHLD TAY ĐIỀU KHIỂN"
+  },
+  {
+   "name": "Alumdoor 2026:MT_TANKER_NHONG:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "MT_TANKER_NHONG",
+    "item_group": "Motor",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "70000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "NHÔNG MOTOR TANKER",
+   "content": "MT_TANKER_NHONG NHÔNG MOTOR TANKER"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_LONGDEN:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LKMT_LONGDEN",
+    "item_group": "Linh kiện motor",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "50000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "LÔNG ĐỀN",
+   "content": "LKMT_LONGDEN LÔNG ĐỀN"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_HOAKHE:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LKMT_HOAKHE",
+    "item_group": "Linh kiện motor",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "50000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "HOA KHẾ (3 CHẤU)",
+   "content": "LKMT_HOAKHE HOA KHẾ (3 CHẤU)"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_COT:Cây:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LKMT_COT",
+    "item_group": "Linh kiện motor",
+    "uom": "Cây",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "80000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "CỐT",
+   "content": "LKMT_COT CỐT"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_NAPCHUP_BACDAN:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKC_NAPCHUP_BACDAN",
+    "item_group": "Phụ kiện chung",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "100000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "BẠC ĐẠN + NẮP CHỤP",
+   "content": "PKC_NAPCHUP_BACDAN BẠC ĐẠN + NẮP CHỤP"
+  },
+  {
+   "name": "Alumdoor 2026:DK_BDK_TANKER_ALUMAX:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "DK_BDK_TANKER_ALUMAX",
+    "item_group": "Điều khiển & phụ kiện điện",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "270000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "BỘ ĐIỀU KHIỂN TANKER ALUMAX",
+   "content": "DK_BDK_TANKER_ALUMAX BỘ ĐIỀU KHIỂN TANKER ALUMAX"
+  },
+  {
+   "name": "Alumdoor 2026:MT_YHLD300KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "MT_YHLD300KG",
+    "item_group": "Motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "2750000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "MOTOR YHLD 300KG",
+   "content": "MT_YHLD300KG MOTOR YHLD 300KG"
+  },
+  {
+   "name": "Alumdoor 2026:MT_YHLD500KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "MT_YHLD500KG",
+    "item_group": "Motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "2850000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "MOTOR YHLD 500KG",
+   "content": "MT_YHLD500KG MOTOR YHLD 500KG"
+  },
+  {
+   "name": "Alumdoor 2026:MT_YHLD800KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "MT_YHLD800KG",
+    "item_group": "Motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "5900000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "MOTOR YHLD 800KG",
+   "content": "MT_YHLD800KG MOTOR YHLD 800KG"
+  },
+  {
+   "name": "Alumdoor 2026:MT_YHLD1000KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "MT_YHLD1000KG",
+    "item_group": "Motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "7000000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "MOTOR YHLD 1000KG",
+   "content": "MT_YHLD1000KG MOTOR YHLD 1000KG"
+  },
+  {
+   "name": "Alumdoor 2026:MT_JG300KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "MT_JG300KG",
+    "item_group": "Motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "3650000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "MOTOR JG 300KG",
+   "content": "MT_JG300KG MOTOR JG 300KG"
+  },
+  {
+   "name": "Alumdoor 2026:MT_JG400KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "MT_JG400KG",
+    "item_group": "Motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "4150000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "MOTOR JG 400KG",
+   "content": "MT_JG400KG MOTOR JG 400KG"
+  },
+  {
+   "name": "Alumdoor 2026:MT_JG500KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "MT_JG500KG",
+    "item_group": "Motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "4200000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "MOTOR JG 500KG",
+   "content": "MT_JG500KG MOTOR JG 500KG"
+  },
+  {
+   "name": "Alumdoor 2026:MT_JG600KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "MT_JG600KG",
+    "item_group": "Motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "4300000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "MOTOR JG 600KG",
+   "content": "MT_JG600KG MOTOR JG 600KG"
+  },
+  {
+   "name": "Alumdoor 2026:MT_JG800KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "MT_JG800KG",
+    "item_group": "Motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "5250000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "MOTOR JG 800KG",
+   "content": "MT_JG800KG MOTOR JG 800KG"
+  },
+  {
+   "name": "Alumdoor 2026:MT_JG1000KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "MT_JG1000KG",
+    "item_group": "Motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "7650000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "MOTOR JG 1000KG",
+   "content": "MT_JG1000KG MOTOR JG 1000KG"
+  },
+  {
+   "name": "Alumdoor 2026:MT_JG1500KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "MT_JG1500KG",
+    "item_group": "Motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "8050000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "MOTOR JG 1500KG",
+   "content": "MT_JG1500KG MOTOR JG 1500KG"
+  },
+  {
+   "name": "Alumdoor 2026:MT_TANKER600KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "MT_TANKER600KG",
+    "item_group": "Motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1850000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "MOTOR TANKER 600KG",
+   "content": "MT_TANKER600KG MOTOR TANKER 600KG"
+  },
+  {
+   "name": "Alumdoor 2026:MT_TANKE800KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "MT_TANKE800KG",
+    "item_group": "Motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "3700000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "MOTOR TANKER 800KG",
+   "content": "MT_TANKE800KG MOTOR TANKER 800KG"
+  },
+  {
+   "name": "Alumdoor 2026:MT_TANKER1000KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "MT_TANKER1000KG",
+    "item_group": "Motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "3900000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "MOTOR TANKER 1000KG",
+   "content": "MT_TANKER1000KG MOTOR TANKER 1000KG"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_LACPHU33_1LO:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LKMT_LACPHU33_1LO",
+    "item_group": "Linh kiện motor",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "65000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "LẮC PHỤ 33-1 LỔ",
+   "content": "LKMT_LACPHU33_1LO LẮC PHỤ 33-1 LỔ"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_LACPHU36_1LO:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LKMT_LACPHU36_1LO",
+    "item_group": "Linh kiện motor",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "70000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "LẮC PHỤ 36-1 LỔ",
+   "content": "LKMT_LACPHU36_1LO LẮC PHỤ 36-1 LỔ"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_LACPHU33_3LO:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LKMT_LACPHU33_3LO",
+    "item_group": "Linh kiện motor",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "65000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "LẮC PHỤ 33-3 LỔ (ĐÀI LOAN)",
+   "content": "LKMT_LACPHU33_3LO LẮC PHỤ 33-3 LỔ (ĐÀI LOAN)"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_LACPHU36_3LO:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LKMT_LACPHU36_3LO",
+    "item_group": "Linh kiện motor",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "70000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "LẮC PHỤ 36-3 LỔ (ĐÀI LOAN)",
+   "content": "LKMT_LACPHU36_3LO LẮC PHỤ 36-3 LỔ (ĐÀI LOAN)"
+  },
+  {
+   "name": "Alumdoor 2026:DK_MULLER:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "DK_MULLER",
+    "item_group": "Điều khiển & phụ kiện điện",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "750000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "BỘ ĐIỀU KHIỂN ĐIỆN THOẠI MULLER",
+   "content": "DK_MULLER BỘ ĐIỀU KHIỂN ĐIỆN THOẠI MULLER"
+  },
+  {
+   "name": "Alumdoor 2026:PKD_TAY_MULLER:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKD_TAY_MULLER",
+    "item_group": "Điều khiển & phụ kiện điện",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "280000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "TAY ĐIỀU KHIỂN ĐIỆN THOẠI MULLER",
+   "content": "PKD_TAY_MULLER TAY ĐIỀU KHIỂN ĐIỆN THOẠI MULLER"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_GOIGANG:Cặp:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKC_GOIGANG",
+    "item_group": "Phụ kiện chung",
+    "uom": "Cặp",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "90000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "GỐI GANG",
+   "content": "PKC_GOIGANG GỐI GANG"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_BANBUOM_INOX:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKC_BANBUOM_INOX",
+    "item_group": "Phụ kiện chung",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "60000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "BẮN BƯỚM (INOX)",
+   "content": "PKC_BANBUOM_INOX BẮN BƯỚM (INOX)"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_LX_5.5_X_70_X_46V:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKC_LX_5.5_X_70_X_46V",
+    "item_group": "Phụ kiện chung",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "45000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "HH LÒ XO 46V",
+   "content": "PKC_LX_5.5_X_70_X_46V HH LÒ XO 46V"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_LX_5.5_X_70_X_50V:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKC_LX_5.5_X_70_X_50V",
+    "item_group": "Phụ kiện chung",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "45000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "HH LÒ XO 50V",
+   "content": "PKC_LX_5.5_X_70_X_50V HH LÒ XO 50V"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_LV_6.0_X_70_X_53V:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKC_LV_6.0_X_70_X_53V",
+    "item_group": "Phụ kiện chung",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "45000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "HH LÒ XO 53V",
+   "content": "PKC_LV_6.0_X_70_X_53V HH LÒ XO 53V"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_LV_6.5_X_80_X_63V:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKC_LV_6.5_X_80_X_63V",
+    "item_group": "Phụ kiện chung",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "45000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "HH LÒ XO 63V",
+   "content": "PKC_LV_6.5_X_80_X_63V HH LÒ XO 63V"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_LV_6.5_X_80_X_68V:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKC_LV_6.5_X_80_X_68V",
+    "item_group": "Phụ kiện chung",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "45000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "HH LÒ XO 68V",
+   "content": "PKC_LV_6.5_X_80_X_68V HH LÒ XO 68V"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_LV_7.0_X_90_X_65V:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKC_LV_7.0_X_90_X_65V",
+    "item_group": "Phụ kiện chung",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "45000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "HH LÒ XO 65V",
+   "content": "PKC_LV_7.0_X_90_X_65V HH LÒ XO 65V"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_LV_7.0_X_90_X_73V:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKC_LV_7.0_X_90_X_73V",
+    "item_group": "Phụ kiện chung",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "45000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "HH LÒ XO 73V",
+   "content": "PKC_LV_7.0_X_90_X_73V HH LÒ XO 73V"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_LV_7.0_X_90_X_83V:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKC_LV_7.0_X_90_X_83V",
+    "item_group": "Phụ kiện chung",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "45000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "HH LÒ XO 83V",
+   "content": "PKC_LV_7.0_X_90_X_83V HH LÒ XO 83V"
+  },
+  {
+   "name": "Alumdoor 2026:RT_RAYNHOMUC:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "RT_RAYNHOMUC",
+    "item_group": "Ray và trục",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "195000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "RAY NHÔM ÚC",
+   "content": "RT_RAYNHOMUC RAY NHÔM ÚC"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_TANKER_ALUMAX:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LKMT_TANKER_ALUMAX",
+    "item_group": "Linh kiện motor",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "150000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "HỘP ĐK TANKER ALUMAX",
+   "content": "LKMT_TANKER_ALUMAX HỘP ĐK TANKER ALUMAX"
+  },
+  {
+   "name": "Alumdoor 2026:DK_TANKER_ALUMAX_BODK:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "DK_TANKER_ALUMAX_BODK",
+    "item_group": "Điều khiển & phụ kiện điện",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "270000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "BỘ ĐK TANKER ALUMAX",
+   "content": "DK_TANKER_ALUMAX_BODK BỘ ĐK TANKER ALUMAX"
+  },
+  {
+   "name": "Alumdoor 2026:PKD_TAY_TANKER_ALUMAX:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKD_TAY_TANKER_ALUMAX",
+    "item_group": "Điều khiển & phụ kiện điện",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "120000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "TAY ĐIỀU KHIỂN TANKER",
+   "content": "PKD_TAY_TANKER_ALUMAX TAY ĐIỀU KHIỂN TANKER"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_PAT_CODAY:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LKMT_PAT_CODAY",
+    "item_group": "Linh kiện motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "150000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "PHÍM ÂM TƯỜNG CÓ DÂY",
+   "content": "LKMT_PAT_CODAY PHÍM ÂM TƯỜNG CÓ DÂY"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_PAT_KHONGDAY:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LKMT_PAT_KHONGDAY",
+    "item_group": "Linh kiện motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "80000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "PHÍM ÂM TƯỜNG KHÔNG DÂY",
+   "content": "LKMT_PAT_KHONGDAY PHÍM ÂM TƯỜNG KHÔNG DÂY"
+  },
+  {
+   "name": "Alumdoor 2026:MT_ALUMAX400KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "MT_ALUMAX400KG",
+    "item_group": "Motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "2200000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "MOTOR ALUMAX 400KG",
+   "content": "MT_ALUMAX400KG MOTOR ALUMAX 400KG"
+  },
+  {
+   "name": "Alumdoor 2026:MT_ALUMAX600KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "MT_ALUMAX600KG",
+    "item_group": "Motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "2300000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "MOTOR ALUMAX 600KG",
+   "content": "MT_ALUMAX600KG MOTOR ALUMAX 600KG"
+  },
+  {
+   "name": "Alumdoor 2026:BLD_UPS_E800I:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "BLD_UPS_E800I",
+    "item_group": "Bình lưu điện",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1800000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "Bình lưu điện Alumax E800i",
+   "content": "BLD_UPS_E800I Bình lưu điện Alumax E800i"
+  },
+  {
+   "name": "Alumdoor 2026:BLD_UPS_E1000I:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "BLD_UPS_E1000I",
+    "item_group": "Bình lưu điện",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "2700000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "Bình lưu điện Alumax E1000i",
+   "content": "BLD_UPS_E1000I Bình lưu điện Alumax E1000i"
+  },
+  {
+   "name": "Alumdoor 2026:BLD_UPS_YH1000:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "BLD_UPS_YH1000",
+    "item_group": "Bình lưu điện",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1800000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "Bình lưu điện YH1000",
+   "content": "BLD_UPS_YH1000 Bình lưu điện YH1000"
+  },
+  {
+   "name": "Alumdoor 2026:BLD_UPS_YH2000:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "BLD_UPS_YH2000",
+    "item_group": "Bình lưu điện",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "2700000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "Bình lưu điện YH2000",
+   "content": "BLD_UPS_YH2000 Bình lưu điện YH2000"
+  },
+  {
+   "name": "Alumdoor 2026:PKD_TAY_JG:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKD_TAY_JG",
+    "item_group": "Điều khiển & phụ kiện điện",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "190000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "JG TAY ĐIỀU KHIỂN",
+   "content": "PKD_TAY_JG JG TAY ĐIỀU KHIỂN"
+  },
+  {
+   "name": "Alumdoor 2026:DK_JG:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "DK_JG",
+    "item_group": "Điều khiển & phụ kiện điện",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "460000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "JG BỘ ĐIỀU KHIỂN",
+   "content": "DK_JG JG BỘ ĐIỀU KHIỂN"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_NAPNHIN:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LKMT_NAPNHIN",
+    "item_group": "Linh kiện motor",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "170000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "NẮP NHÌN",
+   "content": "LKMT_NAPNHIN NẮP NHÌN"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_GOIFE:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKC_GOIFE",
+    "item_group": "Phụ kiện chung",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "65000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "GỐI SẮT",
+   "content": "PKC_GOIFE GỐI SẮT"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_GIAT:Cặp:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKC_GIAT",
+    "item_group": "Phụ kiện chung",
+    "uom": "Cặp",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "120000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "GIÁ T",
+   "content": "PKC_GIAT GIÁ T"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_BOSTEC_PAT:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LKMT_BOSTEC_PAT",
+    "item_group": "Linh kiện motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "250000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "BOSTEC PHÍM ÂM TƯỜNG",
+   "content": "LKMT_BOSTEC_PAT BOSTEC PHÍM ÂM TƯỜNG"
+  },
+  {
+   "name": "Alumdoor 2026:PKD_TAY_BOSTEC:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKD_TAY_BOSTEC",
+    "item_group": "Điều khiển & phụ kiện điện",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "270000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "BOSTEC TAY ĐIỀU KHIỂN",
+   "content": "PKD_TAY_BOSTEC BOSTEC TAY ĐIỀU KHIỂN"
+  },
+  {
+   "name": "Alumdoor 2026:DK_BOSTEC:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "DK_BOSTEC",
+    "item_group": "Điều khiển & phụ kiện điện",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1850000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "BOSTEC BỘ ĐIỀU KHIỂN",
+   "content": "DK_BOSTEC BOSTEC BỘ ĐIỀU KHIỂN"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_CHTAIWAN_PAT:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LKMT_CHTAIWAN_PAT",
+    "item_group": "Linh kiện motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "600000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "CHTAIWAN-PHÍM ÂM TƯỜNG",
+   "content": "LKMT_CHTAIWAN_PAT CHTAIWAN-PHÍM ÂM TƯỜNG"
+  },
+  {
+   "name": "Alumdoor 2026:PKD_TAY_CHTAIWAN:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKD_TAY_CHTAIWAN",
+    "item_group": "Điều khiển & phụ kiện điện",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "320000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "CHTAIWAN-TAY ĐIỀU KHIỂN",
+   "content": "PKD_TAY_CHTAIWAN CHTAIWAN-TAY ĐIỀU KHIỂN"
+  },
+  {
+   "name": "Alumdoor 2026:DK_CHTAIWAN:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "DK_CHTAIWAN",
+    "item_group": "Điều khiển & phụ kiện điện",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "2400000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "CHTAIWAN BỘ ĐIỀU KHIỂN",
+   "content": "DK_CHTAIWAN CHTAIWAN BỘ ĐIỀU KHIỂN"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_BOSTEC_DOI_P:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LKMT_BOSTEC_DOI_P",
+    "item_group": "Linh kiện motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "3800000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "MTT BOSTEC ĐÔI PHẢI",
+   "content": "LKMT_BOSTEC_DOI_P MTT BOSTEC ĐÔI PHẢI"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_BOSTEC_DOI_T:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LKMT_BOSTEC_DOI_T",
+    "item_group": "Linh kiện motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "3800000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "MTT BOSTEC ĐÔI TRÁI",
+   "content": "LKMT_BOSTEC_DOI_T MTT BOSTEC ĐÔI TRÁI"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_BOSTEC_DON_P:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LKMT_BOSTEC_DON_P",
+    "item_group": "Linh kiện motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "3300000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "MTT BOSTEC ĐƠN PHẢI",
+   "content": "LKMT_BOSTEC_DON_P MTT BOSTEC ĐƠN PHẢI"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_BOSTEC_DON_T:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LKMT_BOSTEC_DON_T",
+    "item_group": "Linh kiện motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "3300000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "MTT BOSTEC ĐƠN TRÁI",
+   "content": "LKMT_BOSTEC_DON_T MTT BOSTEC ĐƠN TRÁI"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_CHTAIWAN_DOI_T:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LKMT_CHTAIWAN_DOI_T",
+    "item_group": "Linh kiện motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "5300000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "MTT CHTAIWAN ĐÔI TRÁI",
+   "content": "LKMT_CHTAIWAN_DOI_T MTT CHTAIWAN ĐÔI TRÁI"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_CHTAIWAN_DOI_P:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LKMT_CHTAIWAN_DOI_P",
+    "item_group": "Linh kiện motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "5300000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "MTT CHTAIWAN ĐÔI PHẢI",
+   "content": "LKMT_CHTAIWAN_DOI_P MTT CHTAIWAN ĐÔI PHẢI"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_CHTAIWAN_DON_P:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LKMT_CHTAIWAN_DON_P",
+    "item_group": "Linh kiện motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "4950000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "MTT CHTAIWAN ĐƠN PHẢI",
+   "content": "LKMT_CHTAIWAN_DON_P MTT CHTAIWAN ĐƠN PHẢI"
+  },
+  {
+   "name": "Alumdoor 2026:LKMT_CHTAIWAN_DON_T:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LKMT_CHTAIWAN_DON_T",
+    "item_group": "Linh kiện motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "4950000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "MTT CHTAIWAN ĐƠN TRÁI",
+   "content": "LKMT_CHTAIWAN_DON_T MTT CHTAIWAN ĐƠN TRÁI"
+  },
+  {
+   "name": "Alumdoor 2026:MT_YHTAIWAN_CH_300KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "MT_YHTAIWAN_CH_300KG",
+    "item_group": "Motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "6350000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "MOTOR YHTAIWAN CH 300KG",
+   "content": "MT_YHTAIWAN_CH_300KG MOTOR YHTAIWAN CH 300KG"
+  },
+  {
+   "name": "Alumdoor 2026:MT_YHTAIWAN_CH_500KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "MT_YHTAIWAN_CH_500KG",
+    "item_group": "Motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "7900000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "MOTOR YHTAIWAN CH 500KG",
+   "content": "MT_YHTAIWAN_CH_500KG MOTOR YHTAIWAN CH 500KG"
+  },
+  {
+   "name": "Alumdoor 2026:MT_YHTAIWAN_CH_400KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "MT_YHTAIWAN_CH_400KG",
+    "item_group": "Motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "7000000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "MOTOR YHTAIWAN CH 400KG",
+   "content": "MT_YHTAIWAN_CH_400KG MOTOR YHTAIWAN CH 400KG"
+  },
+  {
+   "name": "Alumdoor 2026:MT_YHTAIWAN_CH_600KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "MT_YHTAIWAN_CH_600KG",
+    "item_group": "Motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "11900000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "MOTOR YHTAIWAN CH 600KG",
+   "content": "MT_YHTAIWAN_CH_600KG MOTOR YHTAIWAN CH 600KG"
+  },
+  {
+   "name": "Alumdoor 2026:MT_YHTAIWAN_CH_700KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "MT_YHTAIWAN_CH_700KG",
+    "item_group": "Motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "12900000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "MOTOR YHTAIWAN CH 700KG",
+   "content": "MT_YHTAIWAN_CH_700KG MOTOR YHTAIWAN CH 700KG"
+  },
+  {
+   "name": "Alumdoor 2026:MT_YHTAIWAN_CH_800KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "MT_YHTAIWAN_CH_800KG",
+    "item_group": "Motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "13600000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "MOTOR YHTAIWAN CH 800KG",
+   "content": "MT_YHTAIWAN_CH_800KG MOTOR YHTAIWAN CH 800KG"
+  },
+  {
+   "name": "Alumdoor 2026:MT_YHTAIWAN_CH_1000KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "MT_YHTAIWAN_CH_1000KG",
+    "item_group": "Motor",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "13600000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "MOTOR YHTAIWAN CH 1000KG",
+   "content": "MT_YHTAIWAN_CH_1000KG MOTOR YHTAIWAN CH 1000KG"
+  },
+  {
+   "name": "Alumdoor 2026:DK_YHTAIWAN:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "DK_YHTAIWAN",
+    "item_group": "Điều khiển & phụ kiện điện",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1050000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "YHTAIWAN BỘ ĐIỀU KHIỂN",
+   "content": "DK_YHTAIWAN YHTAIWAN BỘ ĐIỀU KHIỂN"
+  },
+  {
+   "name": "Alumdoor 2026:PKD_TAY_YHTAIWAN:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKD_TAY_YHTAIWAN",
+    "item_group": "Điều khiển & phụ kiện điện",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "350000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "YHTAIWAN TAY ĐIỀU KHIỂN",
+   "content": "PKD_TAY_YHTAIWAN YHTAIWAN TAY ĐIỀU KHIỂN"
+  },
+  {
+   "name": "Alumdoor 2026:CUC_UC_KT_4D:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CUC_UC_KT_4D",
+    "item_group": "Cửa tấm liền Úc",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "365000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "CỬA ÚC KT 4D",
+   "content": "CUC_UC_KT_4D CỬA ÚC KT 4D"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_VAIHAMXO:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKC_VAIHAMXO",
+    "item_group": "Phụ kiện chung",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "2",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "VAI HÃM XO",
+   "content": "PKC_VAIHAMXO VAI HÃM XO"
+  },
+  {
+   "name": "Alumdoor 2026:CUC_UC_MTN_4D:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CUC_UC_MTN_4D",
+    "item_group": "Cửa tấm liền Úc",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "345000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "CỬA ÚC MTN 4D",
+   "content": "CUC_UC_MTN_4D CỬA ÚC MTN 4D"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_KN:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKC_KN",
+    "item_group": "Phụ kiện chung",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "250000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "KHÓA NGANG",
+   "content": "PKC_KN KHÓA NGANG"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_BKAN:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKC_BKAN",
+    "item_group": "Phụ kiện chung",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "88000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "BÁT KHÓA ÂM NỀN",
+   "content": "PKC_BKAN BÁT KHÓA ÂM NỀN"
+  },
+  {
+   "name": "Alumdoor 2026:CUC_UC_KT_4_6D:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CUC_UC_KT_4_6D",
+    "item_group": "Cửa tấm liền Úc",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "395000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "CỬA ÚC KT 4.6D",
+   "content": "CUC_UC_KT_4_6D CỬA ÚC KT 4.6D"
+  },
+  {
+   "name": "Alumdoor 2026:CUC_UC_KT_5_5D:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CUC_UC_KT_5_5D",
+    "item_group": "Cửa tấm liền Úc",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "425000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "CỬA ÚC KT 5.5D",
+   "content": "CUC_UC_KT_5_5D CỬA ÚC KT 5.5D"
+  },
+  {
+   "name": "Alumdoor 2026:CUC_UC_MTN_4_6D:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CUC_UC_MTN_4_6D",
+    "item_group": "Cửa tấm liền Úc",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "375000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "CỬA ÚC MTN 4.6D",
+   "content": "CUC_UC_MTN_4_6D CỬA ÚC MTN 4.6D"
+  },
+  {
+   "name": "Alumdoor 2026:CUC_UC_MTN_5_5D:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CUC_UC_MTN_5_5D",
+    "item_group": "Cửa tấm liền Úc",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "405000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "CỬA ÚC MTN 5.5D",
+   "content": "CUC_UC_MTN_5_5D CỬA ÚC MTN 5.5D"
+  },
+  {
+   "name": "Alumdoor 2026:CUC_UC_MTN_6D:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CUC_UC_MTN_6D",
+    "item_group": "Cửa tấm liền Úc",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "465000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "CỬA ÚC MTN 6D",
+   "content": "CUC_UC_MTN_6D CỬA ÚC MTN 6D"
+  },
+  {
+   "name": "Alumdoor 2026:CUC_UC_KT_6D:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CUC_UC_KT_6D",
+    "item_group": "Cửa tấm liền Úc",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "465000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "CỬA ÚC KT 6D",
+   "content": "CUC_UC_KT_6D CỬA ÚC KT 6D"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_DUC_KT_AL70_2_LOP:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_DUC_KT_AL70_2_LOP",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "890000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "CỬA ĐỨC KÉO TAY AL70 (2 LỚP)",
+   "content": "CDUC_DUC_KT_AL70_2_LOP CỬA ĐỨC KÉO TAY AL70 (2 LỚP)"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_DUC_KT_AL70:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_DUC_KT_AL70",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "890000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "CỬA ĐỨC KÉO TAY AL70 (1 LỚP)",
+   "content": "CDUC_DUC_KT_AL70 CỬA ĐỨC KÉO TAY AL70 (1 LỚP)"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOI_MV_TRONBO:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CLUOI_LUOI_MV_TRONBO",
+    "item_group": "Cửa Lưới",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "590000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "CỬA LƯỚI MẮT VÕNG -Trọn bộ",
+   "content": "CLUOI_LUOI_MV_TRONBO CỬA LƯỚI MẮT VÕNG -Trọn bộ"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_BANBUOM_FE:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKC_BANBUOM_FE",
+    "item_group": "Phụ kiện chung",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "30000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "BẮN BƯỚM (SẮT)",
+   "content": "PKC_BANBUOM_FE BẮN BƯỚM (SẮT)"
+  },
+  {
+   "name": "Alumdoor 2026:RT_TRUC140:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "RT_TRUC140",
+    "item_group": "Ray và trục",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "180000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "TRỤC 140",
+   "content": "RT_TRUC140 TRỤC 140"
+  },
+  {
+   "name": "Alumdoor 2026:RT_TRUC168:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "RT_TRUC168",
+    "item_group": "Ray và trục",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "500000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "TRỤC 168",
+   "content": "RT_TRUC168 TRỤC 168"
+  },
+  {
+   "name": "Alumdoor 2026:RT_RAY_U70_RON:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "RT_RAY_U70_RON",
+    "item_group": "Ray và trục",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "75000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "RAY SẮT U70 (CÓ RON)",
+   "content": "RT_RAY_U70_RON RAY SẮT U70 (CÓ RON)"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOI_MV_TM:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CLUOI_LUOI_MV_TM",
+    "item_group": "Cửa Lưới",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "450000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "CỬA LƯỚI MẮT VÕNG TÁCH MÓN",
+   "content": "CLUOI_LUOI_MV_TM CỬA LƯỚI MẮT VÕNG TÁCH MÓN"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOI_SN_TM:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CLUOI_LUOI_SN_TM",
+    "item_group": "Cửa Lưới",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "490000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "CỬA LƯỚI SN PHI 19 TÁCH MÓN",
+   "content": "CLUOI_LUOI_SN_TM CỬA LƯỚI SN PHI 19 TÁCH MÓN"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOI_SN_TRONBO:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CLUOI_LUOI_SN_TRONBO",
+    "item_group": "Cửa Lưới",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "630000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "CỬA LƯỚI SN PHI 19 TRỌN BỘ",
+   "content": "CLUOI_LUOI_SN_TRONBO CỬA LƯỚI SN PHI 19 TRỌN BỘ"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOI_SN13X26_TRONBO:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CLUOI_LUOI_SN13X26_TRONBO",
+    "item_group": "Cửa Lưới",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "750000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "CỬA LƯỚI SN PHI 13x26 TRỌN BỘ",
+   "content": "CLUOI_LUOI_SN13X26_TRONBO CỬA LƯỚI SN PHI 13x26 TRỌN BỘ"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOI_SN13X26_TACHMON:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CLUOI_LUOI_SN13X26_TACHMON",
+    "item_group": "Cửa Lưới",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "570000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "CỬA LƯỚI SN PHI 13x26 TÁCH MÓN",
+   "content": "CLUOI_LUOI_SN13X26_TACHMON CỬA LƯỚI SN PHI 13x26 TÁCH MÓN"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOI_SN13X26_INOX_TACHMON:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CLUOI_LUOI_SN13X26_INOX_TACHMON",
+    "item_group": "Cửa Lưới",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1500000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "CỬA LƯỚI SN PHI 13x26 INOX TÁCH MÓN",
+   "content": "CLUOI_LUOI_SN13X26_INOX_TACHMON CỬA LƯỚI SN PHI 13x26 INOX TÁCH MÓN"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOI_SN13X26_INOX_TRONBO:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CLUOI_LUOI_SN13X26_INOX_TRONBO",
+    "item_group": "Cửa Lưới",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1710000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "LƯỚI SN PHI 13X26 INOX TRỌN BỘ",
+   "content": "CLUOI_LUOI_SN13X26_INOX_TRONBO LƯỚI SN PHI 13X26 INOX TRỌN BỘ"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOI_SNPHI19_INOX_TM:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CLUOI_LUOI_SNPHI19_INOX_TM",
+    "item_group": "Cửa Lưới",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1290000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "CỬA LƯỚI SN PHI 19 INOX TÁCH MÓN",
+   "content": "CLUOI_LUOI_SNPHI19_INOX_TM CỬA LƯỚI SN PHI 19 INOX TÁCH MÓN"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOI_SNPHI19_INOX_TRONBO:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CLUOI_LUOI_SNPHI19_INOX_TRONBO",
+    "item_group": "Cửa Lưới",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1530000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "CỬA LƯỚI SN PHI 19 INOX- TRỌN BỘ",
+   "content": "CLUOI_LUOI_SNPHI19_INOX_TRONBO CỬA LƯỚI SN PHI 19 INOX- TRỌN BỘ"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOIMV_INOX_TM:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CLUOI_LUOIMV_INOX_TM",
+    "item_group": "Cửa Lưới",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1290000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "CỬA LƯỚI MẮT VÕNG INOX TÁCH MÓN",
+   "content": "CLUOI_LUOIMV_INOX_TM CỬA LƯỚI MẮT VÕNG INOX TÁCH MÓN"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOIMV_INOX_TRONBO:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CLUOI_LUOIMV_INOX_TRONBO",
+    "item_group": "Cửa Lưới",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1530000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "CỬA LƯỚI MẮT VÕNG INOX TRỌN BỘ",
+   "content": "CLUOI_LUOIMV_INOX_TRONBO CỬA LƯỚI MẮT VÕNG INOX TRỌN BỘ"
+  },
+  {
+   "name": "Alumdoor 2026:INOX_6D:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "INOX_6D",
+    "item_group": "Cửa Đài Loan Inox",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1040000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "LÁ ĐL7.5 INOX 6D",
+   "content": "INOX_6D LÁ ĐL7.5 INOX 6D"
+  },
+  {
+   "name": "Alumdoor 2026:INOX_7D:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "INOX_7D",
+    "item_group": "Cửa Đài Loan Inox",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1160000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "LÁ ĐL7.5 INOX 7D",
+   "content": "INOX_7D LÁ ĐL7.5 INOX 7D"
+  },
+  {
+   "name": "Alumdoor 2026:INOX_8D:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "INOX_8D",
+    "item_group": "Cửa Đài Loan Inox",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1290000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "LÁ ĐL7.5 INOX 8D",
+   "content": "INOX_8D LÁ ĐL7.5 INOX 8D"
+  },
+  {
+   "name": "Alumdoor 2026:INOX_1LY:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "INOX_1LY",
+    "item_group": "Cửa Đài Loan Inox",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1650000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "LÁ ĐL7.5 INOX 1LY",
+   "content": "INOX_1LY LÁ ĐL7.5 INOX 1LY"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_V4_INOX:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKC_V4_INOX",
+    "item_group": "Phụ kiện chung",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "180000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "V4 INOX 2ly",
+   "content": "PKC_V4_INOX V4 INOX 2ly"
+  },
+  {
+   "name": "Alumdoor 2026:RT_RAYINOX_6P_RON:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "RT_RAYINOX_6P_RON",
+    "item_group": "Ray và trục",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "220000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "RAY INOX 6P CÓ RON",
+   "content": "RT_RAYINOX_6P_RON RAY INOX 6P CÓ RON"
+  },
+  {
+   "name": "Alumdoor 2026:RT_RAYINOX_8P_RON:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "RT_RAYINOX_8P_RON",
+    "item_group": "Ray và trục",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "270000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "RAY INOX 8P CÓ RON",
+   "content": "RT_RAYINOX_8P_RON RAY INOX 8P CÓ RON"
+  },
+  {
+   "name": "Alumdoor 2026:RT_RAYINOX_7P_KHONGRON:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "RT_RAYINOX_7P_KHONGRON",
+    "item_group": "Ray và trục",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "250000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "RAY INOX 7P KHÔNG RON",
+   "content": "RT_RAYINOX_7P_KHONGRON RAY INOX 7P KHÔNG RON"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_8D:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_DLK_8D",
+    "item_group": "Nan/lá cửa",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "410000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "TP LÁ ĐÀI LOAN 8D",
+   "content": "LA_DLK_8D TP LÁ ĐÀI LOAN 8D"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1LY:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_DLK_1LY",
+    "item_group": "Nan/lá cửa",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "460000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "LÁ ĐÀI LOAN 1LY",
+   "content": "LA_DLK_1LY LÁ ĐÀI LOAN 1LY"
+  },
+  {
+   "name": "Alumdoor 2026:PKC_CHONGXOLO:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PKC_CHONGXOLO",
+    "item_group": "Phụ kiện chung",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "65000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "CHỐNG XỔ LÔ",
+   "content": "PKC_CHONGXOLO CHỐNG XỔ LÔ"
+  },
+  {
+   "name": "Alumdoor 2026:LA_RUOT_AL71N:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_RUOT_AL71N",
+    "item_group": "Nan/lá cửa",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1178000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "TP LÁ RUỘT AL71N",
+   "content": "LA_RUOT_AL71N TP LÁ RUỘT AL71N"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DUC_AL70_2_LOP:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_DUC_AL70_2_LOP",
+    "item_group": "Nan/lá cửa",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "909000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-ban-dm-2026-08-20"
+   },
+   "title": "TP LÁ ĐỨC AL70 (2 lớp)",
+   "content": "LA_DUC_AL70_2_LOP TP LÁ ĐỨC AL70 (2 lớp)"
+  }
+ ]
+}

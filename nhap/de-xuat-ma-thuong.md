@@ -1,0 +1,314 @@
+# Đề xuất mã — 276 mặt hàng "Hàng thường"
+
+Luật: tiền tố cũ → `VT_`, phần thân giữ nguyên.
+
+### Bình lưu điện  (4 mã)
+
+| Mã mới | Tên hàng | ĐVT tồn | ĐVT mua | ĐVT bán | Mã cũ |
+|---|---|---|---|---|---|
+| VT_UPS-E1000I | Bình lưu điện Alumax E1000i | Cái | Cái | Cái | TP-UPS-E1000i |
+| VT_UPS-E800I | Bình lưu điện Alumax E800i | Cái | Cái | Cái | TP-UPS-E800i |
+| VT_UPS-YH1000 | Bình lưu điện YH1000 | Cái | Cái | Cái | TP-UPS-YH1000 | ⚠ TRÙNG
+| VT_UPS-YH2000 | Bình lưu điện YH2000 | Cái | Cái | Cái | TP-UPS-YH2000 |
+
+### Điều khiển & phụ kiện điện  (16 mã)
+
+| Mã mới | Tên hàng | ĐVT tồn | ĐVT mua | ĐVT bán | Mã cũ |
+|---|---|---|---|---|---|
+| VT_BDK-TANKER-ALUMAX | BỘ ĐIỀU KHIỂN TANKER ALUMAX | Bộ | Bộ | Bộ | TP-BDK-TANKER-ALUMAX |
+| VT_BDKDT-MULLER | BỘ ĐIỀU KHIỂN ĐIỆN THOẠI MULLER | Bộ | Bộ | Bộ | TP-BDKDT-MULLER |
+| VT_BOSTEC-BODIEUKHIEN | BOSTEC BỘ ĐIỀU KHIỂN | Cái | Cái | Cái | TP-BOSTEC-BODIEUKHIEN |
+| VT_CHTAIWAN-BODIEUKHIEN | CHTAIWAN BỘ ĐIỀU KHIỂN | Cái | Cái | Cái | TP-CHTAIWAN-BODIEUKHIEN |
+| VT_JG-BODK | JG BỘ ĐIỀU KHIỂN | Cái | Cái | Cái | JG-BODK |
+| VT_JG-TAYDK | JG TAY ĐIỀU KHIỂN | Cái | Cái | Cái | TP-JG-TayDK |
+| VT_MTT-BOSTEC-TAYDK | BOSTEC TAY ĐIỀU KHIỂN | Cái | Cái | Cái | TP-MTT-BOSTEC-TAYDK |
+| VT_MTT-CHTAIWAN-TAYDK | CHTAIWAN-TAY ĐIỀU KHIỂN | Cái | Cái | Cái | TP-MTT-CHTAIWAN-TAYDK |
+| VT_TANKER-ALUMAX-BODK | BỘ ĐK TANKER ALUMAX | Bộ | Bộ | Bộ | TP-TANKER-ALUMAX-BODK |
+| VT_TANKER-ALUMAX-TAYDK | TAY ĐIỀU KHIỂN TANKER | Cái | Cái | Cái | TP-Tanker-Alumax-TayDK |
+| VT_TDK-MULLER | TAY ĐIỀU KHIỂN ĐIỆN THOẠI MULLER | Cái | Cái | Cái | TP-TDK-MULLER |
+| VT_YHLD-BDK | BỘ ĐIỀU KHIỂN YHLD | Bộ | Bộ | Bộ | TP-YHLD-BDK |
+| VT_YHLD-HDK | HỘP ĐIỀU KHIỂN YHLD | Cái | Cái | Cái | TP-YHLD-HDK |
+| VT_YHLD-TAYDK | YHLD TAY ĐIỀU KHIỂN | Cái | Cái | Cái | TP-YHLD-TayDK |
+| VT_YHTAIWAN-BODK | YHTAIWAN BỘ ĐIỀU KHIỂN | Bộ | Bộ | Bộ | TP-YHTaiwan-BODK |
+| VT_YHTAIWAN-TAYDK | YHTAIWAN TAY ĐIỀU KHIỂN | Cái | Cái | Cái | TP-YHTaiwan-TayDK |
+
+### Linh kiện motor  (97 mã)
+
+| Mã mới | Tên hàng | ĐVT tồn | ĐVT mua | ĐVT bán | Mã cũ |
+|---|---|---|---|---|---|
+| VT_ALUMAX-PATCD | ALUMAX PHÍM ÂM TƯỜNG CÓ DÂY | Bộ | Bộ |  | TP-ALUMAX-PATCD |
+| VT_BACDAN-MT | BẠC ĐẠN MOTOR | Cái | Cái |  | LK-BACDAN-MT |
+| VT_COT | CỐT | Cây | Cây | Cây | NVL-Cot |
+| VT_DAYDIEN-PATCD | DÂY ĐIỆN PHÍM ÂM TƯỜNG | Mét | Mét |  | NVL-Daydien-PATCD |
+| VT_HDKMT-AL | HỘP ĐIỀU KHIỂN MOTOR ALUMAX | Cái | Cái |  | HH-HDKMT-AL |
+| VT_HDKMT-JG | HỘP ĐIỀU KHIỂN MOTOR JG | Cái | Cái |  | HH-HDKMT-JG |
+| VT_HDKMT-TANKER | HỘP ĐIỀU KHIỂN MOTOR TANKER | Cái | Cái |  | HH-HDKMT-TANKER |
+| VT_HDKMT-YH | HỘP ĐIỀU KHIỂN YH | Cái | Cái |  | HH-HDKMT-YH |
+| VT_HOAKHE | HOA KHẾ (3 CHẤU) | Cái | Cái | Cái | NVL-Hoakhe |
+| VT_JG-BDN | JG BẠC ĐẠN | Bộ | Bộ |  | TP-JG-BDN |
+| VT_JG-PATCD | JG PHÍM ÂM TƯỜNG CÓ DÂY | Cái | Cái |  | TP-JG-PATCD |
+| VT_LACJG1000-1500KG | JG LacJG1000-1500KG | Cái | Cái |  | TP-LacJG1000-1500KG |
+| VT_LACJG33 | JG LacJG33 | Cái | Cái |  | TP-LacJG33 |
+| VT_LACPHU33-1LO | LẮC PHỤ 33-1 LỔ | Cái | Cái | Cái | TP-LACPHU33-1LO |
+| VT_LACPHU33-3LO | LẮC PHỤ 33-3 LỔ (ĐÀI LOAN) | Cái | Cái | Cái | TP-LACPHU33-3LO |
+| VT_LACPHU36-1LO | LẮC PHỤ 36-1 LỔ | Cái | Cái | Cái | TP-LACPHU36-1LO |
+| VT_LACPHU36-3LO | LẮC PHỤ 36-3 LỔ (ĐÀI LOAN) | Cái | Cái | Cái | TP-LACPHU36-3LO |
+| VT_LACYHLD300-500KG | LẮC YH 300 500KG | Cái | Cái | Cái | TP-LacYHLD300&500KG |
+| VT_LACYHLD800-1000KG | LẮC YH 800 1000KG | Cái | Cái | Cái | TP-LacYHLD800&1000KG |
+| VT_LMT-AL400 | LẮC MOTOR ALUMAX 400 KG | Cái | Cái |  | HH-LMT-AL400 |
+| VT_LMT-AL600 | LẮC MOTOR ALUMAX 600 KG | Cái | Cái |  | HH-LMT-AL600 |
+| VT_LMT-JG1000 | LẮC MOTOR JG 1000KG (CHÍNH HÃNG) | Cái | Cái |  | HH-LMT-JG1000 |
+| VT_LMT-JG1500 | LẮC MOTOR JG 1500KG (CHÍNH HÃNG) | Cái | Cái |  | HH-LMT-JG1500 |
+| VT_LMT-JG300-600 | LẮC MOTOR JG 300KG-600KG (CHÍNH HÃNG) | Cái | Cái |  | HH-LMT-JG300-600 |
+| VT_LMT-JG500 | LẮC MOTOR JG 500KG (CHÍNH HÃNG) | Cái | Cái |  | HH-LMT-JG500 |
+| VT_LMT-JG600 | LẮC MOTOR JG 600KG (CHÍNH HÃNG) | Cái | Cái |  | HH-LMT-JG600 |
+| VT_LMT-JG800-1000 | LẮC MOTOR JG 800KG-1000KG (CHÍNH HÃNG) | Cái | Cái |  | HH-LMT-JG800-1000 |
+| VT_LMT-TK800-1000 | LẮC MOTOR TANKER 800 KG -1000 KG | Cái | Cái |  | HH-LMT-TK800-1000 |
+| VT_LMT-YHLD1000 | LẮC MOTOR YH LD 1000KG LOẠI 1 (DÂY ĐỒNG) | Cái | Cái |  | HH-LMT-YHLD1000 |
+| VT_LMT-YHLD1200 | LẮC MOTOR YH LD 1200KG LOẠI 1 (DÂY ĐỒNG) | Cái | Cái |  | HH-LMT-YHLD1200 |
+| VT_LMT-YHLD300-500 | LẮC MOTOR YH LD 300/500KG LOẠI 1 (DÂY ĐỒNG) | Cái | Cái |  | HH-LMT-YHLD300-500 |
+| VT_LMT-YHLD800 | LẮC MOTOR YH LD 800KG LOẠI 1 (DÂY ĐỒNG) | Cái | Cái |  | HH-LMT-YHLD800 |
+| VT_LMT33-TK400-600 | LẮC 32-33 MOTOR TANKER 400 KG 600 KG | Cái | Cái |  | HH-LMT33-TK400-600 |
+| VT_LMT36-TK400-600 | LẮC 36 MOTOR TANKER 400 KG 600 KG | Cái | Cái |  | HH-LMT36-TK400-600 |
+| VT_LONGDEN | LÔNG ĐỀN | Cái | Cái | Cái | NVL-Longden |
+| VT_MTT-BOSTEC-DOI-P | MTT BOSTEC ĐÔI PHẢI | Bộ | Bộ | Bộ | TP-MTT-BOSTEC-DOI(P) |
+| VT_MTT-BOSTEC-DOI-T | MTT BOSTEC ĐÔI TRÁI | Bộ | Bộ | Bộ | TP-MTT-BOSTEC-DOI(T) |
+| VT_MTT-BOSTEC-DON-P | MTT BOSTEC ĐƠN PHẢI | Bộ | Bộ | Bộ | TP-MTT-BOSTEC-DON(P) |
+| VT_MTT-BOSTEC-DON-T | MTT BOSTEC ĐƠN TRÁI | Bộ | Bộ | Bộ | TP-MTT-BOSTEC-DON(T) |
+| VT_MTT-BOSTEC-PAT | BOSTEC PHÍM ÂM TƯỜNG | Cái | Cái | Cái | TP-MTT-BOSTEC-PAT |
+| VT_MTT-CHTAIWAN-DOI-P | MTT CHTAIWAN ĐÔI PHẢI | Bộ | Bộ | Bộ | TP-MTT-CHTAIWAN-DOI(P) |
+| VT_MTT-CHTAIWAN-DOI-T | MTT CHTAIWAN ĐÔI TRÁI | Bộ | Bộ | Bộ | TP-MTT-CHTAIWAN-DOI(T) |
+| VT_MTT-CHTAIWAN-DON-P | MTT CHTAIWAN ĐƠN PHẢI | Bộ | Bộ | Bộ | TP-MTT-CHTAIWAN-DON(P) |
+| VT_MTT-CHTAIWAN-DON-T | MTT CHTAIWAN ĐƠN TRÁI | Bộ | Bộ | Bộ | TP-MTT-CHTAIWAN-DON(T) |
+| VT_MTT-CHTAIWAN-PAT | CHTAIWAN-PHÍM ÂM TƯỜNG | Cái | Cái | Cái | TP-MTT-CHTAIWAN-PAT |
+| VT_NAPCHUP-MT | NẮP CHỤP MOTOR | Cái | Cái |  | LK-NAPCHUP-MT |
+| VT_NAPNHIN | NẮP NHÌN | Cái | Cái | Cái | TP-NAPNHIN |
+| VT_PAT-CH | PHÍM ÂM TƯỜNG CH ÚC (Motor trong) | Cái | Cái |  | HH-PAT-CH |
+| VT_PAT-CODAY | PHÍM ÂM TƯỜNG CÓ DÂY | Bộ | Bộ | Bộ | TP-PAT-CODAY |
+| VT_PAT-KHONGDAY | PHÍM ÂM TƯỜNG KHÔNG DÂY | Cái | Cái | Cái | TP-PAT-KHONGDAY |
+| VT_TANKER-ALUMAX-HDK | HỘP ĐK TANKER ALUMAX | Cái | Cái | Cái | TP-Tanker-Alumax-HDK |
+| VT_TANKER-ALUMAX-LAC33 | LẮC TANKER ALUMAX 33 | Cái | Cái | Cái | TP-Tanker-Alumax-Lac33 |
+| VT_TANKER-ALUMAX-LAC36 | LẮC TANKER ALUMAX 36 | Cái | Cái | Cái | TP-Tanker-Alumax-Lac36 |
+| VT_TANKER-LAC800-1000KG | LẮC TANKER 800-1000KG | Cái | Cái | Cái | TP-Tanker-Lac800&1000KG |
+| VT_TANKER-PATCD | TANKER PHÍM ÂM TƯỜNG CÓ DÂY | Bộ | Bộ |  | TP-TANKER-PATCD |
+| VT_TDKMT-AL | TAY ĐIỀU KHIỂN MOTOR ALUMAX | Cái | Cái |  | HH-TDKMT-AL |
+| VT_TDKMT-JG | TAY ĐIỀU KHIỂN MOTOR JG | Cái | Cái |  | HH-TDKMT-JG |
+| VT_TDKMT-TANKER | TAY ĐIỀU KHIỂN MOTOR TANKER | Cái | Cái |  | HH-TDKMT-TANKER |
+| VT_TDKMT-YH | TAY ĐIỀU KHIỂN YH | Cái | Cái |  | HH-TDKMT-YH |
+| VT_TMT-AL400 | THÂN MOTOR ALUMAX 400 KG | Cái | Cái |  | HH-TMT-AL400 |
+| VT_TMT-AL600 | THÂN MOTOR ALUMAX 600 KG | Cái | Cái |  | HH-TMT-AL600 |
+| VT_TMT-JG1000 | THÂN MOTOR JG 1000KG (CHÍNH HÃNG) | Cái | Cái |  | HH-TMT-JG1000 |
+| VT_TMT-JG1500 | THÂN MOTOR JG 1500KG (CHÍNH HÃNG) | Cái | Cái |  | HH-TMT-JG1500 |
+| VT_TMT-JG300 | THÂN MOTOR JG 300KG (CHÍNH HÃNG) | Cái | Cái |  | HH-TMT-JG300 |
+| VT_TMT-JG400 | THÂN MOTOR JG 400KG (CHÍNH HÃNG) | Cái | Cái |  | HH-TMT-JG400 |
+| VT_TMT-JG500 | THÂN MOTOR JG 500KG (CHÍNH HÃNG) | Cái | Cái |  | HH-TMT-JG500 |
+| VT_TMT-JG600 | THÂN MOTOR JG 600KG (CHÍNH HÃNG) | Cái | Cái |  | HH-TMT-JG600 |
+| VT_TMT-JG800 | THÂN MOTOR JG 800KG (CHÍNH HÃNG) | Cái | Cái |  | HH-TMT-JG800 |
+| VT_TMT-TK1000 | THÂN MOTOR TANKER 1000 KG | Cái | Cái |  | HH-TMT-TK1000 |
+| VT_TMT-TK400 | THÂN MOTOR TANKER 400 KG | Cái | Cái |  | HH-TMT-TK400 |
+| VT_TMT-TK600 | THÂN MOTOR TANKER 600 KG | Cái | Cái |  | HH-TMT-TK600 |
+| VT_TMT-TK800 | THÂN MOTOR TANKER 800 KG | Cái | Cái |  | HH-TMT-TK800 |
+| VT_TMT-YHLD1000 | THÂN MOTOR YH LD 1000KG LOẠI 1 (DÂY ĐỒNG) | Cái | Cái |  | HH-TMT-YHLD1000 |
+| VT_TMT-YHLD1200 | THÂN MOTOR YH LD 1200KG LOẠI 1 (DÂY ĐỒNG) | Cái | Cái |  | HH-TMT-YHLD1200 |
+| VT_TMT-YHLD300 | THÂN MOTOR YH LD 300KG LOẠI 1 (DÂY ĐỒNG) | Cái | Cái |  | HH-TMT-YHLD300 |
+| VT_TMT-YHLD500 | THÂN MOTOR YH LD 500KG LOẠI 1 (DÂY ĐỒNG) | Cái | Cái |  | HH-TMT-YHLD500 |
+| VT_TMT-YHLD800 | THÂN MOTOR YH LD 800KG LOẠI 1 (DÂY ĐỒNG) | Cái | Cái |  | HH-TMT-YHLD800 |
+| VT_TMTDOI-BOS-PHAI | THÂN MOTOR BOSTECH ĐÔI PHẢI | Cái | Cái |  | HH-TMTDOI-BOS-PHAI |
+| VT_TMTDOI-BOS-TRAI | THÂN MOTOR BOSTECH ĐÔI TRÁI | Cái | Cái |  | HH-TMTDOI-BOS-TRAI |
+| VT_TMTDON-BOS-PHAI | THÂN MOTOR BOSTECH ĐƠN PHẢI | Cái | Cái |  | HH-TMTDON-BOS-PHAI |
+| VT_TMTDON-BOS-TRAI | THÂN MOTOR BOSTECH ĐƠN TRÁI | Cái | Cái |  | HH-TMTDON-BOS-TRAI |
+| VT_TMTDON-CH | THÂN MOTOR CH TAIWAN | Cái | Cái |  | HH-TMTDON-CH |
+| VT_UPS-ALE1000 | ALUMAX UPS E-1000KG | Bộ | Bộ |  | HH-UPS-ALE1000 |
+| VT_UPS-ALE800 | ALUMAX UPS E-800KG | Bộ | Bộ |  | HH-UPS-ALE800 |
+| VT_YHLD-PATCD | YHLD PHÍM ÂM TƯỜNG CÓ DÂY | Cái | Cái |  | TP-YHLD-PATCD |
+| VT_YHTAIWAN-HDK | YHTAIWAN HopDK | Cái | Cái |  | TP-YHTaiwan-HDK |
+| VT_YHTAIWAN-LAYHTW1000-1200KG | YHTAIWAN LẮC 1000-1200KG | Cái | Cái |  | TP-YHTaiwan-LaYHTW1000-1200KG |
+| VT_YHTAIWAN-LAYHTW300-400-500KG | YHTAIWAN LẮC 300-400-500KG | Cái | Cái |  | TP-YHTaiwan-LaYHTW300-400-500KG |
+| VT_YHTAIWAN-LAYHTW600-700-800KG | YHTAIWAN LẮC 600-700-800KG | Cái | Cái |  | TP-YHTaiwan-LaYHTW600-700-800KG |
+| VT_YHTAIWAN-PATCD | YHTAIWAN PHÍM ÂM TƯỜNG CÓ DÂY | Bộ | Bộ |  | TP-YHTaiwan-PATCD |
+| VT_YHTAIWAN-THAN1000KG | YHTAIWAN Thân 1000KG | Cái | Cái |  | TP-YHTaiwan-Than1000KG |
+| VT_YHTAIWAN-THAN300KG | YHTAIWAN Thân 300KG | Cái | Cái |  | TP-YHTaiwan-Than300KG |
+| VT_YHTAIWAN-THAN400KG | YHTAIWAN Thân 400KG | Cái | Cái |  | TP-YHTaiwan-Than400KG |
+| VT_YHTAIWAN-THAN500KG | YHTAIWAN Thân 500KG | Cái | Cái |  | TP-YHTaiwan-Than500KG |
+| VT_YHTAIWAN-THAN600KG | YHTAIWAN Thân 600KG | Cái | Cái |  | TP-YHTaiwan-Than600KG |
+| VT_YHTAIWAN-THAN700KG | YHTAIWAN Thân 700KG | Cái | Cái |  | TP-YHTaiwan-Than700KG |
+| VT_YHTAIWAN-THAN800KG | YHTAIWAN Thân 800KG | Cái | Cái |  | TP-YHTaiwan-Than800KG |
+
+### Motor  (25 mã)
+
+| Mã mới | Tên hàng | ĐVT tồn | ĐVT mua | ĐVT bán | Mã cũ |
+|---|---|---|---|---|---|
+| VT_MT-ALUMAX400KG | MOTOR ALUMAX 400KG | Bộ | Bộ | Bộ | TP-MT-ALUMAX400KG |
+| VT_MT-ALUMAX600KG | MOTOR ALUMAX 600KG | Bộ | Bộ | Bộ | TP-MT-ALUMAX600KG |
+| VT_MT-JG1000KG | MOTOR JG 1000KG | Bộ | Bộ | Bộ | TP-MT-JG1000KG |
+| VT_MT-JG1500KG | MOTOR JG 1500KG | Bộ | Bộ | Bộ | TP-MT-JG1500KG |
+| VT_MT-JG300KG | MOTOR JG 300KG | Bộ | Bộ | Bộ | TP-MT-JG300KG |
+| VT_MT-JG400KG | MOTOR JG 400KG | Bộ | Bộ | Bộ | TP-MT-JG400KG |
+| VT_MT-JG500KG | MOTOR JG 500KG | Bộ | Bộ | Bộ | TP-MT-JG500KG |
+| VT_MT-JG600KG | MOTOR JG 600KG | Bộ | Bộ | Bộ | TP-MT-JG600KG |
+| VT_MT-JG800KG | MOTOR JG 800KG | Bộ | Bộ | Bộ | TP-MT-JG800KG |
+| VT_MT-TANKE800KG | MOTOR TANKER 800KG | Bộ | Bộ | Bộ | TP-MT-TANKE800KG |
+| VT_MT-TANKER1000KG | MOTOR TANKER 1000KG | Bộ | Bộ | Bộ | TP-MT-TANKER1000KG |
+| VT_MT-TANKER400KG | MOTOR TANKER 400KG | Bộ | Bộ | Bộ | TP-MT-TANKER400KG |
+| VT_MT-TANKER600KG | MOTOR TANKER 600KG | Bộ | Bộ | Bộ | TP-MT-TANKER600KG |
+| VT_MT-YHLD1000KG | MOTOR YHLD 1000KG | Bộ | Bộ | Bộ | TP-MT-YHLD1000KG |
+| VT_MT-YHLD300KG | MOTOR YHLD 300KG | Bộ | Bộ | Bộ | TP-MT-YHLD300KG |
+| VT_MT-YHLD500KG | MOTOR YHLD 500KG | Bộ | Bộ | Bộ | TP-MT-YHLD500KG |
+| VT_MT-YHLD800KG | MOTOR YHLD 800KG | Bộ | Bộ | Bộ | TP-MT-YHLD800KG |
+| VT_MT-YHTAIWAN-CH-1000KG | MOTOR YHTAIWAN CH 1000KG | Bộ | Bộ | Bộ | TP-MT-YHTAIWAN-CH-1000KG |
+| VT_MT-YHTAIWAN-CH-300KG | MOTOR YHTAIWAN CH 300KG | Bộ | Bộ | Bộ | TP-MT-YHTAIWAN-CH-300KG |
+| VT_MT-YHTAIWAN-CH-400KG | MOTOR YHTAIWAN CH 400KG | Bộ | Bộ | Bộ | TP-MT-YHTAIWAN-CH-400KG |
+| VT_MT-YHTAIWAN-CH-500KG | MOTOR YHTAIWAN CH 500KG | Bộ | Bộ | Bộ | TP-MT-YHTAIWAN-CH-500KG |
+| VT_MT-YHTAIWAN-CH-600KG | MOTOR YHTAIWAN CH 600KG | Bộ | Bộ | Bộ | TP-MT-YHTAIWAN-CH-600KG |
+| VT_MT-YHTAIWAN-CH-700KG | MOTOR YHTAIWAN CH 700KG | Bộ | Bộ | Bộ | TP-MT-YHTAIWAN-CH-700KG |
+| VT_MT-YHTAIWAN-CH-800KG | MOTOR YHTAIWAN CH 800KG | Bộ | Bộ | Bộ | TP-MT-YHTAIWAN-CH-800KG |
+| VT_TANKER-NHONG | NHÔNG MOTOR TANKER | Cái | Cái | Cái | NVL-Tanker-nhong |
+
+### Phụ kiện cần sơn tĩnh điện  (5 mã)
+
+| Mã mới | Tên hàng | ĐVT tồn | ĐVT mua | ĐVT bán | Mã cũ |
+|---|---|---|---|---|---|
+| VT_CROMATE-3 | CROMATE 3+ | Kg | Kg | Kg | CROMATE-3+ |
+| VT_LUOIMV | LƯỚI MV | Kg | Kg |  | NVL-LUOIMV |
+| VT_LUOISN13X26 | LƯỚI SN VUÔNG PHI 13X26 | Kg | Kg |  | TP-LUOISN13x26 |
+| VT_LUOISNPHI19 | LƯỚI SN TRÒN PHI 19 | Kg | Kg |  | NVL-LUOISNPHI19 |
+| VT_TAY-NHOM | TẨY NHÔM | Kg | Kg | Kg | TẨY-NHÔM |
+
+### Phụ kiện chung  (97 mã)
+
+| Mã mới | Tên hàng | ĐVT tồn | ĐVT mua | ĐVT bán | Mã cũ |
+|---|---|---|---|---|---|
+| VT_3X6M | SẮT VUÔNG 3X6M | Mét | Mét | Mét | NVL-3X6M |
+| VT_BANBUOM-FE | BẮN BƯỚM (SẮT) | Mét | Mét |  | NVL-BANBUOM-FE |
+| VT_BANBUOM-INOX | BẮN BƯỚM (INOX) | Mét | Mét |  | NVL-BANBUOM-INOX |
+| VT_BANGKT-5P | BĂNG KEO TRONG | Kg | Kg |  | NVL-BANGKT-5P |
+| VT_BKAN | BÁT KHÓA ÂM NỀN | Cặp | Cặp | Cặp | TP-BKAN | ⚠ TRÙNG
+| VT_BKAN | BÁT KHOÁ ÂM NỀN | Cái | Cái |  | NVL-BKAN | ⚠ TRÙNG
+| VT_BOLSN | BỌ LUỚI SONG NGANG MÓNG NGỰA SONG NGANG | Cái | Cái |  | NVL-BOLSN |
+| VT_BOMV | BỌ MẮT VÕNG | Kg | Kg |  | NVL-BOMV |
+| VT_BUOMFE-DL | BƯỚM SẮT ĐÀI LOAN | Kg | Kg |  | NVL-BUOMFE-DL |
+| VT_BUOMFE-ST | BƯỚM SẮT SIÊU TRƯỜNG | Kg | Kg |  | NVL-BUOMFE-ST |
+| VT_CHNHUA | VÒNG NHỰA HÃM TRỤC | Cái | Kg | Kg | NVL-CHNHUA |
+| VT_CHONGXOLO | CHỐNG XỔ LÔ | Cái | Cái | Cái | TP-CHONGXOLO |
+| VT_CONTAN-MV | CON TÁN | Kg | Kg |  | NVL-CONTAN-MV |
+| VT_DINHTAN-MV | ĐINH TÁN | Kg | Kg |  | NVL-DINHTAN-MV |
+| VT_DINHTAN-SN | ĐINH TÁN | Kg | Kg |  | NVL-DINHTAN-SN | · ngừng KD
+| VT_GIAT | GIÁ T | Cặp | Cặp | Cặp | NVL-GIAT |
+| VT_GOIFE | GỐI SẮT | Cái | Cái | Cái | NVL-GOIFE |
+| VT_GOIGANG | GỐI GANG | Cặp | Cặp | Cặp | TP-GOIGANG | ⚠ TRÙNG
+| VT_GOIGANG | GỐI GANG | Cái | Cái |  | NVL-GOIGANG | ⚠ TRÙNG · ngừng KD
+| VT_HDK-MULLER | HỘP ĐIỀU KHIỂN MULLER | Bộ | Bộ |  | TP-HDK-MULLER |
+| VT_HDKDT | BỘ ĐIỀU KHIỂN ĐIỆN THOẠI | Bộ | Bộ |  | HH-HDKDT |
+| VT_HDKMT-BOS | HỘP ĐIỀU KHIỂN BOSTECH | Cái | Cái |  | HH-HDKMT-BOS |
+| VT_HDKMTDON-CH | HỘP ĐIỀU KHIỂN TAIWAN | Cái | Cái |  | HH-HDKMTDON-CH |
+| VT_HOPKEM-1.2LY | HỘP KỄM 30X30X1.2LY | Cây | Cây |  | NVL-HOPKEM-1.2LY |
+| VT_INOX | INOX KÉO TAY 6mét | Cây | Cây |  | NVL-INOX |
+| VT_KN | KHÓA NGANG | Bộ | Bộ | Bộ | TP-KN |
+| VT_LACPHU33 | LẮC PHỤ 33 | Cái | Cái |  | HH-LACPHU33 |
+| VT_LACPHU33-3L | LẮC PHỤ 33 (3 LỖ) | Cái | Cái |  | HH-LACPHU33-3L |
+| VT_LACPHU36 | LẮC PHỤ 36 | Cái | Cái |  | HH-LACPHU36 |
+| VT_LACPHU40 | LẮC PHỤ 40 | Cái | Cái |  | HH-LACPHU40 |
+| VT_LACPHU40-L168 | LẮC PHỤ 40 LỖ 168 | Cái | Cái |  | HH-LACPHU40-L168 |
+| VT_LUOIMV-INOX | LƯỚI MV INOX | m2 | m2 |  | TP-LUOIMV-INOX |
+| VT_LUOISN13X26-INOX | LƯỚI SN VUÔNG PHI 13X26 INOX | m2 | m2 |  | TP-LUOISN13x26-INOX |
+| VT_LUOISNPHI19-INOX | LƯỚI SN TRÒN PHI 19 INOX | m2 | m2 |  | TP-LUOISNPHI19-INOX |
+| VT_LV-6.0-X-70-X-53V | HH LÒ XO 53V | Kg | Kg | Kg | NVL-LV-6.0-x-70-x-53V |
+| VT_LV-6.5-X-80-X-63V | HH LÒ XO 63V | Kg | Kg | Kg | NVL-LV-6.5-x-80-x-63V |
+| VT_LV-6.5-X-80-X-68V | HH LÒ XO 68V | Kg | Kg | Kg | NVL-LV-6.5-x-80-x-68V |
+| VT_LV-7.0-X-90-X-65V | HH LÒ XO 65V | Kg | Kg | Kg | NVL-LV-7.0-x-90-x-65V |
+| VT_LV-7.0-X-90-X-73V | HH LÒ XO 73V | Kg | Kg | Kg | NVL-LV-7.0-x-90-x-73V |
+| VT_LV-7.0-X-90-X-83V | HH LÒ XO 83V | Kg | Kg | Kg | NVL-LV-7.0-x-90-x-83V |
+| VT_LX-5.5-X-70-X-46V | HH LÒ XO 46V | Kg | Kg | Kg | NVL-LX-5.5-X-70-X-46V |
+| VT_LX-5.5-X-70-X-50V | HH LÒ XO 50V | Kg | Kg | Kg | NVL-LX-5.5-x-70-x-50V |
+| VT_LX5.5X70X46V | LÒ XO 46 V | Cái | Cái |  | NVL-LX5.5x70x46V |
+| VT_LX5.5X70X50V | LÒ XO 50 V | Cái | Cái |  | NVL-LX5.5x70x50V |
+| VT_LX6.0X70X53V | LÒ XO 53 V | Cái | Cái |  | NVL-LX6.0x70x53V |
+| VT_LX6.5X80X62V | LÒ XO 62 V | Cái | Cái |  | NVL-LX6.5x80x62V |
+| VT_LX6.5X80X63V | LÒ XO 63 V | Cái | Cái |  | NVL-LX6.5x80x63V |
+| VT_LX6.5X80X68V | LÒ XO 68 V | Cái | Cái |  | NVL-LX6.5x80x68V |
+| VT_LX7.0X90X65 | LÒ XO 65 V | Cái | Cái |  | NVL-LX7.0x90x65 |
+| VT_LX7.0X90X73 | LÒ XO 73 V | Cái | Cái |  | NVL-LX7.0x90x73 |
+| VT_LX7.0X90X83 | LÒ XO 83 V | Cái | Cái |  | NVL-LX7.0x90x83 |
+| VT_MUI-MAI-HOP-KIM | MŨI MÀI HỘP KIM | Cái | Cái |  | MŨI-MÀI-HỘP-KIM |
+| VT_NAPCHUP-BACDAN | BẠC ĐẠN + NẮP CHỤP | Bộ | Bộ | Bộ | NVL-Napchup+Bacdan |
+| VT_NHAN | NHẪN | Cái | Cái |  | NVL-NHAN |
+| VT_OKHOA | Ổ KHÓA NGANG | Cái | Cái | Bộ | NVL-OKHOA |
+| VT_OTPHI13.8 | ỐNG THÉP PHI 13.8 | Kg | Kg |  | NVL-OTPHI13.8 |
+| VT_OTPHI19 | ỐNG THÉP PHI 19 | Kg | Kg |  | NVL-OTPHI19 |
+| VT_PAT-BOS | PHÍM ÂM TƯỜNG ÚC BOSTECH | Cái | Cái |  | HH-PAT-BOS |
+| VT_PE25 | Màng PE 25 CM | Cuộn | Cuộn |  | NVL-PE25 |
+| VT_PE2X1.05X150 | MÀNG PE FOAM 2x1.05x150 (CẮT 4) | Cuộn | Cuộn |  | NVL-PE2x1.05x150 |
+| VT_PE2X1.05X150CAT2 | MÀNG PE FOAM 2x1.05x150 (CẮT 2) | Cuộn | Cuộn |  | NVL-PE2x1.05x150CAT2 |
+| VT_PE3X1.05X100CAT2 | MÀNG PE FOAM 3x1.05x100 (CẮT 2) | Cuộn | Cuộn |  | NVL-PE3x1.05x100CAT2 |
+| VT_PE3X1.05X100CAT4 | MÀNG PE FOAM 3x1.05x100 (CẮT 4) | Cuộn | Cuộn |  | NVL-PE3x1.05x100CAT4 |
+| VT_PE50 | Màng PE 50 CM | Cuộn | Cuộn |  | NVL-PE50 |
+| VT_PHOTLONG4X5X400M | LÔNG NHEO 4X5 | Mét | Mét | Mét | TP-PHOTLONG4X5X400M |
+| VT_PHOTLONG5X6X400M | LÔNG NHEO 5X6 | Mét | Mét | Mét | TP-PHOTLONG5X6X400M |
+| VT_PULYGAI | PULY GAI | Kg | Kg |  | NVL-PULYGAI |
+| VT_PULYUC114 | PULY ÚC 114 | Cái | Cái | Cái | NVL-PULYUC114 |
+| VT_PULYUC114-CAM | PULY ÚC 114 CAM | Cái | Cái |  | NVL-PULYUC114-CAM |
+| VT_PULYUC114-DEN | PULY ÚC 114 ĐEN | Cái | Cái |  | NVL-PULYUC114-DEN |
+| VT_PULYUC34 | PULY ÚC 34 | Cái | Cái | Cái | NVL-PULYUC34 |
+| VT_RON-DD | RON ĐÁY ĐỨC | Mét | Mét | Mét | RON-DD | ⚠ TRÙNG
+| VT_RONDAYUC | RON ĐÁY ÚC | Mét | Mét | Mét | RONDAYUC | ⚠ TRÙNG
+| VT_RONDAYUC | Ron đáy úc | Kg | Kg |  | NVL-RONDAYUC | ⚠ TRÙNG
+| VT_RONNHUA-INOX | RON NHỰA + INOX | Mét | Mét | Mét | RONNHUA-INOX |
+| VT_RONNHUAVANGCANHAY-RSU100 | RONNHUAVANGCANHAY RSU100 | Kg | Kg |  | RONNHUAVANGCẢNHAY-RSU100 |
+| VT_RONNHUAVANGCANHAY-RSU70 | RONNHUAVANGCANHAY RSU70 | Kg | Kg |  | RONNHUAVANGCANHAY-RSU70 |
+| VT_TDK-BOS | TAY ĐIỀU KHIỂN BOSTECH | Cái | Cái |  | HH-TDK-BOS |
+| VT_TDKDT | TAY ĐIỀU KHIỂN ĐIỆN THOẠI | Cái | Cái |  | HH-TDKDT |
+| VT_TDKMTDOI-CH | TAY ĐIỀU KHIỂN TAIWAN | Cái | Cái |  | HH-TDKMTDOI-CH |
+| VT_TIINOX | TI KHÓA NGANG | Kg | Kg | Mét | NVL-TIINOX |
+| VT_UPS-YH1000 | UPS YH1000i | Bộ | Bộ |  | HH-UPS-YH1000 | ⚠ TRÙNG
+| VT_V4 | V4 | Kg | Kg |  | NVL-V4 |
+| VT_V4-INOX | V4 INOX 2ly | Mét | Mét | Mét | TP-V4-INOX |
+| VT_V4-INOX-3LY | V4 3ly | Mét | Mét | Mét | TP-V4-INOX-3LY |
+| VT_V4-KEM | V4 | Mét | Mét | Mét | NVL-V4-KEM |
+| VT_V5 | V5 | Kg | Kg |  | NVL-V5 |
+| VT_V5-KEM | V4 KẼM | Mét | Kg | Mét | NVL-V5-KEM |
+| VT_VAIHAMXO | VAI HÃM XO | Cái | Cái |  | NVL-VAIHAMXO |
+| VT_VDAY-TDU | V ĐÁY (THANH ĐÁY ÚC) | Kg | Kg |  | NVL-VDAY-TDU |
+| VT_VDAY-TDU-KTD | THANH ĐÁY ÚC KTD | Kg | Kg | Kg | NVL-VDAY-TDU-KTD |
+| VT_VIS-BANLO2P | VIS BẮN LÔ 2P | Con | Con |  | NVL-VIS-BANLO2P |
+| VT_VISDD-BANLO | VIS ĐẦU DÙ BẮN LÔ | Con | Con |  | NVL-VISDD-BANLO |
+| VT_VUONG3 | VUÔNG KẼM 30X30X1.2LY | Cây | Cây |  | NVL-VUONG3 |
+| VT_XOP-N45 | XỐP NHỎ | Tấm | Tấm | Tấm | NVL-XOP-N45 |
+| VT_XOP-N90 | XỐP LỚN | Tấm | Tấm | Tấm | NVL-XOP-N90 |
+| VT_XOP-N95 | XỐP LỚN (90cm) | Tấm | Tấm |  | NVL-XOP-N95 |
+
+### Phụ kiện CN Đức  (32 mã)
+
+| Mã mới | Tên hàng | ĐVT tồn | ĐVT mua | ĐVT bán | Mã cũ |
+|---|---|---|---|---|---|
+| VT_BACDAN | BẠC ĐẠN | Cái | Cái |  | NVL-BACDAN |
+| VT_BATSAT | BÁT SẮT | Cái | Cái |  | NVL-BATSAT |
+| VT_BO-1VIS-503N-71-595 | BỌ 1VIS 503N-71-595 | Con | Con | Con | TP-BO-1VIS-503N-71-595 |
+| VT_BO-2VIS-501-552 | BỌ 2VIS-501-552 | Con | Con | Con | TP-BO-2VIS-501-552 |
+| VT_BO-2VIS-652-548C | BỌ 2VIS-652-548C | Con | Con | Con | TP-BO-2VIS-652-548C |
+| VT_BO1VIS-503C | BỌ 1VIS 503C | Kg | Kg |  | NVL-BO1VIS-503C |
+| VT_BO1VIS-503N-71-595 | BỌ 1VIS 503N-71-595 | Kg | Kg |  | NVL-BO1VIS-503N-71-595 |
+| VT_BO2VIS-501N-552 | BỌ 2VIS 501N-552 | Kg | Kg |  | NVL-BO2VIS-501N-552 |
+| VT_BO2VIS-652-548C | BỌ 2VIS 652-548C | Kg | Kg |  | NVL-BO2VIS-652-548C |
+| VT_BO2VIS-752-ST700 | BỌ 2VIS 752 ST700 | Kg | Kg |  | NVL-BO2VIS-752-ST700 |
+| VT_BULON12.12 | BÙ LON 12x12 | Kg | Kg |  | NVL-BULON12.12 |
+| VT_CBD | CÒI BÁO ĐỘNG | Cái | Cái |  | HH-CBD |
+| VT_CLNHUA | CON LĂN NHỰA | Cái | Cái |  | NVL-CLNHUA |
+| VT_CNHUA | CỤC NHỰA | Cái | Cái |  | NVL-CNHUA |
+| VT_COI | CÒI | Cái | Cái | Cái | TP-COI |
+| VT_CON-LAN | CON LĂN | Cặp | Cặp | Cặp | TP-CON-LĂN |
+| VT_CONTAN12.12 | CON TÁN 12 | Kg | Kg |  | NVL-CONTAN12.12 |
+| VT_HTTD | HỆ THỐNG TỰ DỪNG | Bộ | Bộ | Bộ | TP-HTTD | ⚠ TRÙNG
+| VT_HTTD | BỘ TỰ DỪNG | Bộ | Bộ |  | HH-HTTD | ⚠ TRÙNG
+| VT_PHOTLONG4X5 | LÔNG NHEO NHỎ | Cuộn | Cuộn |  | NVL-PHOTLONG4X5 |
+| VT_PHOTLONG5X6 | LÔNG NHEO LỚN | Cuộn | Cuộn |  | NVL-PHOTLONG5X6 |
+| VT_PL114-LON | PULY 114 LỚN | Cái | Cái |  | HH-PL114-LON |
+| VT_PL114-NHO | PULY 114 NHỎ | Cái | Cái |  | HH-PL114-NHO |
+| VT_PL140 | PULY 140 | Cái | Cái |  | HH-PL140 | · ngừng KD
+| VT_PL168 | PULY 168 | Cái | Cái |  | HH-PL168 | · ngừng KD
+| VT_PULY-114L | PULY 114L | Cái | Cái | Cái | TP-PULY-114L |
+| VT_PULY-114N | PULY 114N | Cái | Cái | Cái | TP-PULY-114N |
+| VT_PULY-140 | PULY 140 | Cái | Cái | Cái | TP-PULY-140 |
+| VT_PULY-168 | PULY 168 | Cái | Cái | Cái | TP-PULY-168 |
+| VT_PULY-DEN | PULY ĐEN CUỘN CỬA ĐỨC | Cái | Cái |  | NVL-PULY-ĐEN |
+| VT_RON-DD | RON ĐÁY ĐỨC | Kg | Kg |  | NVL-RON-DD | ⚠ TRÙNG
+| VT_VIS | Vis | Kg | Kg |  | NVL-VIS |

@@ -1,0 +1,241 @@
+{
+ "doctype": "Item Price",
+ "so_ban_ghi": 13,
+ "nguon": "alumdoor-phu-thu-2026-08-20",
+ "ban_ghi": [
+  {
+   "name": "Alumdoor 2026:PT_BANBUOM_FE_DL:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PT_BANBUOM_FE_DL",
+    "item_group": "Phụ thu",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "30000",
+    "currency": "VND",
+    "note": "sheet ĐM, mã TP-BUOMSAT-DL",
+    "disabled": false,
+    "_migration_source": "alumdoor-phu-thu-2026-08-20"
+   },
+   "title": "Bắn bướm sắt — cửa Đài Loan",
+   "content": "PT_BANBUOM_FE_DL 30000"
+  },
+  {
+   "name": "Alumdoor 2026:PT_BANBUOM_FE_ST:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PT_BANBUOM_FE_ST",
+    "item_group": "Phụ thu",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "30000",
+    "currency": "VND",
+    "note": "sheet ĐM, mã TP-BUOMSAT-ST",
+    "disabled": false,
+    "_migration_source": "alumdoor-phu-thu-2026-08-20"
+   },
+   "title": "Bắn bướm sắt — cửa Siêu Trường",
+   "content": "PT_BANBUOM_FE_ST 30000"
+  },
+  {
+   "name": "Alumdoor 2026:PT_BANBUOM_INOX:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PT_BANBUOM_INOX",
+    "item_group": "Phụ thu",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "60000",
+    "currency": "VND",
+    "note": "sheet ĐM, mã TP-BUOMINOX",
+    "disabled": false,
+    "_migration_source": "alumdoor-phu-thu-2026-08-20"
+   },
+   "title": "Bắn bướm inox — cửa Đài Loan Inox",
+   "content": "PT_BANBUOM_INOX 60000"
+  },
+  {
+   "name": "Alumdoor 2026:PT_SON_VAN_GO_DUC:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PT_SON_VAN_GO_DUC",
+    "item_group": "Phụ thu",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "360000",
+    "currency": "VND",
+    "note": "ảnh bảng giá cửa Đức: SƠN MÀU VÂN GỖ phụ thu thêm 360.000đ/m2",
+    "disabled": false,
+    "_migration_source": "alumdoor-phu-thu-2026-08-20"
+   },
+   "title": "Sơn màu vân gỗ — lá Đức",
+   "content": "PT_SON_VAN_GO_DUC 360000"
+  },
+  {
+   "name": "Alumdoor 2026:PT_SON_VAN_GO:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PT_SON_VAN_GO",
+    "item_group": "Phụ thu",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "465000",
+    "currency": "VND",
+    "note": "sheet ĐM, mã PHUTHU-SVG-LADUC. LỆCH với ảnh (360.000) — cần chốt",
+    "disabled": false,
+    "_migration_source": "alumdoor-phu-thu-2026-08-20"
+   },
+   "title": "Sơn vân gỗ — lá Đức (theo ĐM)",
+   "content": "PT_SON_VAN_GO 465000"
+  },
+  {
+   "name": "Alumdoor 2026:PT_SON_RAY_MSK:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PT_SON_RAY_MSK",
+    "item_group": "Phụ thu",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "15000",
+    "currency": "VND",
+    "note": "sheet ĐM, mã PHUTHU_SONRAY_MSK",
+    "disabled": false,
+    "_migration_source": "alumdoor-phu-thu-2026-08-20"
+   },
+   "title": "Sơn ray màu MSK",
+   "content": "PT_SON_RAY_MSK 15000"
+  },
+  {
+   "name": "Alumdoor 2026:PT_CHUYEN_DOI_KEO_TAY:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PT_CHUYEN_DOI_KEO_TAY",
+    "item_group": "Phụ thu",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "20000",
+    "currency": "VND",
+    "note": "ảnh bảng giá Đài Loan: cửa cuốn lò xo kéo tay +20.000đ/m2",
+    "disabled": false,
+    "_migration_source": "alumdoor-phu-thu-2026-08-20"
+   },
+   "title": "Chuyển đổi sang cửa kéo tay",
+   "content": "PT_CHUYEN_DOI_KEO_TAY 20000"
+  },
+  {
+   "name": "Alumdoor 2026:PT_NGANG_6_7M5:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PT_NGANG_6_7M5",
+    "item_group": "Phụ thu",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "40000",
+    "currency": "VND",
+    "note": "ảnh bảng giá Đài Loan và Lưới",
+    "disabled": false,
+    "_migration_source": "alumdoor-phu-thu-2026-08-20"
+   },
+   "title": "Phụ thu khổ ngang trên 6m đến dưới 7m5",
+   "content": "PT_NGANG_6_7M5 40000"
+  },
+  {
+   "name": "Alumdoor 2026:PT_NGANG_7M5_9M:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PT_NGANG_7M5_9M",
+    "item_group": "Phụ thu",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "60000",
+    "currency": "VND",
+    "note": "ảnh bảng giá Đài Loan và Lưới",
+    "disabled": false,
+    "_migration_source": "alumdoor-phu-thu-2026-08-20"
+   },
+   "title": "Phụ thu khổ ngang trên 7m5 đến dưới 9m",
+   "content": "PT_NGANG_7M5_9M 60000"
+  },
+  {
+   "name": "Alumdoor 2026:PT_CUA_NHO_DUOI_7M2:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PT_CUA_NHO_DUOI_7M2",
+    "item_group": "Phụ thu",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "300000",
+    "currency": "VND",
+    "note": "ảnh bảng giá cửa Úc và cửa Lưới",
+    "disabled": false,
+    "_migration_source": "alumdoor-phu-thu-2026-08-20"
+   },
+   "title": "Phụ thu cửa nhỏ dưới 7 m²",
+   "content": "PT_CUA_NHO_DUOI_7M2 300000"
+  },
+  {
+   "name": "Alumdoor 2026:PT_VAN_CHUYEN_DUOI_8M2:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PT_VAN_CHUYEN_DUOI_8M2",
+    "item_group": "Phụ thu",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "300000",
+    "currency": "VND",
+    "note": "ảnh bảng giá cửa Đức: cửa dưới 8m² phụ vận chuyển 300.000đ/bộ",
+    "disabled": false,
+    "_migration_source": "alumdoor-phu-thu-2026-08-20"
+   },
+   "title": "Phụ vận chuyển cửa dưới 8 m²",
+   "content": "PT_VAN_CHUYEN_DUOI_8M2 300000"
+  },
+  {
+   "name": "Alumdoor 2026:PT_GIAO_HANG_CHUYEN:Chuyến:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PT_GIAO_HANG_CHUYEN",
+    "item_group": "Phụ thu",
+    "uom": "Chuyến",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "300000",
+    "currency": "VND",
+    "note": "sheet ĐM: PHUTHU-DUC<8m², PHUTHU-UC-PK<5tr, PHUTHU-DAILOAN<8m², PHUTHU-CUALUOI<8m² — cùng 300.000/chuyến",
+    "disabled": false,
+    "_migration_source": "alumdoor-phu-thu-2026-08-20"
+   },
+   "title": "Phụ thu giao hàng theo chuyến",
+   "content": "PT_GIAO_HANG_CHUYEN 300000"
+  },
+  {
+   "name": "Alumdoor 2026:PT_GIAM_HANG_THO:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "PT_GIAM_HANG_THO",
+    "item_group": "Phụ thu",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "70000",
+    "currency": "VND",
+    "note": "ảnh bảng giá cửa Lưới: hàng thô không sơn GIẢM 70.000đ/m². Đây là khoản TRỪ, không phải cộng.",
+    "disabled": false,
+    "_migration_source": "alumdoor-phu-thu-2026-08-20"
+   },
+   "title": "Giảm giá hàng thô không sơn",
+   "content": "PT_GIAM_HANG_THO 70000"
+  }
+ ]
+}

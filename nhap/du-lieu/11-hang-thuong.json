@@ -1,0 +1,6470 @@
+{
+ "doctype": "Item",
+ "trich_luc_luc": "2026-08-20T14:40:51.153Z",
+ "nguon": "06-hang-hoa.json lọc measurement_profile='Hàng thường'; mã chuẩn hoá VT_ + ASCII; 6 cặp trùng gộp theo lời chủ dự án 2026-08-20",
+ "so_ban_ghi": 267,
+ "ban_ghi": [
+  {
+   "name": "VT_UPS_E1000I",
+   "payload": {
+    "item_code": "VT_UPS_E1000I",
+    "item_name": "Bình lưu điện Alumax E1000i",
+    "item_group": "Bình lưu điện",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-UPS-E1000i"
+   ]
+  },
+  {
+   "name": "VT_UPS_E800I",
+   "payload": {
+    "item_code": "VT_UPS_E800I",
+    "item_name": "Bình lưu điện Alumax E800i",
+    "item_group": "Bình lưu điện",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-UPS-E800i"
+   ]
+  },
+  {
+   "name": "VT_UPS_YH1000",
+   "payload": {
+    "item_code": "VT_UPS_YH1000",
+    "item_name": "Bình lưu điện YH1000",
+    "item_group": "Bình lưu điện",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-UPS-YH1000",
+    "HH-UPS-YH1000"
+   ]
+  },
+  {
+   "name": "VT_UPS_YH2000",
+   "payload": {
+    "item_code": "VT_UPS_YH2000",
+    "item_name": "Bình lưu điện YH2000",
+    "item_group": "Bình lưu điện",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-UPS-YH2000"
+   ]
+  },
+  {
+   "name": "VT_BDK_TANKER_ALUMAX",
+   "payload": {
+    "item_code": "VT_BDK_TANKER_ALUMAX",
+    "item_name": "BỘ ĐIỀU KHIỂN TANKER ALUMAX",
+    "item_group": "Điều khiển & phụ kiện điện",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-BDK-TANKER-ALUMAX"
+   ]
+  },
+  {
+   "name": "VT_BDKDT_MULLER",
+   "payload": {
+    "item_code": "VT_BDKDT_MULLER",
+    "item_name": "BỘ ĐIỀU KHIỂN ĐIỆN THOẠI MULLER",
+    "item_group": "Điều khiển & phụ kiện điện",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-BDKDT-MULLER"
+   ]
+  },
+  {
+   "name": "VT_BOSTEC_BODIEUKHIEN",
+   "payload": {
+    "item_code": "VT_BOSTEC_BODIEUKHIEN",
+    "item_name": "BOSTEC BỘ ĐIỀU KHIỂN",
+    "item_group": "Điều khiển & phụ kiện điện",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-BOSTEC-BODIEUKHIEN"
+   ]
+  },
+  {
+   "name": "VT_CHTAIWAN_BODIEUKHIEN",
+   "payload": {
+    "item_code": "VT_CHTAIWAN_BODIEUKHIEN",
+    "item_name": "CHTAIWAN BỘ ĐIỀU KHIỂN",
+    "item_group": "Điều khiển & phụ kiện điện",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-CHTAIWAN-BODIEUKHIEN"
+   ]
+  },
+  {
+   "name": "VT_JG_BODK",
+   "payload": {
+    "item_code": "VT_JG_BODK",
+    "item_name": "JG BỘ ĐIỀU KHIỂN",
+    "item_group": "Điều khiển & phụ kiện điện",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "JG-BODK"
+   ]
+  },
+  {
+   "name": "VT_JG_TAYDK",
+   "payload": {
+    "item_code": "VT_JG_TAYDK",
+    "item_name": "JG TAY ĐIỀU KHIỂN",
+    "item_group": "Điều khiển & phụ kiện điện",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-JG-TayDK"
+   ]
+  },
+  {
+   "name": "VT_MTT_BOSTEC_TAYDK",
+   "payload": {
+    "item_code": "VT_MTT_BOSTEC_TAYDK",
+    "item_name": "BOSTEC TAY ĐIỀU KHIỂN",
+    "item_group": "Điều khiển & phụ kiện điện",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MTT-BOSTEC-TAYDK"
+   ]
+  },
+  {
+   "name": "VT_MTT_CHTAIWAN_TAYDK",
+   "payload": {
+    "item_code": "VT_MTT_CHTAIWAN_TAYDK",
+    "item_name": "CHTAIWAN-TAY ĐIỀU KHIỂN",
+    "item_group": "Điều khiển & phụ kiện điện",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MTT-CHTAIWAN-TAYDK"
+   ]
+  },
+  {
+   "name": "VT_TANKER_ALUMAX_BODK",
+   "payload": {
+    "item_code": "VT_TANKER_ALUMAX_BODK",
+    "item_name": "BỘ ĐK TANKER ALUMAX",
+    "item_group": "Điều khiển & phụ kiện điện",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-TANKER-ALUMAX-BODK"
+   ]
+  },
+  {
+   "name": "VT_TANKER_ALUMAX_TAYDK",
+   "payload": {
+    "item_code": "VT_TANKER_ALUMAX_TAYDK",
+    "item_name": "TAY ĐIỀU KHIỂN TANKER",
+    "item_group": "Điều khiển & phụ kiện điện",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-Tanker-Alumax-TayDK"
+   ]
+  },
+  {
+   "name": "VT_TDK_MULLER",
+   "payload": {
+    "item_code": "VT_TDK_MULLER",
+    "item_name": "TAY ĐIỀU KHIỂN ĐIỆN THOẠI MULLER",
+    "item_group": "Điều khiển & phụ kiện điện",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-TDK-MULLER"
+   ]
+  },
+  {
+   "name": "VT_YHLD_BDK",
+   "payload": {
+    "item_code": "VT_YHLD_BDK",
+    "item_name": "BỘ ĐIỀU KHIỂN YHLD",
+    "item_group": "Điều khiển & phụ kiện điện",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-YHLD-BDK"
+   ]
+  },
+  {
+   "name": "VT_YHLD_HDK",
+   "payload": {
+    "item_code": "VT_YHLD_HDK",
+    "item_name": "HỘP ĐIỀU KHIỂN YHLD",
+    "item_group": "Điều khiển & phụ kiện điện",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-YHLD-HDK"
+   ]
+  },
+  {
+   "name": "VT_YHLD_TAYDK",
+   "payload": {
+    "item_code": "VT_YHLD_TAYDK",
+    "item_name": "YHLD TAY ĐIỀU KHIỂN",
+    "item_group": "Điều khiển & phụ kiện điện",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-YHLD-TayDK"
+   ]
+  },
+  {
+   "name": "VT_YHTAIWAN_BODK",
+   "payload": {
+    "item_code": "VT_YHTAIWAN_BODK",
+    "item_name": "YHTAIWAN BỘ ĐIỀU KHIỂN",
+    "item_group": "Điều khiển & phụ kiện điện",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-YHTaiwan-BODK"
+   ]
+  },
+  {
+   "name": "VT_YHTAIWAN_TAYDK",
+   "payload": {
+    "item_code": "VT_YHTAIWAN_TAYDK",
+    "item_name": "YHTAIWAN TAY ĐIỀU KHIỂN",
+    "item_group": "Điều khiển & phụ kiện điện",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-YHTaiwan-TayDK"
+   ]
+  },
+  {
+   "name": "VT_ALUMAX_PATCD",
+   "payload": {
+    "item_code": "VT_ALUMAX_PATCD",
+    "item_name": "ALUMAX PHÍM ÂM TƯỜNG CÓ DÂY",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-ALUMAX-PATCD"
+   ]
+  },
+  {
+   "name": "VT_BACDAN_MT",
+   "payload": {
+    "item_code": "VT_BACDAN_MT",
+    "item_name": "BẠC ĐẠN MOTOR",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "LK-BACDAN-MT"
+   ]
+  },
+  {
+   "name": "VT_COT",
+   "payload": {
+    "item_code": "VT_COT",
+    "item_name": "CỐT",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cây",
+    "default_purchase_uom": "Cây",
+    "default_sales_uom": "Cây",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-Cot"
+   ]
+  },
+  {
+   "name": "VT_DAYDIEN_PATCD",
+   "payload": {
+    "item_code": "VT_DAYDIEN_PATCD",
+    "item_name": "DÂY ĐIỆN PHÍM ÂM TƯỜNG",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Mét",
+    "default_purchase_uom": "Mét",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-Daydien-PATCD"
+   ]
+  },
+  {
+   "name": "VT_HDKMT_AL",
+   "payload": {
+    "item_code": "VT_HDKMT_AL",
+    "item_name": "HỘP ĐIỀU KHIỂN MOTOR ALUMAX",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-HDKMT-AL"
+   ]
+  },
+  {
+   "name": "VT_HDKMT_JG",
+   "payload": {
+    "item_code": "VT_HDKMT_JG",
+    "item_name": "HỘP ĐIỀU KHIỂN MOTOR JG",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-HDKMT-JG"
+   ]
+  },
+  {
+   "name": "VT_HDKMT_TANKER",
+   "payload": {
+    "item_code": "VT_HDKMT_TANKER",
+    "item_name": "HỘP ĐIỀU KHIỂN MOTOR TANKER",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-HDKMT-TANKER"
+   ]
+  },
+  {
+   "name": "VT_HDKMT_YH",
+   "payload": {
+    "item_code": "VT_HDKMT_YH",
+    "item_name": "HỘP ĐIỀU KHIỂN YH",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-HDKMT-YH"
+   ]
+  },
+  {
+   "name": "VT_HOAKHE",
+   "payload": {
+    "item_code": "VT_HOAKHE",
+    "item_name": "HOA KHẾ (3 CHẤU)",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-Hoakhe"
+   ]
+  },
+  {
+   "name": "VT_JG_BDN",
+   "payload": {
+    "item_code": "VT_JG_BDN",
+    "item_name": "JG BẠC ĐẠN",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-JG-BDN"
+   ]
+  },
+  {
+   "name": "VT_JG_PATCD",
+   "payload": {
+    "item_code": "VT_JG_PATCD",
+    "item_name": "JG PHÍM ÂM TƯỜNG CÓ DÂY",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-JG-PATCD"
+   ]
+  },
+  {
+   "name": "VT_LACJG1000_1500KG",
+   "payload": {
+    "item_code": "VT_LACJG1000_1500KG",
+    "item_name": "JG LacJG1000-1500KG",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-LacJG1000-1500KG"
+   ]
+  },
+  {
+   "name": "VT_LACJG33",
+   "payload": {
+    "item_code": "VT_LACJG33",
+    "item_name": "JG LacJG33",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-LacJG33"
+   ]
+  },
+  {
+   "name": "VT_LACPHU33_1LO",
+   "payload": {
+    "item_code": "VT_LACPHU33_1LO",
+    "item_name": "LẮC PHỤ 33-1 LỔ",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-LACPHU33-1LO"
+   ]
+  },
+  {
+   "name": "VT_LACPHU33_3LO",
+   "payload": {
+    "item_code": "VT_LACPHU33_3LO",
+    "item_name": "LẮC PHỤ 33-3 LỔ (ĐÀI LOAN)",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-LACPHU33-3LO"
+   ]
+  },
+  {
+   "name": "VT_LACPHU36_1LO",
+   "payload": {
+    "item_code": "VT_LACPHU36_1LO",
+    "item_name": "LẮC PHỤ 36-1 LỔ",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-LACPHU36-1LO"
+   ]
+  },
+  {
+   "name": "VT_LACPHU36_3LO",
+   "payload": {
+    "item_code": "VT_LACPHU36_3LO",
+    "item_name": "LẮC PHỤ 36-3 LỔ (ĐÀI LOAN)",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-LACPHU36-3LO"
+   ]
+  },
+  {
+   "name": "VT_LACYHLD300_500KG",
+   "payload": {
+    "item_code": "VT_LACYHLD300_500KG",
+    "item_name": "LẮC YH 300 500KG",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-LacYHLD300&500KG"
+   ]
+  },
+  {
+   "name": "VT_LACYHLD800_1000KG",
+   "payload": {
+    "item_code": "VT_LACYHLD800_1000KG",
+    "item_name": "LẮC YH 800 1000KG",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-LacYHLD800&1000KG"
+   ]
+  },
+  {
+   "name": "VT_LMT_AL400",
+   "payload": {
+    "item_code": "VT_LMT_AL400",
+    "item_name": "LẮC MOTOR ALUMAX 400 KG",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-LMT-AL400"
+   ]
+  },
+  {
+   "name": "VT_LMT_AL600",
+   "payload": {
+    "item_code": "VT_LMT_AL600",
+    "item_name": "LẮC MOTOR ALUMAX 600 KG",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-LMT-AL600"
+   ]
+  },
+  {
+   "name": "VT_LMT_JG1000",
+   "payload": {
+    "item_code": "VT_LMT_JG1000",
+    "item_name": "LẮC MOTOR JG 1000KG (CHÍNH HÃNG)",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-LMT-JG1000"
+   ]
+  },
+  {
+   "name": "VT_LMT_JG1500",
+   "payload": {
+    "item_code": "VT_LMT_JG1500",
+    "item_name": "LẮC MOTOR JG 1500KG (CHÍNH HÃNG)",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-LMT-JG1500"
+   ]
+  },
+  {
+   "name": "VT_LMT_JG300_600",
+   "payload": {
+    "item_code": "VT_LMT_JG300_600",
+    "item_name": "LẮC MOTOR JG 300KG-600KG (CHÍNH HÃNG)",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-LMT-JG300-600"
+   ]
+  },
+  {
+   "name": "VT_LMT_JG500",
+   "payload": {
+    "item_code": "VT_LMT_JG500",
+    "item_name": "LẮC MOTOR JG 500KG (CHÍNH HÃNG)",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-LMT-JG500"
+   ]
+  },
+  {
+   "name": "VT_LMT_JG600",
+   "payload": {
+    "item_code": "VT_LMT_JG600",
+    "item_name": "LẮC MOTOR JG 600KG (CHÍNH HÃNG)",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-LMT-JG600"
+   ]
+  },
+  {
+   "name": "VT_LMT_JG800_1000",
+   "payload": {
+    "item_code": "VT_LMT_JG800_1000",
+    "item_name": "LẮC MOTOR JG 800KG-1000KG (CHÍNH HÃNG)",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-LMT-JG800-1000"
+   ]
+  },
+  {
+   "name": "VT_LMT_TK800_1000",
+   "payload": {
+    "item_code": "VT_LMT_TK800_1000",
+    "item_name": "LẮC MOTOR TANKER 800 KG -1000 KG",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-LMT-TK800-1000"
+   ]
+  },
+  {
+   "name": "VT_LMT_YHLD1000",
+   "payload": {
+    "item_code": "VT_LMT_YHLD1000",
+    "item_name": "LẮC MOTOR YH LD 1000KG LOẠI 1 (DÂY ĐỒNG)",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-LMT-YHLD1000"
+   ]
+  },
+  {
+   "name": "VT_LMT_YHLD1200",
+   "payload": {
+    "item_code": "VT_LMT_YHLD1200",
+    "item_name": "LẮC MOTOR YH LD 1200KG LOẠI 1 (DÂY ĐỒNG)",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-LMT-YHLD1200"
+   ]
+  },
+  {
+   "name": "VT_LMT_YHLD300_500",
+   "payload": {
+    "item_code": "VT_LMT_YHLD300_500",
+    "item_name": "LẮC MOTOR YH LD 300/500KG LOẠI 1 (DÂY ĐỒNG)",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-LMT-YHLD300-500"
+   ]
+  },
+  {
+   "name": "VT_LMT_YHLD800",
+   "payload": {
+    "item_code": "VT_LMT_YHLD800",
+    "item_name": "LẮC MOTOR YH LD 800KG LOẠI 1 (DÂY ĐỒNG)",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-LMT-YHLD800"
+   ]
+  },
+  {
+   "name": "VT_LMT33_TK400_600",
+   "payload": {
+    "item_code": "VT_LMT33_TK400_600",
+    "item_name": "LẮC 32-33 MOTOR TANKER 400 KG 600 KG",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-LMT33-TK400-600"
+   ]
+  },
+  {
+   "name": "VT_LMT36_TK400_600",
+   "payload": {
+    "item_code": "VT_LMT36_TK400_600",
+    "item_name": "LẮC 36 MOTOR TANKER 400 KG 600 KG",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-LMT36-TK400-600"
+   ]
+  },
+  {
+   "name": "VT_LONGDEN",
+   "payload": {
+    "item_code": "VT_LONGDEN",
+    "item_name": "LÔNG ĐỀN",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-Longden"
+   ]
+  },
+  {
+   "name": "VT_MTT_BOSTEC_DOI_P",
+   "payload": {
+    "item_code": "VT_MTT_BOSTEC_DOI_P",
+    "item_name": "MTT BOSTEC ĐÔI PHẢI",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MTT-BOSTEC-DOI(P)"
+   ]
+  },
+  {
+   "name": "VT_MTT_BOSTEC_DOI_T",
+   "payload": {
+    "item_code": "VT_MTT_BOSTEC_DOI_T",
+    "item_name": "MTT BOSTEC ĐÔI TRÁI",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MTT-BOSTEC-DOI(T)"
+   ]
+  },
+  {
+   "name": "VT_MTT_BOSTEC_DON_P",
+   "payload": {
+    "item_code": "VT_MTT_BOSTEC_DON_P",
+    "item_name": "MTT BOSTEC ĐƠN PHẢI",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MTT-BOSTEC-DON(P)"
+   ]
+  },
+  {
+   "name": "VT_MTT_BOSTEC_DON_T",
+   "payload": {
+    "item_code": "VT_MTT_BOSTEC_DON_T",
+    "item_name": "MTT BOSTEC ĐƠN TRÁI",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MTT-BOSTEC-DON(T)"
+   ]
+  },
+  {
+   "name": "VT_MTT_BOSTEC_PAT",
+   "payload": {
+    "item_code": "VT_MTT_BOSTEC_PAT",
+    "item_name": "BOSTEC PHÍM ÂM TƯỜNG",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MTT-BOSTEC-PAT"
+   ]
+  },
+  {
+   "name": "VT_MTT_CHTAIWAN_DOI_P",
+   "payload": {
+    "item_code": "VT_MTT_CHTAIWAN_DOI_P",
+    "item_name": "MTT CHTAIWAN ĐÔI PHẢI",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MTT-CHTAIWAN-DOI(P)"
+   ]
+  },
+  {
+   "name": "VT_MTT_CHTAIWAN_DOI_T",
+   "payload": {
+    "item_code": "VT_MTT_CHTAIWAN_DOI_T",
+    "item_name": "MTT CHTAIWAN ĐÔI TRÁI",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MTT-CHTAIWAN-DOI(T)"
+   ]
+  },
+  {
+   "name": "VT_MTT_CHTAIWAN_DON_P",
+   "payload": {
+    "item_code": "VT_MTT_CHTAIWAN_DON_P",
+    "item_name": "MTT CHTAIWAN ĐƠN PHẢI",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MTT-CHTAIWAN-DON(P)"
+   ]
+  },
+  {
+   "name": "VT_MTT_CHTAIWAN_DON_T",
+   "payload": {
+    "item_code": "VT_MTT_CHTAIWAN_DON_T",
+    "item_name": "MTT CHTAIWAN ĐƠN TRÁI",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MTT-CHTAIWAN-DON(T)"
+   ]
+  },
+  {
+   "name": "VT_MTT_CHTAIWAN_PAT",
+   "payload": {
+    "item_code": "VT_MTT_CHTAIWAN_PAT",
+    "item_name": "CHTAIWAN-PHÍM ÂM TƯỜNG",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MTT-CHTAIWAN-PAT"
+   ]
+  },
+  {
+   "name": "VT_NAPCHUP_MT",
+   "payload": {
+    "item_code": "VT_NAPCHUP_MT",
+    "item_name": "NẮP CHỤP MOTOR",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "LK-NAPCHUP-MT"
+   ]
+  },
+  {
+   "name": "VT_NAPNHIN",
+   "payload": {
+    "item_code": "VT_NAPNHIN",
+    "item_name": "NẮP NHÌN",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-NAPNHIN"
+   ]
+  },
+  {
+   "name": "VT_PAT_CH",
+   "payload": {
+    "item_code": "VT_PAT_CH",
+    "item_name": "PHÍM ÂM TƯỜNG CH ÚC (Motor trong)",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-PAT-CH"
+   ]
+  },
+  {
+   "name": "VT_PAT_CODAY",
+   "payload": {
+    "item_code": "VT_PAT_CODAY",
+    "item_name": "PHÍM ÂM TƯỜNG CÓ DÂY",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-PAT-CODAY"
+   ]
+  },
+  {
+   "name": "VT_PAT_KHONGDAY",
+   "payload": {
+    "item_code": "VT_PAT_KHONGDAY",
+    "item_name": "PHÍM ÂM TƯỜNG KHÔNG DÂY",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-PAT-KHONGDAY"
+   ]
+  },
+  {
+   "name": "VT_TANKER_ALUMAX_HDK",
+   "payload": {
+    "item_code": "VT_TANKER_ALUMAX_HDK",
+    "item_name": "HỘP ĐK TANKER ALUMAX",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-Tanker-Alumax-HDK"
+   ]
+  },
+  {
+   "name": "VT_TANKER_ALUMAX_LAC33",
+   "payload": {
+    "item_code": "VT_TANKER_ALUMAX_LAC33",
+    "item_name": "LẮC TANKER ALUMAX 33",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-Tanker-Alumax-Lac33"
+   ]
+  },
+  {
+   "name": "VT_TANKER_ALUMAX_LAC36",
+   "payload": {
+    "item_code": "VT_TANKER_ALUMAX_LAC36",
+    "item_name": "LẮC TANKER ALUMAX 36",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-Tanker-Alumax-Lac36"
+   ]
+  },
+  {
+   "name": "VT_TANKER_LAC800_1000KG",
+   "payload": {
+    "item_code": "VT_TANKER_LAC800_1000KG",
+    "item_name": "LẮC TANKER 800-1000KG",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-Tanker-Lac800&1000KG"
+   ]
+  },
+  {
+   "name": "VT_TANKER_PATCD",
+   "payload": {
+    "item_code": "VT_TANKER_PATCD",
+    "item_name": "TANKER PHÍM ÂM TƯỜNG CÓ DÂY",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-TANKER-PATCD"
+   ]
+  },
+  {
+   "name": "VT_TDKMT_AL",
+   "payload": {
+    "item_code": "VT_TDKMT_AL",
+    "item_name": "TAY ĐIỀU KHIỂN MOTOR ALUMAX",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-TDKMT-AL"
+   ]
+  },
+  {
+   "name": "VT_TDKMT_JG",
+   "payload": {
+    "item_code": "VT_TDKMT_JG",
+    "item_name": "TAY ĐIỀU KHIỂN MOTOR JG",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-TDKMT-JG"
+   ]
+  },
+  {
+   "name": "VT_TDKMT_TANKER",
+   "payload": {
+    "item_code": "VT_TDKMT_TANKER",
+    "item_name": "TAY ĐIỀU KHIỂN MOTOR TANKER",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-TDKMT-TANKER"
+   ]
+  },
+  {
+   "name": "VT_TDKMT_YH",
+   "payload": {
+    "item_code": "VT_TDKMT_YH",
+    "item_name": "TAY ĐIỀU KHIỂN YH",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-TDKMT-YH"
+   ]
+  },
+  {
+   "name": "VT_TMT_AL400",
+   "payload": {
+    "item_code": "VT_TMT_AL400",
+    "item_name": "THÂN MOTOR ALUMAX 400 KG",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-TMT-AL400"
+   ]
+  },
+  {
+   "name": "VT_TMT_AL600",
+   "payload": {
+    "item_code": "VT_TMT_AL600",
+    "item_name": "THÂN MOTOR ALUMAX 600 KG",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-TMT-AL600"
+   ]
+  },
+  {
+   "name": "VT_TMT_JG1000",
+   "payload": {
+    "item_code": "VT_TMT_JG1000",
+    "item_name": "THÂN MOTOR JG 1000KG (CHÍNH HÃNG)",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-TMT-JG1000"
+   ]
+  },
+  {
+   "name": "VT_TMT_JG1500",
+   "payload": {
+    "item_code": "VT_TMT_JG1500",
+    "item_name": "THÂN MOTOR JG 1500KG (CHÍNH HÃNG)",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-TMT-JG1500"
+   ]
+  },
+  {
+   "name": "VT_TMT_JG300",
+   "payload": {
+    "item_code": "VT_TMT_JG300",
+    "item_name": "THÂN MOTOR JG 300KG (CHÍNH HÃNG)",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-TMT-JG300"
+   ]
+  },
+  {
+   "name": "VT_TMT_JG400",
+   "payload": {
+    "item_code": "VT_TMT_JG400",
+    "item_name": "THÂN MOTOR JG 400KG (CHÍNH HÃNG)",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-TMT-JG400"
+   ]
+  },
+  {
+   "name": "VT_TMT_JG500",
+   "payload": {
+    "item_code": "VT_TMT_JG500",
+    "item_name": "THÂN MOTOR JG 500KG (CHÍNH HÃNG)",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-TMT-JG500"
+   ]
+  },
+  {
+   "name": "VT_TMT_JG600",
+   "payload": {
+    "item_code": "VT_TMT_JG600",
+    "item_name": "THÂN MOTOR JG 600KG (CHÍNH HÃNG)",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-TMT-JG600"
+   ]
+  },
+  {
+   "name": "VT_TMT_JG800",
+   "payload": {
+    "item_code": "VT_TMT_JG800",
+    "item_name": "THÂN MOTOR JG 800KG (CHÍNH HÃNG)",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-TMT-JG800"
+   ]
+  },
+  {
+   "name": "VT_TMT_TK1000",
+   "payload": {
+    "item_code": "VT_TMT_TK1000",
+    "item_name": "THÂN MOTOR TANKER 1000 KG",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-TMT-TK1000"
+   ]
+  },
+  {
+   "name": "VT_TMT_TK400",
+   "payload": {
+    "item_code": "VT_TMT_TK400",
+    "item_name": "THÂN MOTOR TANKER 400 KG",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-TMT-TK400"
+   ]
+  },
+  {
+   "name": "VT_TMT_TK600",
+   "payload": {
+    "item_code": "VT_TMT_TK600",
+    "item_name": "THÂN MOTOR TANKER 600 KG",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-TMT-TK600"
+   ]
+  },
+  {
+   "name": "VT_TMT_TK800",
+   "payload": {
+    "item_code": "VT_TMT_TK800",
+    "item_name": "THÂN MOTOR TANKER 800 KG",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-TMT-TK800"
+   ]
+  },
+  {
+   "name": "VT_TMT_YHLD1000",
+   "payload": {
+    "item_code": "VT_TMT_YHLD1000",
+    "item_name": "THÂN MOTOR YH LD 1000KG LOẠI 1 (DÂY ĐỒNG)",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-TMT-YHLD1000"
+   ]
+  },
+  {
+   "name": "VT_TMT_YHLD1200",
+   "payload": {
+    "item_code": "VT_TMT_YHLD1200",
+    "item_name": "THÂN MOTOR YH LD 1200KG LOẠI 1 (DÂY ĐỒNG)",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-TMT-YHLD1200"
+   ]
+  },
+  {
+   "name": "VT_TMT_YHLD300",
+   "payload": {
+    "item_code": "VT_TMT_YHLD300",
+    "item_name": "THÂN MOTOR YH LD 300KG LOẠI 1 (DÂY ĐỒNG)",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-TMT-YHLD300"
+   ]
+  },
+  {
+   "name": "VT_TMT_YHLD500",
+   "payload": {
+    "item_code": "VT_TMT_YHLD500",
+    "item_name": "THÂN MOTOR YH LD 500KG LOẠI 1 (DÂY ĐỒNG)",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-TMT-YHLD500"
+   ]
+  },
+  {
+   "name": "VT_TMT_YHLD800",
+   "payload": {
+    "item_code": "VT_TMT_YHLD800",
+    "item_name": "THÂN MOTOR YH LD 800KG LOẠI 1 (DÂY ĐỒNG)",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-TMT-YHLD800"
+   ]
+  },
+  {
+   "name": "VT_TMTDOI_BOS_PHAI",
+   "payload": {
+    "item_code": "VT_TMTDOI_BOS_PHAI",
+    "item_name": "THÂN MOTOR BOSTECH ĐÔI PHẢI",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-TMTDOI-BOS-PHAI"
+   ]
+  },
+  {
+   "name": "VT_TMTDOI_BOS_TRAI",
+   "payload": {
+    "item_code": "VT_TMTDOI_BOS_TRAI",
+    "item_name": "THÂN MOTOR BOSTECH ĐÔI TRÁI",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-TMTDOI-BOS-TRAI"
+   ]
+  },
+  {
+   "name": "VT_TMTDON_BOS_PHAI",
+   "payload": {
+    "item_code": "VT_TMTDON_BOS_PHAI",
+    "item_name": "THÂN MOTOR BOSTECH ĐƠN PHẢI",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-TMTDON-BOS-PHAI"
+   ]
+  },
+  {
+   "name": "VT_TMTDON_BOS_TRAI",
+   "payload": {
+    "item_code": "VT_TMTDON_BOS_TRAI",
+    "item_name": "THÂN MOTOR BOSTECH ĐƠN TRÁI",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-TMTDON-BOS-TRAI"
+   ]
+  },
+  {
+   "name": "VT_TMTDON_CH",
+   "payload": {
+    "item_code": "VT_TMTDON_CH",
+    "item_name": "THÂN MOTOR CH TAIWAN",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-TMTDON-CH"
+   ]
+  },
+  {
+   "name": "VT_UPS_ALE1000",
+   "payload": {
+    "item_code": "VT_UPS_ALE1000",
+    "item_name": "ALUMAX UPS E-1000KG",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-UPS-ALE1000"
+   ]
+  },
+  {
+   "name": "VT_UPS_ALE800",
+   "payload": {
+    "item_code": "VT_UPS_ALE800",
+    "item_name": "ALUMAX UPS E-800KG",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-UPS-ALE800"
+   ]
+  },
+  {
+   "name": "VT_YHLD_PATCD",
+   "payload": {
+    "item_code": "VT_YHLD_PATCD",
+    "item_name": "YHLD PHÍM ÂM TƯỜNG CÓ DÂY",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-YHLD-PATCD"
+   ]
+  },
+  {
+   "name": "VT_YHTAIWAN_HDK",
+   "payload": {
+    "item_code": "VT_YHTAIWAN_HDK",
+    "item_name": "YHTAIWAN HopDK",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-YHTaiwan-HDK"
+   ]
+  },
+  {
+   "name": "VT_YHTAIWAN_LAYHTW1000_1200KG",
+   "payload": {
+    "item_code": "VT_YHTAIWAN_LAYHTW1000_1200KG",
+    "item_name": "YHTAIWAN LẮC 1000-1200KG",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-YHTaiwan-LaYHTW1000-1200KG"
+   ]
+  },
+  {
+   "name": "VT_YHTAIWAN_LAYHTW300_400_500KG",
+   "payload": {
+    "item_code": "VT_YHTAIWAN_LAYHTW300_400_500KG",
+    "item_name": "YHTAIWAN LẮC 300-400-500KG",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-YHTaiwan-LaYHTW300-400-500KG"
+   ]
+  },
+  {
+   "name": "VT_YHTAIWAN_LAYHTW600_700_800KG",
+   "payload": {
+    "item_code": "VT_YHTAIWAN_LAYHTW600_700_800KG",
+    "item_name": "YHTAIWAN LẮC 600-700-800KG",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-YHTaiwan-LaYHTW600-700-800KG"
+   ]
+  },
+  {
+   "name": "VT_YHTAIWAN_PATCD",
+   "payload": {
+    "item_code": "VT_YHTAIWAN_PATCD",
+    "item_name": "YHTAIWAN PHÍM ÂM TƯỜNG CÓ DÂY",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-YHTaiwan-PATCD"
+   ]
+  },
+  {
+   "name": "VT_YHTAIWAN_THAN1000KG",
+   "payload": {
+    "item_code": "VT_YHTAIWAN_THAN1000KG",
+    "item_name": "YHTAIWAN Thân 1000KG",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-YHTaiwan-Than1000KG"
+   ]
+  },
+  {
+   "name": "VT_YHTAIWAN_THAN300KG",
+   "payload": {
+    "item_code": "VT_YHTAIWAN_THAN300KG",
+    "item_name": "YHTAIWAN Thân 300KG",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-YHTaiwan-Than300KG"
+   ]
+  },
+  {
+   "name": "VT_YHTAIWAN_THAN400KG",
+   "payload": {
+    "item_code": "VT_YHTAIWAN_THAN400KG",
+    "item_name": "YHTAIWAN Thân 400KG",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-YHTaiwan-Than400KG"
+   ]
+  },
+  {
+   "name": "VT_YHTAIWAN_THAN500KG",
+   "payload": {
+    "item_code": "VT_YHTAIWAN_THAN500KG",
+    "item_name": "YHTAIWAN Thân 500KG",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-YHTaiwan-Than500KG"
+   ]
+  },
+  {
+   "name": "VT_YHTAIWAN_THAN600KG",
+   "payload": {
+    "item_code": "VT_YHTAIWAN_THAN600KG",
+    "item_name": "YHTAIWAN Thân 600KG",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-YHTaiwan-Than600KG"
+   ]
+  },
+  {
+   "name": "VT_YHTAIWAN_THAN700KG",
+   "payload": {
+    "item_code": "VT_YHTAIWAN_THAN700KG",
+    "item_name": "YHTAIWAN Thân 700KG",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-YHTaiwan-Than700KG"
+   ]
+  },
+  {
+   "name": "VT_YHTAIWAN_THAN800KG",
+   "payload": {
+    "item_code": "VT_YHTAIWAN_THAN800KG",
+    "item_name": "YHTAIWAN Thân 800KG",
+    "item_group": "Linh kiện motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-YHTaiwan-Than800KG"
+   ]
+  },
+  {
+   "name": "VT_MT_ALUMAX400KG",
+   "payload": {
+    "item_code": "VT_MT_ALUMAX400KG",
+    "item_name": "MOTOR ALUMAX 400KG",
+    "item_group": "Motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MT-ALUMAX400KG"
+   ]
+  },
+  {
+   "name": "VT_MT_ALUMAX600KG",
+   "payload": {
+    "item_code": "VT_MT_ALUMAX600KG",
+    "item_name": "MOTOR ALUMAX 600KG",
+    "item_group": "Motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MT-ALUMAX600KG"
+   ]
+  },
+  {
+   "name": "VT_MT_JG1000KG",
+   "payload": {
+    "item_code": "VT_MT_JG1000KG",
+    "item_name": "MOTOR JG 1000KG",
+    "item_group": "Motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MT-JG1000KG"
+   ]
+  },
+  {
+   "name": "VT_MT_JG1500KG",
+   "payload": {
+    "item_code": "VT_MT_JG1500KG",
+    "item_name": "MOTOR JG 1500KG",
+    "item_group": "Motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MT-JG1500KG"
+   ]
+  },
+  {
+   "name": "VT_MT_JG300KG",
+   "payload": {
+    "item_code": "VT_MT_JG300KG",
+    "item_name": "MOTOR JG 300KG",
+    "item_group": "Motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MT-JG300KG"
+   ]
+  },
+  {
+   "name": "VT_MT_JG400KG",
+   "payload": {
+    "item_code": "VT_MT_JG400KG",
+    "item_name": "MOTOR JG 400KG",
+    "item_group": "Motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MT-JG400KG"
+   ]
+  },
+  {
+   "name": "VT_MT_JG500KG",
+   "payload": {
+    "item_code": "VT_MT_JG500KG",
+    "item_name": "MOTOR JG 500KG",
+    "item_group": "Motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MT-JG500KG"
+   ]
+  },
+  {
+   "name": "VT_MT_JG600KG",
+   "payload": {
+    "item_code": "VT_MT_JG600KG",
+    "item_name": "MOTOR JG 600KG",
+    "item_group": "Motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MT-JG600KG"
+   ]
+  },
+  {
+   "name": "VT_MT_JG800KG",
+   "payload": {
+    "item_code": "VT_MT_JG800KG",
+    "item_name": "MOTOR JG 800KG",
+    "item_group": "Motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MT-JG800KG"
+   ]
+  },
+  {
+   "name": "VT_MT_TANKE800KG",
+   "payload": {
+    "item_code": "VT_MT_TANKE800KG",
+    "item_name": "MOTOR TANKER 800KG",
+    "item_group": "Motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MT-TANKE800KG"
+   ]
+  },
+  {
+   "name": "VT_MT_TANKER1000KG",
+   "payload": {
+    "item_code": "VT_MT_TANKER1000KG",
+    "item_name": "MOTOR TANKER 1000KG",
+    "item_group": "Motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MT-TANKER1000KG"
+   ]
+  },
+  {
+   "name": "VT_MT_TANKER400KG",
+   "payload": {
+    "item_code": "VT_MT_TANKER400KG",
+    "item_name": "MOTOR TANKER 400KG",
+    "item_group": "Motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MT-TANKER400KG"
+   ]
+  },
+  {
+   "name": "VT_MT_TANKER600KG",
+   "payload": {
+    "item_code": "VT_MT_TANKER600KG",
+    "item_name": "MOTOR TANKER 600KG",
+    "item_group": "Motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MT-TANKER600KG"
+   ]
+  },
+  {
+   "name": "VT_MT_YHLD1000KG",
+   "payload": {
+    "item_code": "VT_MT_YHLD1000KG",
+    "item_name": "MOTOR YHLD 1000KG",
+    "item_group": "Motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MT-YHLD1000KG"
+   ]
+  },
+  {
+   "name": "VT_MT_YHLD300KG",
+   "payload": {
+    "item_code": "VT_MT_YHLD300KG",
+    "item_name": "MOTOR YHLD 300KG",
+    "item_group": "Motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MT-YHLD300KG"
+   ]
+  },
+  {
+   "name": "VT_MT_YHLD500KG",
+   "payload": {
+    "item_code": "VT_MT_YHLD500KG",
+    "item_name": "MOTOR YHLD 500KG",
+    "item_group": "Motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MT-YHLD500KG"
+   ]
+  },
+  {
+   "name": "VT_MT_YHLD800KG",
+   "payload": {
+    "item_code": "VT_MT_YHLD800KG",
+    "item_name": "MOTOR YHLD 800KG",
+    "item_group": "Motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MT-YHLD800KG"
+   ]
+  },
+  {
+   "name": "VT_MT_YHTAIWAN_CH_1000KG",
+   "payload": {
+    "item_code": "VT_MT_YHTAIWAN_CH_1000KG",
+    "item_name": "MOTOR YHTAIWAN CH 1000KG",
+    "item_group": "Motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MT-YHTAIWAN-CH-1000KG"
+   ]
+  },
+  {
+   "name": "VT_MT_YHTAIWAN_CH_300KG",
+   "payload": {
+    "item_code": "VT_MT_YHTAIWAN_CH_300KG",
+    "item_name": "MOTOR YHTAIWAN CH 300KG",
+    "item_group": "Motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MT-YHTAIWAN-CH-300KG"
+   ]
+  },
+  {
+   "name": "VT_MT_YHTAIWAN_CH_400KG",
+   "payload": {
+    "item_code": "VT_MT_YHTAIWAN_CH_400KG",
+    "item_name": "MOTOR YHTAIWAN CH 400KG",
+    "item_group": "Motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MT-YHTAIWAN-CH-400KG"
+   ]
+  },
+  {
+   "name": "VT_MT_YHTAIWAN_CH_500KG",
+   "payload": {
+    "item_code": "VT_MT_YHTAIWAN_CH_500KG",
+    "item_name": "MOTOR YHTAIWAN CH 500KG",
+    "item_group": "Motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MT-YHTAIWAN-CH-500KG"
+   ]
+  },
+  {
+   "name": "VT_MT_YHTAIWAN_CH_600KG",
+   "payload": {
+    "item_code": "VT_MT_YHTAIWAN_CH_600KG",
+    "item_name": "MOTOR YHTAIWAN CH 600KG",
+    "item_group": "Motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MT-YHTAIWAN-CH-600KG"
+   ]
+  },
+  {
+   "name": "VT_MT_YHTAIWAN_CH_700KG",
+   "payload": {
+    "item_code": "VT_MT_YHTAIWAN_CH_700KG",
+    "item_name": "MOTOR YHTAIWAN CH 700KG",
+    "item_group": "Motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MT-YHTAIWAN-CH-700KG"
+   ]
+  },
+  {
+   "name": "VT_MT_YHTAIWAN_CH_800KG",
+   "payload": {
+    "item_code": "VT_MT_YHTAIWAN_CH_800KG",
+    "item_name": "MOTOR YHTAIWAN CH 800KG",
+    "item_group": "Motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-MT-YHTAIWAN-CH-800KG"
+   ]
+  },
+  {
+   "name": "VT_TANKER_NHONG",
+   "payload": {
+    "item_code": "VT_TANKER_NHONG",
+    "item_name": "NHÔNG MOTOR TANKER",
+    "item_group": "Motor",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Hàng hoá",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-Tanker-nhong"
+   ]
+  },
+  {
+   "name": "VT_CROMATE_3",
+   "payload": {
+    "item_code": "VT_CROMATE_3",
+    "item_name": "CROMATE 3+",
+    "item_group": "Phụ kiện cần sơn tĩnh điện",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "CROMATE-3+"
+   ]
+  },
+  {
+   "name": "VT_LUOIMV",
+   "payload": {
+    "item_code": "VT_LUOIMV",
+    "item_name": "LƯỚI MV",
+    "item_group": "Phụ kiện cần sơn tĩnh điện",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-LUOIMV"
+   ]
+  },
+  {
+   "name": "VT_LUOISN13X26",
+   "payload": {
+    "item_code": "VT_LUOISN13X26",
+    "item_name": "LƯỚI SN VUÔNG PHI 13X26",
+    "item_group": "Phụ kiện cần sơn tĩnh điện",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-LUOISN13x26"
+   ]
+  },
+  {
+   "name": "VT_LUOISNPHI19",
+   "payload": {
+    "item_code": "VT_LUOISNPHI19",
+    "item_name": "LƯỚI SN TRÒN PHI 19",
+    "item_group": "Phụ kiện cần sơn tĩnh điện",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-LUOISNPHI19"
+   ]
+  },
+  {
+   "name": "VT_TAY_NHOM",
+   "payload": {
+    "item_code": "VT_TAY_NHOM",
+    "item_name": "TẨY NHÔM",
+    "item_group": "Phụ kiện cần sơn tĩnh điện",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TẨY-NHÔM"
+   ]
+  },
+  {
+   "name": "VT_3X6M",
+   "payload": {
+    "item_code": "VT_3X6M",
+    "item_name": "SẮT VUÔNG 3X6M",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Mét",
+    "default_purchase_uom": "Mét",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-3X6M"
+   ]
+  },
+  {
+   "name": "VT_BANBUOM_FE",
+   "payload": {
+    "item_code": "VT_BANBUOM_FE",
+    "item_name": "BẮN BƯỚM (SẮT)",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Mét",
+    "default_purchase_uom": "Mét",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-BANBUOM-FE"
+   ]
+  },
+  {
+   "name": "VT_BANBUOM_INOX",
+   "payload": {
+    "item_code": "VT_BANBUOM_INOX",
+    "item_name": "BẮN BƯỚM (INOX)",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Mét",
+    "default_purchase_uom": "Mét",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-BANBUOM-INOX"
+   ]
+  },
+  {
+   "name": "VT_BANGKT_5P",
+   "payload": {
+    "item_code": "VT_BANGKT_5P",
+    "item_name": "BĂNG KEO TRONG",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-BANGKT-5P"
+   ]
+  },
+  {
+   "name": "VT_BKAN",
+   "payload": {
+    "item_code": "VT_BKAN",
+    "item_name": "BÁT KHÓA ÂM NỀN",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cặp",
+    "uom_conversions": [
+     {
+      "uom": "Cặp",
+      "conversion_factor": 10,
+      "note": "Hệ số mặc định 10 — chờ số thật của xưởng"
+     }
+    ],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-BKAN",
+    "NVL-BKAN"
+   ]
+  },
+  {
+   "name": "VT_BOLSN",
+   "payload": {
+    "item_code": "VT_BOLSN",
+    "item_name": "BỌ LUỚI SONG NGANG MÓNG NGỰA SONG NGANG",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-BOLSN"
+   ]
+  },
+  {
+   "name": "VT_BOMV",
+   "payload": {
+    "item_code": "VT_BOMV",
+    "item_name": "BỌ MẮT VÕNG",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-BOMV"
+   ]
+  },
+  {
+   "name": "VT_BUOMFE_DL",
+   "payload": {
+    "item_code": "VT_BUOMFE_DL",
+    "item_name": "BƯỚM SẮT ĐÀI LOAN",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-BUOMFE-DL"
+   ]
+  },
+  {
+   "name": "VT_BUOMFE_ST",
+   "payload": {
+    "item_code": "VT_BUOMFE_ST",
+    "item_name": "BƯỚM SẮT SIÊU TRƯỜNG",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-BUOMFE-ST"
+   ]
+  },
+  {
+   "name": "VT_CHNHUA",
+   "payload": {
+    "item_code": "VT_CHNHUA",
+    "item_name": "VÒNG NHỰA HÃM TRỤC",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [
+     {
+      "uom": "Kg",
+      "conversion_factor": 10,
+      "note": "Hệ số mặc định 10 — chờ số thật của xưởng"
+     }
+    ],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-CHNHUA"
+   ]
+  },
+  {
+   "name": "VT_CHONGXOLO",
+   "payload": {
+    "item_code": "VT_CHONGXOLO",
+    "item_name": "CHỐNG XỔ LÔ",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-CHONGXOLO"
+   ]
+  },
+  {
+   "name": "VT_CONTAN_MV",
+   "payload": {
+    "item_code": "VT_CONTAN_MV",
+    "item_name": "CON TÁN",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-CONTAN-MV"
+   ]
+  },
+  {
+   "name": "VT_DINHTAN_MV",
+   "payload": {
+    "item_code": "VT_DINHTAN_MV",
+    "item_name": "ĐINH TÁN",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-DINHTAN-MV"
+   ]
+  },
+  {
+   "name": "VT_DINHTAN_SN",
+   "payload": {
+    "item_code": "VT_DINHTAN_SN",
+    "item_name": "ĐINH TÁN",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": true
+   },
+   "_gop_tu": [
+    "NVL-DINHTAN-SN"
+   ]
+  },
+  {
+   "name": "VT_GIAT",
+   "payload": {
+    "item_code": "VT_GIAT",
+    "item_name": "GIÁ T",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cặp",
+    "default_purchase_uom": "Cặp",
+    "default_sales_uom": "Cặp",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-GIAT"
+   ]
+  },
+  {
+   "name": "VT_GOIFE",
+   "payload": {
+    "item_code": "VT_GOIFE",
+    "item_name": "GỐI SẮT",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-GOIFE"
+   ]
+  },
+  {
+   "name": "VT_GOIGANG",
+   "payload": {
+    "item_code": "VT_GOIGANG",
+    "item_name": "GỐI GANG",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cặp",
+    "uom_conversions": [
+     {
+      "uom": "Cặp",
+      "conversion_factor": 10,
+      "note": "Hệ số mặc định 10 — chờ số thật của xưởng"
+     }
+    ],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-GOIGANG",
+    "NVL-GOIGANG"
+   ]
+  },
+  {
+   "name": "VT_HDK_MULLER",
+   "payload": {
+    "item_code": "VT_HDK_MULLER",
+    "item_name": "HỘP ĐIỀU KHIỂN MULLER",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-HDK-MULLER"
+   ]
+  },
+  {
+   "name": "VT_HDKDT",
+   "payload": {
+    "item_code": "VT_HDKDT",
+    "item_name": "BỘ ĐIỀU KHIỂN ĐIỆN THOẠI",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-HDKDT"
+   ]
+  },
+  {
+   "name": "VT_HDKMT_BOS",
+   "payload": {
+    "item_code": "VT_HDKMT_BOS",
+    "item_name": "HỘP ĐIỀU KHIỂN BOSTECH",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-HDKMT-BOS"
+   ]
+  },
+  {
+   "name": "VT_HDKMTDON_CH",
+   "payload": {
+    "item_code": "VT_HDKMTDON_CH",
+    "item_name": "HỘP ĐIỀU KHIỂN TAIWAN",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-HDKMTDON-CH"
+   ]
+  },
+  {
+   "name": "VT_HOPKEM_1.2LY",
+   "payload": {
+    "item_code": "VT_HOPKEM_1.2LY",
+    "item_name": "HỘP KỄM 30X30X1.2LY",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cây",
+    "default_purchase_uom": "Cây",
+    "default_sales_uom": "Cây",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-HOPKEM-1.2LY"
+   ]
+  },
+  {
+   "name": "VT_INOX",
+   "payload": {
+    "item_code": "VT_INOX",
+    "item_name": "INOX KÉO TAY 6mét",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cây",
+    "default_purchase_uom": "Cây",
+    "default_sales_uom": "Cây",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-INOX"
+   ]
+  },
+  {
+   "name": "VT_KN",
+   "payload": {
+    "item_code": "VT_KN",
+    "item_name": "KHÓA NGANG",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-KN"
+   ]
+  },
+  {
+   "name": "VT_LACPHU33",
+   "payload": {
+    "item_code": "VT_LACPHU33",
+    "item_name": "LẮC PHỤ 33",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-LACPHU33"
+   ]
+  },
+  {
+   "name": "VT_LACPHU33_3L",
+   "payload": {
+    "item_code": "VT_LACPHU33_3L",
+    "item_name": "LẮC PHỤ 33 (3 LỖ)",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-LACPHU33-3L"
+   ]
+  },
+  {
+   "name": "VT_LACPHU36",
+   "payload": {
+    "item_code": "VT_LACPHU36",
+    "item_name": "LẮC PHỤ 36",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-LACPHU36"
+   ]
+  },
+  {
+   "name": "VT_LACPHU40",
+   "payload": {
+    "item_code": "VT_LACPHU40",
+    "item_name": "LẮC PHỤ 40",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-LACPHU40"
+   ]
+  },
+  {
+   "name": "VT_LACPHU40_L168",
+   "payload": {
+    "item_code": "VT_LACPHU40_L168",
+    "item_name": "LẮC PHỤ 40 LỖ 168",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-LACPHU40-L168"
+   ]
+  },
+  {
+   "name": "VT_LUOIMV_INOX",
+   "payload": {
+    "item_code": "VT_LUOIMV_INOX",
+    "item_name": "LƯỚI MV INOX",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "m2",
+    "default_purchase_uom": "m2",
+    "default_sales_uom": "m2",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-LUOIMV-INOX"
+   ]
+  },
+  {
+   "name": "VT_LUOISN13X26_INOX",
+   "payload": {
+    "item_code": "VT_LUOISN13X26_INOX",
+    "item_name": "LƯỚI SN VUÔNG PHI 13X26 INOX",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "m2",
+    "default_purchase_uom": "m2",
+    "default_sales_uom": "m2",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-LUOISN13x26-INOX"
+   ]
+  },
+  {
+   "name": "VT_LUOISNPHI19_INOX",
+   "payload": {
+    "item_code": "VT_LUOISNPHI19_INOX",
+    "item_name": "LƯỚI SN TRÒN PHI 19 INOX",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "m2",
+    "default_purchase_uom": "m2",
+    "default_sales_uom": "m2",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-LUOISNPHI19-INOX"
+   ]
+  },
+  {
+   "name": "VT_LV_6.0_X_70_X_53V",
+   "payload": {
+    "item_code": "VT_LV_6.0_X_70_X_53V",
+    "item_name": "HH LÒ XO 53V",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-LV-6.0-x-70-x-53V"
+   ]
+  },
+  {
+   "name": "VT_LV_6.5_X_80_X_63V",
+   "payload": {
+    "item_code": "VT_LV_6.5_X_80_X_63V",
+    "item_name": "HH LÒ XO 63V",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-LV-6.5-x-80-x-63V"
+   ]
+  },
+  {
+   "name": "VT_LV_6.5_X_80_X_68V",
+   "payload": {
+    "item_code": "VT_LV_6.5_X_80_X_68V",
+    "item_name": "HH LÒ XO 68V",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-LV-6.5-x-80-x-68V"
+   ]
+  },
+  {
+   "name": "VT_LV_7.0_X_90_X_65V",
+   "payload": {
+    "item_code": "VT_LV_7.0_X_90_X_65V",
+    "item_name": "HH LÒ XO 65V",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-LV-7.0-x-90-x-65V"
+   ]
+  },
+  {
+   "name": "VT_LV_7.0_X_90_X_73V",
+   "payload": {
+    "item_code": "VT_LV_7.0_X_90_X_73V",
+    "item_name": "HH LÒ XO 73V",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-LV-7.0-x-90-x-73V"
+   ]
+  },
+  {
+   "name": "VT_LV_7.0_X_90_X_83V",
+   "payload": {
+    "item_code": "VT_LV_7.0_X_90_X_83V",
+    "item_name": "HH LÒ XO 83V",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-LV-7.0-x-90-x-83V"
+   ]
+  },
+  {
+   "name": "VT_LX_5.5_X_70_X_46V",
+   "payload": {
+    "item_code": "VT_LX_5.5_X_70_X_46V",
+    "item_name": "HH LÒ XO 46V",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-LX-5.5-X-70-X-46V"
+   ]
+  },
+  {
+   "name": "VT_LX_5.5_X_70_X_50V",
+   "payload": {
+    "item_code": "VT_LX_5.5_X_70_X_50V",
+    "item_name": "HH LÒ XO 50V",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-LX-5.5-x-70-x-50V"
+   ]
+  },
+  {
+   "name": "VT_LX5.5X70X46V",
+   "payload": {
+    "item_code": "VT_LX5.5X70X46V",
+    "item_name": "LÒ XO 46 V",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-LX5.5x70x46V"
+   ]
+  },
+  {
+   "name": "VT_LX5.5X70X50V",
+   "payload": {
+    "item_code": "VT_LX5.5X70X50V",
+    "item_name": "LÒ XO 50 V",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-LX5.5x70x50V"
+   ]
+  },
+  {
+   "name": "VT_LX6.0X70X53V",
+   "payload": {
+    "item_code": "VT_LX6.0X70X53V",
+    "item_name": "LÒ XO 53 V",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-LX6.0x70x53V"
+   ]
+  },
+  {
+   "name": "VT_LX6.5X80X62V",
+   "payload": {
+    "item_code": "VT_LX6.5X80X62V",
+    "item_name": "LÒ XO 62 V",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-LX6.5x80x62V"
+   ]
+  },
+  {
+   "name": "VT_LX6.5X80X63V",
+   "payload": {
+    "item_code": "VT_LX6.5X80X63V",
+    "item_name": "LÒ XO 63 V",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-LX6.5x80x63V"
+   ]
+  },
+  {
+   "name": "VT_LX6.5X80X68V",
+   "payload": {
+    "item_code": "VT_LX6.5X80X68V",
+    "item_name": "LÒ XO 68 V",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-LX6.5x80x68V"
+   ]
+  },
+  {
+   "name": "VT_LX7.0X90X65",
+   "payload": {
+    "item_code": "VT_LX7.0X90X65",
+    "item_name": "LÒ XO 65 V",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-LX7.0x90x65"
+   ]
+  },
+  {
+   "name": "VT_LX7.0X90X73",
+   "payload": {
+    "item_code": "VT_LX7.0X90X73",
+    "item_name": "LÒ XO 73 V",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-LX7.0x90x73"
+   ]
+  },
+  {
+   "name": "VT_LX7.0X90X83",
+   "payload": {
+    "item_code": "VT_LX7.0X90X83",
+    "item_name": "LÒ XO 83 V",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-LX7.0x90x83"
+   ]
+  },
+  {
+   "name": "VT_MUI_MAI_HOP_KIM",
+   "payload": {
+    "item_code": "VT_MUI_MAI_HOP_KIM",
+    "item_name": "MŨI MÀI HỘP KIM",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "MŨI-MÀI-HỘP-KIM"
+   ]
+  },
+  {
+   "name": "VT_NAPCHUP_BACDAN",
+   "payload": {
+    "item_code": "VT_NAPCHUP_BACDAN",
+    "item_name": "BẠC ĐẠN + NẮP CHỤP",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-Napchup+Bacdan"
+   ]
+  },
+  {
+   "name": "VT_NHAN",
+   "payload": {
+    "item_code": "VT_NHAN",
+    "item_name": "NHẪN",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-NHAN"
+   ]
+  },
+  {
+   "name": "VT_OKHOA",
+   "payload": {
+    "item_code": "VT_OKHOA",
+    "item_name": "Ổ KHÓA NGANG",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [
+     {
+      "uom": "Bộ",
+      "conversion_factor": 10,
+      "note": "Hệ số mặc định 10 — chờ số thật của xưởng"
+     }
+    ],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-OKHOA"
+   ]
+  },
+  {
+   "name": "VT_OTPHI13.8",
+   "payload": {
+    "item_code": "VT_OTPHI13.8",
+    "item_name": "ỐNG THÉP PHI 13.8",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-OTPHI13.8"
+   ]
+  },
+  {
+   "name": "VT_OTPHI19",
+   "payload": {
+    "item_code": "VT_OTPHI19",
+    "item_name": "ỐNG THÉP PHI 19",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-OTPHI19"
+   ]
+  },
+  {
+   "name": "VT_PAT_BOS",
+   "payload": {
+    "item_code": "VT_PAT_BOS",
+    "item_name": "PHÍM ÂM TƯỜNG ÚC BOSTECH",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-PAT-BOS"
+   ]
+  },
+  {
+   "name": "VT_PE25",
+   "payload": {
+    "item_code": "VT_PE25",
+    "item_name": "Màng PE 25 CM",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cuộn",
+    "default_purchase_uom": "Cuộn",
+    "default_sales_uom": "Cuộn",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-PE25"
+   ]
+  },
+  {
+   "name": "VT_PE2X1.05X150",
+   "payload": {
+    "item_code": "VT_PE2X1.05X150",
+    "item_name": "MÀNG PE FOAM 2x1.05x150 (CẮT 4)",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cuộn",
+    "default_purchase_uom": "Cuộn",
+    "default_sales_uom": "Cuộn",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-PE2x1.05x150"
+   ]
+  },
+  {
+   "name": "VT_PE2X1.05X150CAT2",
+   "payload": {
+    "item_code": "VT_PE2X1.05X150CAT2",
+    "item_name": "MÀNG PE FOAM 2x1.05x150 (CẮT 2)",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cuộn",
+    "default_purchase_uom": "Cuộn",
+    "default_sales_uom": "Cuộn",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-PE2x1.05x150CAT2"
+   ]
+  },
+  {
+   "name": "VT_PE3X1.05X100CAT2",
+   "payload": {
+    "item_code": "VT_PE3X1.05X100CAT2",
+    "item_name": "MÀNG PE FOAM 3x1.05x100 (CẮT 2)",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cuộn",
+    "default_purchase_uom": "Cuộn",
+    "default_sales_uom": "Cuộn",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-PE3x1.05x100CAT2"
+   ]
+  },
+  {
+   "name": "VT_PE3X1.05X100CAT4",
+   "payload": {
+    "item_code": "VT_PE3X1.05X100CAT4",
+    "item_name": "MÀNG PE FOAM 3x1.05x100 (CẮT 4)",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cuộn",
+    "default_purchase_uom": "Cuộn",
+    "default_sales_uom": "Cuộn",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-PE3x1.05x100CAT4"
+   ]
+  },
+  {
+   "name": "VT_PE50",
+   "payload": {
+    "item_code": "VT_PE50",
+    "item_name": "Màng PE 50 CM",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cuộn",
+    "default_purchase_uom": "Cuộn",
+    "default_sales_uom": "Cuộn",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-PE50"
+   ]
+  },
+  {
+   "name": "VT_PHOTLONG4X5X400M",
+   "payload": {
+    "item_code": "VT_PHOTLONG4X5X400M",
+    "item_name": "LÔNG NHEO 4X5",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Mét",
+    "default_purchase_uom": "Mét",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-PHOTLONG4X5X400M"
+   ]
+  },
+  {
+   "name": "VT_PHOTLONG5X6X400M",
+   "payload": {
+    "item_code": "VT_PHOTLONG5X6X400M",
+    "item_name": "LÔNG NHEO 5X6",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Mét",
+    "default_purchase_uom": "Mét",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-PHOTLONG5X6X400M"
+   ]
+  },
+  {
+   "name": "VT_PULYGAI",
+   "payload": {
+    "item_code": "VT_PULYGAI",
+    "item_name": "PULY GAI",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-PULYGAI"
+   ]
+  },
+  {
+   "name": "VT_PULYUC114",
+   "payload": {
+    "item_code": "VT_PULYUC114",
+    "item_name": "PULY ÚC 114",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-PULYUC114"
+   ]
+  },
+  {
+   "name": "VT_PULYUC114_CAM",
+   "payload": {
+    "item_code": "VT_PULYUC114_CAM",
+    "item_name": "PULY ÚC 114 CAM",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-PULYUC114-CAM"
+   ]
+  },
+  {
+   "name": "VT_PULYUC114_DEN",
+   "payload": {
+    "item_code": "VT_PULYUC114_DEN",
+    "item_name": "PULY ÚC 114 ĐEN",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-PULYUC114-DEN"
+   ]
+  },
+  {
+   "name": "VT_PULYUC34",
+   "payload": {
+    "item_code": "VT_PULYUC34",
+    "item_name": "PULY ÚC 34",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-PULYUC34"
+   ]
+  },
+  {
+   "name": "VT_RON_DD",
+   "payload": {
+    "item_code": "VT_RON_DD",
+    "item_name": "RON ĐÁY ĐỨC",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [
+     {
+      "uom": "Mét",
+      "conversion_factor": 10,
+      "note": "Hệ số mặc định 10 — chờ số thật của xưởng"
+     }
+    ],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "RON-DD",
+    "NVL-RON-DD"
+   ]
+  },
+  {
+   "name": "VT_RONDAYUC",
+   "payload": {
+    "item_code": "VT_RONDAYUC",
+    "item_name": "RON ĐÁY ÚC",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [
+     {
+      "uom": "Mét",
+      "conversion_factor": 10,
+      "note": "Hệ số mặc định 10 — chờ số thật của xưởng"
+     }
+    ],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "RONDAYUC",
+    "NVL-RONDAYUC"
+   ]
+  },
+  {
+   "name": "VT_RONNHUA_INOX",
+   "payload": {
+    "item_code": "VT_RONNHUA_INOX",
+    "item_name": "RON NHỰA + INOX",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Mét",
+    "default_purchase_uom": "Mét",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "RONNHUA-INOX"
+   ]
+  },
+  {
+   "name": "VT_RONNHUAVANGCANHAY_RSU100",
+   "payload": {
+    "item_code": "VT_RONNHUAVANGCANHAY_RSU100",
+    "item_name": "RONNHUAVANGCANHAY RSU100",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "RONNHUAVANGCẢNHAY-RSU100"
+   ]
+  },
+  {
+   "name": "VT_RONNHUAVANGCANHAY_RSU70",
+   "payload": {
+    "item_code": "VT_RONNHUAVANGCANHAY_RSU70",
+    "item_name": "RONNHUAVANGCANHAY RSU70",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "RONNHUAVANGCANHAY-RSU70"
+   ]
+  },
+  {
+   "name": "VT_TDK_BOS",
+   "payload": {
+    "item_code": "VT_TDK_BOS",
+    "item_name": "TAY ĐIỀU KHIỂN BOSTECH",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-TDK-BOS"
+   ]
+  },
+  {
+   "name": "VT_TDKDT",
+   "payload": {
+    "item_code": "VT_TDKDT",
+    "item_name": "TAY ĐIỀU KHIỂN ĐIỆN THOẠI",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-TDKDT"
+   ]
+  },
+  {
+   "name": "VT_TDKMTDOI_CH",
+   "payload": {
+    "item_code": "VT_TDKMTDOI_CH",
+    "item_name": "TAY ĐIỀU KHIỂN TAIWAN",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-TDKMTDOI-CH"
+   ]
+  },
+  {
+   "name": "VT_TIINOX",
+   "payload": {
+    "item_code": "VT_TIINOX",
+    "item_name": "TI KHÓA NGANG",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [
+     {
+      "uom": "Mét",
+      "conversion_factor": 10,
+      "note": "Hệ số mặc định 10 — chờ số thật của xưởng"
+     }
+    ],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-TIINOX"
+   ]
+  },
+  {
+   "name": "VT_V4",
+   "payload": {
+    "item_code": "VT_V4",
+    "item_name": "V4",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-V4"
+   ]
+  },
+  {
+   "name": "VT_V4_INOX",
+   "payload": {
+    "item_code": "VT_V4_INOX",
+    "item_name": "V4 INOX 2ly",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Mét",
+    "default_purchase_uom": "Mét",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-V4-INOX"
+   ]
+  },
+  {
+   "name": "VT_V4_INOX_3LY",
+   "payload": {
+    "item_code": "VT_V4_INOX_3LY",
+    "item_name": "V4 3ly",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Mét",
+    "default_purchase_uom": "Mét",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-V4-INOX-3LY"
+   ]
+  },
+  {
+   "name": "VT_V4_KEM",
+   "payload": {
+    "item_code": "VT_V4_KEM",
+    "item_name": "V4",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Mét",
+    "default_purchase_uom": "Mét",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-V4-KEM"
+   ]
+  },
+  {
+   "name": "VT_V5",
+   "payload": {
+    "item_code": "VT_V5",
+    "item_name": "V5",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-V5"
+   ]
+  },
+  {
+   "name": "VT_V5_KEM",
+   "payload": {
+    "item_code": "VT_V5_KEM",
+    "item_name": "V4 KẼM",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Mét",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [
+     {
+      "uom": "Kg",
+      "conversion_factor": 10,
+      "note": "Hệ số mặc định 10 — chờ số thật của xưởng"
+     }
+    ],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-V5-KEM"
+   ]
+  },
+  {
+   "name": "VT_VAIHAMXO",
+   "payload": {
+    "item_code": "VT_VAIHAMXO",
+    "item_name": "VAI HÃM XO",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-VAIHAMXO"
+   ]
+  },
+  {
+   "name": "VT_VDAY_TDU",
+   "payload": {
+    "item_code": "VT_VDAY_TDU",
+    "item_name": "V ĐÁY (THANH ĐÁY ÚC)",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-VDAY-TDU"
+   ]
+  },
+  {
+   "name": "VT_VDAY_TDU_KTD",
+   "payload": {
+    "item_code": "VT_VDAY_TDU_KTD",
+    "item_name": "THANH ĐÁY ÚC KTD",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-VDAY-TDU-KTD"
+   ]
+  },
+  {
+   "name": "VT_VIS_BANLO2P",
+   "payload": {
+    "item_code": "VT_VIS_BANLO2P",
+    "item_name": "VIS BẮN LÔ 2P",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Con",
+    "default_purchase_uom": "Con",
+    "default_sales_uom": "Con",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-VIS-BANLO2P"
+   ]
+  },
+  {
+   "name": "VT_VISDD_BANLO",
+   "payload": {
+    "item_code": "VT_VISDD_BANLO",
+    "item_name": "VIS ĐẦU DÙ BẮN LÔ",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Con",
+    "default_purchase_uom": "Con",
+    "default_sales_uom": "Con",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-VISDD-BANLO"
+   ]
+  },
+  {
+   "name": "VT_VUONG3",
+   "payload": {
+    "item_code": "VT_VUONG3",
+    "item_name": "VUÔNG KẼM 30X30X1.2LY",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cây",
+    "default_purchase_uom": "Cây",
+    "default_sales_uom": "Cây",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-VUONG3"
+   ]
+  },
+  {
+   "name": "VT_XOP_N45",
+   "payload": {
+    "item_code": "VT_XOP_N45",
+    "item_name": "XỐP NHỎ",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Tấm",
+    "default_purchase_uom": "Tấm",
+    "default_sales_uom": "Tấm",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-XOP-N45"
+   ]
+  },
+  {
+   "name": "VT_XOP_N90",
+   "payload": {
+    "item_code": "VT_XOP_N90",
+    "item_name": "XỐP LỚN",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Tấm",
+    "default_purchase_uom": "Tấm",
+    "default_sales_uom": "Tấm",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-XOP-N90"
+   ]
+  },
+  {
+   "name": "VT_XOP_N95",
+   "payload": {
+    "item_code": "VT_XOP_N95",
+    "item_name": "XỐP LỚN (90cm)",
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Tấm",
+    "default_purchase_uom": "Tấm",
+    "default_sales_uom": "Tấm",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-XOP-N95"
+   ]
+  },
+  {
+   "name": "VT_BATSAT",
+   "payload": {
+    "item_code": "VT_BATSAT",
+    "item_name": "BÁT SẮT",
+    "item_group": "Phụ kiện CN Đức",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-BATSAT"
+   ]
+  },
+  {
+   "name": "VT_BO_1VIS_503N_71_595",
+   "payload": {
+    "item_code": "VT_BO_1VIS_503N_71_595",
+    "item_name": "BỌ 1VIS 503N-71-595",
+    "item_group": "Phụ kiện CN Đức",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Con",
+    "default_purchase_uom": "Con",
+    "default_sales_uom": "Con",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-BO-1VIS-503N-71-595"
+   ]
+  },
+  {
+   "name": "VT_BO_2VIS_501_552",
+   "payload": {
+    "item_code": "VT_BO_2VIS_501_552",
+    "item_name": "BỌ 2VIS-501-552",
+    "item_group": "Phụ kiện CN Đức",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Con",
+    "default_purchase_uom": "Con",
+    "default_sales_uom": "Con",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-BO-2VIS-501-552"
+   ]
+  },
+  {
+   "name": "VT_BO_2VIS_652_548C",
+   "payload": {
+    "item_code": "VT_BO_2VIS_652_548C",
+    "item_name": "BỌ 2VIS-652-548C",
+    "item_group": "Phụ kiện CN Đức",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Con",
+    "default_purchase_uom": "Con",
+    "default_sales_uom": "Con",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-BO-2VIS-652-548C"
+   ]
+  },
+  {
+   "name": "VT_BO1VIS_503C",
+   "payload": {
+    "item_code": "VT_BO1VIS_503C",
+    "item_name": "BỌ 1VIS 503C",
+    "item_group": "Phụ kiện CN Đức",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-BO1VIS-503C"
+   ]
+  },
+  {
+   "name": "VT_BO1VIS_503N_71_595",
+   "payload": {
+    "item_code": "VT_BO1VIS_503N_71_595",
+    "item_name": "BỌ 1VIS 503N-71-595",
+    "item_group": "Phụ kiện CN Đức",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-BO1VIS-503N-71-595"
+   ]
+  },
+  {
+   "name": "VT_BO2VIS_501N_552",
+   "payload": {
+    "item_code": "VT_BO2VIS_501N_552",
+    "item_name": "BỌ 2VIS 501N-552",
+    "item_group": "Phụ kiện CN Đức",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-BO2VIS-501N-552"
+   ]
+  },
+  {
+   "name": "VT_BO2VIS_652_548C",
+   "payload": {
+    "item_code": "VT_BO2VIS_652_548C",
+    "item_name": "BỌ 2VIS 652-548C",
+    "item_group": "Phụ kiện CN Đức",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-BO2VIS-652-548C"
+   ]
+  },
+  {
+   "name": "VT_BO2VIS_752_ST700",
+   "payload": {
+    "item_code": "VT_BO2VIS_752_ST700",
+    "item_name": "BỌ 2VIS 752 ST700",
+    "item_group": "Phụ kiện CN Đức",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-BO2VIS-752-ST700"
+   ]
+  },
+  {
+   "name": "VT_CBD",
+   "payload": {
+    "item_code": "VT_CBD",
+    "item_name": "CÒI BÁO ĐỘNG",
+    "item_group": "Phụ kiện CN Đức",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-CBD"
+   ]
+  },
+  {
+   "name": "VT_CLNHUA",
+   "payload": {
+    "item_code": "VT_CLNHUA",
+    "item_name": "CON LĂN NHỰA",
+    "item_group": "Phụ kiện CN Đức",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-CLNHUA"
+   ]
+  },
+  {
+   "name": "VT_COI",
+   "payload": {
+    "item_code": "VT_COI",
+    "item_name": "CÒI",
+    "item_group": "Phụ kiện CN Đức",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-COI"
+   ]
+  },
+  {
+   "name": "VT_CON_LAN",
+   "payload": {
+    "item_code": "VT_CON_LAN",
+    "item_name": "CON LĂN",
+    "item_group": "Phụ kiện CN Đức",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cặp",
+    "default_purchase_uom": "Cặp",
+    "default_sales_uom": "Cặp",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-CON-LĂN"
+   ]
+  },
+  {
+   "name": "VT_CONTAN12.12",
+   "payload": {
+    "item_code": "VT_CONTAN12.12",
+    "item_name": "CON TÁN 12",
+    "item_group": "Phụ kiện CN Đức",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-CONTAN12.12"
+   ]
+  },
+  {
+   "name": "VT_HTTD",
+   "payload": {
+    "item_code": "VT_HTTD",
+    "item_name": "HỆ THỐNG TỰ DỪNG",
+    "item_group": "Phụ kiện CN Đức",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Bộ",
+    "default_purchase_uom": "Bộ",
+    "default_sales_uom": "Bộ",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-HTTD",
+    "HH-HTTD"
+   ]
+  },
+  {
+   "name": "VT_PHOTLONG4X5",
+   "payload": {
+    "item_code": "VT_PHOTLONG4X5",
+    "item_name": "LÔNG NHEO NHỎ",
+    "item_group": "Phụ kiện CN Đức",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cuộn",
+    "default_purchase_uom": "Cuộn",
+    "default_sales_uom": "Cuộn",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-PHOTLONG4X5"
+   ]
+  },
+  {
+   "name": "VT_PHOTLONG5X6",
+   "payload": {
+    "item_code": "VT_PHOTLONG5X6",
+    "item_name": "LÔNG NHEO LỚN",
+    "item_group": "Phụ kiện CN Đức",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cuộn",
+    "default_purchase_uom": "Cuộn",
+    "default_sales_uom": "Cuộn",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-PHOTLONG5X6"
+   ]
+  },
+  {
+   "name": "VT_PL114_LON",
+   "payload": {
+    "item_code": "VT_PL114_LON",
+    "item_name": "PULY 114 LỚN",
+    "item_group": "Phụ kiện CN Đức",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-PL114-LON"
+   ]
+  },
+  {
+   "name": "VT_PL114_NHO",
+   "payload": {
+    "item_code": "VT_PL114_NHO",
+    "item_name": "PULY 114 NHỎ",
+    "item_group": "Phụ kiện CN Đức",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "HH-PL114-NHO"
+   ]
+  },
+  {
+   "name": "VT_PL140",
+   "payload": {
+    "item_code": "VT_PL140",
+    "item_name": "PULY 140",
+    "item_group": "Phụ kiện CN Đức",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": true
+   },
+   "_gop_tu": [
+    "HH-PL140"
+   ]
+  },
+  {
+   "name": "VT_PL168",
+   "payload": {
+    "item_code": "VT_PL168",
+    "item_name": "PULY 168",
+    "item_group": "Phụ kiện CN Đức",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": true
+   },
+   "_gop_tu": [
+    "HH-PL168"
+   ]
+  },
+  {
+   "name": "VT_PULY_114L",
+   "payload": {
+    "item_code": "VT_PULY_114L",
+    "item_name": "PULY 114L",
+    "item_group": "Phụ kiện CN Đức",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-PULY-114L"
+   ]
+  },
+  {
+   "name": "VT_PULY_114N",
+   "payload": {
+    "item_code": "VT_PULY_114N",
+    "item_name": "PULY 114N",
+    "item_group": "Phụ kiện CN Đức",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-PULY-114N"
+   ]
+  },
+  {
+   "name": "VT_PULY_140",
+   "payload": {
+    "item_code": "VT_PULY_140",
+    "item_name": "PULY 140",
+    "item_group": "Phụ kiện CN Đức",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-PULY-140"
+   ]
+  },
+  {
+   "name": "VT_PULY_168",
+   "payload": {
+    "item_code": "VT_PULY_168",
+    "item_name": "PULY 168",
+    "item_group": "Phụ kiện CN Đức",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "TP-PULY-168"
+   ]
+  },
+  {
+   "name": "VT_PULY_DEN",
+   "payload": {
+    "item_code": "VT_PULY_DEN",
+    "item_name": "PULY ĐEN CUỘN CỬA ĐỨC",
+    "item_group": "Phụ kiện CN Đức",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-PULY-ĐEN"
+   ]
+  },
+  {
+   "name": "VT_VIS",
+   "payload": {
+    "item_code": "VT_VIS",
+    "item_name": "Vis",
+    "item_group": "Phụ kiện CN Đức",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   },
+   "_gop_tu": [
+    "NVL-VIS"
+   ]
+  }
+ ]
+}

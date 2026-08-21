@@ -1,0 +1,137 @@
+{
+  "doctype": "Bậc diện tích",
+  "trich_luc_luc": "2026-08-20T00:00:00.000Z",
+  "nguon": "8 bậc rút ra từ mã hàng cũ (gop-ma.mjs) + 1 bậc mở MOI-DIEN-TICH đã là `default` của Item Price.area_tier",
+  "so_ban_ghi": 9,
+  "ban_ghi": [
+    {
+      "name": "MOI-DIEN-TICH",
+      "payload": {
+        "tier_code": "MOI-DIEN-TICH",
+        "tier_name": "Mọi diện tích",
+        "min_area_sqm": null,
+        "max_area_sqm": null,
+        "sort_order": 0,
+        "note": "Bậc MỞ: dòng giá gắn bậc này áp cho mọi diện tích. Đây là cách bảng giá ở thưa — 211/267 dòng nằm ở đây. Dòng gắn bậc cụ thể thắng dòng gắn bậc này.",
+        "disabled": false,
+        "_migration_source": "alumdoor-bac-dien-tich-2026-08-20"
+      },
+      "title": "Mọi diện tích",
+      "content": "MOI-DIEN-TICH Mọi diện tích bậc mở"
+    },
+    {
+      "name": "DT-3-4M2",
+      "payload": {
+        "tier_code": "DT-3-4M2",
+        "tier_name": "3 – 4 m²",
+        "min_area_sqm": 3,
+        "max_area_sqm": 4,
+        "sort_order": 10,
+        "note": "Bậc thấp nhất trong nguồn giá. Nguồn KHÔNG có bậc dưới 3 m² — chờ chủ xưởng chốt: đơn dưới 3 m² ăn giá bậc này hay có giá riêng.",
+        "disabled": false,
+        "_migration_source": "alumdoor-bac-dien-tich-2026-08-20"
+      },
+      "title": "3 – 4 m²",
+      "content": "DT-3-4M2 3-4 m2"
+    },
+    {
+      "name": "DT-4-5M2",
+      "payload": {
+        "tier_code": "DT-4-5M2",
+        "tier_name": "4 – 5 m²",
+        "min_area_sqm": 4,
+        "max_area_sqm": 5,
+        "sort_order": 20,
+        "disabled": false,
+        "_migration_source": "alumdoor-bac-dien-tich-2026-08-20"
+      },
+      "title": "4 – 5 m²",
+      "content": "DT-4-5M2 4-5 m2"
+    },
+    {
+      "name": "DT-5-6M2",
+      "payload": {
+        "tier_code": "DT-5-6M2",
+        "tier_name": "5 – 6 m²",
+        "min_area_sqm": 5,
+        "max_area_sqm": 6,
+        "sort_order": 30,
+        "disabled": false,
+        "_migration_source": "alumdoor-bac-dien-tich-2026-08-20"
+      },
+      "title": "5 – 6 m²",
+      "content": "DT-5-6M2 5-6 m2"
+    },
+    {
+      "name": "DT-6-7M2",
+      "payload": {
+        "tier_code": "DT-6-7M2",
+        "tier_name": "6 – 7 m²",
+        "min_area_sqm": 6,
+        "max_area_sqm": 7,
+        "sort_order": 40,
+        "disabled": false,
+        "_migration_source": "alumdoor-bac-dien-tich-2026-08-20"
+      },
+      "title": "6 – 7 m²",
+      "content": "DT-6-7M2 6-7 m2"
+    },
+    {
+      "name": "DT-7-8M2",
+      "payload": {
+        "tier_code": "DT-7-8M2",
+        "tier_name": "7 – 8 m²",
+        "min_area_sqm": 7,
+        "max_area_sqm": 8,
+        "sort_order": 50,
+        "disabled": false,
+        "_migration_source": "alumdoor-bac-dien-tich-2026-08-20"
+      },
+      "title": "7 – 8 m²",
+      "content": "DT-7-8M2 7-8 m2"
+    },
+    {
+      "name": "DT-8-9M2",
+      "payload": {
+        "tier_code": "DT-8-9M2",
+        "tier_name": "8 – 9 m²",
+        "min_area_sqm": 8,
+        "max_area_sqm": 9,
+        "sort_order": 60,
+        "disabled": false,
+        "_migration_source": "alumdoor-bac-dien-tich-2026-08-20"
+      },
+      "title": "8 – 9 m²",
+      "content": "DT-8-9M2 8-9 m2"
+    },
+    {
+      "name": "DT-9-10M2",
+      "payload": {
+        "tier_code": "DT-9-10M2",
+        "tier_name": "9 – 10 m²",
+        "min_area_sqm": 9,
+        "max_area_sqm": 10,
+        "sort_order": 70,
+        "disabled": false,
+        "_migration_source": "alumdoor-bac-dien-tich-2026-08-20"
+      },
+      "title": "9 – 10 m²",
+      "content": "DT-9-10M2 9-10 m2"
+    },
+    {
+      "name": "DT-TREN-10M2",
+      "payload": {
+        "tier_code": "DT-TREN-10M2",
+        "tier_name": "Trên 10 m²",
+        "min_area_sqm": 10,
+        "max_area_sqm": null,
+        "sort_order": 80,
+        "note": "Bậc cuối, không có trần.",
+        "disabled": false,
+        "_migration_source": "alumdoor-bac-dien-tich-2026-08-20"
+      },
+      "title": "Trên 10 m²",
+      "content": "DT-TREN-10M2 tren 10 m2"
+    }
+  ]
+}

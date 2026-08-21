@@ -1,0 +1,892 @@
+[
+ {
+  "ma": "VT_TMT_JG500",
+  "ten": "THÂN MOTOR JG 500KG (CHÍNH HÃNG)",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "ten_hang",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TMT_JG600",
+  "ten": "THÂN MOTOR JG 600KG (CHÍNH HÃNG)",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "ten_hang",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TMT_JG800",
+  "ten": "THÂN MOTOR JG 800KG (CHÍNH HÃNG)",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "ten_hang",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TMT_TK1000",
+  "ten": "THÂN MOTOR TANKER 1000 KG",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "ten_hang",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TMT_TK400",
+  "ten": "THÂN MOTOR TANKER 400 KG",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "ten_hang",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TMT_TK600",
+  "ten": "THÂN MOTOR TANKER 600 KG",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "ten_hang",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TMT_TK800",
+  "ten": "THÂN MOTOR TANKER 800 KG",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "ten_hang",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TMT_YHLD1000",
+  "ten": "THÂN MOTOR YH LD 1000KG LOẠI 1 (DÂY ĐỒNG)",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "ten_hang",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TMT_YHLD1200",
+  "ten": "THÂN MOTOR YH LD 1200KG LOẠI 1 (DÂY ĐỒNG)",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "ten_hang",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TMT_YHLD300",
+  "ten": "THÂN MOTOR YH LD 300KG LOẠI 1 (DÂY ĐỒNG)",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "ten_hang",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TMT_YHLD500",
+  "ten": "THÂN MOTOR YH LD 500KG LOẠI 1 (DÂY ĐỒNG)",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "ten_hang",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TMT_YHLD800",
+  "ten": "THÂN MOTOR YH LD 800KG LOẠI 1 (DÂY ĐỒNG)",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "ten_hang",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TMTDOI_BOS_PHAI",
+  "ten": "THÂN MOTOR BOSTECH ĐÔI PHẢI",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "ten_hang",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TMTDOI_BOS_TRAI",
+  "ten": "THÂN MOTOR BOSTECH ĐÔI TRÁI",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "ten_hang",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TMTDON_BOS_PHAI",
+  "ten": "THÂN MOTOR BOSTECH ĐƠN PHẢI",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "ten_hang",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TMTDON_BOS_TRAI",
+  "ten": "THÂN MOTOR BOSTECH ĐƠN TRÁI",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "ten_hang",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TMTDON_CH",
+  "ten": "THÂN MOTOR CH TAIWAN",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "ten_hang",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_UPS_ALE1000",
+  "ten": "ALUMAX UPS E-1000KG",
+  "ton": "Bộ",
+  "mua": "Bộ",
+  "ban": "Bộ",
+  "nguon": "ten_hang",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_UPS_ALE800",
+  "ten": "ALUMAX UPS E-800KG",
+  "ton": "Bộ",
+  "mua": "Bộ",
+  "ban": "Bộ",
+  "nguon": "ten_hang",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_YHLD_PATCD",
+  "ten": "YHLD PHÍM ÂM TƯỜNG CÓ DÂY",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_YHTAIWAN_HDK",
+  "ten": "YHTAIWAN HopDK",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_YHTAIWAN_LAYHTW1000_1200KG",
+  "ten": "YHTAIWAN LẮC 1000-1200KG",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_YHTAIWAN_LAYHTW300_400_500KG",
+  "ten": "YHTAIWAN LẮC 300-400-500KG",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_YHTAIWAN_LAYHTW600_700_800KG",
+  "ten": "YHTAIWAN LẮC 600-700-800KG",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_YHTAIWAN_PATCD",
+  "ten": "YHTAIWAN PHÍM ÂM TƯỜNG CÓ DÂY",
+  "ton": "Bộ",
+  "mua": "Bộ",
+  "ban": "Bộ",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_YHTAIWAN_THAN1000KG",
+  "ten": "YHTAIWAN Thân 1000KG",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_YHTAIWAN_THAN300KG",
+  "ten": "YHTAIWAN Thân 300KG",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_YHTAIWAN_THAN400KG",
+  "ten": "YHTAIWAN Thân 400KG",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_YHTAIWAN_THAN500KG",
+  "ten": "YHTAIWAN Thân 500KG",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_YHTAIWAN_THAN600KG",
+  "ten": "YHTAIWAN Thân 600KG",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_YHTAIWAN_THAN700KG",
+  "ten": "YHTAIWAN Thân 700KG",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_YHTAIWAN_THAN800KG",
+  "ten": "YHTAIWAN Thân 800KG",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MT_ALUMAX400KG",
+  "ten": "MOTOR ALUMAX 400KG",
+  "ton": "Bộ",
+  "mua": "Bộ",
+  "ban": "Bộ",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MT_ALUMAX600KG",
+  "ten": "MOTOR ALUMAX 600KG",
+  "ton": "Bộ",
+  "mua": "Bộ",
+  "ban": "Bộ",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MT_JG1000KG",
+  "ten": "MOTOR JG 1000KG",
+  "ton": "Bộ",
+  "mua": "Bộ",
+  "ban": "Bộ",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MT_JG1500KG",
+  "ten": "MOTOR JG 1500KG",
+  "ton": "Bộ",
+  "mua": "Bộ",
+  "ban": "Bộ",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MT_JG300KG",
+  "ten": "MOTOR JG 300KG",
+  "ton": "Bộ",
+  "mua": "Bộ",
+  "ban": "Bộ",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MT_JG400KG",
+  "ten": "MOTOR JG 400KG",
+  "ton": "Bộ",
+  "mua": "Bộ",
+  "ban": "Bộ",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MT_JG500KG",
+  "ten": "MOTOR JG 500KG",
+  "ton": "Bộ",
+  "mua": "Bộ",
+  "ban": "Bộ",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MT_JG600KG",
+  "ten": "MOTOR JG 600KG",
+  "ton": "Bộ",
+  "mua": "Bộ",
+  "ban": "Bộ",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MT_JG800KG",
+  "ten": "MOTOR JG 800KG",
+  "ton": "Bộ",
+  "mua": "Bộ",
+  "ban": "Bộ",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MT_TANKE800KG",
+  "ten": "MOTOR TANKER 800KG",
+  "ton": "Bộ",
+  "mua": "Bộ",
+  "ban": "Bộ",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MT_TANKER1000KG",
+  "ten": "MOTOR TANKER 1000KG",
+  "ton": "Bộ",
+  "mua": "Bộ",
+  "ban": "Bộ",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MT_TANKER400KG",
+  "ten": "MOTOR TANKER 400KG",
+  "ton": "Bộ",
+  "mua": "Bộ",
+  "ban": "Bộ",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MT_TANKER600KG",
+  "ten": "MOTOR TANKER 600KG",
+  "ton": "Bộ",
+  "mua": "Bộ",
+  "ban": "Bộ",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MT_YHLD1000KG",
+  "ten": "MOTOR YHLD 1000KG",
+  "ton": "Bộ",
+  "mua": "Bộ",
+  "ban": "Bộ",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MT_YHLD300KG",
+  "ten": "MOTOR YHLD 300KG",
+  "ton": "Bộ",
+  "mua": "Bộ",
+  "ban": "Bộ",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MT_YHLD500KG",
+  "ten": "MOTOR YHLD 500KG",
+  "ton": "Bộ",
+  "mua": "Bộ",
+  "ban": "Bộ",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MT_YHLD800KG",
+  "ten": "MOTOR YHLD 800KG",
+  "ton": "Bộ",
+  "mua": "Bộ",
+  "ban": "Bộ",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MT_YHTAIWAN_CH_1000KG",
+  "ten": "MOTOR YHTAIWAN CH 1000KG",
+  "ton": "Bộ",
+  "mua": "Bộ",
+  "ban": "Bộ",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MT_YHTAIWAN_CH_300KG",
+  "ten": "MOTOR YHTAIWAN CH 300KG",
+  "ton": "Bộ",
+  "mua": "Bộ",
+  "ban": "Bộ",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MT_YHTAIWAN_CH_400KG",
+  "ten": "MOTOR YHTAIWAN CH 400KG",
+  "ton": "Bộ",
+  "mua": "Bộ",
+  "ban": "Bộ",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MT_YHTAIWAN_CH_500KG",
+  "ten": "MOTOR YHTAIWAN CH 500KG",
+  "ton": "Bộ",
+  "mua": "Bộ",
+  "ban": "Bộ",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MT_YHTAIWAN_CH_600KG",
+  "ten": "MOTOR YHTAIWAN CH 600KG",
+  "ton": "Bộ",
+  "mua": "Bộ",
+  "ban": "Bộ",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MT_YHTAIWAN_CH_700KG",
+  "ten": "MOTOR YHTAIWAN CH 700KG",
+  "ton": "Bộ",
+  "mua": "Bộ",
+  "ban": "Bộ",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MT_YHTAIWAN_CH_800KG",
+  "ten": "MOTOR YHTAIWAN CH 800KG",
+  "ton": "Bộ",
+  "mua": "Bộ",
+  "ban": "Bộ",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TANKER_NHONG",
+  "ten": "NHÔNG MOTOR TANKER",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_CROMATE_3",
+  "ten": "CROMATE 3+",
+  "ton": "Kg",
+  "mua": "Kg",
+  "ban": "Kg",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_LUOIMV",
+  "ten": "LƯỚI MV",
+  "ton": "Kg",
+  "mua": "Kg",
+  "ban": "m2",
+  "nguon": "ten_hang",
+  "doi": true,
+  "ly_do": "Lưới cân ký khi mua, xưởng dùng theo m2 (bản inox trong ĐM ghi M2)"
+ },
+ {
+  "ma": "VT_LUOISN13X26",
+  "ten": "LƯỚI SN VUÔNG PHI 13X26",
+  "ton": "Kg",
+  "mua": "Kg",
+  "ban": "m2",
+  "nguon": "ten_hang",
+  "doi": true,
+  "ly_do": "Lưới cân ký khi mua, xưởng dùng theo m2 (bản inox trong ĐM ghi M2)"
+ },
+ {
+  "ma": "VT_LUOISNPHI19",
+  "ten": "LƯỚI SN TRÒN PHI 19",
+  "ton": "Kg",
+  "mua": "Kg",
+  "ban": "m2",
+  "nguon": "ten_hang",
+  "doi": true,
+  "ly_do": "Lưới cân ký khi mua, xưởng dùng theo m2 (bản inox trong ĐM ghi M2)"
+ },
+ {
+  "ma": "VT_TAY_NHOM",
+  "ten": "TẨY NHÔM",
+  "ton": "Kg",
+  "mua": "Kg",
+  "ban": "Kg",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_3X6M",
+  "ten": "SẮT VUÔNG 3X6M",
+  "ton": "Mét",
+  "mua": "Mét",
+  "ban": "Mét",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_BANBUOM_FE",
+  "ten": "BẮN BƯỚM (SẮT)",
+  "ton": "Mét",
+  "mua": "Mét",
+  "ban": "Mét",
+  "nguon": "ten_hang",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_BANBUOM_INOX",
+  "ten": "BẮN BƯỚM (INOX)",
+  "ton": "Mét",
+  "mua": "Mét",
+  "ban": "Mét",
+  "nguon": "ten_hang",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_BANGKT_5P",
+  "ten": "BĂNG KEO TRONG",
+  "ton": "Kg",
+  "mua": "Kg",
+  "ban": "Cuộn",
+  "nguon": "ten_hang",
+  "doi": true,
+  "ly_do": "Băng keo NCC cân ký, xưởng dùng theo cuộn"
+ },
+ {
+  "ma": "VT_BKAN",
+  "ten": "BÁT KHÓA ÂM NỀN",
+  "ton": "Kg",
+  "mua": "Kg",
+  "ban": "Cặp",
+  "nguon": "dinh_muc",
+  "doi": true,
+  "ly_do": "ĐM ghi KG/CẶP: mua cân ký, lắp theo cặp"
+ },
+ {
+  "ma": "VT_BOLSN",
+  "ten": "BỌ LUỚI SONG NGANG MÓNG NGỰA SONG NGANG",
+  "ton": "Kg",
+  "mua": "Kg",
+  "ban": "Con",
+  "nguon": "ten_hang",
+  "doi": true,
+  "ly_do": "Bọ là đồ vụn cân ký khi mua, dùng đếm theo con như các mã bọ khác trong ĐM"
+ },
+ {
+  "ma": "VT_BOMV",
+  "ten": "BỌ MẮT VÕNG",
+  "ton": "Kg",
+  "mua": "Kg",
+  "ban": "m2",
+  "nguon": "dinh_muc",
+  "doi": true,
+  "ly_do": "ĐM ghi m2: bọ mua cân ký, dùng theo m2 lưới mắt võng"
+ },
+ {
+  "ma": "VT_BUOMFE_DL",
+  "ten": "BƯỚM SẮT ĐÀI LOAN",
+  "ton": "Kg",
+  "mua": "Kg",
+  "ban": "Con",
+  "nguon": "ten_hang",
+  "doi": true,
+  "ly_do": "Bướm sắt mua cân ký, xưởng lắp đếm theo con"
+ },
+ {
+  "ma": "VT_BUOMFE_ST",
+  "ten": "BƯỚM SẮT SIÊU TRƯỜNG",
+  "ton": "Kg",
+  "mua": "Kg",
+  "ban": "Con",
+  "nguon": "ten_hang",
+  "doi": true,
+  "ly_do": "Bướm sắt mua cân ký, xưởng lắp đếm theo con"
+ },
+ {
+  "ma": "VT_CHNHUA",
+  "ten": "VÒNG NHỰA HÃM TRỤC",
+  "ton": "Kg",
+  "mua": "Kg",
+  "ban": "Cái",
+  "nguon": "dinh_muc",
+  "doi": true,
+  "ly_do": "ĐM ghi KG và CÁI: ron/vòng nhựa cân ký khi mua, dùng theo cái"
+ },
+ {
+  "ma": "VT_CHONGXOLO",
+  "ten": "CHỐNG XỔ LÔ",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_CONTAN_MV",
+  "ten": "CON TÁN",
+  "ton": "Kg",
+  "mua": "Kg",
+  "ban": "Con",
+  "nguon": "ten_hang",
+  "doi": true,
+  "ly_do": "Con tán cân ký khi mua, dùng theo con (mã CON TÁN 12 trong ĐM ghi KG/CON)"
+ },
+ {
+  "ma": "VT_DINHTAN_MV",
+  "ten": "ĐINH TÁN MẮT VÕNG",
+  "ton": "Kg",
+  "mua": "Kg",
+  "ban": "Con",
+  "nguon": "ten_hang",
+  "doi": true,
+  "ly_do": "Đinh tán cân ký khi mua, dùng đếm theo con"
+ },
+ {
+  "ma": "VT_DINHTAN_SN",
+  "ten": "ĐINH TÁN SONG NGANG",
+  "ton": "Kg",
+  "mua": "Kg",
+  "ban": "Con",
+  "nguon": "ten_hang",
+  "doi": true,
+  "ly_do": "Đinh tán cân ký khi mua, dùng đếm theo con"
+ },
+ {
+  "ma": "VT_GIAT",
+  "ten": "GIÁ T",
+  "ton": "Cặp",
+  "mua": "Cặp",
+  "ban": "Cặp",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_GOIFE",
+  "ten": "GỐI SẮT",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_GOIGANG",
+  "ten": "GỐI GANG",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cặp",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_HDK_MULLER",
+  "ten": "HỘP ĐIỀU KHIỂN MULLER",
+  "ton": "Bộ",
+  "mua": "Bộ",
+  "ban": "Bộ",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_HDKDT",
+  "ten": "BỘ ĐIỀU KHIỂN ĐIỆN THOẠI",
+  "ton": "Bộ",
+  "mua": "Bộ",
+  "ban": "Bộ",
+  "nguon": "ten_hang",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_HDKMT_BOS",
+  "ten": "HỘP ĐIỀU KHIỂN BOSTECH",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "ten_hang",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_HDKMTDON_CH",
+  "ten": "HỘP ĐIỀU KHIỂN TAIWAN",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "ten_hang",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_HOPKEM_1.2LY",
+  "ten": "HỘP KỄM 30X30X1.2LY",
+  "ton": "Cây",
+  "mua": "Cây",
+  "ban": "Mét",
+  "nguon": "ten_hang",
+  "doi": true,
+  "ly_do": "NCC bán nguyên cây, xưởng cắt dùng theo mét"
+ },
+ {
+  "ma": "VT_INOX",
+  "ten": "INOX KÉO TAY 6mét",
+  "ton": "Cây",
+  "mua": "Cây",
+  "ban": "Mét",
+  "nguon": "ten_hang",
+  "doi": true,
+  "ly_do": "NCC bán nguyên cây 6m, xưởng cắt dùng theo mét"
+ },
+ {
+  "ma": "VT_KN",
+  "ten": "KHÓA NGANG",
+  "ton": "Bộ",
+  "mua": "Bộ",
+  "ban": "Bộ",
+  "nguon": "dinh_muc",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_LACPHU33",
+  "ten": "LẮC PHỤ 33",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "ten_hang",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_LACPHU33_3L",
+  "ten": "LẮC PHỤ 33 (3 LỖ)",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "ten_hang",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_LACPHU36",
+  "ten": "LẮC PHỤ 36",
+  "ton": "Cái",
+  "mua": "Cái",
+  "ban": "Cái",
+  "nguon": "ten_hang",
+  "doi": false,
+  "ly_do": ""
+ }
+]

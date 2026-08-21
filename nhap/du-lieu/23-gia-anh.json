@@ -1,0 +1,961 @@
+{
+ "doctype": "Item Price",
+ "so_ban_ghi": 53,
+ "nguon": "alumdoor-gia-anh-2026-08-20",
+ "ban_ghi": [
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL595:m2:CHI_LA:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_TD_AL595",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "CHI_LA",
+    "rate": "1020000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn khe thoáng công nghệ Đức, AL595, áp dụng 31/07/2026. Chiết khấu đại lý = 15% × giá CHỈ LÁ = 153.000 đ/m², trừ cho cả hai biến thể. Đây là giá chỉ lá (mua tách món).",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CDUC_TD_AL595",
+   "content": "CDUC_TD_AL595 CHI_LA 1020000"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL595:m2:TANG_RAY:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_TD_AL595",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "TANG_RAY",
+    "rate": "1095000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn khe thoáng công nghệ Đức, AL595, áp dụng 31/07/2026. Chiết khấu đại lý = 15% × giá CHỈ LÁ = 153.000 đ/m², trừ cho cả hai biến thể. Đây là giá tặng ray — chỉ áp cho cửa từ 8 m² trở lên.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CDUC_TD_AL595",
+   "content": "CDUC_TD_AL595 TANG_RAY 1095000"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL71N:m2:CHI_LA:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_TD_AL71N",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "CHI_LA",
+    "rate": "1095000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn khe thoáng công nghệ Đức, AL71, áp dụng 31/07/2026. Chiết khấu đại lý = 15% × giá CHỈ LÁ = 164.250 đ/m², trừ cho cả hai biến thể. Đây là giá chỉ lá (mua tách món).",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CDUC_TD_AL71N",
+   "content": "CDUC_TD_AL71N CHI_LA 1095000"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL71N:m2:TANG_RAY:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_TD_AL71N",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "TANG_RAY",
+    "rate": "1170000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn khe thoáng công nghệ Đức, AL71, áp dụng 31/07/2026. Chiết khấu đại lý = 15% × giá CHỈ LÁ = 164.250 đ/m², trừ cho cả hai biến thể. Đây là giá tặng ray — chỉ áp cho cửa từ 8 m² trở lên.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CDUC_TD_AL71N",
+   "content": "CDUC_TD_AL71N TANG_RAY 1170000"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL503N26:m2:CHI_LA:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_TD_AL503N26",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "CHI_LA",
+    "rate": "1200000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn khe thoáng công nghệ Đức, AL503N, áp dụng 31/07/2026. Chiết khấu đại lý = 15% × giá CHỈ LÁ = 180.000 đ/m², trừ cho cả hai biến thể. Đây là giá chỉ lá (mua tách món).",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CDUC_TD_AL503N26",
+   "content": "CDUC_TD_AL503N26 CHI_LA 1200000"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL503N26:m2:TANG_RAY:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_TD_AL503N26",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "TANG_RAY",
+    "rate": "1275000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn khe thoáng công nghệ Đức, AL503N, áp dụng 31/07/2026. Chiết khấu đại lý = 15% × giá CHỈ LÁ = 180.000 đ/m², trừ cho cả hai biến thể. Đây là giá tặng ray — chỉ áp cho cửa từ 8 m² trở lên.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CDUC_TD_AL503N26",
+   "content": "CDUC_TD_AL503N26 TANG_RAY 1275000"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_ALD_548N:m2:CHI_LA:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_ALD_548N",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "CHI_LA",
+    "rate": "1287000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn khe thoáng công nghệ Đức, AL548N, áp dụng 31/07/2026. Chiết khấu đại lý = 15% × giá CHỈ LÁ = 193.050 đ/m², trừ cho cả hai biến thể. Đây là giá chỉ lá (mua tách món).",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CDUC_ALD_548N",
+   "content": "CDUC_ALD_548N CHI_LA 1287000"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_ALD_548N:m2:TANG_RAY:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_ALD_548N",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "TANG_RAY",
+    "rate": "1362000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn khe thoáng công nghệ Đức, AL548N, áp dụng 31/07/2026. Chiết khấu đại lý = 15% × giá CHỈ LÁ = 193.050 đ/m², trừ cho cả hai biến thể. Đây là giá tặng ray — chỉ áp cho cửa từ 8 m² trở lên.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CDUC_ALD_548N",
+   "content": "CDUC_ALD_548N TANG_RAY 1362000"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL501N:m2:CHI_LA:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_TD_AL501N",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "CHI_LA",
+    "rate": "1371000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn khe thoáng công nghệ Đức, AL501N, áp dụng 31/07/2026. Chiết khấu đại lý = 15% × giá CHỈ LÁ = 205.650 đ/m², trừ cho cả hai biến thể. Đây là giá chỉ lá (mua tách món).",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CDUC_TD_AL501N",
+   "content": "CDUC_TD_AL501N CHI_LA 1371000"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL501N:m2:TANG_RAY:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_TD_AL501N",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "TANG_RAY",
+    "rate": "1446000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn khe thoáng công nghệ Đức, AL501N, áp dụng 31/07/2026. Chiết khấu đại lý = 15% × giá CHỈ LÁ = 205.650 đ/m², trừ cho cả hai biến thể. Đây là giá tặng ray — chỉ áp cho cửa từ 8 m² trở lên.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CDUC_TD_AL501N",
+   "content": "CDUC_TD_AL501N TANG_RAY 1446000"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL652N:m2:CHI_LA:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_TD_AL652N",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "CHI_LA",
+    "rate": "1431000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn khe thoáng công nghệ Đức, AL652, áp dụng 31/07/2026. Chiết khấu đại lý = 15% × giá CHỈ LÁ = 214.650 đ/m², trừ cho cả hai biến thể. Đây là giá chỉ lá (mua tách món).",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CDUC_TD_AL652N",
+   "content": "CDUC_TD_AL652N CHI_LA 1431000"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL652N:m2:TANG_RAY:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_TD_AL652N",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "TANG_RAY",
+    "rate": "1506000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn khe thoáng công nghệ Đức, AL652, áp dụng 31/07/2026. Chiết khấu đại lý = 15% × giá CHỈ LÁ = 214.650 đ/m², trừ cho cả hai biến thể. Đây là giá tặng ray — chỉ áp cho cửa từ 8 m² trở lên.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CDUC_TD_AL652N",
+   "content": "CDUC_TD_AL652N TANG_RAY 1506000"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_ALD_DL552:m2:CHI_LA:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_ALD_DL552",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "CHI_LA",
+    "rate": "1540000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn khe thoáng công nghệ Đức, AL552, áp dụng 31/07/2026. Chiết khấu đại lý = 15% × giá CHỈ LÁ = 231.000 đ/m², trừ cho cả hai biến thể. Đây là giá chỉ lá (mua tách món).",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CDUC_ALD_DL552",
+   "content": "CDUC_ALD_DL552 CHI_LA 1540000"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_ALD_DL552:m2:TANG_RAY:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_ALD_DL552",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "TANG_RAY",
+    "rate": "1615000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn khe thoáng công nghệ Đức, AL552, áp dụng 31/07/2026. Chiết khấu đại lý = 15% × giá CHỈ LÁ = 231.000 đ/m², trừ cho cả hai biến thể. Đây là giá tặng ray — chỉ áp cho cửa từ 8 m² trở lên.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CDUC_ALD_DL552",
+   "content": "CDUC_ALD_DL552 TANG_RAY 1615000"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL752N:m2:CHI_LA:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_TD_AL752N",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "CHI_LA",
+    "rate": "1566000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn khe thoáng công nghệ Đức, AL752, áp dụng 31/07/2026. Chiết khấu đại lý = 15% × giá CHỈ LÁ = 234.900 đ/m², trừ cho cả hai biến thể. Đây là giá chỉ lá (mua tách món).",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CDUC_TD_AL752N",
+   "content": "CDUC_TD_AL752N CHI_LA 1566000"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL752N:m2:TANG_RAY:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_TD_AL752N",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "TANG_RAY",
+    "rate": "1641000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn khe thoáng công nghệ Đức, AL752, áp dụng 31/07/2026. Chiết khấu đại lý = 15% × giá CHỈ LÁ = 234.900 đ/m², trừ cho cả hai biến thể. Đây là giá tặng ray — chỉ áp cho cửa từ 8 m² trở lên.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CDUC_TD_AL752N",
+   "content": "CDUC_TD_AL752N TANG_RAY 1641000"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL50:m2:CHI_LA:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_TD_AL50",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "CHI_LA",
+    "rate": "1685000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn khe thoáng công nghệ Đức, AL50, áp dụng 31/07/2026. Chiết khấu đại lý = 15% × giá CHỈ LÁ = 252.750 đ/m², trừ cho cả hai biến thể. Đây là giá chỉ lá (mua tách món).",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CDUC_TD_AL50",
+   "content": "CDUC_TD_AL50 CHI_LA 1685000"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL50:m2:TANG_RAY:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_TD_AL50",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "TANG_RAY",
+    "rate": "1760000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn khe thoáng công nghệ Đức, AL50, áp dụng 31/07/2026. Chiết khấu đại lý = 15% × giá CHỈ LÁ = 252.750 đ/m², trừ cho cả hai biến thể. Đây là giá tặng ray — chỉ áp cho cửa từ 8 m² trở lên.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CDUC_TD_AL50",
+   "content": "CDUC_TD_AL50 TANG_RAY 1760000"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_ALVIP50:m2:CHI_LA:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_ALVIP50",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "CHI_LA",
+    "rate": "1778000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn khe thoáng công nghệ Đức, VIP50, áp dụng 31/07/2026. Chiết khấu đại lý = 15% × giá CHỈ LÁ = 266.700 đ/m², trừ cho cả hai biến thể. Đây là giá chỉ lá (mua tách món).",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CDUC_ALVIP50",
+   "content": "CDUC_ALVIP50 CHI_LA 1778000"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_ALVIP50:m2:TANG_RAY:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_ALVIP50",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "TANG_RAY",
+    "rate": "1853000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn khe thoáng công nghệ Đức, VIP50, áp dụng 31/07/2026. Chiết khấu đại lý = 15% × giá CHỈ LÁ = 266.700 đ/m², trừ cho cả hai biến thể. Đây là giá tặng ray — chỉ áp cho cửa từ 8 m² trở lên.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CDUC_ALVIP50",
+   "content": "CDUC_ALVIP50 TANG_RAY 1853000"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_ALVIPST500:m2:CHI_LA:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_ALVIPST500",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "CHI_LA",
+    "rate": "2108000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn khe thoáng công nghệ Đức, VIP-ST500, áp dụng 31/07/2026. Chiết khấu đại lý = 15% × giá CHỈ LÁ = 316.200 đ/m², trừ cho cả hai biến thể. Đây là giá chỉ lá (mua tách món).",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CDUC_ALVIPST500",
+   "content": "CDUC_ALVIPST500 CHI_LA 2108000"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_ALVIPST500:m2:TANG_RAY:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_ALVIPST500",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "TANG_RAY",
+    "rate": "2183000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn khe thoáng công nghệ Đức, VIP-ST500, áp dụng 31/07/2026. Chiết khấu đại lý = 15% × giá CHỈ LÁ = 316.200 đ/m², trừ cho cả hai biến thể. Đây là giá tặng ray — chỉ áp cho cửa từ 8 m² trở lên.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CDUC_ALVIPST500",
+   "content": "CDUC_ALVIPST500 TANG_RAY 2183000"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_ALVIPST700:m2:CHI_LA:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_ALVIPST700",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "CHI_LA",
+    "rate": "2223000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn khe thoáng công nghệ Đức, VIP-ST700, áp dụng 31/07/2026. Chiết khấu đại lý = 15% × giá CHỈ LÁ = 333.450 đ/m², trừ cho cả hai biến thể. Đây là giá chỉ lá (mua tách món).",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CDUC_ALVIPST700",
+   "content": "CDUC_ALVIPST700 CHI_LA 2223000"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_ALVIPST700:m2:TANG_RAY:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_ALVIPST700",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "TANG_RAY",
+    "rate": "2298000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn khe thoáng công nghệ Đức, VIP-ST700, áp dụng 31/07/2026. Chiết khấu đại lý = 15% × giá CHỈ LÁ = 333.450 đ/m², trừ cho cả hai biến thể. Đây là giá tặng ray — chỉ áp cho cửa từ 8 m² trở lên.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CDUC_ALVIPST700",
+   "content": "CDUC_ALVIPST700 TANG_RAY 2298000"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL70:m2:CHI_LA:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_TD_AL70",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "CHI_LA",
+    "rate": "843000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn khe thoáng công nghệ Đức, AL70 (2 LỚP), áp dụng 31/07/2026. Chiết khấu đại lý = 15% × giá CHỈ LÁ = 126.450 đ/m², trừ cho cả hai biến thể. Đây là giá chỉ lá (mua tách món).",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CDUC_TD_AL70",
+   "content": "CDUC_TD_AL70 CHI_LA 843000"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_TD_AL70:m2:TANG_RAY:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_TD_AL70",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "TANG_RAY",
+    "rate": "918000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn khe thoáng công nghệ Đức, AL70 (2 LỚP), áp dụng 31/07/2026. Chiết khấu đại lý = 15% × giá CHỈ LÁ = 126.450 đ/m², trừ cho cả hai biến thể. Đây là giá tặng ray — chỉ áp cho cửa từ 8 m² trở lên.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CDUC_TD_AL70",
+   "content": "CDUC_TD_AL70 TANG_RAY 918000"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_AL70_1LOP:m2:CHI_LA:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_AL70_1LOP",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "CHI_LA",
+    "rate": "1146000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn khe thoáng công nghệ Đức, AL70 (1 LỚP), áp dụng 31/07/2026. Chiết khấu đại lý = 15% × giá CHỈ LÁ = 171.900 đ/m², trừ cho cả hai biến thể. Đây là giá chỉ lá (mua tách món).",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CDUC_AL70_1LOP",
+   "content": "CDUC_AL70_1LOP CHI_LA 1146000"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_AL70_1LOP:m2:TANG_RAY:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_AL70_1LOP",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "TANG_RAY",
+    "rate": "1221000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn khe thoáng công nghệ Đức, AL70 (1 LỚP), áp dụng 31/07/2026. Chiết khấu đại lý = 15% × giá CHỈ LÁ = 171.900 đ/m², trừ cho cả hai biến thể. Đây là giá tặng ray — chỉ áp cho cửa từ 8 m² trở lên.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CDUC_AL70_1LOP",
+   "content": "CDUC_AL70_1LOP TANG_RAY 1221000"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_AL75:m2:CHI_LA:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_AL75",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "CHI_LA",
+    "rate": "1303000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn khe thoáng công nghệ Đức, AL75, áp dụng 31/07/2026. Chiết khấu đại lý = 15% × giá CHỈ LÁ = 195.450 đ/m², trừ cho cả hai biến thể. Đây là giá chỉ lá (mua tách món).",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CDUC_AL75",
+   "content": "CDUC_AL75 CHI_LA 1303000"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_AL75:m2:TANG_RAY:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_AL75",
+    "item_group": "Cửa CN Đức",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "TANG_RAY",
+    "rate": "1378000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn khe thoáng công nghệ Đức, AL75, áp dụng 31/07/2026. Chiết khấu đại lý = 15% × giá CHỈ LÁ = 195.450 đ/m², trừ cho cả hai biến thể. Đây là giá tặng ray — chỉ áp cho cửa từ 8 m² trở lên.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CDUC_AL75",
+   "content": "CDUC_AL75 TANG_RAY 1378000"
+  },
+  {
+   "name": "Alumdoor 2026:CUC_UC_KT_4D:m2:KEO_TAY:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CUC_UC_KT_4D",
+    "item_group": "Cửa tấm liền Úc",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "KEO_TAY",
+    "rate": "365000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn tấm liền công nghệ Úc, 4 Dem, áp dụng 31/07/2026. Đơn giá ĐÃ gồm phụ kiện hoàn thiện (trục, ray, puly, lò xo, cùm gang, giá đỡ T). Phụ thu 300.000đ nếu cửa dưới 7 m².",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CUC_UC_KT_4D",
+   "content": "CUC_UC_KT_4D KEO_TAY 365000"
+  },
+  {
+   "name": "Alumdoor 2026:CUC_UC_MTN_4D:m2:MOTOR_NGOAI:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CUC_UC_MTN_4D",
+    "item_group": "Cửa tấm liền Úc",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "MOTOR_NGOAI",
+    "rate": "345000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn tấm liền công nghệ Úc, 4 Dem, áp dụng 31/07/2026. Đơn giá ĐÃ gồm phụ kiện hoàn thiện (trục, ray, puly, lò xo, cùm gang, giá đỡ T). Phụ thu 300.000đ nếu cửa dưới 7 m².",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CUC_UC_MTN_4D",
+   "content": "CUC_UC_MTN_4D MOTOR_NGOAI 345000"
+  },
+  {
+   "name": "Alumdoor 2026:CUC_UC_KT_4_6D:m2:KEO_TAY:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CUC_UC_KT_4_6D",
+    "item_group": "Cửa tấm liền Úc",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "KEO_TAY",
+    "rate": "395000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn tấm liền công nghệ Úc, 4.3 - 4.7 Dem, áp dụng 31/07/2026. Đơn giá ĐÃ gồm phụ kiện hoàn thiện (trục, ray, puly, lò xo, cùm gang, giá đỡ T). Phụ thu 300.000đ nếu cửa dưới 7 m².",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CUC_UC_KT_4_6D",
+   "content": "CUC_UC_KT_4_6D KEO_TAY 395000"
+  },
+  {
+   "name": "Alumdoor 2026:CUC_UC_MTN_4_6D:m2:MOTOR_NGOAI:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CUC_UC_MTN_4_6D",
+    "item_group": "Cửa tấm liền Úc",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "MOTOR_NGOAI",
+    "rate": "375000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn tấm liền công nghệ Úc, 4.3 - 4.7 Dem, áp dụng 31/07/2026. Đơn giá ĐÃ gồm phụ kiện hoàn thiện (trục, ray, puly, lò xo, cùm gang, giá đỡ T). Phụ thu 300.000đ nếu cửa dưới 7 m².",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CUC_UC_MTN_4_6D",
+   "content": "CUC_UC_MTN_4_6D MOTOR_NGOAI 375000"
+  },
+  {
+   "name": "Alumdoor 2026:CUC_UC_KT_5_5D:m2:KEO_TAY:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CUC_UC_KT_5_5D",
+    "item_group": "Cửa tấm liền Úc",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "KEO_TAY",
+    "rate": "425000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn tấm liền công nghệ Úc, 4.8 - 5.2 Dem, áp dụng 31/07/2026. Đơn giá ĐÃ gồm phụ kiện hoàn thiện (trục, ray, puly, lò xo, cùm gang, giá đỡ T). Phụ thu 300.000đ nếu cửa dưới 7 m².",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CUC_UC_KT_5_5D",
+   "content": "CUC_UC_KT_5_5D KEO_TAY 425000"
+  },
+  {
+   "name": "Alumdoor 2026:CUC_UC_MTN_5_5D:m2:MOTOR_NGOAI:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CUC_UC_MTN_5_5D",
+    "item_group": "Cửa tấm liền Úc",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "MOTOR_NGOAI",
+    "rate": "405000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn tấm liền công nghệ Úc, 4.8 - 5.2 Dem, áp dụng 31/07/2026. Đơn giá ĐÃ gồm phụ kiện hoàn thiện (trục, ray, puly, lò xo, cùm gang, giá đỡ T). Phụ thu 300.000đ nếu cửa dưới 7 m².",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CUC_UC_MTN_5_5D",
+   "content": "CUC_UC_MTN_5_5D MOTOR_NGOAI 405000"
+  },
+  {
+   "name": "Alumdoor 2026:CUC_UC_KT_6D:m2:KEO_TAY:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CUC_UC_KT_6D",
+    "item_group": "Cửa tấm liền Úc",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "KEO_TAY",
+    "rate": "485000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn tấm liền công nghệ Úc, Sơn tĩnh điện 6 Dem, áp dụng 31/07/2026. Đơn giá ĐÃ gồm phụ kiện hoàn thiện (trục, ray, puly, lò xo, cùm gang, giá đỡ T). Phụ thu 300.000đ nếu cửa dưới 7 m².",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CUC_UC_KT_6D",
+   "content": "CUC_UC_KT_6D KEO_TAY 485000"
+  },
+  {
+   "name": "Alumdoor 2026:CUC_UC_MTN_6D:m2:MOTOR_NGOAI:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CUC_UC_MTN_6D",
+    "item_group": "Cửa tấm liền Úc",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "MOTOR_NGOAI",
+    "rate": "465000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn tấm liền công nghệ Úc, Sơn tĩnh điện 6 Dem, áp dụng 31/07/2026. Đơn giá ĐÃ gồm phụ kiện hoàn thiện (trục, ray, puly, lò xo, cùm gang, giá đỡ T). Phụ thu 300.000đ nếu cửa dưới 7 m².",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CUC_UC_MTN_6D",
+   "content": "CUC_UC_MTN_6D MOTOR_NGOAI 465000"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_DUC_KT_AL70:m2:KEO_TAY:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_DUC_KT_AL70",
+    "item_group": "Cửa tấm liền Úc",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "KEO_TAY",
+    "rate": "830000",
+    "currency": "VND",
+    "note": "Bảng giá cửa Úc, dòng AL70 (nan nhôm), áp dụng 31/07/2026. Giá này CHƯA gồm ray và khóa ngang.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CDUC_DUC_KT_AL70",
+   "content": "CDUC_DUC_KT_AL70 KEO_TAY 830000"
+  },
+  {
+   "name": "Alumdoor 2026:CDUC_DUC_KT_AL70_2_LOP:m2:KEO_TAY:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDUC_DUC_KT_AL70_2_LOP",
+    "item_group": "Cửa tấm liền Úc",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "KEO_TAY",
+    "rate": "830000",
+    "currency": "VND",
+    "note": "Bảng giá cửa Úc, dòng AL70 (nan nhôm), áp dụng 31/07/2026. Giá này CHƯA gồm ray và khóa ngang.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CDUC_DUC_KT_AL70_2_LOP",
+   "content": "CDUC_DUC_KT_AL70_2_LOP KEO_TAY 830000"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOI_MV_TM:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CLUOI_LUOI_MV_TM",
+    "item_group": "Cửa Lưới",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "450000",
+    "currency": "VND",
+    "note": "Bảng giá cửa lưới Đài Loan, Lưới mắt võng, sắt sơn tĩnh điện, chưa phụ kiện. Ống Ø13.8 x 1.1mm. Áp dụng 31/07/2026. Đơn giá hoàn thiện gồm trục, lưới, lá Đài Loan, V đáy, ray 7p-1.2mm. Dưới 7 m² phụ thu 300.000đ/bộ. Hàng thô không sơn GIẢM 70.000đ/m².",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CLUOI_LUOI_MV_TM",
+   "content": "CLUOI_LUOI_MV_TM STANDARD 450000"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOI_MV_TRONBO:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CLUOI_LUOI_MV_TRONBO",
+    "item_group": "Cửa Lưới",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "590000",
+    "currency": "VND",
+    "note": "Bảng giá cửa lưới Đài Loan, Lưới mắt võng, sắt sơn tĩnh điện, có phụ kiện. Áp dụng 31/07/2026. Đơn giá hoàn thiện gồm trục, lưới, lá Đài Loan, V đáy, ray 7p-1.2mm. Dưới 7 m² phụ thu 300.000đ/bộ. Hàng thô không sơn GIẢM 70.000đ/m².",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CLUOI_LUOI_MV_TRONBO",
+   "content": "CLUOI_LUOI_MV_TRONBO STANDARD 590000"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOIMV_INOX_TM:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CLUOI_LUOIMV_INOX_TM",
+    "item_group": "Cửa Lưới",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1290000",
+    "currency": "VND",
+    "note": "Bảng giá cửa lưới Đài Loan, Lưới mắt võng, inox 304, chưa phụ kiện. Ống Ø12.7 x 1.1mm. Áp dụng 31/07/2026. Đơn giá hoàn thiện gồm trục, lưới, lá Đài Loan, V đáy, ray 7p-1.2mm. Dưới 7 m² phụ thu 300.000đ/bộ. Hàng thô không sơn GIẢM 70.000đ/m².",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CLUOI_LUOIMV_INOX_TM",
+   "content": "CLUOI_LUOIMV_INOX_TM STANDARD 1290000"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOIMV_INOX_TRONBO:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CLUOI_LUOIMV_INOX_TRONBO",
+    "item_group": "Cửa Lưới",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1530000",
+    "currency": "VND",
+    "note": "Bảng giá cửa lưới Đài Loan, Lưới mắt võng, inox 304, có phụ kiện. Áp dụng 31/07/2026. Đơn giá hoàn thiện gồm trục, lưới, lá Đài Loan, V đáy, ray 7p-1.2mm. Dưới 7 m² phụ thu 300.000đ/bộ. Hàng thô không sơn GIẢM 70.000đ/m².",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CLUOI_LUOIMV_INOX_TRONBO",
+   "content": "CLUOI_LUOIMV_INOX_TRONBO STANDARD 1530000"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOI_SN13X26_TACHMON:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CLUOI_LUOI_SN13X26_TACHMON",
+    "item_group": "Cửa Lưới",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "570000",
+    "currency": "VND",
+    "note": "Bảng giá cửa lưới Đài Loan, Lưới song ngang 13/26, sắt sơn tĩnh điện, chưa phụ kiện. Ống hộp 13x26 x 1.1mm. Áp dụng 31/07/2026. Đơn giá hoàn thiện gồm trục, lưới, lá Đài Loan, V đáy, ray 7p-1.2mm. Dưới 7 m² phụ thu 300.000đ/bộ. Hàng thô không sơn GIẢM 70.000đ/m².",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CLUOI_LUOI_SN13X26_TACHMON",
+   "content": "CLUOI_LUOI_SN13X26_TACHMON STANDARD 570000"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOI_SN13X26_TRONBO:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CLUOI_LUOI_SN13X26_TRONBO",
+    "item_group": "Cửa Lưới",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "750000",
+    "currency": "VND",
+    "note": "Bảng giá cửa lưới Đài Loan, Lưới song ngang 13/26, sắt sơn tĩnh điện, có phụ kiện. Áp dụng 31/07/2026. Đơn giá hoàn thiện gồm trục, lưới, lá Đài Loan, V đáy, ray 7p-1.2mm. Dưới 7 m² phụ thu 300.000đ/bộ. Hàng thô không sơn GIẢM 70.000đ/m².",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CLUOI_LUOI_SN13X26_TRONBO",
+   "content": "CLUOI_LUOI_SN13X26_TRONBO STANDARD 750000"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOI_SN13X26_INOX_TACHMON:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CLUOI_LUOI_SN13X26_INOX_TACHMON",
+    "item_group": "Cửa Lưới",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1500000",
+    "currency": "VND",
+    "note": "Bảng giá cửa lưới Đài Loan, Lưới song ngang 13/26, inox 304, chưa phụ kiện. Ống inox hộp 13x26 x 0.9mm. Áp dụng 31/07/2026. Đơn giá hoàn thiện gồm trục, lưới, lá Đài Loan, V đáy, ray 7p-1.2mm. Dưới 7 m² phụ thu 300.000đ/bộ. Hàng thô không sơn GIẢM 70.000đ/m².",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CLUOI_LUOI_SN13X26_INOX_TACHMON",
+   "content": "CLUOI_LUOI_SN13X26_INOX_TACHMON STANDARD 1500000"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOI_SN13X26_INOX_TRONBO:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CLUOI_LUOI_SN13X26_INOX_TRONBO",
+    "item_group": "Cửa Lưới",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1710000",
+    "currency": "VND",
+    "note": "Bảng giá cửa lưới Đài Loan, Lưới song ngang 13/26, inox 304, có phụ kiện. Áp dụng 31/07/2026. Đơn giá hoàn thiện gồm trục, lưới, lá Đài Loan, V đáy, ray 7p-1.2mm. Dưới 7 m² phụ thu 300.000đ/bộ. Hàng thô không sơn GIẢM 70.000đ/m².",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CLUOI_LUOI_SN13X26_INOX_TRONBO",
+   "content": "CLUOI_LUOI_SN13X26_INOX_TRONBO STANDARD 1710000"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOI_SN_TM:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CLUOI_LUOI_SN_TM",
+    "item_group": "Cửa Lưới",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "490000",
+    "currency": "VND",
+    "note": "Bảng giá cửa lưới Đài Loan, Lưới song ngang Ø19, sắt sơn tĩnh điện, chưa phụ kiện. Ống Ø19 x 1.1mm. Áp dụng 31/07/2026. Đơn giá hoàn thiện gồm trục, lưới, lá Đài Loan, V đáy, ray 7p-1.2mm. Dưới 7 m² phụ thu 300.000đ/bộ. Hàng thô không sơn GIẢM 70.000đ/m².",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CLUOI_LUOI_SN_TM",
+   "content": "CLUOI_LUOI_SN_TM STANDARD 490000"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOI_SN_TRONBO:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CLUOI_LUOI_SN_TRONBO",
+    "item_group": "Cửa Lưới",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "630000",
+    "currency": "VND",
+    "note": "Bảng giá cửa lưới Đài Loan, Lưới song ngang Ø19, sắt sơn tĩnh điện, có phụ kiện. Áp dụng 31/07/2026. Đơn giá hoàn thiện gồm trục, lưới, lá Đài Loan, V đáy, ray 7p-1.2mm. Dưới 7 m² phụ thu 300.000đ/bộ. Hàng thô không sơn GIẢM 70.000đ/m².",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CLUOI_LUOI_SN_TRONBO",
+   "content": "CLUOI_LUOI_SN_TRONBO STANDARD 630000"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOI_SNPHI19_INOX_TM:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CLUOI_LUOI_SNPHI19_INOX_TM",
+    "item_group": "Cửa Lưới",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1290000",
+    "currency": "VND",
+    "note": "Bảng giá cửa lưới Đài Loan, Lưới song ngang Ø19, inox 304, chưa phụ kiện. Ống Ø19 x 0.9mm. Áp dụng 31/07/2026. Đơn giá hoàn thiện gồm trục, lưới, lá Đài Loan, V đáy, ray 7p-1.2mm. Dưới 7 m² phụ thu 300.000đ/bộ. Hàng thô không sơn GIẢM 70.000đ/m².",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CLUOI_LUOI_SNPHI19_INOX_TM",
+   "content": "CLUOI_LUOI_SNPHI19_INOX_TM STANDARD 1290000"
+  },
+  {
+   "name": "Alumdoor 2026:CLUOI_LUOI_SNPHI19_INOX_TRONBO:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CLUOI_LUOI_SNPHI19_INOX_TRONBO",
+    "item_group": "Cửa Lưới",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1530000",
+    "currency": "VND",
+    "note": "Bảng giá cửa lưới Đài Loan, Lưới song ngang Ø19, inox 304, có phụ kiện. Áp dụng 31/07/2026. Đơn giá hoàn thiện gồm trục, lưới, lá Đài Loan, V đáy, ray 7p-1.2mm. Dưới 7 m² phụ thu 300.000đ/bộ. Hàng thô không sơn GIẢM 70.000đ/m².",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "CLUOI_LUOI_SNPHI19_INOX_TRONBO",
+   "content": "CLUOI_LUOI_SNPHI19_INOX_TRONBO STANDARD 1530000"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLM_1LY_K175:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_DLM_1LY_K175",
+    "item_group": "Cửa Siêu Trường",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "440000",
+    "currency": "VND",
+    "note": "Bảng giá cửa cuốn siêu trường bản 100, lá Đài Loan mạ màu 1.0 LY (±8%). Áp dụng 31/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-anh-2026-08-20"
+   },
+   "title": "LA_DLM_1LY_K175",
+   "content": "LA_DLM_1LY_K175 STANDARD 440000"
+  }
+ ]
+}

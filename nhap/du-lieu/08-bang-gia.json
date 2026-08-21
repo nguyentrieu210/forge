@@ -1,0 +1,22 @@
+{
+ "doctype": "Price List",
+ "trich_luc_luc": "2026-08-20T13:30:35.704Z",
+ "nguon": "work/pricing-preimage.json — Price List Alumdoor 2026",
+ "so_ban_ghi": 1,
+ "ban_ghi": [
+  {
+   "name": "Alumdoor 2026",
+   "payload": {
+    "price_list_name": "Alumdoor 2026",
+    "customer_group": "",
+    "effective_date": "2026-01-01",
+    "currency": "VND",
+    "note": "Bảng giá DUY NHẤT. Để trống `customer_group` là cố ý: đại lý và bán lẻ dùng chung bảng này, phần chênh nằm ở Pricing Rule.",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20"
+   },
+   "title": "Alumdoor 2026",
+   "content": "Alumdoor 2026 bảng giá bán chung đại lý lẻ"
+  }
+ ]
+}

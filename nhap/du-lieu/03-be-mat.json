@@ -1,0 +1,123 @@
+{
+  "doctype": "Surface Finish",
+  "trich_luc_luc": "2026-08-20T10:57:40.784Z",
+  "nguon": "D1 cục bộ — fixture app alumdoor 2.10.0 + seed canonical layer0",
+  "so_ban_ghi": 4,
+  "ban_ghi": [
+    {
+      "name": "MA_MAU",
+      "payload": {
+        "finish_code": "MA_MAU",
+        "finish_name": "MẠ MÀU",
+        "requires_color": true,
+        "applies_to_groups": [
+          {
+            "row_id": "SCOPE-01",
+            "item_group": "Cửa tấm liền Úc"
+          },
+          {
+            "row_id": "SCOPE-02",
+            "item_group": "Cửa Đài Loan"
+          }
+        ],
+        "excluded_groups": [],
+        "excluded_items": [],
+        "applies_to_all_groups": false,
+        "usage_scope": "Mua & bán",
+        "disabled": false
+      },
+      "title": "MẠ MÀU",
+      "content": "MA_MAU MẠ MÀU"
+    },
+    {
+      "name": "SON_TINH_DIEN",
+      "payload": {
+        "finish_code": "SON_TINH_DIEN",
+        "finish_name": "SƠN TĨNH ĐIỆN",
+        "requires_color": true,
+        "applies_to_groups": [
+          {
+            "row_id": "SCOPE-01",
+            "item_group": "Cửa CN Đức"
+          },
+          {
+            "row_id": "SCOPE-02",
+            "item_group": "Cửa tấm liền Úc"
+          },
+          {
+            "row_id": "SCOPE-03",
+            "item_group": "Cửa Siêu Trường"
+          },
+          {
+            "row_id": "SCOPE-04",
+            "item_group": "Cửa Đài Loan"
+          },
+          {
+            "row_id": "SCOPE-05",
+            "item_group": "Cửa Lưới"
+          },
+          {
+            "row_id": "SCOPE-06",
+            "item_group": "Phụ kiện cần sơn tĩnh điện"
+          }
+        ],
+        "excluded_groups": [],
+        "excluded_items": [],
+        "applies_to_all_groups": false,
+        "usage_scope": "Mua & bán",
+        "disabled": false
+      },
+      "title": "SƠN TĨNH ĐIỆN",
+      "content": "SON_TINH_DIEN SƠN TĨNH ĐIỆN"
+    },
+    {
+      "name": "SON_VAN_GO",
+      "payload": {
+        "finish_code": "SON_VAN_GO",
+        "finish_name": "SƠN VÂN GỖ",
+        "requires_color": true,
+        "applies_to_groups": [
+          {
+            "row_id": "SCOPE-01",
+            "item_group": "Cửa CN Đức"
+          },
+          {
+            "row_id": "SCOPE-02",
+            "item_group": "Cửa tấm liền Úc"
+          },
+          {
+            "row_id": "SCOPE-03",
+            "item_group": "Cửa Siêu Trường"
+          },
+          {
+            "row_id": "SCOPE-04",
+            "item_group": "Cửa Đài Loan"
+          }
+        ],
+        "excluded_groups": [],
+        "excluded_items": [],
+        "applies_to_all_groups": false,
+        "usage_scope": "Mua & bán",
+        "disabled": false
+      },
+      "title": "SƠN VÂN GỖ",
+      "content": "SON_VAN_GO SƠN VÂN GỖ"
+    },
+    {
+      "name": "THO",
+      "payload": {
+        "finish_code": "THO",
+        "finish_name": "THÔ",
+        "requires_color": false,
+        "applies_to_groups": [],
+        "excluded_groups": [],
+        "excluded_items": [],
+        "applies_to_all_groups": true,
+        "usage_scope": "Mua hàng",
+        "disabled": false
+      },
+      "title": "THÔ",
+      "content": "THO THÔ"
+    }
+  ]
+}

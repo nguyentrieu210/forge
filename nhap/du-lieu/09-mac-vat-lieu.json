@@ -1,0 +1,60 @@
+{
+ "doctype": "Material Grade",
+ "trich_luc_luc": "2026-08-20T13:30:35.828Z",
+ "nguon": "suy từ mã + tên hàng trong D1",
+ "so_ban_ghi": 4,
+ "ban_ghi": [
+  {
+   "name": "TON-DL-MAU",
+   "payload": {
+    "grade_code": "TON-DL-MAU",
+    "grade_name": "Tôn màu Đài Loan",
+    "material_family": "Thép mạ màu",
+    "note": "Suy từ mã hàng + tên hàng, hai bên đồng ý. Khối lượng riêng chưa khai.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-vat-lieu-2026-08-20"
+   },
+   "title": "Tôn màu Đài Loan",
+   "content": "TON-DL-MAU Tôn màu Đài Loan Thép mạ màu"
+  },
+  {
+   "name": "TON-DL-KEM",
+   "payload": {
+    "grade_code": "TON-DL-KEM",
+    "grade_name": "Tôn kẽm Đài Loan",
+    "material_family": "Thép mạ kẽm",
+    "note": "Suy từ mã hàng + tên hàng, hai bên đồng ý. Khối lượng riêng chưa khai.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-vat-lieu-2026-08-20"
+   },
+   "title": "Tôn kẽm Đài Loan",
+   "content": "TON-DL-KEM Tôn kẽm Đài Loan Thép mạ kẽm"
+  },
+  {
+   "name": "TON-UC",
+   "payload": {
+    "grade_code": "TON-UC",
+    "grade_name": "Tôn Úc",
+    "material_family": "Thép mạ màu",
+    "note": "Suy từ mã hàng + tên hàng, hai bên đồng ý. Khối lượng riêng chưa khai.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-vat-lieu-2026-08-20"
+   },
+   "title": "Tôn Úc",
+   "content": "TON-UC Tôn Úc Thép mạ màu"
+  },
+  {
+   "name": "LA-INOX",
+   "payload": {
+    "grade_code": "LA-INOX",
+    "grade_name": "Lá inox Đài Loan",
+    "material_family": "Thép không gỉ",
+    "note": "Suy từ mã hàng + tên hàng, hai bên đồng ý. Khối lượng riêng chưa khai.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-vat-lieu-2026-08-20"
+   },
+   "title": "Lá inox Đài Loan",
+   "content": "LA-INOX Lá inox Đài Loan Thép không gỉ"
+  }
+ ]
+}

@@ -1,0 +1,3726 @@
+{
+ "nguon": "MS LIÊN BS.xlsx sheet ĐM, cột Giá bán",
+ "so_dong": 372,
+ "dong": [
+  {
+   "dong": 7,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "CON LĂN",
+   "ten_vat_tu": "CON LĂN",
+   "ma_nguon": "TP-CON LĂN",
+   "dvt": "CẶP",
+   "dinh_muc": 1.0,
+   "gia_ban": 100000.0
+  },
+  {
+   "dong": 13,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "PULY 114L",
+   "ten_vat_tu": "PULY 114 LỚN",
+   "ma_nguon": "TP-PULY 114L",
+   "dvt": "CÁI",
+   "dinh_muc": 1.0,
+   "gia_ban": 30000.0
+  },
+  {
+   "dong": 14,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "PULY 114N",
+   "ten_vat_tu": "PULY 114 NHỎ",
+   "ma_nguon": "TP-PULY 114N",
+   "dvt": "CÁI",
+   "dinh_muc": 1.0,
+   "gia_ban": 22000.0
+  },
+  {
+   "dong": 15,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "PULY 140",
+   "ten_vat_tu": "PULY 140",
+   "ma_nguon": "TP-PULY 140",
+   "dvt": "CÁI",
+   "dinh_muc": 1.0,
+   "gia_ban": 33000.0
+  },
+  {
+   "dong": 16,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "PULY 168",
+   "ten_vat_tu": "PULY 168",
+   "ma_nguon": "TP-PULY 168",
+   "dvt": "CÁI",
+   "dinh_muc": 1.0,
+   "gia_ban": 43000.0
+  },
+  {
+   "dong": 17,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "CÒI",
+   "ten_vat_tu": "CÒI BÁO ĐỘNG",
+   "ma_nguon": "TP-COI",
+   "dvt": "CÁI",
+   "dinh_muc": 1.0,
+   "gia_ban": 70000.0
+  },
+  {
+   "dong": 18,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "HỆ THỐNG TỰ DỪNG",
+   "ten_vat_tu": "HỆ THỐNG TỰ DỪNG",
+   "ma_nguon": "TP-HTTD",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 80000.0
+  },
+  {
+   "dong": 19,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "TRỤC 114_1.8LY",
+   "ten_vat_tu": "TP-TRỤC 114_1.8LY",
+   "ma_nguon": "TRỤC 114_1.8LY",
+   "dvt": "KG/M",
+   "dinh_muc": 4.4,
+   "gia_ban": 180000.0
+  },
+  {
+   "dong": 20,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "TRỤC 114_2.1LY",
+   "ten_vat_tu": "TP-TRỤC 114_2.1LY",
+   "ma_nguon": "TRỤC 114_2.1LY",
+   "dvt": "KG/M",
+   "dinh_muc": 4.7,
+   "gia_ban": 200000.0
+  },
+  {
+   "dong": 21,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "RAY HỘP TD U76",
+   "ten_vat_tu": "TP-RHM8",
+   "ma_nguon": "TP-RAYHOP",
+   "dvt": "KG/M",
+   "dinh_muc": 1.083,
+   "gia_ban": 190000.0
+  },
+  {
+   "dong": 25,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "RAY ĐƠN TD U76",
+   "ten_vat_tu": "TP RAY ĐƠN TD",
+   "ma_nguon": "TP-TD87A1 GS",
+   "dvt": "KG/M",
+   "dinh_muc": 0.6,
+   "gia_ban": 145000.0
+  },
+  {
+   "dong": 29,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "RAY HỘP TD U100",
+   "ten_vat_tu": "TP RAY HỘP TD U100",
+   "ma_nguon": "TP-RAY HỘP TD U100",
+   "dvt": "KG/M",
+   "dinh_muc": 1.419,
+   "gia_ban": 250000.0
+  },
+  {
+   "dong": 33,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "PHỤ THU SƠN RAY MSK",
+   "ten_vat_tu": "PHỤ THU SƠN RAY MSK",
+   "ma_nguon": "PHUTHU_SONRAY_MSK",
+   "dvt": "M",
+   "dinh_muc": 1.0,
+   "gia_ban": 15000.0
+  },
+  {
+   "dong": 34,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL595 - GS",
+   "ten_vat_tu": "ĐỨC AL595 - GS",
+   "ma_nguon": "TD-AL595 GS",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 1095000.0
+  },
+  {
+   "dong": 42,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐẦU",
+   "ten_vat_tu": "TP-LÁ ĐẦU",
+   "ma_nguon": "TP-A282",
+   "dvt": "M",
+   "dinh_muc": 1.0,
+   "gia_ban": 170000.0
+  },
+  {
+   "dong": 44,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ YẾM",
+   "ten_vat_tu": "TP-LÁ YẾM",
+   "ma_nguon": "TP-TD327",
+   "dvt": "M",
+   "dinh_muc": 1.0,
+   "gia_ban": 46000.0
+  },
+  {
+   "dong": 46,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ TRUNG GIAN",
+   "ten_vat_tu": "TP-LÁ TRUNG GIAN",
+   "ma_nguon": "TP-TD326",
+   "dvt": "M",
+   "dinh_muc": 1.0,
+   "gia_ban": 80000.0
+  },
+  {
+   "dong": 48,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐÁY LỚN",
+   "ten_vat_tu": "TP-LÁ ĐÁY LỚN",
+   "ma_nguon": "TP-TD325",
+   "dvt": "M",
+   "dinh_muc": 1.0,
+   "gia_ban": 130000.0
+  },
+  {
+   "dong": 50,
+   "loai_cua": "BỘ",
+   "ten_thanh_pham": "BỘ BA LÁ ĐÁY",
+   "ten_vat_tu": "TP-BỘ 3 LÁ ĐÁY",
+   "ma_nguon": "TP-BO3LADAY",
+   "dvt": "M",
+   "dinh_muc": 1.0,
+   "gia_ban": 230000.0
+  },
+  {
+   "dong": 52,
+   "loai_cua": "LÔN",
+   "ten_thanh_pham": "LÔNG NHEO 4X5",
+   "ten_vat_tu": "TP LÔNG NHEO NHỎ",
+   "ma_nguon": "TP-PHOTLONG4X5X400M",
+   "dvt": "M",
+   "dinh_muc": 1.0,
+   "gia_ban": 2000.0
+  },
+  {
+   "dong": 53,
+   "loai_cua": "LÔN",
+   "ten_thanh_pham": "LÔNG NHEO 5X6",
+   "ten_vat_tu": "TP LÔNG NHEO LỚN",
+   "ma_nguon": "TP-PHOTLONG5X6X400M",
+   "dvt": "M",
+   "dinh_muc": 1.0,
+   "gia_ban": 2000.0
+  },
+  {
+   "dong": 54,
+   "loai_cua": "",
+   "ten_thanh_pham": "RON ĐÁY ĐỨC",
+   "ten_vat_tu": "TP RON ĐÁY ĐỨC",
+   "ma_nguon": "RON-DD",
+   "dvt": "M",
+   "dinh_muc": 1.0,
+   "gia_ban": 10000.0
+  },
+  {
+   "dong": 56,
+   "loai_cua": "RON",
+   "ten_thanh_pham": "RON NHỰA + INOX",
+   "ten_vat_tu": "TP RON NHỰA + INOX",
+   "ma_nguon": "RONNHUA_INOX",
+   "dvt": "M",
+   "dinh_muc": 1.0,
+   "gia_ban": 30000.0
+  },
+  {
+   "dong": 59,
+   "loai_cua": "RON",
+   "ten_thanh_pham": "RON NHỰA ĐÁY RAY",
+   "ten_vat_tu": "TP RON NHỰA ĐÁY RAY",
+   "ma_nguon": "RNHUA-DR",
+   "dvt": "M",
+   "dinh_muc": 1.0,
+   "gia_ban": 20000.0
+  },
+  {
+   "dong": 60,
+   "loai_cua": "RON",
+   "ten_thanh_pham": "RON INOX ĐÁY RAY",
+   "ten_vat_tu": "TP RON INOX ĐÁY RAY",
+   "ma_nguon": "RNINOX-DR",
+   "dvt": "M",
+   "dinh_muc": 1.0,
+   "gia_ban": 15000.0
+  },
+  {
+   "dong": 61,
+   "loai_cua": "RON",
+   "ten_thanh_pham": "RON NHỰA CẠNH RAY",
+   "ten_vat_tu": "TP RON NHỰA/LÔNG CẠNH RAY",
+   "ma_nguon": "RNHUA/LONG-CR",
+   "dvt": "M",
+   "dinh_muc": 1.0,
+   "gia_ban": 6000.0
+  },
+  {
+   "dong": 62,
+   "loai_cua": "RON",
+   "ten_thanh_pham": "RON LÔNG CẠNH RAY",
+   "ten_vat_tu": "TP RON LÔNG CẠNH RAY",
+   "ma_nguon": "NVL-PHOTLONG12,5X5X120M",
+   "dvt": "M",
+   "dinh_muc": 1.0,
+   "gia_ban": 7000.0
+  },
+  {
+   "dong": 64,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL595 - VK",
+   "ten_vat_tu": "ĐỨC AL595 - VK",
+   "ma_nguon": "TP-TD-AL595 VK",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 1095000.0
+  },
+  {
+   "dong": 72,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL595 - MSK",
+   "ten_vat_tu": "ĐỨC AL595 - MSK",
+   "ma_nguon": "TP-TD-AL595 THÔ",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 1095000.0
+  },
+  {
+   "dong": 80,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL70 (2 LỚP) - MSK",
+   "ten_vat_tu": "ĐỨC AL70 (2 lớp) - MSK",
+   "ma_nguon": "TP-TD-AL70 THÔ",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 909000.0
+  },
+  {
+   "dong": 87,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL70 (2 LỚP) - GS",
+   "ten_vat_tu": "ĐỨC AL70 (2 lớp) - GS",
+   "ma_nguon": "TP-TD-AL70 GS",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 909000.0
+  },
+  {
+   "dong": 94,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL70 (2 LỚP) - VK",
+   "ten_vat_tu": "ĐỨC AL70 (2 lớp) - VK",
+   "ma_nguon": "TP-TD-AL70 VK",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 909000.0
+  },
+  {
+   "dong": 101,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL70 (1 LỚP) - MSK",
+   "ten_vat_tu": "ĐỨC AL70 (1 lớp) - MSK",
+   "ma_nguon": "TP-AL70-1LOP THÔ",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 1242000.0
+  },
+  {
+   "dong": 108,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL71N - MSK",
+   "ten_vat_tu": "ĐỨC AL71N - MSK",
+   "ma_nguon": "TP-TD-AL71N THÔ",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 1178000.0
+  },
+  {
+   "dong": 116,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL71N - GS",
+   "ten_vat_tu": "ĐỨC AL71N - GS",
+   "ma_nguon": "TP-TD-AL71N GS",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 1178000.0
+  },
+  {
+   "dong": 124,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL71N - VK",
+   "ten_vat_tu": "ĐỨC AL71N - VK",
+   "ma_nguon": "TP-TD-AL71N VK",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 1178000.0
+  },
+  {
+   "dong": 132,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL503N - VK",
+   "ten_vat_tu": "ĐỨC AL503N VK",
+   "ma_nguon": "TP-TD-AL503N26 VK",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 1295000.0
+  },
+  {
+   "dong": 140,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL503N - GS",
+   "ten_vat_tu": "ĐỨC AL503N GS",
+   "ma_nguon": "TP-TD-AL503N26 GS",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 1295000.0
+  },
+  {
+   "dong": 148,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL503N - MSK",
+   "ten_vat_tu": "ĐỨC AL503N MSK",
+   "ma_nguon": "TP-TD-AL503N26 THO",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 1295000.0
+  },
+  {
+   "dong": 156,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL548N - MSK",
+   "ten_vat_tu": "ĐỨC AL548N GS",
+   "ma_nguon": "TP-ALD-548N GS",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 1390000.0
+  },
+  {
+   "dong": 164,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL548N - MSK",
+   "ten_vat_tu": "ĐỨC AL548N MSK",
+   "ma_nguon": "TP-ALD-548N THO",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 1390000.0
+  },
+  {
+   "dong": 172,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL548N - VK",
+   "ten_vat_tu": "ĐỨC AL548N VK",
+   "ma_nguon": "TP-ALD-548N VK",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 1390000.0
+  },
+  {
+   "dong": 180,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL501N- VK",
+   "ten_vat_tu": "ĐỨC AL501N VK",
+   "ma_nguon": "TP-TD-AL501N VK",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 1471000.0
+  },
+  {
+   "dong": 188,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL501N- GS",
+   "ten_vat_tu": "ĐỨC AL501N GS",
+   "ma_nguon": "TP-TD-AL501N GS",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 1471000.0
+  },
+  {
+   "dong": 196,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL501N- MSK",
+   "ten_vat_tu": "ĐỨC AL501N MSK",
+   "ma_nguon": "TP-TD-AL501NTHO",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 1471000.0
+  },
+  {
+   "dong": 204,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL552N- VK",
+   "ten_vat_tu": "ĐỨC AL552N VK",
+   "ma_nguon": "TP-ALD-DL552 VK",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 1666000.0
+  },
+  {
+   "dong": 212,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL552N- MSK",
+   "ten_vat_tu": "ĐỨC AL552N MSK",
+   "ma_nguon": "TP-ALD-DL552 THO",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 1666000.0
+  },
+  {
+   "dong": 220,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL552N- GS",
+   "ten_vat_tu": "ĐỨC AL552N GS",
+   "ma_nguon": "TP-ALD-DL552 GS",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 1666000.0
+  },
+  {
+   "dong": 228,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL752N- GS",
+   "ten_vat_tu": "ĐỨC AL752N GS",
+   "ma_nguon": "TP-TD-AL752N GS",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 1686000.0
+  },
+  {
+   "dong": 236,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL752N- VK",
+   "ten_vat_tu": "ĐỨC AL752N VK",
+   "ma_nguon": "TP-TD-AL752N VK",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 1686000.0
+  },
+  {
+   "dong": 244,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL752N- MSK",
+   "ten_vat_tu": "ĐỨC AL752N MSK",
+   "ma_nguon": "TP-TD-AL752N THO",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 1686000.0
+  },
+  {
+   "dong": 252,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL652- MSK",
+   "ten_vat_tu": "ĐỨC AL652 MSK",
+   "ma_nguon": "TP-TD-AL652N THO",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 1548000.0
+  },
+  {
+   "dong": 260,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL652- GS",
+   "ten_vat_tu": "ĐỨC AL652 GS",
+   "ma_nguon": "TP-TD-AL652 GS",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 1548000.0
+  },
+  {
+   "dong": 268,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL652- VK",
+   "ten_vat_tu": "ĐỨC AL652 VK",
+   "ma_nguon": "TP-TD-AL652 VK",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 1548000.0
+  },
+  {
+   "dong": 276,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL50- MSK",
+   "ten_vat_tu": "ĐỨC AL50 MSK",
+   "ma_nguon": "TP-TD-AL50 THO",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 1815000.0
+  },
+  {
+   "dong": 284,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL50- GS",
+   "ten_vat_tu": "ĐỨC AL50 GS",
+   "ma_nguon": "TP-TD-AL50 GS",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 1815000.0
+  },
+  {
+   "dong": 292,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL50- VK",
+   "ten_vat_tu": "ĐỨC AL50 VK",
+   "ma_nguon": "TP-TD-AL50 VK",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 1815000.0
+  },
+  {
+   "dong": 300,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL-VIP50- GS",
+   "ten_vat_tu": "ĐỨC AL-VIP50 GS",
+   "ma_nguon": "TP-ALVIP50 GS",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 1912000.0
+  },
+  {
+   "dong": 308,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL-VIP50- MSK",
+   "ten_vat_tu": "ĐỨC AL-VIP50 MSK",
+   "ma_nguon": "TP-ALVIP50 THO",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 1912000.0
+  },
+  {
+   "dong": 316,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL-VIPST500- MSK",
+   "ten_vat_tu": "ĐỨC AL-VIPST500 MSK",
+   "ma_nguon": "TP-ALVIPST500 THO",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 2268000.0
+  },
+  {
+   "dong": 324,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL-VIPST700- MSK",
+   "ten_vat_tu": "ĐỨC AL-VIPST700 MSK",
+   "ma_nguon": "TP-ALVIPST700 THO",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 2392000.0
+  },
+  {
+   "dong": 332,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "BỌ 2VIS 752-VIPST700",
+   "ten_vat_tu": "TP BỌ 2VIS 752-VIPST700",
+   "ma_nguon": "TP-BO 2VIS 752-VIPST700",
+   "dvt": "CON",
+   "dinh_muc": 1.0,
+   "gia_ban": 2500.0
+  },
+  {
+   "dong": 335,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "BỌ 1 VIS-AL702LOP",
+   "ten_vat_tu": "TP BỌ 1 VIS-AL702LOP",
+   "ma_nguon": "TP-BO 1VIS AL702LOP",
+   "dvt": "CON",
+   "dinh_muc": 1.0,
+   "gia_ban": 1500.0
+  },
+  {
+   "dong": 338,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "BỌ 1 VIS-AL701LOP",
+   "ten_vat_tu": "TP BỌ 1 VIS-AL701LOP",
+   "ma_nguon": "TP-BO 1VIS AL701LOP",
+   "dvt": "CON",
+   "dinh_muc": 1.0,
+   "gia_ban": 1500.0
+  },
+  {
+   "dong": 341,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "BỌ 1VIS-AL75",
+   "ten_vat_tu": "TP BỌ 1VIS-AL75",
+   "ma_nguon": "TP-BO 1VIS AL75",
+   "dvt": "CON",
+   "dinh_muc": 1.0,
+   "gia_ban": 1500.0
+  },
+  {
+   "dong": 344,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "BỌ 2VIS-AL50-VIP50-AL548-ST500",
+   "ten_vat_tu": "TP BỌ 2VIS-AL50-VIP50-AL548-ST500",
+   "ma_nguon": "TP-BO 2VIS AL50-VIP50-AL548-ST500",
+   "dvt": "CON",
+   "dinh_muc": 1.0,
+   "gia_ban": 2500.0
+  },
+  {
+   "dong": 347,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "BỌ 1VIS_AL503C",
+   "ten_vat_tu": "TP BỌ 1VIS_AL503C",
+   "ma_nguon": "TP-BO 1VIS AL503C",
+   "dvt": "CON",
+   "dinh_muc": 1.0,
+   "gia_ban": 1500.0
+  },
+  {
+   "dong": 350,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "BỌ 1VIS 503N-71-595",
+   "ten_vat_tu": "TP BỌ 1VIS 503N-71-595",
+   "ma_nguon": "TP-BO 1VIS 503N-71-595",
+   "dvt": "CON",
+   "dinh_muc": 1.0,
+   "gia_ban": 1500.0
+  },
+  {
+   "dong": 353,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "BỌ 2VIS-501-552",
+   "ten_vat_tu": "TP BỌ 2VIS-501-552",
+   "ma_nguon": "TP-BO 2VIS-501-552",
+   "dvt": "CON",
+   "dinh_muc": 1.0,
+   "gia_ban": 2500.0
+  },
+  {
+   "dong": 356,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "BỌ 2VIS-652-548C",
+   "ten_vat_tu": "TP BỌ 2VIS-652-548C",
+   "ma_nguon": "TP-BO 2VIS-652-548C",
+   "dvt": "CON",
+   "dinh_muc": 1.0,
+   "gia_ban": 2500.0
+  },
+  {
+   "dong": 359,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL75- MSK",
+   "ten_vat_tu": "ĐỨC AL75 MSK",
+   "ma_nguon": "TP-AL75 THO",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 1403000.0
+  },
+  {
+   "dong": 367,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL75- VK",
+   "ten_vat_tu": "ĐỨC AL75 VK",
+   "ma_nguon": "TP-AL75 VK",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 1403000.0
+  },
+  {
+   "dong": 375,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "ĐỨC AL75- GS",
+   "ten_vat_tu": "ĐỨC AL75 GS",
+   "ma_nguon": "TP-AL75 GS",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 1403000.0
+  },
+  {
+   "dong": 383,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "MOTOR TANKER 400KG",
+   "ten_vat_tu": "MOTOR TANKER 400KG",
+   "ma_nguon": "TP-MT-TANKER400KG",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 1750000.0
+  },
+  {
+   "dong": 386,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "TP-Tanker-Alumax-Lac36",
+   "ten_vat_tu": "PHỤ THU-TANKER_ALUMAX_LẮC 36",
+   "ma_nguon": "TP-Tanker-Alumax-Lac36",
+   "dvt": "cái",
+   "dinh_muc": 0.0,
+   "gia_ban": 50000.0
+  },
+  {
+   "dong": 390,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "LẮC TANKER_ALUMAX 33",
+   "ten_vat_tu": "TANKER_ALUMAX_LẮC 33",
+   "ma_nguon": "TP-Tanker-Alumax-Lac33",
+   "dvt": "cái",
+   "dinh_muc": 1.0,
+   "gia_ban": 450000.0
+  },
+  {
+   "dong": 391,
+   "loai_cua": "LẮC TANKER_ALUMAX 36",
+   "ten_thanh_pham": "LẮC TANKER_ALUMAX 36",
+   "ten_vat_tu": "TANKER_ALUMAX_LẮC 36",
+   "ma_nguon": "TP-Tanker-Alumax-Lac36",
+   "dvt": "cái",
+   "dinh_muc": 1.0,
+   "gia_ban": 500000.0
+  },
+  {
+   "dong": 392,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "LẮC TANKER_800-1000KG",
+   "ten_vat_tu": "TP-TANKER_LẮC 800&1000KG",
+   "ma_nguon": "TP-Tanker-Lac800&1000KG",
+   "dvt": "cái",
+   "dinh_muc": 1.0,
+   "gia_ban": 600000.0
+  },
+  {
+   "dong": 393,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "LẮC YH 300_500KG",
+   "ten_vat_tu": "TP-YHLD_LẮC YHLD300&500KG",
+   "ma_nguon": "TP-LacYHLD300&500KG",
+   "dvt": "cái",
+   "dinh_muc": 1.0,
+   "gia_ban": 650000.0
+  },
+  {
+   "dong": 394,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "LẮC YH 800_1000KG",
+   "ten_vat_tu": "TP-YHLD_ LẮC YHLD800&1000KG",
+   "ma_nguon": "TP-LacYHLD800&1000KG",
+   "dvt": "cái",
+   "dinh_muc": 1.0,
+   "gia_ban": 750000.0
+  },
+  {
+   "dong": 399,
+   "loai_cua": "",
+   "ten_thanh_pham": "YHLD TAY ĐIỀU KHIỂN",
+   "ten_vat_tu": "TP-YHLD-TAY ĐIỀU KHIỂN",
+   "ma_nguon": "TP-YHLD_TayDK",
+   "dvt": "",
+   "dinh_muc": null,
+   "gia_ban": 180000.0
+  },
+  {
+   "dong": 400,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "NHÔNG MOTOR TANKER",
+   "ten_vat_tu": "NHÔNG MOTOR TANKER",
+   "ma_nguon": "NVL_Tanker-nhong",
+   "dvt": "cái",
+   "dinh_muc": 1.0,
+   "gia_ban": 70000.0
+  },
+  {
+   "dong": 401,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "LÔNG ĐỀN",
+   "ten_vat_tu": "LÔNG ĐỀN",
+   "ma_nguon": "NVL_Longden",
+   "dvt": "cái",
+   "dinh_muc": 1.0,
+   "gia_ban": 50000.0
+  },
+  {
+   "dong": 402,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "HOA KHẾ (3 CHẤU)",
+   "ten_vat_tu": "HOA KHẾ (3 CHẤU)",
+   "ma_nguon": "NVL_Hoakhe",
+   "dvt": "cái",
+   "dinh_muc": 1.0,
+   "gia_ban": 50000.0
+  },
+  {
+   "dong": 403,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "CỐT",
+   "ten_vat_tu": "CỐT",
+   "ma_nguon": "NVL_Cot",
+   "dvt": "cây",
+   "dinh_muc": 1.0,
+   "gia_ban": 80000.0
+  },
+  {
+   "dong": 404,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "BẠC ĐẠN + NẮP CHỤP",
+   "ten_vat_tu": "BẠC ĐẠN + NẮP CHỤP",
+   "ma_nguon": "NVL_Napchup+Bacdan",
+   "dvt": "Bộ",
+   "dinh_muc": 1.0,
+   "gia_ban": 100000.0
+  },
+  {
+   "dong": 413,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "BỘ ĐIỀU KHIỂN TANKER_ALUMAX",
+   "ten_vat_tu": "BỘ ĐIỀU KHIỂN TANKER_ALUMAX",
+   "ma_nguon": "TP-BDK-TANKER-ALUMAX",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 270000.0
+  },
+  {
+   "dong": 416,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "MOTOR YHLD 300KG",
+   "ten_vat_tu": "MOTOR YHLD 300KG",
+   "ma_nguon": "TP-MT-YHLD300KG",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 2750000.0
+  },
+  {
+   "dong": 422,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "MOTOR YHLD 500KG",
+   "ten_vat_tu": "MOTOR YHLD 500KG",
+   "ma_nguon": "TP-MT-YHLD500KG",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 2850000.0
+  },
+  {
+   "dong": 436,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "MOTOR YHLD 800KG",
+   "ten_vat_tu": "MOTOR YHLD 800KG",
+   "ma_nguon": "TP-MT-YHLD800KG",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 5900000.0
+  },
+  {
+   "dong": 442,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "MOTOR YHLD 1000KG",
+   "ten_vat_tu": "MOTOR YHLD 1000KG",
+   "ma_nguon": "TP-MT-YHLD1000KG",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 7000000.0
+  },
+  {
+   "dong": 448,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "MOTOR JG 300KG",
+   "ten_vat_tu": "MOTOR JG 300KG",
+   "ma_nguon": "TP-MT-JG300KG",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 3650000.0
+  },
+  {
+   "dong": 454,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "MOTOR JG 400KG",
+   "ten_vat_tu": "MOTOR JG 400KG",
+   "ma_nguon": "TP-MT-JG400KG",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 4150000.0
+  },
+  {
+   "dong": 460,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "MOTOR JG 500KG",
+   "ten_vat_tu": "MOTOR JG 500KG",
+   "ma_nguon": "TP-MT-JG500KG",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 4200000.0
+  },
+  {
+   "dong": 466,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "MOTOR JG 600KG",
+   "ten_vat_tu": "MOTOR JG 600KG",
+   "ma_nguon": "TP-MT-JG600KG",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 4300000.0
+  },
+  {
+   "dong": 472,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "MOTOR JG 800KG",
+   "ten_vat_tu": "MOTOR JG 800KG",
+   "ma_nguon": "TP-MT-JG800KG",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 5250000.0
+  },
+  {
+   "dong": 478,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "MOTOR JG 1000KG",
+   "ten_vat_tu": "MOTOR JG 1000KG",
+   "ma_nguon": "TP-MT-JG1000KG",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 7650000.0
+  },
+  {
+   "dong": 484,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "JG_Bacdannhao",
+   "ten_vat_tu": "JG_Bacdannhao",
+   "ma_nguon": "TP-JG-BDN",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 100000.0
+  },
+  {
+   "dong": 485,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "MOTOR JG 1500KG",
+   "ten_vat_tu": "MOTOR JG 1500KG",
+   "ma_nguon": "TP-MT-JG1500KG",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 8050000.0
+  },
+  {
+   "dong": 491,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "JG_Bacdannhao",
+   "ten_vat_tu": "JG_Bacdannhao",
+   "ma_nguon": "TP-JG-BDN",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 100000.0
+  },
+  {
+   "dong": 492,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "MOTOR TANKER 600KG",
+   "ten_vat_tu": "MOTOR TANKER 600KG",
+   "ma_nguon": "TP-MT-TANKER600KG",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 1850000.0
+  },
+  {
+   "dong": 495,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "TP-Tanker-Alumax-Lac36",
+   "ten_vat_tu": "PHỤ THU-TANKER_ALUMAX_LẮC 36",
+   "ma_nguon": "TP-Tanker-Alumax-Lac36",
+   "dvt": "cái",
+   "dinh_muc": 0.0,
+   "gia_ban": 50000.0
+  },
+  {
+   "dong": 499,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "MOTOR TANKER 800KG",
+   "ten_vat_tu": "MOTOR TANKER 800KG",
+   "ma_nguon": "TP-MT-TANKE800KG",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 3700000.0
+  },
+  {
+   "dong": 505,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "MOTOR TANKER 1000KG",
+   "ten_vat_tu": "MOTOR TANKER1000KG",
+   "ma_nguon": "TP-MT-TANKER1000KG",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 3900000.0
+  },
+  {
+   "dong": 511,
+   "loai_cua": "",
+   "ten_thanh_pham": "LẮC PHỤ 33-1 LỔ",
+   "ten_vat_tu": "LẮC PHỤ 33-1 LỔ",
+   "ma_nguon": "TP-LACPHU33_1LO",
+   "dvt": "CÁI",
+   "dinh_muc": 1.0,
+   "gia_ban": 65000.0
+  },
+  {
+   "dong": 512,
+   "loai_cua": "",
+   "ten_thanh_pham": "LẮC PHỤ 36-1 LỔ",
+   "ten_vat_tu": "LẮC PHỤ 36-1 LỔ",
+   "ma_nguon": "TP-LACPHU36_1LO",
+   "dvt": "CÁI",
+   "dinh_muc": 1.0,
+   "gia_ban": 70000.0
+  },
+  {
+   "dong": 513,
+   "loai_cua": "",
+   "ten_thanh_pham": "LẮC PHỤ 33-3 LỔ (ĐÀI LOAN)",
+   "ten_vat_tu": "LẮC PHỤ 33-3 LỔ (ĐÀI LOAN)",
+   "ma_nguon": "TP-LACPHU33_3LO",
+   "dvt": "CÁI",
+   "dinh_muc": 1.0,
+   "gia_ban": 65000.0
+  },
+  {
+   "dong": 514,
+   "loai_cua": "",
+   "ten_thanh_pham": "LẮC PHỤ 36-3 LỔ (ĐÀI LOAN)",
+   "ten_vat_tu": "LẮC PHỤ 36-3 LỔ (ĐÀI LOAN)",
+   "ma_nguon": "TP-LACPHU36_3LO",
+   "dvt": "CÁI",
+   "dinh_muc": 1.0,
+   "gia_ban": 70000.0
+  },
+  {
+   "dong": 515,
+   "loai_cua": "",
+   "ten_thanh_pham": "BỘ ĐIỀU KHIỂN ĐIỆN THOẠI MULLER",
+   "ten_vat_tu": "BỘ ĐIỀU KHIỂN ĐIỆN THOẠI MULLER",
+   "ma_nguon": "TP-BDKDT_MULLER",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 750000.0
+  },
+  {
+   "dong": 518,
+   "loai_cua": "",
+   "ten_thanh_pham": "TAY ĐIỀU KHIỂN ĐIỆN THOẠI MULLER",
+   "ten_vat_tu": "TP - TAY ĐIỀU KHIỂN MULLER",
+   "ma_nguon": "TP-TDK_MULLER",
+   "dvt": "CÁI",
+   "dinh_muc": 1.0,
+   "gia_ban": 280000.0
+  },
+  {
+   "dong": 519,
+   "loai_cua": "",
+   "ten_thanh_pham": "GỐI GANG",
+   "ten_vat_tu": "GỐI GANG",
+   "ma_nguon": "TP-GOIGANG",
+   "dvt": "CẶP",
+   "dinh_muc": 1.0,
+   "gia_ban": 90000.0
+  },
+  {
+   "dong": 521,
+   "loai_cua": "ĐÀI LOAN",
+   "ten_thanh_pham": "BẮN BƯỚM SẮT ĐÀI LOAN",
+   "ten_vat_tu": "BẮN BƯỚM SẮT ĐÀI LOAN",
+   "ma_nguon": "TP-BUOMSAT-DL",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 30000.0
+  },
+  {
+   "dong": 523,
+   "loai_cua": "",
+   "ten_thanh_pham": "BẮN BƯỚM SẮT SIÊU TRƯỜNG",
+   "ten_vat_tu": "BẮN BƯỚM SẮT SIÊU TRƯỜNG",
+   "ma_nguon": "TP-BUOMSAT-ST",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 30000.0
+  },
+  {
+   "dong": 525,
+   "loai_cua": "ĐÀI LOAN",
+   "ten_thanh_pham": "BẮN BƯỚM INOX",
+   "ten_vat_tu": "BẮN BƯỚM INOX",
+   "ma_nguon": "TP-BUOMINOX",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 60000.0
+  },
+  {
+   "dong": 526,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "HH LÒ XO 46V",
+   "ten_vat_tu": "HH LÒ XO 46V",
+   "ma_nguon": "NVL-LX-5.5 X 70 X 46V",
+   "dvt": "KG",
+   "dinh_muc": 1.7,
+   "gia_ban": 45000.0
+  },
+  {
+   "dong": 527,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "HH LÒ XO 50V",
+   "ten_vat_tu": "HH LÒ XO 50V",
+   "ma_nguon": "NVL-LX-5.5 x 70 x 50V",
+   "dvt": "KG",
+   "dinh_muc": 1.9,
+   "gia_ban": 45000.0
+  },
+  {
+   "dong": 528,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "HH LÒ XO 53V",
+   "ten_vat_tu": "HH LÒ XO 53V",
+   "ma_nguon": "NVL-LV-6.0 x 70 x 53V",
+   "dvt": "KG",
+   "dinh_muc": 2.4,
+   "gia_ban": 45000.0
+  },
+  {
+   "dong": 529,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "HH LÒ XO 63V",
+   "ten_vat_tu": "HH LÒ XO 63V",
+   "ma_nguon": "NVL-LV-6.5 x 80 x 63V",
+   "dvt": "KG",
+   "dinh_muc": 3.8,
+   "gia_ban": 45000.0
+  },
+  {
+   "dong": 530,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "HH LÒ XO 68V",
+   "ten_vat_tu": "HH LÒ XO 68V",
+   "ma_nguon": "NVL-LV-6.5 x 80 x 68V",
+   "dvt": "KG",
+   "dinh_muc": 4.2,
+   "gia_ban": 45000.0
+  },
+  {
+   "dong": 531,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "HH LÒ XO 65V",
+   "ten_vat_tu": "HH LÒ XO 65V",
+   "ma_nguon": "NVL-LV-7.0 x 90 x 65V",
+   "dvt": "KG",
+   "dinh_muc": 5.1,
+   "gia_ban": 45000.0
+  },
+  {
+   "dong": 532,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "HH LÒ XO 73V",
+   "ten_vat_tu": "HH LÒ XO 73V",
+   "ma_nguon": "NVL-LV-7.0 x 90 x 73V",
+   "dvt": "KG",
+   "dinh_muc": 5.8,
+   "gia_ban": 45000.0
+  },
+  {
+   "dong": 533,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "HH LÒ XO 83V",
+   "ten_vat_tu": "HH LÒ XO 83V",
+   "ma_nguon": "NVL-LV-7.0 x 90 x 83V",
+   "dvt": "KG",
+   "dinh_muc": 6.7,
+   "gia_ban": 45000.0
+  },
+  {
+   "dong": 534,
+   "loai_cua": "",
+   "ten_thanh_pham": "RAY NHÔM ÚC",
+   "ten_vat_tu": "HH RAY NHÔM ÚC",
+   "ma_nguon": "TP-RAYNHOMUC",
+   "dvt": "M",
+   "dinh_muc": 1.0,
+   "gia_ban": 195000.0
+  },
+  {
+   "dong": 535,
+   "loai_cua": "",
+   "ten_thanh_pham": "PULY ÚC 34",
+   "ten_vat_tu": "HH PULY UC 34",
+   "ma_nguon": "NVL-PULYUC34",
+   "dvt": "CÁI",
+   "dinh_muc": 1.0,
+   "gia_ban": 36000.0
+  },
+  {
+   "dong": 536,
+   "loai_cua": "",
+   "ten_thanh_pham": "PULY ÚC 114",
+   "ten_vat_tu": "HH PULY 114",
+   "ma_nguon": "NVL-PULYUC114",
+   "dvt": "CÁI",
+   "dinh_muc": 1.0,
+   "gia_ban": 38000.0
+  },
+  {
+   "dong": 537,
+   "loai_cua": "",
+   "ten_thanh_pham": "SẮT VUÔNG 3X6M",
+   "ten_vat_tu": "HH SẮT VUÔNG 3X6M",
+   "ma_nguon": "NVL-3X6M",
+   "dvt": "M",
+   "dinh_muc": 1.0,
+   "gia_ban": 25000.0
+  },
+  {
+   "dong": 538,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "HỘP ĐK TANKER_ALUMAX",
+   "ten_vat_tu": "TANKER_ALUMAX_HopDK",
+   "ma_nguon": "TP-Tanker-Alumax-HDK",
+   "dvt": "CÁI",
+   "dinh_muc": 1.0,
+   "gia_ban": 150000.0
+  },
+  {
+   "dong": 539,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "BỘ ĐK TANKER_ALUMAX",
+   "ten_vat_tu": "TANKER_ALUMAX_BỘ ĐIỀU KHIỂN",
+   "ma_nguon": "TP-TANKER_ALUMAX_BODK",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 270000.0
+  },
+  {
+   "dong": 542,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "TAY ĐIỀU KHIỂN TANKER",
+   "ten_vat_tu": "TANKER_ALUMAX_TayDK",
+   "ma_nguon": "TP-Tanker-Alumax_TayDK",
+   "dvt": "cái",
+   "dinh_muc": 1.0,
+   "gia_ban": 120000.0
+  },
+  {
+   "dong": 543,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "PHÍM ÂM TƯỜNG CÓ DÂY",
+   "ten_vat_tu": "PHÍM ÂM TƯỜNG CÓ DÂY",
+   "ma_nguon": "TP_PAT_CODAY",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 150000.0
+  },
+  {
+   "dong": 546,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "PHÍM ÂM TƯỜNG KHÔNG DÂY",
+   "ten_vat_tu": "TP PHÍM ÂM TƯỜNG KHÔNG DÂY",
+   "ma_nguon": "TP-PAT_KHONGDAY",
+   "dvt": "cái",
+   "dinh_muc": 1.0,
+   "gia_ban": 80000.0
+  },
+  {
+   "dong": 547,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "MOTOR ALUMAX 400KG",
+   "ten_vat_tu": "MOTOR ALUMAX 400KG",
+   "ma_nguon": "TP-MT-ALUMAX400KG",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 2200000.0
+  },
+  {
+   "dong": 550,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "TP-Tanker-Alumax-Lac36",
+   "ten_vat_tu": "PHỤ THU-TANKER_ALUMAX_LẮC 36",
+   "ma_nguon": "TP-Tanker-Alumax-Lac36",
+   "dvt": "cái",
+   "dinh_muc": 1.0,
+   "gia_ban": 50000.0
+  },
+  {
+   "dong": 554,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "MOTOR ALUMAX 600KG",
+   "ten_vat_tu": "MOTOR ALUMAX 600KG",
+   "ma_nguon": "TP-MT-ALUMAX600KG",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 2300000.0
+  },
+  {
+   "dong": 557,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "TP-Tanker-Alumax-Lac36",
+   "ten_vat_tu": "PHỤ THU-TANKER_ALUMAX_LẮC 36",
+   "ma_nguon": "TP-Tanker-Alumax-Lac36",
+   "dvt": "cái",
+   "dinh_muc": null,
+   "gia_ban": 50000.0
+  },
+  {
+   "dong": 561,
+   "loai_cua": "",
+   "ten_thanh_pham": "Bình lưu điện Alumax E800i",
+   "ten_vat_tu": "Bình lưu điện Alumax E800i",
+   "ma_nguon": "TP_UPS-E800i",
+   "dvt": "CÁI",
+   "dinh_muc": 1.0,
+   "gia_ban": 1800000.0
+  },
+  {
+   "dong": 562,
+   "loai_cua": "",
+   "ten_thanh_pham": "Bình lưu điện Alumax E1000i",
+   "ten_vat_tu": "Bình lưu điện Alumax E1000i",
+   "ma_nguon": "TP_UPS-E1000i",
+   "dvt": "CÁI",
+   "dinh_muc": 1.0,
+   "gia_ban": 2700000.0
+  },
+  {
+   "dong": 563,
+   "loai_cua": "",
+   "ten_thanh_pham": "Bình lưu điện YH1000",
+   "ten_vat_tu": "Bình lưu điện YH1000",
+   "ma_nguon": "TP_UPS-YH1000",
+   "dvt": "CÁI",
+   "dinh_muc": 1.0,
+   "gia_ban": 1800000.0
+  },
+  {
+   "dong": 564,
+   "loai_cua": "",
+   "ten_thanh_pham": "Bình lưu điện YH2000",
+   "ten_vat_tu": "Bình lưu điện YH2000",
+   "ma_nguon": "TP_UPS-YH2000",
+   "dvt": "CÁI",
+   "dinh_muc": 1.0,
+   "gia_ban": 2700000.0
+  },
+  {
+   "dong": 565,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "JG_TAY ĐIỀU KHIỂN",
+   "ten_vat_tu": "JG_TayDK",
+   "ma_nguon": "TP-JG_TayDK",
+   "dvt": "CÁI",
+   "dinh_muc": 1.0,
+   "gia_ban": 190000.0
+  },
+  {
+   "dong": 566,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "JG_BỘ ĐIỀU KHIỂN",
+   "ten_vat_tu": "JG_BỘ ĐIỀU KHIỂN",
+   "ma_nguon": "JG_BODK",
+   "dvt": "CÁI",
+   "dinh_muc": 1.0,
+   "gia_ban": 460000.0
+  },
+  {
+   "dong": 577,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "NẮP NHÌN",
+   "ten_vat_tu": "NẮP NHÌN",
+   "ma_nguon": "TP-NAPNHIN",
+   "dvt": "CÁI",
+   "dinh_muc": 1.0,
+   "gia_ban": 170000.0
+  },
+  {
+   "dong": 578,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "GỐI SẮT",
+   "ten_vat_tu": "GỐI SẮT",
+   "ma_nguon": "NVL-GOIFE",
+   "dvt": "CÁI",
+   "dinh_muc": 2.0,
+   "gia_ban": 65000.0
+  },
+  {
+   "dong": 579,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "GIÁ T",
+   "ten_vat_tu": "GIÁ T",
+   "ma_nguon": "NVL-GIAT",
+   "dvt": "CẶP",
+   "dinh_muc": 1.0,
+   "gia_ban": 120000.0
+  },
+  {
+   "dong": 580,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "BOSTEC_PHÍM ÂM TƯỜNG",
+   "ten_vat_tu": "TP-BOSTEC_PHÍM ÂM TƯỜNG",
+   "ma_nguon": "TP-MTT-BOSTEC-PAT",
+   "dvt": "CÁI",
+   "dinh_muc": 1.0,
+   "gia_ban": 250000.0
+  },
+  {
+   "dong": 581,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "BOSTEC TAY ĐIỀU KHIỂN",
+   "ten_vat_tu": "TP-BOSTEC_TAYDK",
+   "ma_nguon": "TP-MTT-BOSTEC-TAYDK",
+   "dvt": "CÁI",
+   "dinh_muc": 2.0,
+   "gia_ban": 270000.0
+  },
+  {
+   "dong": 582,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "BOSTEC BỘ ĐIỀU KHIỂN",
+   "ten_vat_tu": "TP-BOSTEC_BỘ ĐIỀU KHIỂN",
+   "ma_nguon": "TP_BOSTEC_BODIEUKHIEN",
+   "dvt": "CÁI",
+   "dinh_muc": 1.0,
+   "gia_ban": 1850000.0
+  },
+  {
+   "dong": 585,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "CHTAIWAN-PHÍM ÂM TƯỜNG",
+   "ten_vat_tu": "TP-CHTAIWAN_PHÍM ÂM TƯỜNG",
+   "ma_nguon": "TP-MTT-CHTAIWAN-PAT",
+   "dvt": "CÁI",
+   "dinh_muc": 1.0,
+   "gia_ban": 600000.0
+  },
+  {
+   "dong": 586,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "CHTAIWAN-TAY ĐIỀU KHIỂN",
+   "ten_vat_tu": "TP-CHTAIWAN_TAYDK",
+   "ma_nguon": "TP-MTT-CHTAIWAN-TAYDK",
+   "dvt": "CÁI",
+   "dinh_muc": 1.0,
+   "gia_ban": 320000.0
+  },
+  {
+   "dong": 587,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "CHTAIWAN BỘ ĐIỀU KHIỂN",
+   "ten_vat_tu": "TP-CHTAIWAN_BỘ ĐIỀU KHIỂN",
+   "ma_nguon": "TP_CHTAIWAN_BODIEUKHIEN",
+   "dvt": "CÁI",
+   "dinh_muc": 1.0,
+   "gia_ban": 2400000.0
+  },
+  {
+   "dong": 590,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "MTT BOSTEC ĐÔI - PHẢI",
+   "ten_vat_tu": "TP-MTT BOSTEC ĐÔI - PHẢI",
+   "ma_nguon": "TP-MTT_BOSTEC-DOI(P)",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 3800000.0
+  },
+  {
+   "dong": 595,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "MTT BOSTEC ĐÔI - TRÁI",
+   "ten_vat_tu": "TP-MTT BOSTEC ĐÔI - TRÁI",
+   "ma_nguon": "TP-MTT_BOSTEC-DOI(T)",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 3800000.0
+  },
+  {
+   "dong": 600,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "MTT BOSTEC ĐƠN - PHẢI",
+   "ten_vat_tu": "TP-MTT BOSTEC ĐƠN - PHẢI",
+   "ma_nguon": "TP-MTT_BOSTEC-DON(P)",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 3300000.0
+  },
+  {
+   "dong": 605,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "MTT BOSTEC ĐƠN - TRÁI",
+   "ten_vat_tu": "TP-MTT BOSTEC ĐƠN - TRÁI",
+   "ma_nguon": "TP-MTT_BOSTEC-DON(T)",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 3300000.0
+  },
+  {
+   "dong": 610,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "MTT CHTAIWAN ĐÔI - TRÁI",
+   "ten_vat_tu": "TP-MTT CH TAIWAN ĐÔI - TRÁI",
+   "ma_nguon": "TP-MTT_CHTAIWAN-DOI(T)",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 5300000.0
+  },
+  {
+   "dong": 615,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "MTT CHTAIWAN ĐÔI - PHẢI",
+   "ten_vat_tu": "TP-MTT CH TAIWAN ĐÔI - PHẢI",
+   "ma_nguon": "TP-MTT_CHTAIWAN-DOI(P)",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 5300000.0
+  },
+  {
+   "dong": 620,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "MTT CHTAIWAN ĐƠN - PHẢI",
+   "ten_vat_tu": "TP-MTT CH TAIWAN ĐƠN - PHẢI",
+   "ma_nguon": "TP-MTT_CHTAIWAN-DON(P)",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 4950000.0
+  },
+  {
+   "dong": 625,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "MTT CHTAIWAN ĐƠN - TRÁI",
+   "ten_vat_tu": "TP-MTT CH TAIWAN ĐƠN - TRÁI",
+   "ma_nguon": "TP-MTT_CHTAIWAN-DON(T)",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 4950000.0
+  },
+  {
+   "dong": 630,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "MOTOR YHTAIWAN CH 300KG",
+   "ten_vat_tu": "TP-MOTOR YHTAIWAN CH 300KG",
+   "ma_nguon": "TP-MT-YHTAIWAN CH 300KG",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 6350000.0
+  },
+  {
+   "dong": 636,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "MOTOR YHTAIWAN CH 500KG",
+   "ten_vat_tu": "TP-MOTOR YHTAIWAN CH 500KG",
+   "ma_nguon": "TP-MT-YHTAIWAN CH 500KG",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 7900000.0
+  },
+  {
+   "dong": 642,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "MOTOR YHTAIWAN CH 400KG",
+   "ten_vat_tu": "TP-MOTOR YHTAIWAN CH 400KG",
+   "ma_nguon": "TP-MT-YHTAIWAN CH 400KG",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 7000000.0
+  },
+  {
+   "dong": 648,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "MOTOR YHTAIWAN CH 600KG",
+   "ten_vat_tu": "TP-MOTOR YHTAIWAN CH 600KG",
+   "ma_nguon": "TP-MT-YHTAIWAN CH 600KG",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 11900000.0
+  },
+  {
+   "dong": 654,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "MOTOR YHTAIWAN CH 700KG",
+   "ten_vat_tu": "TP-MOTOR YHTAIWAN CH 700KG",
+   "ma_nguon": "TP-MT-YHTAIWAN CH 700KG",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 12900000.0
+  },
+  {
+   "dong": 660,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "MOTOR YHTAIWAN CH 800KG",
+   "ten_vat_tu": "TP-MOTOR YHTAIWAN CH 800KG",
+   "ma_nguon": "TP-MT-YHTAIWAN CH 800KG",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 13600000.0
+  },
+  {
+   "dong": 666,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "MOTOR YHTAIWAN CH 1000KG",
+   "ten_vat_tu": "TP-MOTOR YHTAIWAN CH 1000KG",
+   "ma_nguon": "TP-MT-YHTAIWAN CH 1000KG",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 13600000.0
+  },
+  {
+   "dong": 672,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "YHTAIWAN_BỘ ĐIỀU KHIỂN",
+   "ten_vat_tu": "TP-YHTAIWAN_BỘ ĐIỀU KHIỂN",
+   "ma_nguon": "TP-YHTaiwan-BODK",
+   "dvt": "Bộ",
+   "dinh_muc": 1.0,
+   "gia_ban": 1050000.0
+  },
+  {
+   "dong": 675,
+   "loai_cua": "MOTOR",
+   "ten_thanh_pham": "YHTAIWAN_TAY ĐIỀU KHIỂN",
+   "ten_vat_tu": "TP-YHTAIWAN_TayDK",
+   "ma_nguon": "TP-YHTaiwan-TayDK",
+   "dvt": "cái",
+   "dinh_muc": 1.0,
+   "gia_ban": 350000.0
+  },
+  {
+   "dong": 676,
+   "loai_cua": "",
+   "ten_thanh_pham": "XỐP NHỎ",
+   "ten_vat_tu": "XỐP ( TẤM NHỎ - 45cm)",
+   "ma_nguon": "NVL-XOP-N45",
+   "dvt": "TẤM",
+   "dinh_muc": 1.0,
+   "gia_ban": 18000.0
+  },
+  {
+   "dong": 677,
+   "loai_cua": "",
+   "ten_thanh_pham": "XỐP LỚN",
+   "ten_vat_tu": "XỐP ( TẤM NHỎ - 90cm)",
+   "ma_nguon": "NVL-XOP-N90",
+   "dvt": "TẤM",
+   "dinh_muc": 1.0,
+   "gia_ban": 24000.0
+  },
+  {
+   "dong": 678,
+   "loai_cua": "",
+   "ten_thanh_pham": "VÒNG NHỰA HÃM TRỤC",
+   "ten_vat_tu": "CÙM HÃM NHỰA",
+   "ma_nguon": "NVL-CHNHUA",
+   "dvt": "KG",
+   "dinh_muc": 1.0,
+   "gia_ban": 75000.0
+  },
+  {
+   "dong": 679,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "TRỤC PHI 34",
+   "ten_vat_tu": "TP-TRỤC 34",
+   "ma_nguon": "NVL-TRUC34",
+   "dvt": "M",
+   "dinh_muc": 1.0,
+   "gia_ban": 150000.0
+  },
+  {
+   "dong": 681,
+   "loai_cua": "",
+   "ten_thanh_pham": "TRỤC PHI 90",
+   "ten_vat_tu": "TP-TRỤC 90",
+   "ma_nguon": "NVL-TRUC90",
+   "dvt": "M",
+   "dinh_muc": 1.0,
+   "gia_ban": 120000.0
+  },
+  {
+   "dong": 682,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "CÂY KÉO CỬA INOX",
+   "ten_vat_tu": "TP-CÂY KÉO CỬA INOX",
+   "ma_nguon": "NVL-INOX, NVL-NHUA, NVL-MOC",
+   "dvt": "CÂY",
+   "dinh_muc": 1.0,
+   "gia_ban": 150000.0
+  },
+  {
+   "dong": 684,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "THANH ĐÁY ÚC_KTD",
+   "ten_vat_tu": "TP-THANH ĐÁY ÚC_KTD",
+   "ma_nguon": "NVL-VDAY-TDU-KTD",
+   "dvt": "KG",
+   "dinh_muc": 1.0,
+   "gia_ban": 118000.0
+  },
+  {
+   "dong": 686,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "RON ĐÁY ÚC",
+   "ten_vat_tu": "TP-RON ĐÁY ÚC",
+   "ma_nguon": "RONDAYUC",
+   "dvt": "M",
+   "dinh_muc": null,
+   "gia_ban": 10000.0
+  },
+  {
+   "dong": 688,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "CỬA ÚC KT 4D XN-VK",
+   "ten_vat_tu": "CỬA ÚC KT 4D XN-VK",
+   "ma_nguon": "TP-UC KT 4D XN-VK",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 365000.0
+  },
+  {
+   "dong": 708,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "CỬA ÚC KT 4D XN-VK",
+   "ten_vat_tu": "VAI HÃM XO",
+   "ma_nguon": "NVL-VAIHAMXO",
+   "dvt": "CÁI",
+   "dinh_muc": null,
+   "gia_ban": 2.0
+  },
+  {
+   "dong": 714,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "CỬA ÚC MTN 4D XN-VK",
+   "ten_vat_tu": "CỬA ÚC MTN 4D XN-VK",
+   "ma_nguon": "TP-UC MTN 4D XN-VK",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 345000.0
+  },
+  {
+   "dong": 726,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "KHÓA NGANG",
+   "ten_vat_tu": "TP KHÓA NGANG",
+   "ma_nguon": "TP-KN",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 250000.0
+  },
+  {
+   "dong": 729,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "Ổ KHÓA NGANG",
+   "ten_vat_tu": "TP Ổ KHÓA",
+   "ma_nguon": "NVL-OKHOA",
+   "dvt": "BỘ",
+   "dinh_muc": 1.0,
+   "gia_ban": 100000.0
+  },
+  {
+   "dong": 730,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "TI KHÓA NGANG",
+   "ten_vat_tu": "TP TI INOX",
+   "ma_nguon": "NVL-TIINOX",
+   "dvt": "KG/M",
+   "dinh_muc": 0.11,
+   "gia_ban": 150000.0
+  },
+  {
+   "dong": 731,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "BÁT KHÓA ÂM NỀN",
+   "ten_vat_tu": "TP BÁT KHÓA ÂM NỀN",
+   "ma_nguon": "TP-BKAN",
+   "dvt": "BỘ/4 CẶP",
+   "dinh_muc": 1.0,
+   "gia_ban": 88000
+  },
+  {
+   "dong": 733,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "CỬA ÚC KT 4.6D XN-VK",
+   "ten_vat_tu": "CỬA ÚC KT 4.6D XN-VK",
+   "ma_nguon": "TP-UC KT 4.6D XN-VK",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 395000.0
+  },
+  {
+   "dong": 758,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "CỬA ÚC KT 4.6D XR-CAFE",
+   "ten_vat_tu": "CỬA ÚC KT 4.6D XR-CAFE",
+   "ma_nguon": "TP-UC KT 4.6D XR-CF",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 395000.0
+  },
+  {
+   "dong": 783,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "CỬA ÚC KT 4.6D TR-XLC",
+   "ten_vat_tu": "CỬA ÚC KT 4.6D TR-XLC",
+   "ma_nguon": "TP-UC KT 4.6D TRẮNG-XLC",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 395000.0
+  },
+  {
+   "dong": 808,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "CỬA ÚC KT 4.6D KU-GU",
+   "ten_vat_tu": "CỬA ÚC KT 4.6D KU-GU",
+   "ma_nguon": "TP-UC KT 4.6D KU-GU",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 395000.0
+  },
+  {
+   "dong": 833,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "CỬA ÚC KT 5.5D KU-GU",
+   "ten_vat_tu": "CỬA ÚC KT 5.5D KU-GU",
+   "ma_nguon": "TP-UC KT 5.5D KU-GU",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 425000.0
+  },
+  {
+   "dong": 858,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "CỬA ÚC KT 5.5D TR-XLC",
+   "ten_vat_tu": "CỬA ÚC KT 5.5D TR-XLC",
+   "ma_nguon": "TP-UC KT 5.5D TR-XLC",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 425000.0
+  },
+  {
+   "dong": 883,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "CỬA ÚC KT 5.5D XN-VK",
+   "ten_vat_tu": "CỬA ÚC KT 5.5D XN-VK",
+   "ma_nguon": "TP-UC KT 5.5D XN-VK",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 425000.0
+  },
+  {
+   "dong": 908,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "CỬA ÚC KT 5.5D XR-CF",
+   "ten_vat_tu": "CỬA ÚC KT 5.5D XR-CAFE",
+   "ma_nguon": "TP-UC KT 5.5D XR-CF",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 425000.0
+  },
+  {
+   "dong": 933,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "CỬA ÚC MTN 4.6D XN-VK",
+   "ten_vat_tu": "CỬA ÚC MTN 4.6D XN-VK",
+   "ma_nguon": "TP-UC MTN 4.6D XN-VK",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 375000.0
+  },
+  {
+   "dong": 944,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "CỬA ÚC MTN 4.6D XR-CF",
+   "ten_vat_tu": "CỬA ÚC MTN 4.6D XR-CF",
+   "ma_nguon": "TP-UC MTN 4.6D XR-CF",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 375000.0
+  },
+  {
+   "dong": 955,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "CỬA ÚC MTN 4.6D TR-XLC",
+   "ten_vat_tu": "CỬA ÚC MTN 4.6D TR-XLC",
+   "ma_nguon": "TP-UC MTN 4.6D TR-XLC",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 375000.0
+  },
+  {
+   "dong": 966,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "CỬA ÚC MTN 4.6D GU-KU",
+   "ten_vat_tu": "CỬA ÚC MTN 4.6D GU-KU",
+   "ma_nguon": "TP-UC MTN 4.6D GU-KU",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 375000.0
+  },
+  {
+   "dong": 977,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "CỬA ÚC MTN 5.5D XN-VK",
+   "ten_vat_tu": "CỬA ÚC MTN 5.5D XN-VK",
+   "ma_nguon": "TP-UC MTN 5.5D XN-VK",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 405000.0
+  },
+  {
+   "dong": 988,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "CỬA ÚC MTN 5.5D XR-CF",
+   "ten_vat_tu": "CỬA ÚC MTN 5.5D XR-CF",
+   "ma_nguon": "TP-UC MTN 5.5D XR-CF",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 405000.0
+  },
+  {
+   "dong": 999,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "CỬA ÚC MTN 5.5D TR-XLC",
+   "ten_vat_tu": "CỬA ÚC MTN 5.5D TR-XLC",
+   "ma_nguon": "TP-UC MTN 5.5D TR-XLC",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 405000.0
+  },
+  {
+   "dong": 1010,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "CỬA ÚC MTN 5.5D GU-KU",
+   "ten_vat_tu": "CỬA ÚC MTN 5.5D GU-KU",
+   "ma_nguon": "TP-UC MTN 5.5D GU-KU",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 405000.0
+  },
+  {
+   "dong": 1021,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "CỬA ÚC MTN STD 6D MSK",
+   "ten_vat_tu": "CỬA ÚC MTN 6D STĐ MSK",
+   "ma_nguon": "TP-UC MTN 6D STD MSK",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 465000.0
+  },
+  {
+   "dong": 1032,
+   "loai_cua": "ÚC",
+   "ten_thanh_pham": "CỬA ÚC KT 6D STĐ MSK",
+   "ten_vat_tu": "CỬA ÚC KT 6D STĐ MSK",
+   "ma_nguon": "TP-UC KT 6D STĐ MSK",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 465000.0
+  },
+  {
+   "dong": 1057,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "CỬA ĐỨC KÉO TAY AL70 (2 LỚP)",
+   "ten_vat_tu": "CỬA ĐỨC KÉO TAY AL70 (2 LỚP)",
+   "ma_nguon": "TP-DUC-KT AL70 (2 LỚP) STĐ MSK",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 890000.0
+  },
+  {
+   "dong": 1082,
+   "loai_cua": "ĐỨC",
+   "ten_thanh_pham": "CỬA ĐỨC KÉO TAY AL70 (1 LỚP)",
+   "ten_vat_tu": "CỬA ĐỨC KÉO TAY AL70 (1 LỚP)",
+   "ma_nguon": "TP-DUC-KT AL70 STĐ MSK",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 890000.0
+  },
+  {
+   "dong": 1107,
+   "loai_cua": "LƯỚI MV",
+   "ten_thanh_pham": "CỬA LƯỚI MẮT VÕNG STĐ-Trọn bộ",
+   "ten_vat_tu": "CỬA LƯỚI MẮT VÕNG STĐ - Trọn bộ",
+   "ma_nguon": "TP-LUOI-MV-STD - TRONBO",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 590000.0
+  },
+  {
+   "dong": 1121,
+   "loai_cua": "LƯỚI MV",
+   "ten_thanh_pham": "BẮN BƯỚM SẮT",
+   "ten_vat_tu": "NVL-BẮN BƯỚM SẮT",
+   "ma_nguon": "TP-BUOMSAT",
+   "dvt": "KG/M2",
+   "dinh_muc": 0.14,
+   "gia_ban": 30000.0
+  },
+  {
+   "dong": 1122,
+   "loai_cua": "LƯỚI MV",
+   "ten_thanh_pham": "BẮN BƯỚM INOX",
+   "ten_vat_tu": "BẮN BƯỚM (INOX)",
+   "ma_nguon": "TP-BUOMINOX",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 60000.0
+  },
+  {
+   "dong": 1125,
+   "loai_cua": "",
+   "ten_thanh_pham": "TRỤC 140",
+   "ten_vat_tu": "TP TRỤC 140",
+   "ma_nguon": "TP-TRUC140",
+   "dvt": "M",
+   "dinh_muc": 1.0,
+   "gia_ban": 180000.0
+  },
+  {
+   "dong": 1127,
+   "loai_cua": "",
+   "ten_thanh_pham": "TRỤC 168",
+   "ten_vat_tu": "TP TRỤC 168",
+   "ma_nguon": "TP-TRUC168",
+   "dvt": "M",
+   "dinh_muc": 1.0,
+   "gia_ban": 500000.0
+  },
+  {
+   "dong": 1129,
+   "loai_cua": "",
+   "ten_thanh_pham": "RAY SẮT U70 (KHÔNG RON)",
+   "ten_vat_tu": "TP RAY SẮT U70 (KHÔNG RON)",
+   "ma_nguon": "NVL-TOLE1.2x190-KRON",
+   "dvt": "M",
+   "dinh_muc": 1.0,
+   "gia_ban": 70000.0
+  },
+  {
+   "dong": 1131,
+   "loai_cua": "",
+   "ten_thanh_pham": "RAY SẮT U100-1.2ly (KHÔNG RON)",
+   "ten_vat_tu": "TP RAY SẮT U100-1.2ly (KHÔNG RON)",
+   "ma_nguon": "NVL-TOLE1.4x270x1.2ly-KRON",
+   "dvt": "M",
+   "dinh_muc": 1.0,
+   "gia_ban": 90000.0
+  },
+  {
+   "dong": 1133,
+   "loai_cua": "",
+   "ten_thanh_pham": "RAY SẮT U100-1.2ly (CÓ RON)",
+   "ten_vat_tu": "TP RAY SẮT U100-1.2ly (CÓ RON)",
+   "ma_nguon": "NVL-TOLE1.4x270x1.2ly-CRON",
+   "dvt": "M",
+   "dinh_muc": 1.0,
+   "gia_ban": 95000.0
+  },
+  {
+   "dong": 1136,
+   "loai_cua": "",
+   "ten_thanh_pham": "RAY SẮT U100-1.4ly (KHÔNG RON)",
+   "ten_vat_tu": "TP RAY SẮT U100-1.4ly (KHÔNG RON)",
+   "ma_nguon": "NVL-TOLE1.4x270x1.4ly-KRON",
+   "dvt": "M",
+   "dinh_muc": 1.0,
+   "gia_ban": 105000.0
+  },
+  {
+   "dong": 1138,
+   "loai_cua": "",
+   "ten_thanh_pham": "RAY SẮT U100-1.4ly (CÓ RON)",
+   "ten_vat_tu": "TP RAY SẮT U100-1.4ly (CÓ RON)",
+   "ma_nguon": "NVL-TOLE1.4x270x1.4ly-CRON",
+   "dvt": "M",
+   "dinh_muc": 1.0,
+   "gia_ban": 110000.0
+  },
+  {
+   "dong": 1141,
+   "loai_cua": "",
+   "ten_thanh_pham": "RAY SẮT U100-1.4ly (CÓ RON+TỰ DỪNG)",
+   "ten_vat_tu": "TP RAY SẮT U100-1.4ly (CÓ RON+TỰ DỪNG)",
+   "ma_nguon": "NVL-TOLE1.4x270x1.4ly-CRON+TD",
+   "dvt": "M",
+   "dinh_muc": 1.0,
+   "gia_ban": 135000.0
+  },
+  {
+   "dong": 1146,
+   "loai_cua": "",
+   "ten_thanh_pham": "RAY SẮT U70 (CÓ RON)",
+   "ten_vat_tu": "TP RAY SẮT U70 (CÓ RON)",
+   "ma_nguon": "TP-RS7P (CÓ RON)",
+   "dvt": "M",
+   "dinh_muc": 1.0,
+   "gia_ban": 75000.0
+  },
+  {
+   "dong": 1149,
+   "loai_cua": "LƯỚI MV",
+   "ten_thanh_pham": "CỬA LƯỚI MẮT VÕNG STĐ - TÁCH MÓN",
+   "ten_vat_tu": "TP CỬA LƯỚI MẮT VÕNG STĐ - Tách món",
+   "ma_nguon": "TP-LUOI-MV-STD - TM",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 450000.0
+  },
+  {
+   "dong": 1158,
+   "loai_cua": "LƯỚI SN19",
+   "ten_thanh_pham": "CỬA LƯỚI SN PHI 19 STD - TÁCH MÓN",
+   "ten_vat_tu": "CỬA LƯỚI SN PHI 19 STD - TÁCH MÓN",
+   "ma_nguon": "TP-LUOI-SN-STD - TM",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 490000.0
+  },
+  {
+   "dong": 1169,
+   "loai_cua": "LƯỚI SN19",
+   "ten_thanh_pham": "CỬA LƯỚI SN PHI 19 STD - TRỌN BỘ",
+   "ten_vat_tu": "CỬA LƯỚI SN PHI 19 STD - TRỌN BỘ",
+   "ma_nguon": "TP-LUOI-SN-STD - TRONBO",
+   "dvt": "M2",
+   "dinh_muc": 1.0,
+   "gia_ban": 630000.0
+  },
+  {
+   "dong": 1185,
+   "loai_cua": "LƯỚI SN13x26",
+   "ten_thanh_pham": "CỬA LƯỚI SN PHI 13x26 STĐ - TRỌN BỘ",
+   "ten_vat_tu": "LƯỚI SN PHI 13X26 STĐ - TRỌN  BỘ",
+   "ma_nguon": "TP-LUOI-SN13x26-STD - TRONBO",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 750000.0
+  },
+  {
+   "dong": 1193,
+   "loai_cua": "LƯỚI SN13x26",
+   "ten_thanh_pham": "CỬA LƯỚI SN PHI 13x26 STĐ - TÁCH MÓN",
+   "ten_vat_tu": "LƯỚI SN PHI 13X26 STĐ - TÁCH MÓN",
+   "ma_nguon": "TP-LUOI-SN13x26-STD - TACHMON",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 570000.0
+  },
+  {
+   "dong": 1195,
+   "loai_cua": "LƯỚI SN13x26",
+   "ten_thanh_pham": "CỬA LƯỚI SN PHI 13x26 INOX - TÁCH MÓN",
+   "ten_vat_tu": "LƯỚI SN PHI 13X26 INOX - TÁCH MÓN",
+   "ma_nguon": "TP-LUOI-SN13x26-INOX - TACHMON",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 1500000.0
+  },
+  {
+   "dong": 1197,
+   "loai_cua": "LƯỚI SN13x26",
+   "ten_thanh_pham": "LƯỚI SN PHI 13X26 INOX - TRỌN BỘ",
+   "ten_vat_tu": "LƯỚI SN PHI 13X26 INOX - TRỌN BỘ",
+   "ma_nguon": "TP-LUOI-SN13x26-INOX - TRONBO",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 1710000.0
+  },
+  {
+   "dong": 1204,
+   "loai_cua": "LƯỚI SN19",
+   "ten_thanh_pham": "CỬA LƯỚI SN PHI 19 STD - TÁCH MÓN",
+   "ten_vat_tu": "CỬA LƯỚI SN PHI 19 INOX- TÁCH MÓN",
+   "ma_nguon": "TP-LUOI-SNPHI19-INOX - TM",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 1290000.0
+  },
+  {
+   "dong": 1206,
+   "loai_cua": "LƯỚI SN19",
+   "ten_thanh_pham": "CỬA LƯỚI SN PHI 19 INOX- TRỌN BỘ",
+   "ten_vat_tu": "CỬA LƯỚI SN PHI 19 INOX- TRỌN BỘ",
+   "ma_nguon": "TP-LUOI-SNPHI19-INOX - TRONBO",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 1530000.0
+  },
+  {
+   "dong": 1213,
+   "loai_cua": "LƯỚI MV",
+   "ten_thanh_pham": "CỬA LƯỚI MẮT VÕNG INOX - TÁCH MÓN",
+   "ten_vat_tu": "CỬA LƯỚI MẮT VÕNG INOX - TÁCH MÓN",
+   "ma_nguon": "TP-LUOIMV-INOX- TM",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 1290000.0
+  },
+  {
+   "dong": 1215,
+   "loai_cua": "LƯỚI MV",
+   "ten_thanh_pham": "CỬA LƯỚI MẮT VÕNG INOX - TRỌN BỘ",
+   "ten_vat_tu": "CỬA LƯỚI MẮT VÕNG INOX - TRỌN BỘ",
+   "ma_nguon": "TP-LUOIMV-INOX- TRONBO",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 1530000.0
+  },
+  {
+   "dong": 1222,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐL7.5 INOX 6D",
+   "ten_vat_tu": "TP LÁ ĐL7.5 INOX 6D",
+   "ma_nguon": "TP-LADLINOX_6D",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 1040000.0
+  },
+  {
+   "dong": 1223,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐL7.5  INOX 7D",
+   "ten_vat_tu": "TP LÁ ĐL7.5  INOX 7D",
+   "ma_nguon": "TP-LADLINOX_7D",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 1160000.0
+  },
+  {
+   "dong": 1224,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐL7.5  INOX 8D",
+   "ten_vat_tu": "TP LÁ ĐL7.5  INOX 8D",
+   "ma_nguon": "TP-LADLINOX_8D",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 1290000.0
+  },
+  {
+   "dong": 1225,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐL7.5  INOX 1LY",
+   "ten_vat_tu": "TP LÁ ĐL7.5  INOX 1LY",
+   "ma_nguon": "TP-LADLINOX_1LY",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 1650000.0
+  },
+  {
+   "dong": 1226,
+   "loai_cua": "",
+   "ten_thanh_pham": "V4_INOX_2ly",
+   "ten_vat_tu": "TP V4_INOX_2ly",
+   "ma_nguon": "TP-V4_INOX",
+   "dvt": "M",
+   "dinh_muc": null,
+   "gia_ban": 180000.0
+  },
+  {
+   "dong": 1227,
+   "loai_cua": "",
+   "ten_thanh_pham": "V4_3ly",
+   "ten_vat_tu": "TP V4_INOX_3ly",
+   "ma_nguon": "TP-V4_INOX_3LY",
+   "dvt": "M",
+   "dinh_muc": null,
+   "gia_ban": 250000.0
+  },
+  {
+   "dong": 1228,
+   "loai_cua": "",
+   "ten_thanh_pham": "RAY INOX 6P - CÓ RON",
+   "ten_vat_tu": "TP RAY INOX 6P - CÓ RON",
+   "ma_nguon": "TP-RAYINOX-6P-RON",
+   "dvt": "M",
+   "dinh_muc": null,
+   "gia_ban": 220000.0
+  },
+  {
+   "dong": 1229,
+   "loai_cua": "",
+   "ten_thanh_pham": "RAY INOX 8P - CÓ RON",
+   "ten_vat_tu": "TP RAY INOX 8P - CÓ RON",
+   "ma_nguon": "TP-RAYINOX-8P-RON",
+   "dvt": "M",
+   "dinh_muc": null,
+   "gia_ban": 270000.0
+  },
+  {
+   "dong": 1230,
+   "loai_cua": "",
+   "ten_thanh_pham": "RAY INOX 7P - KHÔNG RON",
+   "ten_vat_tu": "TP RAY INOX 7P - KHÔNG RON",
+   "ma_nguon": "TP-RAYINOX-7P-KHONGRON",
+   "dvt": "M",
+   "dinh_muc": null,
+   "gia_ban": 250000.0
+  },
+  {
+   "dong": 1231,
+   "loai_cua": "",
+   "ten_thanh_pham": "PHỤ THU_CỬA ĐỨC < 8m²",
+   "ten_vat_tu": "PHỤ THU_CỬA ĐỨC<8m²",
+   "ma_nguon": "PHUTHU-DUC<8m²",
+   "dvt": "CHUYẾN",
+   "dinh_muc": null,
+   "gia_ban": 300000.0
+  },
+  {
+   "dong": 1232,
+   "loai_cua": "",
+   "ten_thanh_pham": "PHỤ THU_PHỤ KIỆN ĐỨC < 5tr",
+   "ten_vat_tu": "PHỤ THU_PHỤ KIỆN ĐỨC<5tr",
+   "ma_nguon": "PHUTHU-DUC-PK<5tr",
+   "dvt": "CHUYẾN",
+   "dinh_muc": null,
+   "gia_ban": 300000.0
+  },
+  {
+   "dong": 1233,
+   "loai_cua": "",
+   "ten_thanh_pham": "PHỤ THU_CỬA ÚC < 7m²",
+   "ten_vat_tu": "PHỤ THU_CỬA ÚC<7m²",
+   "ma_nguon": "PHUTHU-UC<7m²",
+   "dvt": "BỘ",
+   "dinh_muc": null,
+   "gia_ban": 300000.0
+  },
+  {
+   "dong": 1234,
+   "loai_cua": "",
+   "ten_thanh_pham": "PHỤ THU_PHỤ KIỆN ÚC < 5tr",
+   "ten_vat_tu": "PHỤ THU_PHỤ KIỆN ÚC<5tr",
+   "ma_nguon": "PHUTHU-UC-PK<5tr",
+   "dvt": "CHUYẾN",
+   "dinh_muc": null,
+   "gia_ban": 300000.0
+  },
+  {
+   "dong": 1235,
+   "loai_cua": "",
+   "ten_thanh_pham": "PHỤ THU_CỬA ĐÀI LOAN< 8m²",
+   "ten_vat_tu": "PHỤ THU_CỬA ĐÀI LOAN< 8m²",
+   "ma_nguon": "PHUTHU-DAILOAN<8m²",
+   "dvt": "CHUYẾN",
+   "dinh_muc": null,
+   "gia_ban": 300000.0
+  },
+  {
+   "dong": 1236,
+   "loai_cua": "",
+   "ten_thanh_pham": "PHỤ THU_PHỤ KIỆN ĐÀI LOAN< 8m²",
+   "ten_vat_tu": "PHỤ THU_PHỤ KIỆN ĐÀI LOAN<3tr",
+   "ma_nguon": "PHUTHU-DAILOAN-PK<3tr",
+   "dvt": "CHUYẾN",
+   "dinh_muc": null,
+   "gia_ban": 300000.0
+  },
+  {
+   "dong": 1237,
+   "loai_cua": "",
+   "ten_thanh_pham": "PHỤ THU_CỬA LƯỚI< 8m²",
+   "ten_vat_tu": "PHỤ THU_CỬA LƯỚI< 8m²",
+   "ma_nguon": "PHUTHU-CUALUOI<8m²",
+   "dvt": "CHUYẾN",
+   "dinh_muc": null,
+   "gia_ban": 300000.0
+  },
+  {
+   "dong": 1238,
+   "loai_cua": "",
+   "ten_thanh_pham": "PHỤ THU_CỬA LƯỚI <3tr",
+   "ten_vat_tu": "PHỤ THU_CỬA LƯỚI <3tr",
+   "ma_nguon": "PHUTHU-CUALUOI<3tr",
+   "dvt": "CHUYẾN",
+   "dinh_muc": null,
+   "gia_ban": 300000.0
+  },
+  {
+   "dong": 1239,
+   "loai_cua": "",
+   "ten_thanh_pham": "PHỤ THU_SƠN VÂN GỖ_LÁ ĐỨC",
+   "ten_vat_tu": "PHỤ THU_SƠN VÂN GỖ_LÁ ĐỨC",
+   "ma_nguon": "PHUTHU-SVG-LADUC",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 465000.0
+  },
+  {
+   "dong": 1241,
+   "loai_cua": "",
+   "ten_thanh_pham": "V4_KẼM",
+   "ten_vat_tu": "TP-V4_KẼM",
+   "ma_nguon": "NVL-V4-KEM_TOLE75_STD",
+   "dvt": "M",
+   "dinh_muc": 1.464,
+   "gia_ban": 55000.0
+  },
+  {
+   "dong": 1242,
+   "loai_cua": "",
+   "ten_thanh_pham": "V4_STĐ",
+   "ten_vat_tu": "TP-V4_STĐ",
+   "ma_nguon": "NVL-V4_KEM_STD",
+   "dvt": "M",
+   "dinh_muc": 1.464,
+   "gia_ban": 70000.0
+  },
+  {
+   "dong": 1243,
+   "loai_cua": "",
+   "ten_thanh_pham": "V4_KẼM",
+   "ten_vat_tu": "TP-V5_KẼM",
+   "ma_nguon": "NVL-V5_KEM_STD",
+   "dvt": "M",
+   "dinh_muc": null,
+   "gia_ban": 75000.0
+  },
+  {
+   "dong": 1244,
+   "loai_cua": "",
+   "ten_thanh_pham": "V4_STĐ",
+   "ten_vat_tu": "TP-V5_STĐ",
+   "ma_nguon": "NVL-V5_KEM_STD",
+   "dvt": "M",
+   "dinh_muc": 1.8,
+   "gia_ban": 90000.0
+  },
+  {
+   "dong": 1245,
+   "loai_cua": "6D",
+   "ten_thanh_pham": "TP LÁ ĐÀI LOAN 6D_XN-VK",
+   "ten_vat_tu": "TP LÁ ĐÀI LOAN 6D_XN-VK",
+   "ma_nguon": "NVL-TON-DL5.2Dx124-XNVK",
+   "dvt": "KG",
+   "dinh_muc": 6.32,
+   "gia_ban": 280000.0
+  },
+  {
+   "dong": 1246,
+   "loai_cua": "6D",
+   "ten_thanh_pham": "TP LÁ ĐÀI LOAN 6D_XN-XLC",
+   "ten_vat_tu": "TP LÁ ĐÀI LOAN 6D_XN-XLC",
+   "ma_nguon": "NVL-TON-DL5.2Dx124-XNXLC",
+   "dvt": "KG",
+   "dinh_muc": 6.32,
+   "gia_ban": 280000.0
+  },
+  {
+   "dong": 1247,
+   "loai_cua": "",
+   "ten_thanh_pham": "TP LÁ ĐÀI LOAN 7D_XN-VK",
+   "ten_vat_tu": "TP LÁ ĐÀI LOAN 7D_XN-VK",
+   "ma_nguon": "NVL-TON-DL6.2Dx124-XNVK",
+   "dvt": "KG",
+   "dinh_muc": 7.6,
+   "gia_ban": 300000.0
+  },
+  {
+   "dong": 1248,
+   "loai_cua": "",
+   "ten_thanh_pham": "TP LÁ ĐÀI LOAN 7D_XN-XLC",
+   "ten_vat_tu": "TP LÁ ĐÀI LOAN 7D_XN-XLC",
+   "ma_nguon": "NVL-TON-DL6.2Dx124-XNXLC",
+   "dvt": "KG",
+   "dinh_muc": 7.6,
+   "gia_ban": 300000.0
+  },
+  {
+   "dong": 1249,
+   "loai_cua": "",
+   "ten_thanh_pham": "TP LÁ ĐÀI LOAN 8D_XN-VK",
+   "ten_vat_tu": "TP LÁ ĐÀI LOAN 8D_XN-VK",
+   "ma_nguon": "NVL-TON-DL7.2Dx124-XNVK",
+   "dvt": "KG",
+   "dinh_muc": 8.85,
+   "gia_ban": 320000.0
+  },
+  {
+   "dong": 1250,
+   "loai_cua": "",
+   "ten_thanh_pham": "TP LÁ ĐÀI LOAN 8D_XN-XLC",
+   "ten_vat_tu": "TP LÁ ĐÀI LOAN 8D_XN-XLC",
+   "ma_nguon": "NVL-TON-DL7.2Dx124-XNXLC",
+   "dvt": "KG",
+   "dinh_muc": 8.85,
+   "gia_ban": 320000.0
+  },
+  {
+   "dong": 1251,
+   "loai_cua": "",
+   "ten_thanh_pham": "TP LÁ ĐÀI LOAN 1LY_XN-VK",
+   "ten_vat_tu": "TP LÁ ĐÀI LOAN 1LY_XN-VK",
+   "ma_nguon": "NVL-TON-DL9.2Dx124-XNVK",
+   "dvt": "KG",
+   "dinh_muc": 11.64,
+   "gia_ban": 380000.0
+  },
+  {
+   "dong": 1252,
+   "loai_cua": "",
+   "ten_thanh_pham": "TP LÁ ĐÀI LOAN 1LY_XN-XLC",
+   "ten_vat_tu": "TP LÁ ĐÀI LOAN 1LY_XN-XLC",
+   "ma_nguon": "NVL-TON-DL9.2Dx124-XNXLC",
+   "dvt": "KG",
+   "dinh_muc": 11.64,
+   "gia_ban": 380000.0
+  },
+  {
+   "dong": 1253,
+   "loai_cua": "",
+   "ten_thanh_pham": "TP LÁ ĐÀI LOAN STĐ 8D",
+   "ten_vat_tu": "TP LÁ ĐÀI LOAN STĐ 8D",
+   "ma_nguon": "TP-TOLEKEM124_6D",
+   "dvt": "M2",
+   "dinh_muc": 8.2,
+   "gia_ban": 410000.0
+  },
+  {
+   "dong": 1256,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐÀI LOAN STĐ 1LY",
+   "ten_vat_tu": "TP LÁ ĐÀI LOAN STĐ 1LY",
+   "ma_nguon": "TP-TOLEKEM124_8D",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 460000.0
+  },
+  {
+   "dong": 1259,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐÀI LOAN STĐ 1.2LY",
+   "ten_vat_tu": "HH LÁ ĐÀI LOAN STĐ 1.2LY",
+   "ma_nguon": "TP-TOLEKEM124_1.2LY",
+   "dvt": "M2",
+   "dinh_muc": 11.64,
+   "gia_ban": 510000.0
+  },
+  {
+   "dong": 1262,
+   "loai_cua": "6D",
+   "ten_thanh_pham": "CỬA ĐL6D XN-VK_TRỌN BỘ >10m²",
+   "ten_vat_tu": "CỬA ĐL6D XN-VK_TRỌN BỘ >10m²",
+   "ma_nguon": "TP-CUADL6D XN-VK_TRONBO>10m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 380000.0
+  },
+  {
+   "dong": 1267,
+   "loai_cua": "",
+   "ten_thanh_pham": "PHỤ THU CHUYỂN ĐỔI CỬA KÉO TAY",
+   "ten_vat_tu": "PHỤ THU CHUYỂN ĐỔI LÊN CỬA KÉO TAY",
+   "ma_nguon": "PHUTHUCHUYENDOICUAKT",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 20000.0
+  },
+  {
+   "dong": 1268,
+   "loai_cua": "6D",
+   "ten_thanh_pham": "CỬA ĐL6D XN-XLC_TRỌN BỘ >10m²",
+   "ten_vat_tu": "CỬA ĐL6D XN-XLC_TRỌN BỘ >10m²",
+   "ma_nguon": "TP-CUADL6D XN-XLC_TRONBO>10m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 380000.0
+  },
+  {
+   "dong": 1273,
+   "loai_cua": "6D",
+   "ten_thanh_pham": "PHỤ THU CHUYỂN ĐỔI CỬA KÉO TAY",
+   "ten_vat_tu": "PHỤ THU CHUYỂN ĐỔI LÊN CỬA KÉO TAY",
+   "ma_nguon": "PHUTHUCHUYENDOICUAKT",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 20000.0
+  },
+  {
+   "dong": 1274,
+   "loai_cua": "6D",
+   "ten_thanh_pham": "CỬA ĐL6D XN-XLC_TRỌN BỘ_9-10m²",
+   "ten_vat_tu": "CỬA ĐL6D XN-XLC_TRỌN BỘ_9-10m²",
+   "ma_nguon": "TP-CUADL6D XN-XLC_TRONBO_9-10m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 390000.0
+  },
+  {
+   "dong": 1279,
+   "loai_cua": "",
+   "ten_thanh_pham": "PHỤ THU CHUYỂN ĐỔI CỬA KÉO TAY",
+   "ten_vat_tu": "PHỤ THU CHUYỂN ĐỔI LÊN CỬA KÉO TAY",
+   "ma_nguon": "PHUTHUCHUYENDOICUAKT",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 20000.0
+  },
+  {
+   "dong": 1280,
+   "loai_cua": "6D",
+   "ten_thanh_pham": "CỬA ĐL6D XN-VK_TRỌN BỘ_9-10m²",
+   "ten_vat_tu": "CỬA ĐL6D XN-VK_TRỌN BỘ_9-10m²",
+   "ma_nguon": "TP-CUADL6D XN-VK_TRONBO_9-10m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 390000.0
+  },
+  {
+   "dong": 1285,
+   "loai_cua": "",
+   "ten_thanh_pham": "PHỤ THU CHUYỂN ĐỔI CỬA KÉO TAY",
+   "ten_vat_tu": "PHỤ THU CHUYỂN ĐỔI LÊN CỬA KÉO TAY",
+   "ma_nguon": "PHUTHUCHUYENDOICUAKT",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 20000.0
+  },
+  {
+   "dong": 1286,
+   "loai_cua": "6D",
+   "ten_thanh_pham": "CỬA ĐL6D XN-XLC_TRỌN BỘ_8-9m²",
+   "ten_vat_tu": "CỬA ĐL6D XN-XLC_TRỌN BỘ_8-9m²",
+   "ma_nguon": "TP-CUADL6D XN-XLC_TRONBO_8-9m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 400000.0
+  },
+  {
+   "dong": 1291,
+   "loai_cua": "",
+   "ten_thanh_pham": "PHỤ THU CHUYỂN ĐỔI CỬA KÉO TAY",
+   "ten_vat_tu": "PHỤ THU CHUYỂN ĐỔI LÊN CỬA KÉO TAY",
+   "ma_nguon": "PHUTHUCHUYENDOICUAKT",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 20000.0
+  },
+  {
+   "dong": 1292,
+   "loai_cua": "6D",
+   "ten_thanh_pham": "CỬA ĐL6D XN-VK_TRỌN BỘ_8-9m²",
+   "ten_vat_tu": "CỬA ĐL6D XN-VK_TRỌN BỘ_8-9m²",
+   "ma_nguon": "TP-CUADL6D XN-VK_TRONBO_8-9m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 400000.0
+  },
+  {
+   "dong": 1297,
+   "loai_cua": "",
+   "ten_thanh_pham": "PHỤ THU CHUYỂN ĐỔI CỬA KÉO TAY",
+   "ten_vat_tu": "PHỤ THU CHUYỂN ĐỔI LÊN CỬA KÉO TAY",
+   "ma_nguon": "PHUTHUCHUYENDOICUAKT",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 20000.0
+  },
+  {
+   "dong": 1298,
+   "loai_cua": "6D",
+   "ten_thanh_pham": "CỬA ĐL6D XN-VK_TRỌN BỘ_7-8m²",
+   "ten_vat_tu": "CỬA ĐL6D XN-VK_TRỌN BỘ_7-8m²",
+   "ma_nguon": "TP-CUADL6D XN-VK_TRONBO_7-8m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 410000.0
+  },
+  {
+   "dong": 1303,
+   "loai_cua": "",
+   "ten_thanh_pham": "PHỤ THU CHUYỂN ĐỔI CỬA KÉO TAY",
+   "ten_vat_tu": "PHỤ THU CHUYỂN ĐỔI LÊN CỬA KÉO TAY",
+   "ma_nguon": "PHUTHUCHUYENDOICUAKT",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 20000.0
+  },
+  {
+   "dong": 1304,
+   "loai_cua": "6D",
+   "ten_thanh_pham": "CỬA ĐL6D XN-XLC_TRỌN BỘ_7-8m²",
+   "ten_vat_tu": "CỬA ĐL6D XN-XLC_TRỌN BỘ_7-8m²",
+   "ma_nguon": "TP-CUADL6D XN-XLC_TRONBO_7-8m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 410000.0
+  },
+  {
+   "dong": 1309,
+   "loai_cua": "",
+   "ten_thanh_pham": "PHỤ THU CHUYỂN ĐỔI CỬA KÉO TAY",
+   "ten_vat_tu": "PHỤ THU CHUYỂN ĐỔI LÊN CỬA KÉO TAY",
+   "ma_nguon": "PHUTHUCHUYENDOICUAKT",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 20000.0
+  },
+  {
+   "dong": 1310,
+   "loai_cua": "6D",
+   "ten_thanh_pham": "CỬA ĐL6D XN-XLC_TRỌN BỘ_6-7m²",
+   "ten_vat_tu": "CỬA ĐL6D XN-XLC_TRỌN BỘ_6-7m²",
+   "ma_nguon": "TP-CUADL6D XN-XLC_TRONBO_6-7m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 420000.0
+  },
+  {
+   "dong": 1315,
+   "loai_cua": "",
+   "ten_thanh_pham": "PHỤ THU CHUYỂN ĐỔI CỬA KÉO TAY",
+   "ten_vat_tu": "PHỤ THU CHUYỂN ĐỔI LÊN CỬA KÉO TAY",
+   "ma_nguon": "PHUTHUCHUYENDOICUAKT",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 20000.0
+  },
+  {
+   "dong": 1316,
+   "loai_cua": "6D",
+   "ten_thanh_pham": "CỬA ĐL6D XN-VK_TRỌN BỘ_6-7m²",
+   "ten_vat_tu": "CỬA ĐL6D XN-VK_TRỌN BỘ_6-7m²",
+   "ma_nguon": "TP-CUADL6D XN-VK_TRONBO_6-7m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 420000.0
+  },
+  {
+   "dong": 1321,
+   "loai_cua": "",
+   "ten_thanh_pham": "PHỤ THU CHUYỂN ĐỔI CỬA KÉO TAY",
+   "ten_vat_tu": "PHỤ THU CHUYỂN ĐỔI LÊN CỬA KÉO TAY",
+   "ma_nguon": "PHUTHUCHUYENDOICUAKT",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 20000.0
+  },
+  {
+   "dong": 1322,
+   "loai_cua": "6D",
+   "ten_thanh_pham": "CỬA ĐL6D XN-XLC_TRỌN BỘ_5-6m²",
+   "ten_vat_tu": "CỬA ĐL6D XN-XLC_TRỌN BỘ_5-6m²",
+   "ma_nguon": "TP-CUADL6D XN-XLC_TRONBO_5-6m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 430000.0
+  },
+  {
+   "dong": 1327,
+   "loai_cua": "",
+   "ten_thanh_pham": "PHỤ THU CHUYỂN ĐỔI CỬA KÉO TAY",
+   "ten_vat_tu": "PHỤ THU CHUYỂN ĐỔI LÊN CỬA KÉO TAY",
+   "ma_nguon": "PHUTHUCHUYENDOICUAKT",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 20000.0
+  },
+  {
+   "dong": 1328,
+   "loai_cua": "6D",
+   "ten_thanh_pham": "CỬA ĐL6D XN-XLC_TRỌN BỘ_5-6m²",
+   "ten_vat_tu": "CỬA ĐL6D XN-VK_TRỌN BỘ_5-6m²",
+   "ma_nguon": "TP-CUADL6D XN-VK_TRONBO_5-6m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 430000.0
+  },
+  {
+   "dong": 1333,
+   "loai_cua": "",
+   "ten_thanh_pham": "PHỤ THU CHUYỂN ĐỔI CỬA KÉO TAY",
+   "ten_vat_tu": "PHỤ THU CHUYỂN ĐỔI LÊN CỬA KÉO TAY",
+   "ma_nguon": "PHUTHUCHUYENDOICUAKT",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 20000.0
+  },
+  {
+   "dong": 1334,
+   "loai_cua": "6D",
+   "ten_thanh_pham": "CỬA ĐL6D XN-XLC_TRỌN BỘ_4-5m²",
+   "ten_vat_tu": "CỬA ĐL6D XN-XLC_TRỌN BỘ_4-5m²",
+   "ma_nguon": "TP-CUADL6D XN-XLC_TRONBO_4-5m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 440000.0
+  },
+  {
+   "dong": 1339,
+   "loai_cua": "",
+   "ten_thanh_pham": "PHỤ THU CHUYỂN ĐỔI CỬA KÉO TAY",
+   "ten_vat_tu": "PHỤ THU CHUYỂN ĐỔI LÊN CỬA KÉO TAY",
+   "ma_nguon": "PHUTHUCHUYENDOICUAKT",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 20000.0
+  },
+  {
+   "dong": 1340,
+   "loai_cua": "6D",
+   "ten_thanh_pham": "CỬA ĐL6D XN-VK_TRỌN BỘ_4-5m²",
+   "ten_vat_tu": "CỬA ĐL6D XN-VK_TRỌN BỘ_4-5m²",
+   "ma_nguon": "TP-CUADL6D XN-VK_TRONBO_4-5m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 440000.0
+  },
+  {
+   "dong": 1345,
+   "loai_cua": "",
+   "ten_thanh_pham": "PHỤ THU CHUYỂN ĐỔI CỬA KÉO TAY",
+   "ten_vat_tu": "PHỤ THU CHUYỂN ĐỔI LÊN CỬA KÉO TAY",
+   "ma_nguon": "PHUTHUCHUYENDOICUAKT",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 20000.0
+  },
+  {
+   "dong": 1346,
+   "loai_cua": "6D",
+   "ten_thanh_pham": "CỬA ĐL6D XN-VK_TRỌN BỘ_3-4m²",
+   "ten_vat_tu": "CỬA ĐL6D XN-VK_TRỌN BỘ_3-4m²",
+   "ma_nguon": "TP-CUADL6D XN-VK_TRONBO_3-4m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 450000.0
+  },
+  {
+   "dong": 1351,
+   "loai_cua": "",
+   "ten_thanh_pham": "PHỤ THU CHUYỂN ĐỔI CỬA KÉO TAY",
+   "ten_vat_tu": "PHỤ THU CHUYỂN ĐỔI LÊN CỬA KÉO TAY",
+   "ma_nguon": "PHUTHUCHUYENDOICUAKT",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 20000.0
+  },
+  {
+   "dong": 1352,
+   "loai_cua": "6D",
+   "ten_thanh_pham": "CỬA ĐL6D XN-XLC_TRỌN BỘ_3-4m²",
+   "ten_vat_tu": "CỬA ĐL6D XN-XLC_TRỌN BỘ_3-4m²",
+   "ma_nguon": "TP-CUADL6D XN-XLC_TRONBO_3-4m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 450000.0
+  },
+  {
+   "dong": 1357,
+   "loai_cua": "",
+   "ten_thanh_pham": "PHỤ THU CHUYỂN ĐỔI CỬA KÉO TAY",
+   "ten_vat_tu": "PHỤ THU CHUYỂN ĐỔI LÊN CỬA KÉO TAY",
+   "ma_nguon": "PHUTHUCHUYENDOICUAKT",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 20000.0
+  },
+  {
+   "dong": 1358,
+   "loai_cua": "7D",
+   "ten_thanh_pham": "CỬA ĐL7D XN-VK_TRỌN BỘ >10m²",
+   "ten_vat_tu": "CỬA ĐL7D XN-VK_TRỌN BỘ >10m²",
+   "ma_nguon": "TP-CUADL7D XN-VK_TRONBO>10m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 410000.0
+  },
+  {
+   "dong": 1364,
+   "loai_cua": "7D",
+   "ten_thanh_pham": "CỬA ĐL7D XN-XLC_TRỌN BỘ >10m²",
+   "ten_vat_tu": "CỬA ĐL7D XN-XLC_TRỌN BỘ >10m²",
+   "ma_nguon": "TP-CUADL7D XN-XLC_TRONBO>10m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 410000.0
+  },
+  {
+   "dong": 1370,
+   "loai_cua": "6D",
+   "ten_thanh_pham": "CỬA ĐL7D XN-XLC_TRỌN BỘ_9-10m²",
+   "ten_vat_tu": "CỬA ĐL7D XN-XLC_TRỌN BỘ_9-10m²",
+   "ma_nguon": "TP-CUADL7D XN-XLC_TRONBO_9-10m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 420000.0
+  },
+  {
+   "dong": 1376,
+   "loai_cua": "6D",
+   "ten_thanh_pham": "CỬA ĐL7D XN-VK_TRỌN BỘ_9-10m²",
+   "ten_vat_tu": "CỬA ĐL7D XN-VK_TRỌN BỘ_9-10m²",
+   "ma_nguon": "TP-CUADL7D XN-VK_TRONBO_9-10m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 420000.0
+  },
+  {
+   "dong": 1382,
+   "loai_cua": "6D",
+   "ten_thanh_pham": "CỬA ĐL7D XN-XLC_TRỌN BỘ_8-9m²",
+   "ten_vat_tu": "CỬA ĐL7D XN-XLC_TRỌN BỘ_8-9m²",
+   "ma_nguon": "TP-CUADL7D XN-XLC_TRONBO_8-9m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 430000.0
+  },
+  {
+   "dong": 1388,
+   "loai_cua": "6D",
+   "ten_thanh_pham": "CỬA ĐL7D XN-VK_TRỌN BỘ_8-9m²",
+   "ten_vat_tu": "CỬA ĐL7D XN-VK_TRỌN BỘ_8-9m²",
+   "ma_nguon": "TP-CUADL7D XN-VK_TRONBO_8-9m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 430000.0
+  },
+  {
+   "dong": 1394,
+   "loai_cua": "6D",
+   "ten_thanh_pham": "CỬA ĐL7D XN-VK_TRỌN BỘ_7-8m²",
+   "ten_vat_tu": "CỬA ĐL7D XN-VK_TRỌN BỘ_7-8m²",
+   "ma_nguon": "TP-CUADL7D XN-VK_TRONBO_7-8m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 440000.0
+  },
+  {
+   "dong": 1400,
+   "loai_cua": "6D",
+   "ten_thanh_pham": "CỬA ĐL7D XN-XLC_TRỌN BỘ_7-8m²",
+   "ten_vat_tu": "CỬA ĐL7D XN-XLC_TRỌN BỘ_7-8m²",
+   "ma_nguon": "TP-CUADL7D XN-XLC_TRONBO_7-8m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 440000.0
+  },
+  {
+   "dong": 1406,
+   "loai_cua": "6D",
+   "ten_thanh_pham": "CỬA ĐL7D XN-XLC_TRỌN BỘ_6-7m²",
+   "ten_vat_tu": "CỬA ĐL7D XN-XLC_TRỌN BỘ_6-7m²",
+   "ma_nguon": "TP-CUADL7D XN-XLC_TRONBO_6-7m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 450000.0
+  },
+  {
+   "dong": 1412,
+   "loai_cua": "6D",
+   "ten_thanh_pham": "CỬA ĐL7D XN-VK_TRỌN BỘ_6-7m²",
+   "ten_vat_tu": "CỬA ĐL7D XN-VK_TRỌN BỘ_6-7m²",
+   "ma_nguon": "TP-CUADL7D XN-VK_TRONBO_6-7m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 450000.0
+  },
+  {
+   "dong": 1418,
+   "loai_cua": "6D",
+   "ten_thanh_pham": "CỬA ĐL7D XN-XLC_TRỌN BỘ_5-6m²",
+   "ten_vat_tu": "CỬA ĐL7D XN-XLC_TRỌN BỘ_5-6m²",
+   "ma_nguon": "TP-CUADL7D XN-XLC_TRONBO_5-6m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 460000.0
+  },
+  {
+   "dong": 1424,
+   "loai_cua": "6D",
+   "ten_thanh_pham": "CỬA ĐL7D XN-XLC_TRỌN BỘ_5-6m²",
+   "ten_vat_tu": "CỬA ĐL7D XN-VK_TRỌN BỘ_5-6m²",
+   "ma_nguon": "TP-CUADL7D XN-VK_TRONBO_5-6m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 460000.0
+  },
+  {
+   "dong": 1430,
+   "loai_cua": "6D",
+   "ten_thanh_pham": "CỬA ĐL7D XN-XLC_TRỌN BỘ_4-5m²",
+   "ten_vat_tu": "CỬA ĐL7D XN-XLC_TRỌN BỘ_4-5m²",
+   "ma_nguon": "TP-CUADL7D XN-XLC_TRONBO_4-5m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 470000.0
+  },
+  {
+   "dong": 1436,
+   "loai_cua": "6D",
+   "ten_thanh_pham": "CỬA ĐL7D XN-VK_TRỌN BỘ_4-5m²",
+   "ten_vat_tu": "CỬA ĐL7D XN-VK_TRỌN BỘ_4-5m²",
+   "ma_nguon": "TP-CUADL7D XN-VK_TRONBO_4-5m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 470000.0
+  },
+  {
+   "dong": 1442,
+   "loai_cua": "6D",
+   "ten_thanh_pham": "CỬA ĐL7D XN-VK_TRỌN BỘ_3-4m²",
+   "ten_vat_tu": "CỬA ĐL7D XN-VK_TRỌN BỘ_3-4m²",
+   "ma_nguon": "TP-CUADL7D XN-VK_TRONBO_3-4m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 480000.0
+  },
+  {
+   "dong": 1448,
+   "loai_cua": "6D",
+   "ten_thanh_pham": "CỬA ĐL7D XN-XLC_TRỌN BỘ_3-4m²",
+   "ten_vat_tu": "CỬA ĐL7D XN-XLC_TRỌN BỘ_3-4m²",
+   "ma_nguon": "TP-CUADL7D XN-XLC_TRONBO_3-4m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 480000.0
+  },
+  {
+   "dong": 1454,
+   "loai_cua": "8D",
+   "ten_thanh_pham": "CỬA ĐL8D XN-VK_TRỌN BỘ >10m²",
+   "ten_vat_tu": "CỬA ĐL8D XN-VK_TRỌN BỘ >10m²",
+   "ma_nguon": "TP-CUADL8D XN-VK_TRONBO>10m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 440000.0
+  },
+  {
+   "dong": 1460,
+   "loai_cua": "8D",
+   "ten_thanh_pham": "CỬA ĐL8D XN-XLC_TRỌN BỘ >10m²",
+   "ten_vat_tu": "CỬA ĐL8D XN-XLC_TRỌN BỘ >10m²",
+   "ma_nguon": "TP-CUADL8D XN-XLC_TRONBO>10m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 440000.0
+  },
+  {
+   "dong": 1466,
+   "loai_cua": "8D",
+   "ten_thanh_pham": "CỬA ĐL8D XN-XLC_TRỌN BỘ_9-10m²",
+   "ten_vat_tu": "CỬA ĐL8D XN-XLC_TRỌN BỘ_9-10m²",
+   "ma_nguon": "TP-CUADL8D XN-XLC_TRONBO_9-10m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 450000.0
+  },
+  {
+   "dong": 1472,
+   "loai_cua": "8D",
+   "ten_thanh_pham": "CỬA ĐL8D XN-VK_TRỌN BỘ_9-10m²",
+   "ten_vat_tu": "CỬA ĐL8D XN-VK_TRỌN BỘ_9-10m²",
+   "ma_nguon": "TP-CUADL8D XN-VK_TRONBO_9-10m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 450000.0
+  },
+  {
+   "dong": 1478,
+   "loai_cua": "8D",
+   "ten_thanh_pham": "CỬA ĐL8D XN-XLC_TRỌN BỘ_8-9m²",
+   "ten_vat_tu": "CỬA ĐL8D XN-XLC_TRỌN BỘ_8-9m²",
+   "ma_nguon": "TP-CUADL8D XN-XLC_TRONBO_8-9m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 460000.0
+  },
+  {
+   "dong": 1484,
+   "loai_cua": "8D",
+   "ten_thanh_pham": "CỬA ĐL8D XN-VK_TRỌN BỘ_8-9m²",
+   "ten_vat_tu": "CỬA ĐL8D XN-VK_TRỌN BỘ_8-9m²",
+   "ma_nguon": "TP-CUADL8D XN-VK_TRONBO_8-9m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 460000.0
+  },
+  {
+   "dong": 1490,
+   "loai_cua": "8D",
+   "ten_thanh_pham": "CỬA ĐL8D XN-VK_TRỌN BỘ_7-8m²",
+   "ten_vat_tu": "CỬA ĐL8D XN-VK_TRỌN BỘ_7-8m²",
+   "ma_nguon": "TP-CUADL8D XN-VK_TRONBO_7-8m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 470000.0
+  },
+  {
+   "dong": 1496,
+   "loai_cua": "8D",
+   "ten_thanh_pham": "CỬA ĐL8D XN-XLC_TRỌN BỘ_7-8m²",
+   "ten_vat_tu": "CỬA ĐL8D XN-XLC_TRỌN BỘ_7-8m²",
+   "ma_nguon": "TP-CUADL8D XN-XLC_TRONBO_7-8m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 470000.0
+  },
+  {
+   "dong": 1502,
+   "loai_cua": "8D",
+   "ten_thanh_pham": "CỬA ĐL8D XN-XLC_TRỌN BỘ_6-7m²",
+   "ten_vat_tu": "CỬA ĐL8D XN-XLC_TRỌN BỘ_6-7m²",
+   "ma_nguon": "TP-CUADL8D XN-XLC_TRONBO_6-7m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 480000.0
+  },
+  {
+   "dong": 1508,
+   "loai_cua": "8D",
+   "ten_thanh_pham": "CỬA ĐL8D XN-VK_TRỌN BỘ_6-7m²",
+   "ten_vat_tu": "CỬA ĐL8D XN-VK_TRỌN BỘ_6-7m²",
+   "ma_nguon": "TP-CUADL8D XN-VK_TRONBO_6-7m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 480000.0
+  },
+  {
+   "dong": 1514,
+   "loai_cua": "8D",
+   "ten_thanh_pham": "CỬA ĐL8D XN-XLC_TRỌN BỘ_5-6m²",
+   "ten_vat_tu": "CỬA ĐL8D XN-XLC_TRỌN BỘ_5-6m²",
+   "ma_nguon": "TP-CUADL8D XN-XLC_TRONBO_5-6m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 490000.0
+  },
+  {
+   "dong": 1520,
+   "loai_cua": "8D",
+   "ten_thanh_pham": "CỬA ĐL8D XN-XLC_TRỌN BỘ_5-6m²",
+   "ten_vat_tu": "CỬA ĐL8D XN-VK_TRỌN BỘ_5-6m²",
+   "ma_nguon": "TP-CUADL8D XN-VK_TRONBO_5-6m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 490000.0
+  },
+  {
+   "dong": 1526,
+   "loai_cua": "8D",
+   "ten_thanh_pham": "CỬA ĐL8D XN-XLC_TRỌN BỘ_4-5m²",
+   "ten_vat_tu": "CỬA ĐL8D XN-XLC_TRỌN BỘ_4-5m²",
+   "ma_nguon": "TP-CUADL8D XN-XLC_TRONBO_4-5m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 500000.0
+  },
+  {
+   "dong": 1532,
+   "loai_cua": "8D",
+   "ten_thanh_pham": "CỬA ĐL8D XN-VK_TRỌN BỘ_4-5m²",
+   "ten_vat_tu": "CỬA ĐL8D XN-VK_TRỌN BỘ_4-5m²",
+   "ma_nguon": "TP-CUADL8D XN-VK_TRONBO_4-5m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 500000.0
+  },
+  {
+   "dong": 1538,
+   "loai_cua": "8D",
+   "ten_thanh_pham": "CỬA ĐL8D XN-VK_TRỌN BỘ_3-4m²",
+   "ten_vat_tu": "CỬA ĐL8D XN-VK_TRỌN BỘ_3-4m²",
+   "ma_nguon": "TP-CUADL8D XN-VK_TRONBO_3-4m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 520000.0
+  },
+  {
+   "dong": 1544,
+   "loai_cua": "8D",
+   "ten_thanh_pham": "CỬA ĐL8D XN-XLC_TRỌN BỘ_3-4m²",
+   "ten_vat_tu": "CỬA ĐL8D XN-XLC_TRỌN BỘ_3-4m²",
+   "ma_nguon": "TP-CUADL8D XN-XLC_TRONBO_3-4m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 520000.0
+  },
+  {
+   "dong": 1550,
+   "loai_cua": "1LY",
+   "ten_thanh_pham": "CỬA ĐL1LY XN-VK_TRỌN BỘ >10m²",
+   "ten_vat_tu": "CỬA ĐL1LY XN-VK_TRỌN BỘ >10m²",
+   "ma_nguon": "TP-CUADL1LY XN-VK_TRONBO>10m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 520000.0
+  },
+  {
+   "dong": 1556,
+   "loai_cua": "1LY",
+   "ten_thanh_pham": "CỬA ĐL1LY XN-XLC_TRỌN BỘ >10m²",
+   "ten_vat_tu": "CỬA ĐL1LY XN-XLC_TRỌN BỘ >10m²",
+   "ma_nguon": "TP-CUADL1LY XN-XLC_TRONBO>10m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 520000.0
+  },
+  {
+   "dong": 1562,
+   "loai_cua": "1LY",
+   "ten_thanh_pham": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_9-10m²",
+   "ten_vat_tu": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_9-10m²",
+   "ma_nguon": "TP-CUADL1LY XN-XLC_TRONBO_9-10m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 530000.0
+  },
+  {
+   "dong": 1568,
+   "loai_cua": "1LY",
+   "ten_thanh_pham": "CỬA ĐL1LY XN-VK_TRỌN BỘ_9-10m²",
+   "ten_vat_tu": "CỬA ĐL1LY XN-VK_TRỌN BỘ_9-10m²",
+   "ma_nguon": "TP-CUADL1LY XN-VK_TRONBO_9-10m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 530000.0
+  },
+  {
+   "dong": 1574,
+   "loai_cua": "1LY",
+   "ten_thanh_pham": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_8-9m²",
+   "ten_vat_tu": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_8-9m²",
+   "ma_nguon": "TP-CUADL1LY XN-XLC_TRONBO_8-9m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 540000.0
+  },
+  {
+   "dong": 1580,
+   "loai_cua": "1LY",
+   "ten_thanh_pham": "CỬA ĐL1LY XN-VK_TRỌN BỘ_8-9m²",
+   "ten_vat_tu": "CỬA ĐL1LY XN-VK_TRỌN BỘ_8-9m²",
+   "ma_nguon": "TP-CUADL1LY XN-VK_TRONBO_8-9m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 540000.0
+  },
+  {
+   "dong": 1586,
+   "loai_cua": "1LY",
+   "ten_thanh_pham": "CỬA ĐL1LY XN-VK_TRỌN BỘ_7-8m²",
+   "ten_vat_tu": "CỬA ĐL1LY XN-VK_TRỌN BỘ_7-8m²",
+   "ma_nguon": "TP-CUADL1LY XN-VK_TRONBO_7-8m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 550000.0
+  },
+  {
+   "dong": 1592,
+   "loai_cua": "1LY",
+   "ten_thanh_pham": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_7-8m²",
+   "ten_vat_tu": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_7-8m²",
+   "ma_nguon": "TP-CUADL1LY XN-XLC_TRONBO_7-8m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 550000.0
+  },
+  {
+   "dong": 1598,
+   "loai_cua": "1LY",
+   "ten_thanh_pham": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_6-7m²",
+   "ten_vat_tu": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_6-7m²",
+   "ma_nguon": "TP-CUADL1LY XN-XLC_TRONBO_6-7m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 560000.0
+  },
+  {
+   "dong": 1604,
+   "loai_cua": "1LY",
+   "ten_thanh_pham": "CỬA ĐL1LY XN-VK_TRỌN BỘ_6-7m²",
+   "ten_vat_tu": "CỬA ĐL1LY XN-VK_TRỌN BỘ_6-7m²",
+   "ma_nguon": "TP-CUADL1LY XN-VK_TRONBO_6-7m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 560000.0
+  },
+  {
+   "dong": 1610,
+   "loai_cua": "1LY",
+   "ten_thanh_pham": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_5-6m²",
+   "ten_vat_tu": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_5-6m²",
+   "ma_nguon": "TP-CUADL1LY XN-XLC_TRONBO_5-6m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 570000.0
+  },
+  {
+   "dong": 1616,
+   "loai_cua": "1LY",
+   "ten_thanh_pham": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_5-6m²",
+   "ten_vat_tu": "CỬA ĐL1LY XN-VK_TRỌN BỘ_5-6m²",
+   "ma_nguon": "TP-CUADL1LY XN-VK_TRONBO_5-6m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 570000.0
+  },
+  {
+   "dong": 1622,
+   "loai_cua": "1LY",
+   "ten_thanh_pham": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_4-5m²",
+   "ten_vat_tu": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_4-5m²",
+   "ma_nguon": "TP-CUADL1LY XN-XLC_TRONBO_4-5m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 580000.0
+  },
+  {
+   "dong": 1628,
+   "loai_cua": "1LY",
+   "ten_thanh_pham": "CỬA ĐL1LY XN-VK_TRỌN BỘ_4-5m²",
+   "ten_vat_tu": "CỬA ĐL1LY XN-VK_TRỌN BỘ_4-5m²",
+   "ma_nguon": "TP-CUADL1LY XN-VK_TRONBO_4-5m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 580000.0
+  },
+  {
+   "dong": 1634,
+   "loai_cua": "1LY",
+   "ten_thanh_pham": "CỬA ĐL1LY XN-VK_TRỌN BỘ_3-4m²",
+   "ten_vat_tu": "CỬA ĐL1LY XN-VK_TRỌN BỘ_3-4m²",
+   "ma_nguon": "TP-CUADL1LY XN-VK_TRONBO_3-4m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 590000.0
+  },
+  {
+   "dong": 1640,
+   "loai_cua": "1LY",
+   "ten_thanh_pham": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_3-4m²",
+   "ten_vat_tu": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_3-4m²",
+   "ma_nguon": "TP-CUADL1LY XN-XLC_TRONBO_3-4m²",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 590000.0
+  },
+  {
+   "dong": 1646,
+   "loai_cua": "8D",
+   "ten_thanh_pham": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ >10m²",
+   "ten_vat_tu": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ >10m²",
+   "ma_nguon": "TP-TOLEKEM124_6D_TRONBO>10m²_MSK",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 500000.0
+  },
+  {
+   "dong": 1654,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 9-10m²",
+   "ten_vat_tu": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 9-10m²",
+   "ma_nguon": "TP-TOLEKEM124_6D_TRONBO_9-10m²_MSK",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 510000.0
+  },
+  {
+   "dong": 1662,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 8-9m²",
+   "ten_vat_tu": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 8-9m²",
+   "ma_nguon": "TP-TOLEKEM124_6D_TRONBO_8-9m²_MSK",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 520000.0
+  },
+  {
+   "dong": 1670,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 7-8m²",
+   "ten_vat_tu": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 7-8m²",
+   "ma_nguon": "TP-TOLEKEM124_6D_TRONBO_7-8m²_MSK",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 530000.0
+  },
+  {
+   "dong": 1678,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 6-7m²",
+   "ten_vat_tu": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 6-7m²",
+   "ma_nguon": "TP-TOLEKEM124_6D_TRONBO_6-7m²_MSK",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 540000.0
+  },
+  {
+   "dong": 1686,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 6-7m²",
+   "ten_vat_tu": "LÁ ĐÀI LOAN STĐ 8D_MSK",
+   "ma_nguon": "NVL-TOLEKEM124_6D_MSK",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 320000.0
+  },
+  {
+   "dong": 1693,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 5-6m²",
+   "ten_vat_tu": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 5-6m²",
+   "ma_nguon": "TP-TOLEKEM124_6D_TRONBO_5-6m²_MSK",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 550000.0
+  },
+  {
+   "dong": 1701,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 4-5m²",
+   "ten_vat_tu": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 4-5m²",
+   "ma_nguon": "TP-TOLEKEM124_6D_TRONBO_4-5m²_MSK",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 560000.0
+  },
+  {
+   "dong": 1716,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 3-4m²",
+   "ten_vat_tu": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 3-4m²",
+   "ma_nguon": "TP-TOLEKEM124_6D_TRONBO_3-4m²_MSK",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 570000.0
+  },
+  {
+   "dong": 1731,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ >10m²",
+   "ten_vat_tu": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ >10m²",
+   "ma_nguon": "TP-TOLEKEM124_8D_TRONBO>10m²_MSK",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 560000.0
+  },
+  {
+   "dong": 1739,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 9-10m²",
+   "ten_vat_tu": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 9-10m²",
+   "ma_nguon": "TP-TOLEKEM124_8D_TRONBO_9-10m²_MSK",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 570000.0
+  },
+  {
+   "dong": 1747,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 8-10m²",
+   "ten_vat_tu": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 8-9m²",
+   "ma_nguon": "TP-TOLEKEM124_8D_TRONBO_8-9m²_MSK",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 580000.0
+  },
+  {
+   "dong": 1755,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 7-8m²",
+   "ten_vat_tu": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 7-8m²",
+   "ma_nguon": "TP-TOLEKEM124_8D_TRONBO_7-8m²_MSK",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 590000.0
+  },
+  {
+   "dong": 1770,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 6-7m²",
+   "ten_vat_tu": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 6-7m²",
+   "ma_nguon": "TP-TOLEKEM124_8D_TRONBO_6-7m²_MSK",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 610000.0
+  },
+  {
+   "dong": 1778,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 5-6m²",
+   "ten_vat_tu": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 5-6m²",
+   "ma_nguon": "TP-TOLEKEM124_8D_TRONBO_5-6m²_MSK",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 620000.0
+  },
+  {
+   "dong": 1793,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 4-5m²",
+   "ten_vat_tu": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 4-5m²",
+   "ma_nguon": "TP-TOLEKEM124_8D_TRONBO_4-5m²_MSK",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 640000.0
+  },
+  {
+   "dong": 1808,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 3-4m²",
+   "ten_vat_tu": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 3-4m²",
+   "ma_nguon": "TP-TOLEKEM124_8D_TRONBO_3-4m²_MSK",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 660000.0
+  },
+  {
+   "dong": 1816,
+   "loai_cua": "",
+   "ten_thanh_pham": "CỬA ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ >10m²",
+   "ten_vat_tu": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ >10m²",
+   "ma_nguon": "TP-TOLEKEM124_1LY_TRONBO>10m²_MSK",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 620000.0
+  },
+  {
+   "dong": 1824,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 9-10m²",
+   "ten_vat_tu": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 9-10m²",
+   "ma_nguon": "TP-TOLEKEM124_1LY_TRONBO_9-10m²_MSK",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 630000.0
+  },
+  {
+   "dong": 1832,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 8-9m²",
+   "ten_vat_tu": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 8-9m²",
+   "ma_nguon": "TP-TOLEKEM124_1LY_TRONBO_8-9m²_MSK",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 640000.0
+  },
+  {
+   "dong": 1840,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 7-8m²",
+   "ten_vat_tu": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 7-8m²",
+   "ma_nguon": "TP-TOLEKEM124_1LY_TRONBO_7-8m²_MSK",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 650000.0
+  },
+  {
+   "dong": 1855,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 6-7m²",
+   "ten_vat_tu": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 6-7m²",
+   "ma_nguon": "TP-TOLEKEM124_1LY_TRONBO_6-7m²_MSK",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 660000.0
+  },
+  {
+   "dong": 1863,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 5-6m²",
+   "ten_vat_tu": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 5-6m²",
+   "ma_nguon": "TP-TOLEKEM124_1LY_TRONBO_5-6m²_MSK",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 670000.0
+  },
+  {
+   "dong": 1870,
+   "loai_cua": "",
+   "ten_thanh_pham": "PHỤ THU CHUYỂN ĐỔI CỬA KÉO TAY",
+   "ten_vat_tu": "PHỤ THU CHUYỂN ĐỔI LÊN CỬA KÉO TAY",
+   "ma_nguon": "PHUTHUCHUYENDOICUAKT",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 20000.0
+  },
+  {
+   "dong": 1878,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 4-5m²",
+   "ten_vat_tu": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 4-5m²",
+   "ma_nguon": "TP-TOLEKEM124_1LY_TRONBO_4-5m²_MSK",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 680000.0
+  },
+  {
+   "dong": 1886,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 3-4m²",
+   "ten_vat_tu": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 3-4m²",
+   "ma_nguon": "TP-TOLEKEM124_1LY_TRONBO_3-4m²_MSK",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 690000.0
+  },
+  {
+   "dong": 1903,
+   "loai_cua": "",
+   "ten_thanh_pham": "CHỐNG XỔ LÔ",
+   "ten_vat_tu": "CHỐNG XỔ LÔ",
+   "ma_nguon": "TP-CHONGXOLO",
+   "dvt": "CÁI",
+   "dinh_muc": 1.0,
+   "gia_ban": 65000.0
+  },
+  {
+   "dong": 2677,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ SIÊU TRƯỜNG 1LY_XN-VK",
+   "ten_vat_tu": "LÁ SIÊU TRƯỜNG 1LY_XN-VK",
+   "ma_nguon": "NVL-TON-DL9.2Dx175-XNVK",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 440000.0
+  },
+  {
+   "dong": 2680,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐÀI LOAN 1.1LY_MSK",
+   "ten_vat_tu": "LÁ SIÊU TRƯỜNG STĐ 1.1LY_MSK",
+   "ma_nguon": "NVL-TOLEKEM175_8D-9D_STD_MSK",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 490000.0
+  },
+  {
+   "dong": 2681,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐÀI LOAN 1.2LY_MSK",
+   "ten_vat_tu": "LÁ SIÊU TRƯỜNG STĐ 1.2LY_MSK",
+   "ma_nguon": "NVL-TON-ST-1LYx175-_MSK",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 520000.0
+  },
+  {
+   "dong": 2682,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐÀI LOAN 1.2LY_MSK",
+   "ten_vat_tu": "LÁ SIÊU TRƯỜNG STĐ 1.3LY_MSK",
+   "ma_nguon": "NVL-TON-ST-1LYx175-_MSK",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 520000.0
+  },
+  {
+   "dong": 2683,
+   "loai_cua": "",
+   "ten_thanh_pham": "LÁ ĐÀI LOAN 1.2LY_MSK",
+   "ten_vat_tu": "LÁ SIÊU TRƯỜNG STĐ 1.3LY_MSK",
+   "ma_nguon": "NVL-TON-ST-1LYx175-_MSK",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 520000.0
+  },
+  {
+   "dong": 2684,
+   "loai_cua": "",
+   "ten_thanh_pham": "TP LÁ RUỘT  AL71N VK",
+   "ten_vat_tu": "TP LÁ RUỘT  AL71N VK",
+   "ma_nguon": "TP LÁ RUỘT  AL71N VK",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 1178000.0
+  },
+  {
+   "dong": 2685,
+   "loai_cua": "",
+   "ten_thanh_pham": "TP  LÁ ĐỨC AL70 (2 lớp) - GS",
+   "ten_vat_tu": "TP  LÁ ĐỨC AL70 (2 lớp) - GS",
+   "ma_nguon": "TP  LÁ ĐỨC AL70 (2 lớp) - GS",
+   "dvt": "M2",
+   "dinh_muc": null,
+   "gia_ban": 909000.0
+  }
+ ]
+}

@@ -1,0 +1,4704 @@
+{
+ "format": "alumdoor-anh-xa-ma/v1",
+ "tu": 587,
+ "con": 429,
+ "lech": [],
+ "anh_xa": [
+  {
+   "ma_cu": "TP-CON LĂN",
+   "ma_moi": "TP-CON-LĂN",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-CNHUA",
+   "ma_moi": "NVL-CNHUA",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-PULY 114L",
+   "ma_moi": "TP-PULY-114L",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-PULY 114N",
+   "ma_moi": "TP-PULY-114N",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-PULY 140",
+   "ma_moi": "TP-PULY-140",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-PULY 168",
+   "ma_moi": "TP-PULY-168",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-COI",
+   "ma_moi": "TP-COI",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-HTTD",
+   "ma_moi": "TP-HTTD",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TRỤC 114_1.8LY",
+   "ma_moi": "TRỤC-114-1.8LY",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TRỤC 114_2.1LY",
+   "ma_moi": "TRỤC-114-2.1LY",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-RAYHOP",
+   "ma_moi": "TP-RAYHOP",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TD87A1 GS",
+   "ma_moi": "TP-TD87A1",
+   "mau": "GHI SẦN",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-RAY HỘP TD U100",
+   "ma_moi": "TP-RAY-HỘP-TD-U100",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TD-AL595 GS",
+   "ma_moi": "TD-AL595",
+   "mau": "GHI SẦN",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-A282",
+   "ma_moi": "TP-A282",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TD327",
+   "ma_moi": "TP-TD327",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TD326",
+   "ma_moi": "TP-TD326",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TD325",
+   "ma_moi": "TP-TD325",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-BO3LADAY",
+   "ma_moi": "TP-BO3LADAY",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-PHOTLONG4X5X400M",
+   "ma_moi": "TP-PHOTLONG4X5X400M",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-PHOTLONG5X6X400M",
+   "ma_moi": "TP-PHOTLONG5X6X400M",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "RON-DD",
+   "ma_moi": "RON-DD",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "RONNHUA_INOX",
+   "ma_moi": "RONNHUA-INOX",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "RNHUA-DR",
+   "ma_moi": "RNHUA-DR",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "RNINOX-DR",
+   "ma_moi": "RNINOX-DR",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "RNHUA/LONG-CR",
+   "ma_moi": "RNHUA/LONG-CR",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-PHOTLONG12,5X5X120M",
+   "ma_moi": "NVL-PHOTLONG12,5X5X120M",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TD-AL595 VK",
+   "ma_moi": "TP-TD-AL595",
+   "mau": "VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TD-AL595 THÔ",
+   "ma_moi": "TP-TD-AL595",
+   "mau": "THÔ",
+   "be_mat": "THÔ",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TD-AL70 THÔ",
+   "ma_moi": "TP-TD-AL70",
+   "mau": "THÔ",
+   "be_mat": "THÔ",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TD-AL70 GS",
+   "ma_moi": "TP-TD-AL70",
+   "mau": "GHI SẦN",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TD-AL70 VK",
+   "ma_moi": "TP-TD-AL70",
+   "mau": "VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-AL70-1LOP THÔ",
+   "ma_moi": "TP-AL70-1LOP",
+   "mau": "THÔ",
+   "be_mat": "THÔ",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TD-AL71N THÔ",
+   "ma_moi": "TP-TD-AL71N",
+   "mau": "THÔ",
+   "be_mat": "THÔ",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TD-AL71N GS",
+   "ma_moi": "TP-TD-AL71N",
+   "mau": "GHI SẦN",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TD-AL71N VK",
+   "ma_moi": "TP-TD-AL71N",
+   "mau": "VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TD-AL503N26 VK",
+   "ma_moi": "TP-TD-AL503N26",
+   "mau": "VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TD-AL503N26 GS",
+   "ma_moi": "TP-TD-AL503N26",
+   "mau": "GHI SẦN",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TD-AL503N26 THO",
+   "ma_moi": "TP-TD-AL503N26",
+   "mau": "THÔ",
+   "be_mat": "THÔ",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-ALD-548N GS",
+   "ma_moi": "TP-ALD-548N",
+   "mau": "GHI SẦN",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-ALD-548N THO",
+   "ma_moi": "TP-ALD-548N",
+   "mau": "THÔ",
+   "be_mat": "THÔ",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-ALD-548N VK",
+   "ma_moi": "TP-ALD-548N",
+   "mau": "VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TD-AL501N VK",
+   "ma_moi": "TP-TD-AL501N",
+   "mau": "VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TD-AL501N GS",
+   "ma_moi": "TP-TD-AL501N",
+   "mau": "GHI SẦN",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TD-AL501NTHO",
+   "ma_moi": "TP-TD-AL501NTHO",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-ALD-DL552 VK",
+   "ma_moi": "TP-ALD-DL552",
+   "mau": "VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-ALD-DL552 THO",
+   "ma_moi": "TP-ALD-DL552",
+   "mau": "THÔ",
+   "be_mat": "THÔ",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-ALD-DL552 GS",
+   "ma_moi": "TP-ALD-DL552",
+   "mau": "GHI SẦN",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TD-AL752N GS",
+   "ma_moi": "TP-TD-AL752N",
+   "mau": "GHI SẦN",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TD-AL752N VK",
+   "ma_moi": "TP-TD-AL752N",
+   "mau": "VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TD-AL752N THO",
+   "ma_moi": "TP-TD-AL752N",
+   "mau": "THÔ",
+   "be_mat": "THÔ",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TD-AL652N THO",
+   "ma_moi": "TP-TD-AL652N",
+   "mau": "THÔ",
+   "be_mat": "THÔ",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TD-AL652 GS",
+   "ma_moi": "TP-TD-AL652",
+   "mau": "GHI SẦN",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TD-AL652 VK",
+   "ma_moi": "TP-TD-AL652",
+   "mau": "VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TD-AL50 THO",
+   "ma_moi": "TP-TD-AL50",
+   "mau": "THÔ",
+   "be_mat": "THÔ",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TD-AL50 GS",
+   "ma_moi": "TP-TD-AL50",
+   "mau": "GHI SẦN",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TD-AL50 VK",
+   "ma_moi": "TP-TD-AL50",
+   "mau": "VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-ALVIP50 GS",
+   "ma_moi": "TP-ALVIP50",
+   "mau": "GHI SẦN",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-ALVIP50 THO",
+   "ma_moi": "TP-ALVIP50",
+   "mau": "THÔ",
+   "be_mat": "THÔ",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-ALVIPST500 THO",
+   "ma_moi": "TP-ALVIPST500",
+   "mau": "THÔ",
+   "be_mat": "THÔ",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-ALVIPST700 THO",
+   "ma_moi": "TP-ALVIPST700",
+   "mau": "THÔ",
+   "be_mat": "THÔ",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-BO 2VIS 752-VIPST700",
+   "ma_moi": "TP-BO-2VIS-752-VIPST700",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-BO 1VIS AL702LOP",
+   "ma_moi": "TP-BO-1VIS-AL702LOP",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-BO 1VIS AL701LOP",
+   "ma_moi": "TP-BO-1VIS-AL701LOP",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-BO 1VIS AL75",
+   "ma_moi": "TP-BO-1VIS-AL75",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-BO 2VIS AL50-VIP50-AL548-ST500",
+   "ma_moi": "TP-BO-2VIS-AL50-VIP50-AL548-ST500",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-BO 1VIS AL503C",
+   "ma_moi": "TP-BO-1VIS-AL503C",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-BO 1VIS 503N-71-595",
+   "ma_moi": "TP-BO-1VIS-503N-71-595",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-BO 2VIS-501-552",
+   "ma_moi": "TP-BO-2VIS-501-552",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-BO 2VIS-652-548C",
+   "ma_moi": "TP-BO-2VIS-652-548C",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-AL75 THO",
+   "ma_moi": "TP-AL75",
+   "mau": "THÔ",
+   "be_mat": "THÔ",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-AL75 VK",
+   "ma_moi": "TP-AL75",
+   "mau": "VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-AL75 GS",
+   "ma_moi": "TP-AL75",
+   "mau": "GHI SẦN",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MT-TANKER400KG",
+   "ma_moi": "TP-MT-TANKER400KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TANKER_PATCD",
+   "ma_moi": "TP-TANKER-PATCD",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-Tanker-Alumax-Lac33",
+   "ma_moi": "TP-Tanker-Alumax-Lac33",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-Tanker-Alumax-Lac36",
+   "ma_moi": "TP-Tanker-Alumax-Lac36",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-Tanker-Lac800&1000KG",
+   "ma_moi": "TP-Tanker-Lac800&1000KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-LacYHLD300&500KG",
+   "ma_moi": "TP-LacYHLD300&500KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-LacYHLD800&1000KG",
+   "ma_moi": "TP-LacYHLD800&1000KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-YHLD-BDK",
+   "ma_moi": "TP-YHLD-BDK",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-YHLD-HDK",
+   "ma_moi": "TP-YHLD-HDK",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-YHLD_TayDK",
+   "ma_moi": "TP-YHLD-TayDK",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL_Tanker-nhong",
+   "ma_moi": "NVL-Tanker-nhong",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL_Longden",
+   "ma_moi": "NVL-Longden",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL_Hoakhe",
+   "ma_moi": "NVL-Hoakhe",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL_Cot",
+   "ma_moi": "NVL-Cot",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL_Napchup+Bacdan",
+   "ma_moi": "NVL-Napchup+Bacdan",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-BDK-TANKER-ALUMAX",
+   "ma_moi": "TP-BDK-TANKER-ALUMAX",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MT-YHLD300KG",
+   "ma_moi": "TP-MT-YHLD300KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP_YHLD_PATCD",
+   "ma_moi": "TP-YHLD-PATCD",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MT-YHLD500KG",
+   "ma_moi": "TP-MT-YHLD500KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MT-YHLD800KG",
+   "ma_moi": "TP-MT-YHLD800KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MT-YHLD1000KG",
+   "ma_moi": "TP-MT-YHLD1000KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MT-JG300KG",
+   "ma_moi": "TP-MT-JG300KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-LacJG33",
+   "ma_moi": "TP-LacJG33",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP_JG_PATCD",
+   "ma_moi": "TP-JG-PATCD",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MT-JG400KG",
+   "ma_moi": "TP-MT-JG400KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MT-JG500KG",
+   "ma_moi": "TP-MT-JG500KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MT-JG600KG",
+   "ma_moi": "TP-MT-JG600KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MT-JG800KG",
+   "ma_moi": "TP-MT-JG800KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MT-JG1000KG",
+   "ma_moi": "TP-MT-JG1000KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-LacJG1000-1500KG",
+   "ma_moi": "TP-LacJG1000-1500KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-JG-BDN",
+   "ma_moi": "TP-JG-BDN",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MT-JG1500KG",
+   "ma_moi": "TP-MT-JG1500KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MT-TANKER600KG",
+   "ma_moi": "TP-MT-TANKER600KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MT-TANKE800KG",
+   "ma_moi": "TP-MT-TANKE800KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MT-TANKER1000KG",
+   "ma_moi": "TP-MT-TANKER1000KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-LACPHU33_1LO",
+   "ma_moi": "TP-LACPHU33-1LO",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-LACPHU36_1LO",
+   "ma_moi": "TP-LACPHU36-1LO",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-LACPHU33_3LO",
+   "ma_moi": "TP-LACPHU33-3LO",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-LACPHU36_3LO",
+   "ma_moi": "TP-LACPHU36-3LO",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-BDKDT_MULLER",
+   "ma_moi": "TP-BDKDT-MULLER",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-HDK_MULLER",
+   "ma_moi": "TP-HDK-MULLER",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TDK_MULLER",
+   "ma_moi": "TP-TDK-MULLER",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-GOIGANG",
+   "ma_moi": "TP-GOIGANG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-BUOMSAT-DL",
+   "ma_moi": "TP-BUOMSAT-DL",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-BUOMSAT-ST",
+   "ma_moi": "TP-BUOMSAT-ST",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-BUOMINOX",
+   "ma_moi": "TP-BUOMINOX",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-LX-5.5 X 70 X 46V",
+   "ma_moi": "NVL-LX-5.5-X-70-X-46V",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-LX-5.5 x 70 x 50V",
+   "ma_moi": "NVL-LX-5.5-x-70-x-50V",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-LV-6.0 x 70 x 53V",
+   "ma_moi": "NVL-LV-6.0-x-70-x-53V",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-LV-6.5 x 80 x 63V",
+   "ma_moi": "NVL-LV-6.5-x-80-x-63V",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-LV-6.5 x 80 x 68V",
+   "ma_moi": "NVL-LV-6.5-x-80-x-68V",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-LV-7.0 x 90 x 65V",
+   "ma_moi": "NVL-LV-7.0-x-90-x-65V",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-LV-7.0 x 90 x 73V",
+   "ma_moi": "NVL-LV-7.0-x-90-x-73V",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-LV-7.0 x 90 x 83V",
+   "ma_moi": "NVL-LV-7.0-x-90-x-83V",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-RAYNHOMUC",
+   "ma_moi": "TP-RAYNHOMUC",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-PULYUC34",
+   "ma_moi": "NVL-PULYUC34",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-PULYUC114",
+   "ma_moi": "NVL-PULYUC114",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-3X6M",
+   "ma_moi": "NVL-3X6M",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-Tanker-Alumax-HDK",
+   "ma_moi": "TP-Tanker-Alumax-HDK",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TANKER_ALUMAX_BODK",
+   "ma_moi": "TP-TANKER-ALUMAX-BODK",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-Tanker-Alumax_TayDK",
+   "ma_moi": "TP-Tanker-Alumax-TayDK",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP_PAT_CODAY",
+   "ma_moi": "TP-PAT-CODAY",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL_Daydien_PATCD",
+   "ma_moi": "NVL-Daydien-PATCD",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-PAT_KHONGDAY",
+   "ma_moi": "TP-PAT-KHONGDAY",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MT-ALUMAX400KG",
+   "ma_moi": "TP-MT-ALUMAX400KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-ALUMAX_PATCD",
+   "ma_moi": "TP-ALUMAX-PATCD",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MT-ALUMAX600KG",
+   "ma_moi": "TP-MT-ALUMAX600KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP_UPS-E800i",
+   "ma_moi": "TP-UPS-E800i",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP_UPS-E1000i",
+   "ma_moi": "TP-UPS-E1000i",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP_UPS-YH1000",
+   "ma_moi": "TP-UPS-YH1000",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP_UPS-YH2000",
+   "ma_moi": "TP-UPS-YH2000",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-JG_TayDK",
+   "ma_moi": "TP-JG-TayDK",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "JG_BODK",
+   "ma_moi": "JG-BODK",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-NAPNHIN",
+   "ma_moi": "TP-NAPNHIN",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-GOIFE",
+   "ma_moi": "NVL-GOIFE",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-GIAT",
+   "ma_moi": "NVL-GIAT",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MTT-BOSTEC-PAT",
+   "ma_moi": "TP-MTT-BOSTEC-PAT",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MTT-BOSTEC-TAYDK",
+   "ma_moi": "TP-MTT-BOSTEC-TAYDK",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP_BOSTEC_BODIEUKHIEN",
+   "ma_moi": "TP-BOSTEC-BODIEUKHIEN",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MTT-CHTAIWAN-PAT",
+   "ma_moi": "TP-MTT-CHTAIWAN-PAT",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MTT-CHTAIWAN-TAYDK",
+   "ma_moi": "TP-MTT-CHTAIWAN-TAYDK",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP_CHTAIWAN_BODIEUKHIEN",
+   "ma_moi": "TP-CHTAIWAN-BODIEUKHIEN",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MTT_BOSTEC-DOI(P)",
+   "ma_moi": "TP-MTT-BOSTEC-DOI(P)",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MTT_BOSTEC-DOI(T)",
+   "ma_moi": "TP-MTT-BOSTEC-DOI(T)",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MTT_BOSTEC-DON(P)",
+   "ma_moi": "TP-MTT-BOSTEC-DON(P)",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MTT_BOSTEC-DON(T)",
+   "ma_moi": "TP-MTT-BOSTEC-DON(T)",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MTT_CHTAIWAN-DOI(T)",
+   "ma_moi": "TP-MTT-CHTAIWAN-DOI(T)",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MTT_CHTAIWAN-DOI(P)",
+   "ma_moi": "TP-MTT-CHTAIWAN-DOI(P)",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MTT_CHTAIWAN-DON(P)",
+   "ma_moi": "TP-MTT-CHTAIWAN-DON(P)",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MTT_CHTAIWAN-DON(T)",
+   "ma_moi": "TP-MTT-CHTAIWAN-DON(T)",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MT-YHTAIWAN CH 300KG",
+   "ma_moi": "TP-MT-YHTAIWAN-CH-300KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-YHTaiwan-Than300KG",
+   "ma_moi": "TP-YHTaiwan-Than300KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-YHTaiwan-LaYHTW300-400-500KG",
+   "ma_moi": "TP-YHTaiwan-LaYHTW300-400-500KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-YHTaiwan-HDK",
+   "ma_moi": "TP-YHTaiwan-HDK",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-YHTaiwan-PATCD",
+   "ma_moi": "TP-YHTaiwan-PATCD",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MT-YHTAIWAN CH 500KG",
+   "ma_moi": "TP-MT-YHTAIWAN-CH-500KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-YHTaiwan-Than500KG",
+   "ma_moi": "TP-YHTaiwan-Than500KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MT-YHTAIWAN CH 400KG",
+   "ma_moi": "TP-MT-YHTAIWAN-CH-400KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-YHTaiwan-Than400KG",
+   "ma_moi": "TP-YHTaiwan-Than400KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MT-YHTAIWAN CH 600KG",
+   "ma_moi": "TP-MT-YHTAIWAN-CH-600KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-YHTaiwan-Than600KG",
+   "ma_moi": "TP-YHTaiwan-Than600KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-YHTaiwan-LaYHTW600-700-800KG",
+   "ma_moi": "TP-YHTaiwan-LaYHTW600-700-800KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MT-YHTAIWAN CH 700KG",
+   "ma_moi": "TP-MT-YHTAIWAN-CH-700KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-YHTaiwan-Than700KG",
+   "ma_moi": "TP-YHTaiwan-Than700KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MT-YHTAIWAN CH 800KG",
+   "ma_moi": "TP-MT-YHTAIWAN-CH-800KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-YHTaiwan-Than800KG",
+   "ma_moi": "TP-YHTaiwan-Than800KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-MT-YHTAIWAN CH 1000KG",
+   "ma_moi": "TP-MT-YHTAIWAN-CH-1000KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-YHTaiwan-Than1000KG",
+   "ma_moi": "TP-YHTaiwan-Than1000KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-YHTaiwan-LaYHTW1000-1200KG",
+   "ma_moi": "TP-YHTaiwan-LaYHTW1000-1200KG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-YHTaiwan-BODK",
+   "ma_moi": "TP-YHTaiwan-BODK",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-YHTaiwan-TayDK",
+   "ma_moi": "TP-YHTaiwan-TayDK",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-XOP-N45",
+   "ma_moi": "NVL-XOP-N45",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-XOP-N90",
+   "ma_moi": "NVL-XOP-N90",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-CHNHUA",
+   "ma_moi": "NVL-CHNHUA",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TRUC34",
+   "ma_moi": "NVL-TRUC34",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TRUC90",
+   "ma_moi": "NVL-TRUC90",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-VDAY-TDU-KTD",
+   "ma_moi": "NVL-VDAY-TDU-KTD",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "RONDAYUC",
+   "ma_moi": "RONDAYUC",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-UC KT 4D XN-VK",
+   "ma_moi": "TP-UC-KT-4D",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-UC MTN 4D XN-VK",
+   "ma_moi": "TP-UC-MTN-4D",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-KN",
+   "ma_moi": "TP-KN",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-OKHOA",
+   "ma_moi": "NVL-OKHOA",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TIINOX",
+   "ma_moi": "NVL-TIINOX",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-BKAN",
+   "ma_moi": "TP-BKAN",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-UC KT 4.6D XN-VK",
+   "ma_moi": "TP-UC-KT-4.6D",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-UC KT 4.6D XR-CF",
+   "ma_moi": "TP-UC-KT-4.6D",
+   "mau": "XANH RÊU - CAFÉ",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-UC KT 4.6D TRẮNG-XLC",
+   "ma_moi": "TP-UC-KT-4.6D",
+   "mau": "XÁM - TRẮNG",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-UC KT 4.6D KU-GU",
+   "ma_moi": "TP-UC-KT-4.6D",
+   "mau": "GHI ÚC - KEM ÚC",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-UC KT 5.5D KU-GU",
+   "ma_moi": "TP-UC-KT-5.5D",
+   "mau": "GHI ÚC - KEM ÚC",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-UC KT 5.5D TR-XLC",
+   "ma_moi": "TP-UC-KT-5.5D",
+   "mau": "XÁM - TRẮNG",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-UC KT 5.5D XN-VK",
+   "ma_moi": "TP-UC-KT-5.5D",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-UC KT 5.5D XR-CF",
+   "ma_moi": "TP-UC-KT-5.5D",
+   "mau": "XANH RÊU - CAFÉ",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-UC MTN 4.6D XN-VK",
+   "ma_moi": "TP-UC-MTN-4.6D",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-UC MTN 4.6D XR-CF",
+   "ma_moi": "TP-UC-MTN-4.6D",
+   "mau": "XANH RÊU - CAFÉ",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-UC MTN 4.6D TR-XLC",
+   "ma_moi": "TP-UC-MTN-4.6D",
+   "mau": "XÁM - TRẮNG",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-UC MTN 4.6D GU-KU",
+   "ma_moi": "TP-UC-MTN-4.6D",
+   "mau": "GHI ÚC - KEM ÚC",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-UC MTN 5.5D XN-VK",
+   "ma_moi": "TP-UC-MTN-5.5D",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-UC MTN 5.5D XR-CF",
+   "ma_moi": "TP-UC-MTN-5.5D",
+   "mau": "XANH RÊU - CAFÉ",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-UC MTN 5.5D TR-XLC",
+   "ma_moi": "TP-UC-MTN-5.5D",
+   "mau": "XÁM - TRẮNG",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-UC MTN 5.5D GU-KU",
+   "ma_moi": "TP-UC-MTN-5.5D",
+   "mau": "GHI ÚC - KEM ÚC",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-UC MTN 6D STD MSK",
+   "ma_moi": "TP-UC-MTN-6D",
+   "mau": null,
+   "be_mat": "SƠN TĨNH ĐIỆN",
+   "bac": null,
+   "msk": true
+  },
+  {
+   "ma_cu": "TP-UC KT 6D STĐ MSK",
+   "ma_moi": "TP-UC-KT-6D",
+   "mau": null,
+   "be_mat": "SƠN TĨNH ĐIỆN",
+   "bac": null,
+   "msk": true
+  },
+  {
+   "ma_cu": "TP-DUC-KT AL70 (2 LỚP) STĐ MSK",
+   "ma_moi": "TP-DUC-KT-AL70-(2-LỚP)",
+   "mau": null,
+   "be_mat": "SƠN TĨNH ĐIỆN",
+   "bac": null,
+   "msk": true
+  },
+  {
+   "ma_cu": "TP-DUC-KT AL70 STĐ MSK",
+   "ma_moi": "TP-DUC-KT-AL70",
+   "mau": null,
+   "be_mat": "SƠN TĨNH ĐIỆN",
+   "bac": null,
+   "msk": true
+  },
+  {
+   "ma_cu": "TP-LUOI-MV-STD - TRONBO",
+   "ma_moi": "TP-LUOI-MV-TRONBO",
+   "mau": null,
+   "be_mat": "SƠN TĨNH ĐIỆN",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-LUOIMV_STD",
+   "ma_moi": "NVL-LUOIMV",
+   "mau": null,
+   "be_mat": "SƠN TĨNH ĐIỆN",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "RONNHUAVANGCANHAY_RSU70",
+   "ma_moi": "RONNHUAVANGCANHAY-RSU70",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TRUC140",
+   "ma_moi": "TP-TRUC140",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TRUC114_2.4LY",
+   "ma_moi": "NVL-TRUC114-2.4LY",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TRUC168",
+   "ma_moi": "TP-TRUC168",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TRUC168_5LY",
+   "ma_moi": "NVL-TRUC168-5LY",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TOLE1.2x190-KRON",
+   "ma_moi": "NVL-RAY-U70-KRON",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TOLE1.4x270x1.2ly-KRON",
+   "ma_moi": "NVL-RAY-U100-1.2LY-KRON",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TOLE1.4x270x1.2ly-CRON",
+   "ma_moi": "NVL-RAY-U100-1.2LY-RON",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "RONNHUAVANGCẢNHAY_RSU100",
+   "ma_moi": "RONNHUAVANGCẢNHAY-RSU100",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TOLE1.4x270x1.4ly-KRON",
+   "ma_moi": "NVL-RAY-U100-1.4LY-KRON",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TOLE1.4x270x1.4ly-CRON",
+   "ma_moi": "NVL-RAY-U100-1.4LY-RON",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TOLE1.4x270x1.4ly-CRON+TD",
+   "ma_moi": "NVL-RAY-U100-1.4LY-RON-TD",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-RS7P (CÓ RON)",
+   "ma_moi": "TP-RS7P-(CÓ-RON)",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-LUOI-MV-STD - TM",
+   "ma_moi": "TP-LUOI-MV-TM",
+   "mau": null,
+   "be_mat": "SƠN TĨNH ĐIỆN",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-LUOI-SN-STD - TM",
+   "ma_moi": "TP-LUOI-SN-TM",
+   "mau": null,
+   "be_mat": "SƠN TĨNH ĐIỆN",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-LUOISNPHI19_STD",
+   "ma_moi": "NVL-LUOISNPHI19",
+   "mau": null,
+   "be_mat": "SƠN TĨNH ĐIỆN",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-LUOI-SN-STD - TRONBO",
+   "ma_moi": "TP-LUOI-SN-TRONBO",
+   "mau": null,
+   "be_mat": "SƠN TĨNH ĐIỆN",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-LUOI-SN13x26-STD - TRONBO",
+   "ma_moi": "TP-LUOI-SN13x26-TRONBO",
+   "mau": null,
+   "be_mat": "SƠN TĨNH ĐIỆN",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-LUOISN13x26_STD",
+   "ma_moi": "TP-LUOISN13x26",
+   "mau": null,
+   "be_mat": "SƠN TĨNH ĐIỆN",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-LUOI-SN13x26-STD - TACHMON",
+   "ma_moi": "TP-LUOI-SN13x26-TACHMON",
+   "mau": null,
+   "be_mat": "SƠN TĨNH ĐIỆN",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-LUOI-SN13x26-INOX - TACHMON",
+   "ma_moi": "TP-LUOI-SN13x26-INOX-TACHMON",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-LUOISN13x26_INOX",
+   "ma_moi": "TP-LUOISN13x26-INOX",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-LUOI-SN13x26-INOX - TRONBO",
+   "ma_moi": "TP-LUOI-SN13x26-INOX-TRONBO",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-LUOI-SNPHI19-INOX - TM",
+   "ma_moi": "TP-LUOI-SNPHI19-INOX-TM",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-LUOISNPHI19_INOX",
+   "ma_moi": "TP-LUOISNPHI19-INOX",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-LUOI-SNPHI19-INOX - TRONBO",
+   "ma_moi": "TP-LUOI-SNPHI19-INOX-TRONBO",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-LUOIMV-INOX- TM",
+   "ma_moi": "TP-LUOIMV-INOX-TM",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-LUOIMV_INOX",
+   "ma_moi": "TP-LUOIMV-INOX",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-LUOIMV-INOX- TRONBO",
+   "ma_moi": "TP-LUOIMV-INOX-TRONBO",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-LADLINOX_6D",
+   "ma_moi": "TP-LA-INOX-6D",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-LADLINOX_7D",
+   "ma_moi": "TP-LA-INOX-7D",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-LADLINOX_8D",
+   "ma_moi": "TP-LA-INOX-8D",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-LADLINOX_1LY",
+   "ma_moi": "TP-LA-INOX-1LY",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-V4_INOX",
+   "ma_moi": "TP-V4-INOX",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-V4_INOX_3LY",
+   "ma_moi": "TP-V4-INOX-3LY",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-RAYINOX-6P-RON",
+   "ma_moi": "TP-RAYINOX-6P-RON",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-RAYINOX-8P-RON",
+   "ma_moi": "TP-RAYINOX-8P-RON",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-RAYINOX-7P-KHONGRON",
+   "ma_moi": "TP-RAYINOX-7P-KHONGRON",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-V4-KEM_TOLE75_STD",
+   "ma_moi": "NVL-V4-KEM-TOLE75",
+   "mau": null,
+   "be_mat": "SƠN TĨNH ĐIỆN",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-V4_KEM_STD",
+   "ma_moi": "NVL-V4-KEM",
+   "mau": null,
+   "be_mat": "SƠN TĨNH ĐIỆN",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-V5_KEM_STD",
+   "ma_moi": "NVL-V5-KEM",
+   "mau": null,
+   "be_mat": "SƠN TĨNH ĐIỆN",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TON-DL5.2Dx124-XNVK",
+   "ma_moi": "NVL-TON-DLM-6D-K124",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TON-DL5.2Dx124-XNXLC",
+   "ma_moi": "NVL-TON-DLM-6D-K124",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TON-DL6.2Dx124-XNVK",
+   "ma_moi": "NVL-TON-DLM-7D-K124",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TON-DL6.2Dx124-XNXLC",
+   "ma_moi": "NVL-TON-DLM-7D-K124",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TON-DL7.2Dx124-XNVK",
+   "ma_moi": "NVL-TON-DLM-8D-K124",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TON-DL7.2Dx124-XNXLC",
+   "ma_moi": "NVL-TON-DLM-8D-K124",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TON-DL9.2Dx124-XNVK",
+   "ma_moi": "NVL-TON-DLM-1LY-K124",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TON-DL9.2Dx124-XNXLC",
+   "ma_moi": "NVL-TON-DLM-1LY-K124",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TOLEKEM124_6D",
+   "ma_moi": "TP-LA-DLK-8D",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TOLEKEM124_8D",
+   "ma_moi": "TP-LA-DLK-1LY",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TOLEKEM124_1.2LY",
+   "ma_moi": "TP-LA-DLK-1.2LY",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL6D XN-VK_TRONBO>10m²",
+   "ma_moi": "TP-CUA-DLM-6D",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": ">10m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL6D XN-XLC_TRONBO>10m²",
+   "ma_moi": "TP-CUA-DLM-6D",
+   "mau": "XÁM - XANH NGỌC",
+   "be_mat": null,
+   "bac": ">10m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL6D XN-XLC_TRONBO_9-10m²",
+   "ma_moi": "TP-CUA-DLM-6D",
+   "mau": "XÁM - XANH NGỌC",
+   "be_mat": null,
+   "bac": "9-10m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL6D XN-VK_TRONBO_9-10m²",
+   "ma_moi": "TP-CUA-DLM-6D",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": "9-10m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL6D XN-XLC_TRONBO_8-9m²",
+   "ma_moi": "TP-CUA-DLM-6D",
+   "mau": "XÁM - XANH NGỌC",
+   "be_mat": null,
+   "bac": "8-9m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL6D XN-VK_TRONBO_8-9m²",
+   "ma_moi": "TP-CUA-DLM-6D",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": "8-9m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL6D XN-VK_TRONBO_7-8m²",
+   "ma_moi": "TP-CUA-DLM-6D",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": "7-8m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL6D XN-XLC_TRONBO_7-8m²",
+   "ma_moi": "TP-CUA-DLM-6D",
+   "mau": "XÁM - XANH NGỌC",
+   "be_mat": null,
+   "bac": "7-8m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL6D XN-XLC_TRONBO_6-7m²",
+   "ma_moi": "TP-CUA-DLM-6D",
+   "mau": "XÁM - XANH NGỌC",
+   "be_mat": null,
+   "bac": "6-7m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL6D XN-VK_TRONBO_6-7m²",
+   "ma_moi": "TP-CUA-DLM-6D",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": "6-7m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL6D XN-XLC_TRONBO_5-6m²",
+   "ma_moi": "TP-CUA-DLM-6D",
+   "mau": "XÁM - XANH NGỌC",
+   "be_mat": null,
+   "bac": "5-6m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL6D XN-VK_TRONBO_5-6m²",
+   "ma_moi": "TP-CUA-DLM-6D",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": "5-6m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL6D XN-XLC_TRONBO_4-5m²",
+   "ma_moi": "TP-CUA-DLM-6D",
+   "mau": "XÁM - XANH NGỌC",
+   "be_mat": null,
+   "bac": "4-5m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL6D XN-VK_TRONBO_4-5m²",
+   "ma_moi": "TP-CUA-DLM-6D",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": "4-5m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL6D XN-VK_TRONBO_3-4m²",
+   "ma_moi": "TP-CUA-DLM-6D",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": "3-4m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL6D XN-XLC_TRONBO_3-4m²",
+   "ma_moi": "TP-CUA-DLM-6D",
+   "mau": "XÁM - XANH NGỌC",
+   "be_mat": null,
+   "bac": "3-4m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL7D XN-VK_TRONBO>10m²",
+   "ma_moi": "TP-CUA-DLM-7D",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": ">10m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL7D XN-XLC_TRONBO>10m²",
+   "ma_moi": "TP-CUA-DLM-7D",
+   "mau": "XÁM - XANH NGỌC",
+   "be_mat": null,
+   "bac": ">10m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL7D XN-XLC_TRONBO_9-10m²",
+   "ma_moi": "TP-CUA-DLM-7D",
+   "mau": "XÁM - XANH NGỌC",
+   "be_mat": null,
+   "bac": "9-10m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL7D XN-VK_TRONBO_9-10m²",
+   "ma_moi": "TP-CUA-DLM-7D",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": "9-10m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL7D XN-XLC_TRONBO_8-9m²",
+   "ma_moi": "TP-CUA-DLM-7D",
+   "mau": "XÁM - XANH NGỌC",
+   "be_mat": null,
+   "bac": "8-9m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL7D XN-VK_TRONBO_8-9m²",
+   "ma_moi": "TP-CUA-DLM-7D",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": "8-9m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL7D XN-VK_TRONBO_7-8m²",
+   "ma_moi": "TP-CUA-DLM-7D",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": "7-8m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL7D XN-XLC_TRONBO_7-8m²",
+   "ma_moi": "TP-CUA-DLM-7D",
+   "mau": "XÁM - XANH NGỌC",
+   "be_mat": null,
+   "bac": "7-8m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL7D XN-XLC_TRONBO_6-7m²",
+   "ma_moi": "TP-CUA-DLM-7D",
+   "mau": "XÁM - XANH NGỌC",
+   "be_mat": null,
+   "bac": "6-7m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL7D XN-VK_TRONBO_6-7m²",
+   "ma_moi": "TP-CUA-DLM-7D",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": "6-7m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL7D XN-XLC_TRONBO_5-6m²",
+   "ma_moi": "TP-CUA-DLM-7D",
+   "mau": "XÁM - XANH NGỌC",
+   "be_mat": null,
+   "bac": "5-6m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL7D XN-VK_TRONBO_5-6m²",
+   "ma_moi": "TP-CUA-DLM-7D",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": "5-6m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL7D XN-XLC_TRONBO_4-5m²",
+   "ma_moi": "TP-CUA-DLM-7D",
+   "mau": "XÁM - XANH NGỌC",
+   "be_mat": null,
+   "bac": "4-5m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL7D XN-VK_TRONBO_4-5m²",
+   "ma_moi": "TP-CUA-DLM-7D",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": "4-5m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL7D XN-VK_TRONBO_3-4m²",
+   "ma_moi": "TP-CUA-DLM-7D",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": "3-4m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL7D XN-XLC_TRONBO_3-4m²",
+   "ma_moi": "TP-CUA-DLM-7D",
+   "mau": "XÁM - XANH NGỌC",
+   "be_mat": null,
+   "bac": "3-4m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL8D XN-VK_TRONBO>10m²",
+   "ma_moi": "TP-CUA-DLM-8D",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": ">10m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL8D XN-XLC_TRONBO>10m²",
+   "ma_moi": "TP-CUA-DLM-8D",
+   "mau": "XÁM - XANH NGỌC",
+   "be_mat": null,
+   "bac": ">10m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL8D XN-XLC_TRONBO_9-10m²",
+   "ma_moi": "TP-CUA-DLM-8D",
+   "mau": "XÁM - XANH NGỌC",
+   "be_mat": null,
+   "bac": "9-10m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL8D XN-VK_TRONBO_9-10m²",
+   "ma_moi": "TP-CUA-DLM-8D",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": "9-10m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL8D XN-XLC_TRONBO_8-9m²",
+   "ma_moi": "TP-CUA-DLM-8D",
+   "mau": "XÁM - XANH NGỌC",
+   "be_mat": null,
+   "bac": "8-9m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL8D XN-VK_TRONBO_8-9m²",
+   "ma_moi": "TP-CUA-DLM-8D",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": "8-9m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL8D XN-VK_TRONBO_7-8m²",
+   "ma_moi": "TP-CUA-DLM-8D",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": "7-8m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL8D XN-XLC_TRONBO_7-8m²",
+   "ma_moi": "TP-CUA-DLM-8D",
+   "mau": "XÁM - XANH NGỌC",
+   "be_mat": null,
+   "bac": "7-8m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL8D XN-XLC_TRONBO_6-7m²",
+   "ma_moi": "TP-CUA-DLM-8D",
+   "mau": "XÁM - XANH NGỌC",
+   "be_mat": null,
+   "bac": "6-7m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL8D XN-VK_TRONBO_6-7m²",
+   "ma_moi": "TP-CUA-DLM-8D",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": "6-7m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL8D XN-XLC_TRONBO_5-6m²",
+   "ma_moi": "TP-CUA-DLM-8D",
+   "mau": "XÁM - XANH NGỌC",
+   "be_mat": null,
+   "bac": "5-6m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL8D XN-VK_TRONBO_5-6m²",
+   "ma_moi": "TP-CUA-DLM-8D",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": "5-6m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL8D XN-XLC_TRONBO_4-5m²",
+   "ma_moi": "TP-CUA-DLM-8D",
+   "mau": "XÁM - XANH NGỌC",
+   "be_mat": null,
+   "bac": "4-5m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL8D XN-VK_TRONBO_4-5m²",
+   "ma_moi": "TP-CUA-DLM-8D",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": "4-5m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL8D XN-VK_TRONBO_3-4m²",
+   "ma_moi": "TP-CUA-DLM-8D",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": "3-4m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL8D XN-XLC_TRONBO_3-4m²",
+   "ma_moi": "TP-CUA-DLM-8D",
+   "mau": "XÁM - XANH NGỌC",
+   "be_mat": null,
+   "bac": "3-4m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL1LY XN-VK_TRONBO>10m²",
+   "ma_moi": "TP-CUA-DLM-1LY",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": ">10m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL1LY XN-XLC_TRONBO>10m²",
+   "ma_moi": "TP-CUA-DLM-1LY",
+   "mau": "XÁM - XANH NGỌC",
+   "be_mat": null,
+   "bac": ">10m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL1LY XN-XLC_TRONBO_9-10m²",
+   "ma_moi": "TP-CUA-DLM-1LY",
+   "mau": "XÁM - XANH NGỌC",
+   "be_mat": null,
+   "bac": "9-10m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL1LY XN-VK_TRONBO_9-10m²",
+   "ma_moi": "TP-CUA-DLM-1LY",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": "9-10m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL1LY XN-XLC_TRONBO_8-9m²",
+   "ma_moi": "TP-CUA-DLM-1LY",
+   "mau": "XÁM - XANH NGỌC",
+   "be_mat": null,
+   "bac": "8-9m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL1LY XN-VK_TRONBO_8-9m²",
+   "ma_moi": "TP-CUA-DLM-1LY",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": "8-9m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL1LY XN-VK_TRONBO_7-8m²",
+   "ma_moi": "TP-CUA-DLM-1LY",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": "7-8m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL1LY XN-XLC_TRONBO_7-8m²",
+   "ma_moi": "TP-CUA-DLM-1LY",
+   "mau": "XÁM - XANH NGỌC",
+   "be_mat": null,
+   "bac": "7-8m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL1LY XN-XLC_TRONBO_6-7m²",
+   "ma_moi": "TP-CUA-DLM-1LY",
+   "mau": "XÁM - XANH NGỌC",
+   "be_mat": null,
+   "bac": "6-7m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL1LY XN-VK_TRONBO_6-7m²",
+   "ma_moi": "TP-CUA-DLM-1LY",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": "6-7m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL1LY XN-XLC_TRONBO_5-6m²",
+   "ma_moi": "TP-CUA-DLM-1LY",
+   "mau": "XÁM - XANH NGỌC",
+   "be_mat": null,
+   "bac": "5-6m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL1LY XN-VK_TRONBO_5-6m²",
+   "ma_moi": "TP-CUA-DLM-1LY",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": "5-6m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL1LY XN-XLC_TRONBO_4-5m²",
+   "ma_moi": "TP-CUA-DLM-1LY",
+   "mau": "XÁM - XANH NGỌC",
+   "be_mat": null,
+   "bac": "4-5m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL1LY XN-VK_TRONBO_4-5m²",
+   "ma_moi": "TP-CUA-DLM-1LY",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": "4-5m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL1LY XN-VK_TRONBO_3-4m²",
+   "ma_moi": "TP-CUA-DLM-1LY",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": "3-4m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CUADL1LY XN-XLC_TRONBO_3-4m²",
+   "ma_moi": "TP-CUA-DLM-1LY",
+   "mau": "XÁM - XANH NGỌC",
+   "be_mat": null,
+   "bac": "3-4m²",
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-TOLEKEM124_6D_TRONBO>10m²_MSK",
+   "ma_moi": "TP-CUA-DLK-8D",
+   "mau": null,
+   "be_mat": null,
+   "bac": ">10m²",
+   "msk": true
+  },
+  {
+   "ma_cu": "TP-TOLEKEM124_6D_TRONBO_9-10m²_MSK",
+   "ma_moi": "TP-CUA-DLK-8D",
+   "mau": null,
+   "be_mat": null,
+   "bac": "9-10m²",
+   "msk": true
+  },
+  {
+   "ma_cu": "TP-TOLEKEM124_6D_TRONBO_8-9m²_MSK",
+   "ma_moi": "TP-CUA-DLK-8D",
+   "mau": null,
+   "be_mat": null,
+   "bac": "8-9m²",
+   "msk": true
+  },
+  {
+   "ma_cu": "TP-TOLEKEM124_6D_TRONBO_7-8m²_MSK",
+   "ma_moi": "TP-CUA-DLK-8D",
+   "mau": null,
+   "be_mat": null,
+   "bac": "7-8m²",
+   "msk": true
+  },
+  {
+   "ma_cu": "TP-TOLEKEM124_6D_TRONBO_6-7m²_MSK",
+   "ma_moi": "TP-CUA-DLK-8D",
+   "mau": null,
+   "be_mat": null,
+   "bac": "6-7m²",
+   "msk": true
+  },
+  {
+   "ma_cu": "TP-TOLEKEM124_6D_TRONBO_5-6m²_MSK",
+   "ma_moi": "TP-CUA-DLK-8D",
+   "mau": null,
+   "be_mat": null,
+   "bac": "5-6m²",
+   "msk": true
+  },
+  {
+   "ma_cu": "TP-TOLEKEM124_6D_TRONBO_4-5m²_MSK",
+   "ma_moi": "TP-CUA-DLK-8D",
+   "mau": null,
+   "be_mat": null,
+   "bac": "4-5m²",
+   "msk": true
+  },
+  {
+   "ma_cu": "TP-TOLEKEM124_6D_TRONBO_3-4m²_MSK",
+   "ma_moi": "TP-CUA-DLK-8D",
+   "mau": null,
+   "be_mat": null,
+   "bac": "3-4m²",
+   "msk": true
+  },
+  {
+   "ma_cu": "TP-TOLEKEM124_8D_TRONBO>10m²_MSK",
+   "ma_moi": "TP-CUA-DLK-1LY",
+   "mau": null,
+   "be_mat": null,
+   "bac": ">10m²",
+   "msk": true
+  },
+  {
+   "ma_cu": "TP-TOLEKEM124_8D_TRONBO_9-10m²_MSK",
+   "ma_moi": "TP-CUA-DLK-1LY",
+   "mau": null,
+   "be_mat": null,
+   "bac": "9-10m²",
+   "msk": true
+  },
+  {
+   "ma_cu": "TP-TOLEKEM124_8D_TRONBO_8-9m²_MSK",
+   "ma_moi": "TP-CUA-DLK-1LY",
+   "mau": null,
+   "be_mat": null,
+   "bac": "8-9m²",
+   "msk": true
+  },
+  {
+   "ma_cu": "TP-TOLEKEM124_8D_TRONBO_7-8m²_MSK",
+   "ma_moi": "TP-CUA-DLK-1LY",
+   "mau": null,
+   "be_mat": null,
+   "bac": "7-8m²",
+   "msk": true
+  },
+  {
+   "ma_cu": "TP-TOLEKEM124_8D_TRONBO_6-7m²_MSK",
+   "ma_moi": "TP-CUA-DLK-1LY",
+   "mau": null,
+   "be_mat": null,
+   "bac": "6-7m²",
+   "msk": true
+  },
+  {
+   "ma_cu": "TP-TOLEKEM124_8D_TRONBO_5-6m²_MSK",
+   "ma_moi": "TP-CUA-DLK-1LY",
+   "mau": null,
+   "be_mat": null,
+   "bac": "5-6m²",
+   "msk": true
+  },
+  {
+   "ma_cu": "TP-TOLEKEM124_8D_TRONBO_4-5m²_MSK",
+   "ma_moi": "TP-CUA-DLK-1LY",
+   "mau": null,
+   "be_mat": null,
+   "bac": "4-5m²",
+   "msk": true
+  },
+  {
+   "ma_cu": "TP-TOLEKEM124_8D_TRONBO_3-4m²_MSK",
+   "ma_moi": "TP-CUA-DLK-1LY",
+   "mau": null,
+   "be_mat": null,
+   "bac": "3-4m²",
+   "msk": true
+  },
+  {
+   "ma_cu": "TP-TOLEKEM124_1LY_TRONBO>10m²_MSK",
+   "ma_moi": "TP-CUA-DLK-1.2LY",
+   "mau": null,
+   "be_mat": null,
+   "bac": ">10m²",
+   "msk": true
+  },
+  {
+   "ma_cu": "TP-TOLEKEM124_1LY_TRONBO_9-10m²_MSK",
+   "ma_moi": "TP-CUA-DLK-1.2LY",
+   "mau": null,
+   "be_mat": null,
+   "bac": "9-10m²",
+   "msk": true
+  },
+  {
+   "ma_cu": "TP-TOLEKEM124_1LY_TRONBO_8-9m²_MSK",
+   "ma_moi": "TP-CUA-DLK-1.2LY",
+   "mau": null,
+   "be_mat": null,
+   "bac": "8-9m²",
+   "msk": true
+  },
+  {
+   "ma_cu": "TP-TOLEKEM124_1LY_TRONBO_7-8m²_MSK",
+   "ma_moi": "TP-CUA-DLK-1.2LY",
+   "mau": null,
+   "be_mat": null,
+   "bac": "7-8m²",
+   "msk": true
+  },
+  {
+   "ma_cu": "TP-TOLEKEM124_1LY_TRONBO_6-7m²_MSK",
+   "ma_moi": "TP-CUA-DLK-1.2LY",
+   "mau": null,
+   "be_mat": null,
+   "bac": "6-7m²",
+   "msk": true
+  },
+  {
+   "ma_cu": "TP-TOLEKEM124_1LY_TRONBO_5-6m²_MSK",
+   "ma_moi": "TP-CUA-DLK-1.2LY",
+   "mau": null,
+   "be_mat": null,
+   "bac": "5-6m²",
+   "msk": true
+  },
+  {
+   "ma_cu": "TP-TOLEKEM124_1LY_TRONBO_4-5m²_MSK",
+   "ma_moi": "TP-CUA-DLK-1.2LY",
+   "mau": null,
+   "be_mat": null,
+   "bac": "4-5m²",
+   "msk": true
+  },
+  {
+   "ma_cu": "TP-TOLEKEM124_1LY_TRONBO_3-4m²_MSK",
+   "ma_moi": "TP-CUA-DLK-1.2LY",
+   "mau": null,
+   "be_mat": null,
+   "bac": "3-4m²",
+   "msk": true
+  },
+  {
+   "ma_cu": "NVL-TOLEKEM124_1LY_MSK",
+   "ma_moi": "TP-CUA-DLK-1.2LY",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": true
+  },
+  {
+   "ma_cu": "NVL-LAMAU-PHE",
+   "ma_moi": "NVL-LAMAU-PHE",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP-CHONGXOLO",
+   "ma_moi": "TP-CHONGXOLO",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-CUAKEODL",
+   "ma_moi": "HH-CUAKEODL",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "MŨI MÀI HỘP KIM",
+   "ma_moi": "MŨI-MÀI-HỘP-KIM",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TON-DL9.2Dx175-XNVK",
+   "ma_moi": "TP-LA-DLM-1LY-K175",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TOLEKEM175_8D-9D_STD_MSK",
+   "ma_moi": "TP-LA-DLK-1.1LY",
+   "mau": null,
+   "be_mat": "SƠN TĨNH ĐIỆN",
+   "bac": null,
+   "msk": true
+  },
+  {
+   "ma_cu": "NVL-TON-ST-1LYx175-_MSK",
+   "ma_moi": "TP-LA-DLK-1.2LY-K175",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": true
+  },
+  {
+   "ma_cu": "TP LÁ RUỘT  AL71N VK",
+   "ma_moi": "TP-LÁ-RUỘT-AL71N",
+   "mau": "VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TP  LÁ ĐỨC AL70 (2 lớp) - GS",
+   "ma_moi": "TP-LÁ-ĐỨC-AL70-(2-lớp)",
+   "mau": "GHI SẦN",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "CROMATE 3+",
+   "ma_moi": "CROMATE-3+",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "TẨY NHÔM",
+   "ma_moi": "TẨY-NHÔM",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TOLE0.35x598-XNVK",
+   "ma_moi": "NVL-TON-UC-3.8D-K598",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TOLE0.42x598-XNVK",
+   "ma_moi": "NVL-TON-UC-4.4D-K598",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TOLE0.42x598-GUKU",
+   "ma_moi": "NVL-TON-UC-4.4D-K598",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TOLE0.42x598-XR-CAFE",
+   "ma_moi": "NVL-TON-UC-4.4D-K598",
+   "mau": "XANH RÊU - CAFÉ",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TOLE0.42x598-TRXLC",
+   "ma_moi": "NVL-TON-UC-4.4D-K598",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TOLE0.48x598-GUKU",
+   "ma_moi": "NVL-TON-UC-4.8D-K598",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-PULYGAI",
+   "ma_moi": "NVL-PULYGAI",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-VDAY-TDU",
+   "ma_moi": "NVL-VDAY-TDU",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TOLE1.2x190-RON",
+   "ma_moi": "NVL-RAY-U70-RON",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TOLE1.2X270-KRON",
+   "ma_moi": "NVL-RAY-U100-KRON",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TOLE1.2X270-RON",
+   "ma_moi": "NVL-RAY-U100-RON",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-VAIHAMXO",
+   "ma_moi": "NVL-VAIHAMXO",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-ONGKEM34",
+   "ma_moi": "NVL-ONGKEM34",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-INOX",
+   "ma_moi": "NVL-INOX",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-GOIGANG",
+   "ma_moi": "NVL-GOIGANG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-BKAN",
+   "ma_moi": "NVL-BKAN",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-VISDD-BANLO",
+   "ma_moi": "NVL-VISDD-BANLO",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-VIS-BANLO2P",
+   "ma_moi": "NVL-VIS-BANLO2P",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-XOP-N95",
+   "ma_moi": "NVL-XOP-N95",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-PULYUC114-CAM",
+   "ma_moi": "NVL-PULYUC114-CAM",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-PULYUC114-DEN",
+   "ma_moi": "NVL-PULYUC114-DEN",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-LX5.5x70x46V",
+   "ma_moi": "NVL-LX5.5x70x46V",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-LX5.5x70x50V",
+   "ma_moi": "NVL-LX5.5x70x50V",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-LX6.0x70x53V",
+   "ma_moi": "NVL-LX6.0x70x53V",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-LX6.5x80x62V",
+   "ma_moi": "NVL-LX6.5x80x62V",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-LX6.5x80x63V",
+   "ma_moi": "NVL-LX6.5x80x63V",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-LX6.5x80x68V",
+   "ma_moi": "NVL-LX6.5x80x68V",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-LX7.0x90x65",
+   "ma_moi": "NVL-LX7.0x90x65",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-LX7.0x90x73",
+   "ma_moi": "NVL-LX7.0x90x73",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-LX7.0x90x83",
+   "ma_moi": "NVL-LX7.0x90x83",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-RONDAYUC",
+   "ma_moi": "NVL-RONDAYUC",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-CLNHUA",
+   "ma_moi": "NVL-CLNHUA",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-BATSAT",
+   "ma_moi": "NVL-BATSAT",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-BULON12.12",
+   "ma_moi": "NVL-BULON12.12",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-CONTAN12.12",
+   "ma_moi": "NVL-CONTAN12.12",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-BACDAN",
+   "ma_moi": "NVL-BACDAN",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-PL114-NHO",
+   "ma_moi": "HH-PL114-NHO",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-PL114-LON",
+   "ma_moi": "HH-PL114-LON",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-PL140",
+   "ma_moi": "HH-PL140",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-PL168",
+   "ma_moi": "HH-PL168",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-PULY ĐEN",
+   "ma_moi": "NVL-PULY-ĐEN",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-HTTD",
+   "ma_moi": "HH-HTTD",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-CBD",
+   "ma_moi": "HH-CBD",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-RHM8-GS",
+   "ma_moi": "NVL-RHM8",
+   "mau": "GHI SẦN",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-RHM8-VK",
+   "ma_moi": "NVL-RHM8",
+   "mau": "VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-RHM8-THÔ",
+   "ma_moi": "NVL-RHM8",
+   "mau": "THÔ",
+   "be_mat": "THÔ",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-R87A1-GS",
+   "ma_moi": "NVL-R87A1",
+   "mau": "GHI SẦN",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-R87A1-VK",
+   "ma_moi": "NVL-R87A1",
+   "mau": "VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-R87A1-THÔ",
+   "ma_moi": "NVL-R87A1",
+   "mau": "THÔ",
+   "be_mat": "THÔ",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-RHU100-GS",
+   "ma_moi": "NVL-RHU100",
+   "mau": "GHI SẦN",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-RHU100-VK",
+   "ma_moi": "NVL-RHU100",
+   "mau": "VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-RHU100-THÔ",
+   "ma_moi": "NVL-RHU100",
+   "mau": "THÔ",
+   "be_mat": "THÔ",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-RNHUA-DR",
+   "ma_moi": "NVL-RNHUA-DR",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-RNHUA-CR",
+   "ma_moi": "NVL-RNHUA-CR",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-RINOX-DR",
+   "ma_moi": "NVL-RINOX-DR",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL595-GS",
+   "ma_moi": "NVL-AL595",
+   "mau": "GHI SẦN",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL595-VK",
+   "ma_moi": "NVL-AL595",
+   "mau": "VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL595-THO",
+   "ma_moi": "NVL-AL595",
+   "mau": "THÔ",
+   "be_mat": "THÔ",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL71-GS",
+   "ma_moi": "NVL-AL71",
+   "mau": "GHI SẦN",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL71-VK",
+   "ma_moi": "NVL-AL71",
+   "mau": "VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL71-THO",
+   "ma_moi": "NVL-AL71",
+   "mau": "THÔ",
+   "be_mat": "THÔ",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL503-GS",
+   "ma_moi": "NVL-AL503",
+   "mau": "GHI SẦN",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL503-VK",
+   "ma_moi": "NVL-AL503",
+   "mau": "VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL503-THO",
+   "ma_moi": "NVL-AL503",
+   "mau": "THÔ",
+   "be_mat": "THÔ",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL548-GS",
+   "ma_moi": "NVL-AL548",
+   "mau": "GHI SẦN",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL548-VK",
+   "ma_moi": "NVL-AL548",
+   "mau": "VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL548-THO",
+   "ma_moi": "NVL-AL548",
+   "mau": "THÔ",
+   "be_mat": "THÔ",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL501-GS",
+   "ma_moi": "NVL-AL501",
+   "mau": "GHI SẦN",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL501-VK",
+   "ma_moi": "NVL-AL501",
+   "mau": "VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL501-THO",
+   "ma_moi": "NVL-AL501",
+   "mau": "THÔ",
+   "be_mat": "THÔ",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL652-GS",
+   "ma_moi": "NVL-AL652",
+   "mau": "GHI SẦN",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL652-VK",
+   "ma_moi": "NVL-AL652",
+   "mau": "VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL652-THO",
+   "ma_moi": "NVL-AL652",
+   "mau": "THÔ",
+   "be_mat": "THÔ",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL552-GS",
+   "ma_moi": "NVL-AL552",
+   "mau": "GHI SẦN",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL552-VK",
+   "ma_moi": "NVL-AL552",
+   "mau": "VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL552-THO",
+   "ma_moi": "NVL-AL552",
+   "mau": "THÔ",
+   "be_mat": "THÔ",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL752-GS",
+   "ma_moi": "NVL-AL752",
+   "mau": "GHI SẦN",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL752-VK",
+   "ma_moi": "NVL-AL752",
+   "mau": "VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL752-THO",
+   "ma_moi": "NVL-AL752",
+   "mau": "THÔ",
+   "be_mat": "THÔ",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL50-GS",
+   "ma_moi": "NVL-AL50",
+   "mau": "GHI SẦN",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL50-VK",
+   "ma_moi": "NVL-AL50",
+   "mau": "VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL50-THO",
+   "ma_moi": "NVL-AL50",
+   "mau": "THÔ",
+   "be_mat": "THÔ",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-ALVIP50-GS",
+   "ma_moi": "NVL-ALVIP50",
+   "mau": "GHI SẦN",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-ALVIP50-VK",
+   "ma_moi": "NVL-ALVIP50",
+   "mau": "VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-ALVIP50-THO",
+   "ma_moi": "NVL-ALVIP50",
+   "mau": "THÔ",
+   "be_mat": "THÔ",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-ALVIPST500-GS",
+   "ma_moi": "NVL-ALVIPST500",
+   "mau": "GHI SẦN",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-ALVIPST500-VK",
+   "ma_moi": "NVL-ALVIPST500",
+   "mau": "VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-ALVIPST500-THO",
+   "ma_moi": "NVL-ALVIPST500",
+   "mau": "THÔ",
+   "be_mat": "THÔ",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-ALVIPST700-GS",
+   "ma_moi": "NVL-ALVIPST700",
+   "mau": "GHI SẦN",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-ALVIPST700-VK",
+   "ma_moi": "NVL-ALVIPST700",
+   "mau": "VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-ALVIPST700-THO",
+   "ma_moi": "NVL-ALVIPST700",
+   "mau": "THÔ",
+   "be_mat": "THÔ",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL70(2LOP)-GS",
+   "ma_moi": "NVL-AL70(2LOP)",
+   "mau": "GHI SẦN",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL70(2LOP)-VK",
+   "ma_moi": "NVL-AL70(2LOP)",
+   "mau": "VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL70(2LOP)-THO",
+   "ma_moi": "NVL-AL70(2LOP)",
+   "mau": "THÔ",
+   "be_mat": "THÔ",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL70(1LOP)-GS",
+   "ma_moi": "NVL-AL70(1LOP)",
+   "mau": "GHI SẦN",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL70(1LOP)-VK",
+   "ma_moi": "NVL-AL70(1LOP)",
+   "mau": "VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL70(1LOP)-THO",
+   "ma_moi": "NVL-AL70(1LOP)",
+   "mau": "THÔ",
+   "be_mat": "THÔ",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL75-GS",
+   "ma_moi": "NVL-AL75",
+   "mau": "GHI SẦN",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL75-VK",
+   "ma_moi": "NVL-AL75",
+   "mau": "VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-AL75-THO",
+   "ma_moi": "NVL-AL75",
+   "mau": "THÔ",
+   "be_mat": "THÔ",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-RON-DD",
+   "ma_moi": "NVL-RON-DD",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-BO2VIS-752-ST700",
+   "ma_moi": "NVL-BO2VIS-752-ST700",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-BO1VIS-AL701LOP",
+   "ma_moi": "NVL-BO1VIS-AL701LOP",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-BO1VIS-AL75",
+   "ma_moi": "NVL-BO1VIS-AL75",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-BO2VIS AL50-VIP50-548-ST500",
+   "ma_moi": "NVL-BO2VIS-AL50-VIP50-548-ST500",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-BO1VIS-503C",
+   "ma_moi": "NVL-BO1VIS-503C",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-BO1VIS-AL702LOP",
+   "ma_moi": "NVL-BO1VIS-AL702LOP",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-BO1VIS-503N-71-595",
+   "ma_moi": "NVL-BO1VIS-503N-71-595",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-BO2VIS-501N-552",
+   "ma_moi": "NVL-BO2VIS-501N-552",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-BO2VIS-652-548C",
+   "ma_moi": "NVL-BO2VIS-652-548C",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-VIS",
+   "ma_moi": "NVL-VIS",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-PHOTLONG4X5",
+   "ma_moi": "NVL-PHOTLONG4X5",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-PHOTLONG5X6",
+   "ma_moi": "NVL-PHOTLONG5X6",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-OTPHI13.8",
+   "ma_moi": "NVL-OTPHI13.8",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-BOMV",
+   "ma_moi": "NVL-BOMV",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TONLAYEM-MVSN",
+   "ma_moi": "NVL-TONLAYEM-MVSN",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-BAT-MV",
+   "ma_moi": "NVL-BAT-MV",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-DINHTAN-MV",
+   "ma_moi": "NVL-DINHTAN-MV",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-CONTAN-MV",
+   "ma_moi": "NVL-CONTAN-MV",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-V4",
+   "ma_moi": "NVL-V4",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-V5",
+   "ma_moi": "NVL-V5",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-LACPHU33",
+   "ma_moi": "HH-LACPHU33",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-LACPHU33-3L",
+   "ma_moi": "HH-LACPHU33-3L",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-LACPHU36",
+   "ma_moi": "HH-LACPHU36",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-LACPHU40",
+   "ma_moi": "HH-LACPHU40",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-LACPHU40-L168",
+   "ma_moi": "HH-LACPHU40-L168",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-BANBUOM-FE",
+   "ma_moi": "NVL-BANBUOM-FE",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-BANBUOM-INOX",
+   "ma_moi": "NVL-BANBUOM-INOX",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-OTPHI19",
+   "ma_moi": "NVL-OTPHI19",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-BOLSN",
+   "ma_moi": "NVL-BOLSN",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-BAT-SN",
+   "ma_moi": "NVL-BAT-SN",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-DINHTAN-SN",
+   "ma_moi": "NVL-DINHTAN-SN",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-NHAN",
+   "ma_moi": "NVL-NHAN",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TON-DL6Dx124-STD",
+   "ma_moi": "NVL-TON-DLK-6D-K124",
+   "mau": null,
+   "be_mat": "SƠN TĨNH ĐIỆN",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TON-DL8Dx124-STD",
+   "ma_moi": "NVL-TON-DLK-8D-K124",
+   "mau": null,
+   "be_mat": "SƠN TĨNH ĐIỆN",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TON-DL1LYx124-STD",
+   "ma_moi": "NVL-TON-DLK-1LY-K124",
+   "mau": null,
+   "be_mat": "SƠN TĨNH ĐIỆN",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TON-DL1LY2x124-STD",
+   "ma_moi": "NVL-TON-DLK-1.2LY-K124",
+   "mau": null,
+   "be_mat": "SƠN TĨNH ĐIỆN",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-BUOMFE-DL",
+   "ma_moi": "NVL-BUOMFE-DL",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TON-DL9.2Dx175-XN-VK",
+   "ma_moi": "NVL-TON-DLK-1LY-K175",
+   "mau": "XANH NGỌC - VÀNG KEM",
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TON-DL8D-9Dx175-STD",
+   "ma_moi": "NVL-TON-DLK-9D-K175",
+   "mau": null,
+   "be_mat": "SƠN TĨNH ĐIỆN",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TON-DL1LYx175-STD",
+   "ma_moi": "NVL-TON-DLK-1LY-K175",
+   "mau": null,
+   "be_mat": "SƠN TĨNH ĐIỆN",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TON-DL1.2LYx175-STD",
+   "ma_moi": "NVL-TON-DLK-1.2LY-K175",
+   "mau": null,
+   "be_mat": "SƠN TĨNH ĐIỆN",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TON-DL1.3LYx175-STD",
+   "ma_moi": "NVL-TON-DLK-1.3LY-K175",
+   "mau": null,
+   "be_mat": "SƠN TĨNH ĐIỆN",
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-BUOMFE-ST",
+   "ma_moi": "NVL-BUOMFE-ST",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TR114-1.8",
+   "ma_moi": "NVL-TR114-1.8",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TR114-2.1",
+   "ma_moi": "NVL-TR114-2.1",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TR140",
+   "ma_moi": "NVL-TR140",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-TR168",
+   "ma_moi": "NVL-TR168",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-PE25",
+   "ma_moi": "NVL-PE25",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-PE50",
+   "ma_moi": "NVL-PE50",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-PE2x1.05x150",
+   "ma_moi": "NVL-PE2x1.05x150",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-PE2x1.05x150CAT2",
+   "ma_moi": "NVL-PE2x1.05x150CAT2",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-PE3x1.05x100CAT2",
+   "ma_moi": "NVL-PE3x1.05x100CAT2",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-PE3x1.05x100CAT4",
+   "ma_moi": "NVL-PE3x1.05x100CAT4",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-BANGKT-5P",
+   "ma_moi": "NVL-BANGKT-5P",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-VUONG3",
+   "ma_moi": "NVL-VUONG3",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "NVL-HOPKEM-1.2LY",
+   "ma_moi": "NVL-HOPKEM-1.2LY",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-TMT-TK400",
+   "ma_moi": "HH-TMT-TK400",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-LMT33-TK400-600",
+   "ma_moi": "HH-LMT33-TK400-600",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-LMT36-TK400-600",
+   "ma_moi": "HH-LMT36-TK400-600",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-HDKMT-TANKER",
+   "ma_moi": "HH-HDKMT-TANKER",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-TDKMT-TANKER",
+   "ma_moi": "HH-TDKMT-TANKER",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-TMT-TK600",
+   "ma_moi": "HH-TMT-TK600",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-TMT-TK800",
+   "ma_moi": "HH-TMT-TK800",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-LMT-TK800-1000",
+   "ma_moi": "HH-LMT-TK800-1000",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-TMT-TK1000",
+   "ma_moi": "HH-TMT-TK1000",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "LK-BACDAN-MT",
+   "ma_moi": "LK-BACDAN-MT",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "LK-NAPCHUP-MT",
+   "ma_moi": "LK-NAPCHUP-MT",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-HDKDT",
+   "ma_moi": "HH-HDKDT",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-TDKDT",
+   "ma_moi": "HH-TDKDT",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-TMT-YHLD300",
+   "ma_moi": "HH-TMT-YHLD300",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-LMT-YHLD300-500",
+   "ma_moi": "HH-LMT-YHLD300-500",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-HDKMT-YH",
+   "ma_moi": "HH-HDKMT-YH",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-TDKMT-YH",
+   "ma_moi": "HH-TDKMT-YH",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-TMT-YHLD500",
+   "ma_moi": "HH-TMT-YHLD500",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-TMT-YHLD800",
+   "ma_moi": "HH-TMT-YHLD800",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-LMT-YHLD800",
+   "ma_moi": "HH-LMT-YHLD800",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-TMT-YHLD1000",
+   "ma_moi": "HH-TMT-YHLD1000",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-LMT-YHLD1000",
+   "ma_moi": "HH-LMT-YHLD1000",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-TMT-YHLD1200",
+   "ma_moi": "HH-TMT-YHLD1200",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-LMT-YHLD1200",
+   "ma_moi": "HH-LMT-YHLD1200",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-TMT-AL400",
+   "ma_moi": "HH-TMT-AL400",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-LMT-AL400",
+   "ma_moi": "HH-LMT-AL400",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-HDKMT-AL",
+   "ma_moi": "HH-HDKMT-AL",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-TDKMT-AL",
+   "ma_moi": "HH-TDKMT-AL",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-TMT-AL600",
+   "ma_moi": "HH-TMT-AL600",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-LMT-AL600",
+   "ma_moi": "HH-LMT-AL600",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-TMT-JG300",
+   "ma_moi": "HH-TMT-JG300",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-HDKMT-JG",
+   "ma_moi": "HH-HDKMT-JG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-TDKMT-JG",
+   "ma_moi": "HH-TDKMT-JG",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-TMT-JG400",
+   "ma_moi": "HH-TMT-JG400",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-LMT-JG300-600",
+   "ma_moi": "HH-LMT-JG300-600",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-TMT-JG500",
+   "ma_moi": "HH-TMT-JG500",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-LMT-JG500",
+   "ma_moi": "HH-LMT-JG500",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-TMT-JG600",
+   "ma_moi": "HH-TMT-JG600",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-LMT-JG600",
+   "ma_moi": "HH-LMT-JG600",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-TMT-JG800",
+   "ma_moi": "HH-TMT-JG800",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-LMT-JG800-1000",
+   "ma_moi": "HH-LMT-JG800-1000",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-TMT-JG1000",
+   "ma_moi": "HH-TMT-JG1000",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-LMT-JG1000",
+   "ma_moi": "HH-LMT-JG1000",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-TMT-JG1500",
+   "ma_moi": "HH-TMT-JG1500",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-LMT-JG1500",
+   "ma_moi": "HH-LMT-JG1500",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-TMTDON-CH",
+   "ma_moi": "HH-TMTDON-CH",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-HDKMTDON-CH",
+   "ma_moi": "HH-HDKMTDON-CH",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-TDKMTDOI-CH",
+   "ma_moi": "HH-TDKMTDOI-CH",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-PAT-CH",
+   "ma_moi": "HH-PAT-CH",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-TMTDON-BOS-TRAI",
+   "ma_moi": "HH-TMTDON-BOS-TRAI",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-TMTDON-BOS-PHAI",
+   "ma_moi": "HH-TMTDON-BOS-PHAI",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-TMTDOI-BOS-TRAI",
+   "ma_moi": "HH-TMTDOI-BOS-TRAI",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-TMTDOI-BOS-PHAI",
+   "ma_moi": "HH-TMTDOI-BOS-PHAI",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-HDKMT-BOS",
+   "ma_moi": "HH-HDKMT-BOS",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-TDK-BOS",
+   "ma_moi": "HH-TDK-BOS",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-PAT-BOS",
+   "ma_moi": "HH-PAT-BOS",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-UPS-ALE800",
+   "ma_moi": "HH-UPS-ALE800",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-UPS-ALE1000",
+   "ma_moi": "HH-UPS-ALE1000",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  },
+  {
+   "ma_cu": "HH-UPS-YH1000",
+   "ma_moi": "HH-UPS-YH1000",
+   "mau": null,
+   "be_mat": null,
+   "bac": null,
+   "msk": false
+  }
+ ]
+}

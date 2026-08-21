@@ -1,0 +1,150 @@
+[
+ {
+  "ma": "NHOM_AL595",
+  "so_nguon": 1,
+  "spec": "NHOM-TD-AL595",
+  "tu_dong": false,
+  "cac_spec": [
+   "NHOM-TD-AL595"
+  ]
+ },
+ {
+  "ma": "NHOM_AL71",
+  "so_nguon": 2,
+  "spec": "NHOM-TD-AL71N",
+  "tu_dong": true,
+  "cac_spec": [
+   "NHOM-TD-AL71N",
+   "NHOM-TD-MTH-AL71M6"
+  ]
+ },
+ {
+  "ma": "NHOM_AL503",
+  "so_nguon": 2,
+  "spec": "NHOM-TD-AL503",
+  "tu_dong": true,
+  "cac_spec": [
+   "NHOM-TD-AL503",
+   "NHOM-TD-AL503N26"
+  ]
+ },
+ {
+  "ma": "NHOM_AL548",
+  "so_nguon": 2,
+  "spec": "NHOM-TD-AL548N",
+  "tu_dong": true,
+  "cac_spec": [
+   "NHOM-TD-AL548N",
+   "NHOM-TD-ALD-548"
+  ]
+ },
+ {
+  "ma": "NHOM_AL501",
+  "so_nguon": 2,
+  "spec": "NHOM-TD-AL501",
+  "tu_dong": true,
+  "cac_spec": [
+   "NHOM-TD-AL501",
+   "NHOM-TD-AL501N"
+  ]
+ },
+ {
+  "ma": "NHOM_AL652",
+  "so_nguon": 2,
+  "spec": "NHOM-TD-MTH-B652",
+  "tu_dong": true,
+  "cac_spec": [
+   "NHOM-MTH-B652M5",
+   "NHOM-TD-MTH-B652"
+  ]
+ },
+ {
+  "ma": "NHOM_AL552",
+  "so_nguon": 2,
+  "spec": "NHOM-TD-ALD-DL552",
+  "tu_dong": true,
+  "cac_spec": [
+   "NHOM-ALD-DL552",
+   "NHOM-TD-ALD-DL552"
+  ]
+ },
+ {
+  "ma": "NHOM_AL752",
+  "so_nguon": 2,
+  "spec": "NHOM-TD-AL752N",
+  "tu_dong": true,
+  "cac_spec": [
+   "NHOM-TD-AL752N",
+   "NHOM-TD-MITH-AL752M7"
+  ]
+ },
+ {
+  "ma": "NHOM_AL50",
+  "so_nguon": 2,
+  "spec": "NHOM-TD-AL50",
+  "tu_dong": true,
+  "cac_spec": [
+   "NHOM-AL50",
+   "NHOM-TD-AL50"
+  ]
+ },
+ {
+  "ma": "NHOM_ALVIP50",
+  "so_nguon": 2,
+  "spec": "NHOM-TD-ALVIP50",
+  "tu_dong": true,
+  "cac_spec": [
+   "NHOM-ALVIP50",
+   "NHOM-TD-ALVIP50"
+  ]
+ },
+ {
+  "ma": "NHOM_ALVIPST500",
+  "so_nguon": 2,
+  "spec": "NHOM-TD-VIPST500",
+  "tu_dong": true,
+  "cac_spec": [
+   "NHOM-VIPST500",
+   "NHOM-TD-VIPST500"
+  ]
+ },
+ {
+  "ma": "NHOM_ALVIPST700",
+  "so_nguon": 2,
+  "spec": "NHOM-TD-VIPST700",
+  "tu_dong": true,
+  "cac_spec": [
+   "NHOM-VIPST700",
+   "NHOM-TD-VIPST700"
+  ]
+ },
+ {
+  "ma": "NHOM_AL70_1LOP",
+  "so_nguon": 1,
+  "spec": "NHOM-AL70-1-LOP",
+  "tu_dong": false,
+  "cac_spec": [
+   "NHOM-AL70-1-LOP"
+  ]
+ },
+ {
+  "ma": "NHOM_AL70_2LOP",
+  "so_nguon": 3,
+  "spec": "NHOM-TD-AL70",
+  "tu_dong": true,
+  "cac_spec": [
+   "NHOM-TD-AL70",
+   "NHOM-TD-AL70-CU",
+   "NHOM-TD-AL70-15MM"
+  ]
+ },
+ {
+  "ma": "NHOM_AL75",
+  "so_nguon": 1,
+  "spec": "NHOM-AL75",
+  "tu_dong": false,
+  "cac_spec": [
+   "NHOM-AL75"
+  ]
+ }
+]

@@ -1,0 +1,832 @@
+[
+  {
+    "ma": "VT_LACPHU40",
+    "ten": "LẮC PHỤ 40",
+    "ton": "Cái",
+    "mua": "Cái",
+    "ban": "Cái",
+    "nguon": "ten_hang",
+    "doi": false
+  },
+  {
+    "ma": "VT_LACPHU40_L168",
+    "ten": "LẮC PHỤ 40 LỖ 168",
+    "ton": "Cái",
+    "mua": "Cái",
+    "ban": "Cái",
+    "nguon": "ten_hang",
+    "doi": false
+  },
+  {
+    "ma": "VT_LUOIMV_INOX",
+    "ten": "LƯỚI MV INOX",
+    "ton": "m2",
+    "mua": "m2",
+    "ban": "m2",
+    "nguon": "ten_hang",
+    "doi": false
+  },
+  {
+    "ma": "VT_LUOISN13X26_INOX",
+    "ten": "LƯỚI SN VUÔNG PHI 13X26 INOX",
+    "ton": "m2",
+    "mua": "m2",
+    "ban": "m2",
+    "nguon": "dinh_muc",
+    "doi": false
+  },
+  {
+    "ma": "VT_LUOISNPHI19_INOX",
+    "ten": "LƯỚI SN TRÒN PHI 19 INOX",
+    "ton": "m2",
+    "mua": "m2",
+    "ban": "m2",
+    "nguon": "dinh_muc",
+    "doi": false
+  },
+  {
+    "ma": "VT_LV_6.0_X_70_X_53V",
+    "ten": "HH LÒ XO 53V",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Cái",
+    "nguon": "dinh_muc",
+    "doi": true,
+    "ly_do": "ĐM ghi KG và CÁI: lò xo nhà cung cấp cân ký, lắp cửa đếm theo cái"
+  },
+  {
+    "ma": "VT_LV_6.5_X_80_X_63V",
+    "ten": "HH LÒ XO 63V",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Cái",
+    "nguon": "dinh_muc",
+    "doi": true,
+    "ly_do": "ĐM ghi KG và CÁI: lò xo nhà cung cấp cân ký, lắp cửa đếm theo cái"
+  },
+  {
+    "ma": "VT_LV_6.5_X_80_X_68V",
+    "ten": "HH LÒ XO 68V",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Cái",
+    "nguon": "dinh_muc",
+    "doi": true,
+    "ly_do": "ĐM ghi KG và CÁI: lò xo nhà cung cấp cân ký, lắp cửa đếm theo cái"
+  },
+  {
+    "ma": "VT_LV_7.0_X_90_X_65V",
+    "ten": "HH LÒ XO 65V",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Cái",
+    "nguon": "dinh_muc",
+    "doi": true,
+    "ly_do": "ĐM ghi KG và CÁI: lò xo nhà cung cấp cân ký, lắp cửa đếm theo cái"
+  },
+  {
+    "ma": "VT_LV_7.0_X_90_X_73V",
+    "ten": "HH LÒ XO 73V",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Cái",
+    "nguon": "dinh_muc",
+    "doi": true,
+    "ly_do": "ĐM ghi KG và CÁI: lò xo nhà cung cấp cân ký, lắp cửa đếm theo cái"
+  },
+  {
+    "ma": "VT_LV_7.0_X_90_X_83V",
+    "ten": "HH LÒ XO 83V",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Cái",
+    "nguon": "dinh_muc",
+    "doi": true,
+    "ly_do": "ĐM ghi KG và CÁI: lò xo nhà cung cấp cân ký, lắp cửa đếm theo cái"
+  },
+  {
+    "ma": "VT_LX_5.5_X_70_X_46V",
+    "ten": "HH LÒ XO 46V",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Cái",
+    "nguon": "dinh_muc",
+    "doi": true,
+    "ly_do": "ĐM ghi KG và CÁI: lò xo nhà cung cấp cân ký, lắp cửa đếm theo cái"
+  },
+  {
+    "ma": "VT_LX_5.5_X_70_X_50V",
+    "ten": "HH LÒ XO 50V",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Cái",
+    "nguon": "dinh_muc",
+    "doi": true,
+    "ly_do": "ĐM ghi KG và CÁI: lò xo nhà cung cấp cân ký, lắp cửa đếm theo cái"
+  },
+  {
+    "ma": "VT_LX5.5X70X46V",
+    "ten": "LÒ XO 46 V",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Cái",
+    "nguon": "ten_hang",
+    "doi": true,
+    "ly_do": "Trùng quy cách với mã HH LÒ XO có ĐM ghi KG/CÁI: mua cân ký, dùng theo cái"
+  },
+  {
+    "ma": "VT_LX5.5X70X50V",
+    "ten": "LÒ XO 50 V",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Cái",
+    "nguon": "ten_hang",
+    "doi": true,
+    "ly_do": "Trùng quy cách với mã HH LÒ XO có ĐM ghi KG/CÁI: mua cân ký, dùng theo cái"
+  },
+  {
+    "ma": "VT_LX6.0X70X53V",
+    "ten": "LÒ XO 53 V",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Cái",
+    "nguon": "ten_hang",
+    "doi": true,
+    "ly_do": "Trùng quy cách với mã HH LÒ XO có ĐM ghi KG/CÁI: mua cân ký, dùng theo cái"
+  },
+  {
+    "ma": "VT_LX6.5X80X62V",
+    "ten": "LÒ XO 62 V",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Cái",
+    "nguon": "ten_hang",
+    "doi": true,
+    "ly_do": "Trùng quy cách với mã HH LÒ XO có ĐM ghi KG/CÁI: mua cân ký, dùng theo cái"
+  },
+  {
+    "ma": "VT_LX6.5X80X63V",
+    "ten": "LÒ XO 63 V",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Cái",
+    "nguon": "ten_hang",
+    "doi": true,
+    "ly_do": "Trùng quy cách với mã HH LÒ XO có ĐM ghi KG/CÁI: mua cân ký, dùng theo cái"
+  },
+  {
+    "ma": "VT_LX6.5X80X68V",
+    "ten": "LÒ XO 68 V",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Cái",
+    "nguon": "ten_hang",
+    "doi": true,
+    "ly_do": "Trùng quy cách với mã HH LÒ XO có ĐM ghi KG/CÁI: mua cân ký, dùng theo cái"
+  },
+  {
+    "ma": "VT_LX7.0X90X65",
+    "ten": "LÒ XO 65 V",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Cái",
+    "nguon": "ten_hang",
+    "doi": true,
+    "ly_do": "Trùng quy cách với mã HH LÒ XO có ĐM ghi KG/CÁI: mua cân ký, dùng theo cái"
+  },
+  {
+    "ma": "VT_LX7.0X90X73",
+    "ten": "LÒ XO 73 V",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Cái",
+    "nguon": "ten_hang",
+    "doi": true,
+    "ly_do": "Trùng quy cách với mã HH LÒ XO có ĐM ghi KG/CÁI: mua cân ký, dùng theo cái"
+  },
+  {
+    "ma": "VT_LX7.0X90X83",
+    "ten": "LÒ XO 83 V",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Cái",
+    "nguon": "ten_hang",
+    "doi": true,
+    "ly_do": "Trùng quy cách với mã HH LÒ XO có ĐM ghi KG/CÁI: mua cân ký, dùng theo cái"
+  },
+  {
+    "ma": "VT_MUI_MAI_HOP_KIM",
+    "ten": "MŨI MÀI HỘP KIM",
+    "ton": "Cái",
+    "mua": "Cái",
+    "ban": "Cái",
+    "nguon": "dinh_muc",
+    "doi": false
+  },
+  {
+    "ma": "VT_NAPCHUP_BACDAN",
+    "ten": "BẠC ĐẠN + NẮP CHỤP",
+    "ton": "Bộ",
+    "mua": "Bộ",
+    "ban": "Bộ",
+    "nguon": "dinh_muc",
+    "doi": false
+  },
+  {
+    "ma": "VT_NHAN",
+    "ten": "NHẪN",
+    "ton": "Cái",
+    "mua": "Cái",
+    "ban": "Cái",
+    "nguon": "ten_hang",
+    "doi": false
+  },
+  {
+    "ma": "VT_OKHOA",
+    "ten": "Ổ KHÓA NGANG",
+    "ton": "Bộ",
+    "mua": "Bộ",
+    "ban": "Bộ",
+    "nguon": "dinh_muc",
+    "doi": true,
+    "ly_do": "ĐM ghi BỘ: ổ khóa mua nguyên bộ nên tồn/mua phải là Bộ"
+  },
+  {
+    "ma": "VT_OTPHI13.8",
+    "ten": "ỐNG THÉP PHI 13.8",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Kg",
+    "nguon": "ten_hang",
+    "doi": false
+  },
+  {
+    "ma": "VT_OTPHI19",
+    "ten": "ỐNG THÉP PHI 19",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Kg",
+    "nguon": "ten_hang",
+    "doi": false
+  },
+  {
+    "ma": "VT_PAT_BOS",
+    "ten": "PHÍM ÂM TƯỜNG ÚC BOSTECH",
+    "ton": "Cái",
+    "mua": "Cái",
+    "ban": "Cái",
+    "nguon": "ten_hang",
+    "doi": false
+  },
+  {
+    "ma": "VT_PE25",
+    "ten": "Màng PE 25 CM",
+    "ton": "Cuộn",
+    "mua": "Cuộn",
+    "ban": "Cuộn",
+    "nguon": "ten_hang",
+    "doi": false
+  },
+  {
+    "ma": "VT_PE2X1.05X150",
+    "ten": "MÀNG PE FOAM 2x1.05x150 (CẮT 4)",
+    "ton": "Cuộn",
+    "mua": "Cuộn",
+    "ban": "Cuộn",
+    "nguon": "ten_hang",
+    "doi": false
+  },
+  {
+    "ma": "VT_PE2X1.05X150CAT2",
+    "ten": "MÀNG PE FOAM 2x1.05x150 (CẮT 2)",
+    "ton": "Cuộn",
+    "mua": "Cuộn",
+    "ban": "Cuộn",
+    "nguon": "ten_hang",
+    "doi": false
+  },
+  {
+    "ma": "VT_PE3X1.05X100CAT2",
+    "ten": "MÀNG PE FOAM 3x1.05x100 (CẮT 2)",
+    "ton": "Cuộn",
+    "mua": "Cuộn",
+    "ban": "Cuộn",
+    "nguon": "ten_hang",
+    "doi": false
+  },
+  {
+    "ma": "VT_PE3X1.05X100CAT4",
+    "ten": "MÀNG PE FOAM 3x1.05x100 (CẮT 4)",
+    "ton": "Cuộn",
+    "mua": "Cuộn",
+    "ban": "Cuộn",
+    "nguon": "ten_hang",
+    "doi": false
+  },
+  {
+    "ma": "VT_PE50",
+    "ten": "Màng PE 50 CM",
+    "ton": "Cuộn",
+    "mua": "Cuộn",
+    "ban": "Cuộn",
+    "nguon": "ten_hang",
+    "doi": false
+  },
+  {
+    "ma": "VT_PHOTLONG4X5X400M",
+    "ten": "LÔNG NHEO 4X5",
+    "ton": "Mét",
+    "mua": "Mét",
+    "ban": "Mét",
+    "nguon": "dinh_muc",
+    "doi": false
+  },
+  {
+    "ma": "VT_PHOTLONG5X6X400M",
+    "ten": "LÔNG NHEO 5X6",
+    "ton": "Mét",
+    "mua": "Mét",
+    "ban": "Mét",
+    "nguon": "dinh_muc",
+    "doi": false
+  },
+  {
+    "ma": "VT_PULYGAI",
+    "ten": "PULY GAI",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "m2",
+    "nguon": "dinh_muc",
+    "doi": true,
+    "ly_do": "ĐM ghi KG/M2: mua cân ký, dùng theo m2 mặt cửa"
+  },
+  {
+    "ma": "VT_PULYUC114",
+    "ten": "PULY ÚC 114",
+    "ton": "Cái",
+    "mua": "Cái",
+    "ban": "Cái",
+    "nguon": "dinh_muc",
+    "doi": false
+  },
+  {
+    "ma": "VT_PULYUC114_CAM",
+    "ten": "PULY ÚC 114 CAM",
+    "ton": "Cái",
+    "mua": "Cái",
+    "ban": "Cái",
+    "nguon": "ten_hang",
+    "doi": false
+  },
+  {
+    "ma": "VT_PULYUC114_DEN",
+    "ten": "PULY ÚC 114 ĐEN",
+    "ton": "Cái",
+    "mua": "Cái",
+    "ban": "Cái",
+    "nguon": "ten_hang",
+    "doi": false
+  },
+  {
+    "ma": "VT_PULYUC34",
+    "ten": "PULY ÚC 34",
+    "ton": "Cái",
+    "mua": "Cái",
+    "ban": "Cái",
+    "nguon": "dinh_muc",
+    "doi": false
+  },
+  {
+    "ma": "VT_RON_DD",
+    "ten": "RON ĐÁY ĐỨC",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Mét",
+    "nguon": "dinh_muc",
+    "doi": true,
+    "ly_do": "ĐM ghi KG/M: ron mua cân ký, lắp cửa cắt theo mét"
+  },
+  {
+    "ma": "VT_RONDAYUC",
+    "ten": "RON ĐÁY ÚC",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Mét",
+    "nguon": "dinh_muc",
+    "doi": true,
+    "ly_do": "ĐM ghi KG/M ngang: ron mua cân ký, dùng theo mét ngang cửa"
+  },
+  {
+    "ma": "VT_RONNHUA_INOX",
+    "ten": "RON NHỰA + INOX",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Mét",
+    "nguon": "dinh_muc",
+    "doi": true,
+    "ly_do": "Ron nhựa/inox nhà cung cấp cân ký; ĐM ghi M nên bán theo mét"
+  },
+  {
+    "ma": "VT_RONNHUAVANGCANHAY_RSU100",
+    "ten": "RONNHUAVANGCANHAY RSU100",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Mét",
+    "nguon": "dinh_muc",
+    "doi": true,
+    "ly_do": "ĐM ghi KG/M: ron mua cân ký, lắp cửa cắt theo mét"
+  },
+  {
+    "ma": "VT_RONNHUAVANGCANHAY_RSU70",
+    "ten": "RONNHUAVANGCANHAY RSU70",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Mét",
+    "nguon": "dinh_muc",
+    "doi": true,
+    "ly_do": "ĐM ghi KG/M: ron mua cân ký, lắp cửa cắt theo mét"
+  },
+  {
+    "ma": "VT_TDK_BOS",
+    "ten": "TAY ĐIỀU KHIỂN BOSTECH",
+    "ton": "Cái",
+    "mua": "Cái",
+    "ban": "Cái",
+    "nguon": "ten_hang",
+    "doi": false
+  },
+  {
+    "ma": "VT_TDKDT",
+    "ten": "TAY ĐIỀU KHIỂN ĐIỆN THOẠI",
+    "ton": "Cái",
+    "mua": "Cái",
+    "ban": "Cái",
+    "nguon": "ten_hang",
+    "doi": false
+  },
+  {
+    "ma": "VT_TDKMTDOI_CH",
+    "ten": "TAY ĐIỀU KHIỂN TAIWAN",
+    "ton": "Cái",
+    "mua": "Cái",
+    "ban": "Cái",
+    "nguon": "ten_hang",
+    "doi": false
+  },
+  {
+    "ma": "VT_TIINOX",
+    "ten": "TI KHÓA NGANG",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Mét",
+    "nguon": "dinh_muc",
+    "doi": false
+  },
+  {
+    "ma": "VT_V4",
+    "ten": "V4",
+    "ton": "Mét",
+    "mua": "Mét",
+    "ban": "Mét",
+    "nguon": "ten_hang",
+    "doi": false
+  },
+  {
+    "ma": "VT_V4_INOX",
+    "ten": "V4 INOX 2ly",
+    "ton": "Mét",
+    "mua": "Mét",
+    "ban": "Mét",
+    "nguon": "dinh_muc",
+    "doi": false
+  },
+  {
+    "ma": "VT_V4_INOX_3LY",
+    "ten": "V4 3ly",
+    "ton": "Mét",
+    "mua": "Mét",
+    "ban": "Mét",
+    "nguon": "dinh_muc",
+    "doi": false
+  },
+  {
+    "ma": "VT_V5",
+    "ten": "V5",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Mét",
+    "nguon": "ten_hang",
+    "doi": true,
+    "ly_do": "Thanh V sắt mua cân ký, cắt dùng theo mét như V đáy (ĐM KG/M)"
+  },
+  {
+    "ma": "VT_VAIHAMXO",
+    "ten": "VAI HÃM XO",
+    "ton": "Cái",
+    "mua": "Cái",
+    "ban": "Cái",
+    "nguon": "dinh_muc",
+    "doi": false
+  },
+  {
+    "ma": "VT_VDAY_TDU",
+    "ten": "V ĐÁY (THANH ĐÁY ÚC)",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Mét",
+    "nguon": "dinh_muc",
+    "doi": true,
+    "ly_do": "ĐM ghi KG/M: mua cân ký, cắt dùng theo mét"
+  },
+  {
+    "ma": "VT_VDAY_TDU_KTD",
+    "ten": "THANH ĐÁY ÚC KTD",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Kg",
+    "nguon": "dinh_muc",
+    "doi": false
+  },
+  {
+    "ma": "VT_VIS_BANLO2P",
+    "ten": "VIS BẮN LÔ 2P",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Con",
+    "nguon": "dinh_muc",
+    "doi": true,
+    "ly_do": "Vít nhà cung cấp cân ký; ĐM ghi CON nên bán theo con"
+  },
+  {
+    "ma": "VT_VISDD_BANLO",
+    "ten": "VIS ĐẦU DÙ BẮN LÔ",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Con",
+    "nguon": "dinh_muc",
+    "doi": true,
+    "ly_do": "Vít nhà cung cấp cân ký; ĐM ghi CON nên bán theo con"
+  },
+  {
+    "ma": "VT_VUONG3",
+    "ten": "VUÔNG KẼM 30X30X1.2LY",
+    "ton": "Cây",
+    "mua": "Cây",
+    "ban": "Cây",
+    "nguon": "ten_hang",
+    "doi": false
+  },
+  {
+    "ma": "VT_XOP_N45",
+    "ten": "XỐP NHỎ",
+    "ton": "Tấm",
+    "mua": "Tấm",
+    "ban": "Tấm",
+    "nguon": "dinh_muc",
+    "doi": false
+  },
+  {
+    "ma": "VT_XOP_N90",
+    "ten": "XỐP LỚN",
+    "ton": "Tấm",
+    "mua": "Tấm",
+    "ban": "Tấm",
+    "nguon": "dinh_muc",
+    "doi": false
+  },
+  {
+    "ma": "VT_XOP_N95",
+    "ten": "XỐP LỚN (90cm)",
+    "ton": "Tấm",
+    "mua": "Tấm",
+    "ban": "Tấm",
+    "nguon": "ten_hang",
+    "doi": false
+  },
+  {
+    "ma": "VT_BATSAT",
+    "ten": "BÁT SẮT",
+    "ton": "Cái",
+    "mua": "Cái",
+    "ban": "Cái",
+    "nguon": "ten_hang",
+    "doi": false
+  },
+  {
+    "ma": "VT_BO_1VIS_503N_71_595",
+    "ten": "BỌ 1VIS 503N-71-595",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Con",
+    "nguon": "dinh_muc",
+    "doi": true,
+    "ly_do": "Bọ là hàng vụn nhà cung cấp cân ký; ĐM ghi CON nên bán theo con"
+  },
+  {
+    "ma": "VT_BO_2VIS_501_552",
+    "ten": "BỌ 2VIS-501-552",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Con",
+    "nguon": "dinh_muc",
+    "doi": true,
+    "ly_do": "Bọ là hàng vụn nhà cung cấp cân ký; ĐM ghi CON nên bán theo con"
+  },
+  {
+    "ma": "VT_BO_2VIS_652_548C",
+    "ten": "BỌ 2VIS-652-548C",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Con",
+    "nguon": "dinh_muc",
+    "doi": true,
+    "ly_do": "Bọ là hàng vụn nhà cung cấp cân ký; ĐM ghi CON nên bán theo con"
+  },
+  {
+    "ma": "VT_BO1VIS_503C",
+    "ten": "BỌ 1VIS 503C",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Con",
+    "nguon": "ten_hang",
+    "doi": true,
+    "ly_do": "Bọ mua cân ký; cùng họ với mã bọ có ĐM ghi CON nên bán theo con"
+  },
+  {
+    "ma": "VT_BO2VIS_501N_552",
+    "ten": "BỌ 2VIS 501N-552",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Con",
+    "nguon": "ten_hang",
+    "doi": true,
+    "ly_do": "Bọ mua cân ký; cùng họ với mã bọ có ĐM ghi CON nên bán theo con"
+  },
+  {
+    "ma": "VT_BO2VIS_652_548C",
+    "ten": "BỌ 2VIS 652-548C",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Con",
+    "nguon": "ten_hang",
+    "doi": true,
+    "ly_do": "Bọ mua cân ký; cùng họ với mã bọ có ĐM ghi CON nên bán theo con"
+  },
+  {
+    "ma": "VT_BO2VIS_752_ST700",
+    "ten": "BỌ 2VIS 752 ST700",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "Con",
+    "nguon": "ten_hang",
+    "doi": true,
+    "ly_do": "Bọ mua cân ký; cùng họ với mã bọ có ĐM ghi CON nên bán theo con"
+  },
+  {
+    "ma": "VT_CBD",
+    "ten": "CÒI BÁO ĐỘNG",
+    "ton": "Cái",
+    "mua": "Cái",
+    "ban": "Cái",
+    "nguon": "ten_hang",
+    "doi": false
+  },
+  {
+    "ma": "VT_CLNHUA",
+    "ten": "CON LĂN NHỰA",
+    "ton": "Cái",
+    "mua": "Cái",
+    "ban": "Cái",
+    "nguon": "ten_hang",
+    "doi": false
+  },
+  {
+    "ma": "VT_COI",
+    "ten": "CÒI",
+    "ton": "Cái",
+    "mua": "Cái",
+    "ban": "Cái",
+    "nguon": "dinh_muc",
+    "doi": false
+  },
+  {
+    "ma": "VT_CON_LAN",
+    "ten": "CON LĂN",
+    "ton": "Cặp",
+    "mua": "Cặp",
+    "ban": "Cặp",
+    "nguon": "dinh_muc",
+    "doi": false
+  },
+  {
+    "ma": "VT_HTTD",
+    "ten": "HỆ THỐNG TỰ DỪNG",
+    "ton": "Bộ",
+    "mua": "Bộ",
+    "ban": "Bộ",
+    "nguon": "dinh_muc",
+    "doi": false
+  },
+  {
+    "ma": "VT_PHOTLONG4X5",
+    "ten": "LÔNG NHEO NHỎ",
+    "ton": "Mét",
+    "mua": "Mét",
+    "ban": "Mét",
+    "nguon": "dinh_muc",
+    "doi": true,
+    "ly_do": "ĐM ghi M: lông nheo dùng theo mét, thống nhất với mã LÔNG NHEO 4X5 400M"
+  },
+  {
+    "ma": "VT_PHOTLONG5X6",
+    "ten": "LÔNG NHEO LỚN",
+    "ton": "Mét",
+    "mua": "Mét",
+    "ban": "Mét",
+    "nguon": "dinh_muc",
+    "doi": true,
+    "ly_do": "ĐM ghi M: lông nheo dùng theo mét, thống nhất với mã LÔNG NHEO 5X6 400M"
+  },
+  {
+    "ma": "VT_PL114_LON",
+    "ten": "PULY 114 LỚN",
+    "ton": "Cái",
+    "mua": "Cái",
+    "ban": "Cái",
+    "nguon": "ten_hang",
+    "doi": false
+  },
+  {
+    "ma": "VT_PL114_NHO",
+    "ten": "PULY 114 NHỎ",
+    "ton": "Cái",
+    "mua": "Cái",
+    "ban": "Cái",
+    "nguon": "ten_hang",
+    "doi": false
+  },
+  {
+    "ma": "VT_PULY_114L",
+    "ten": "PULY 114L",
+    "ton": "Cái",
+    "mua": "Cái",
+    "ban": "Cái",
+    "nguon": "dinh_muc",
+    "doi": false
+  },
+  {
+    "ma": "VT_PULY_114N",
+    "ten": "PULY 114N",
+    "ton": "Cái",
+    "mua": "Cái",
+    "ban": "Cái",
+    "nguon": "dinh_muc",
+    "doi": false
+  },
+  {
+    "ma": "VT_PULY_140",
+    "ten": "PULY 140",
+    "ton": "Cái",
+    "mua": "Cái",
+    "ban": "Cái",
+    "nguon": "dinh_muc",
+    "doi": false
+  },
+  {
+    "ma": "VT_PULY_168",
+    "ten": "PULY 168",
+    "ton": "Cái",
+    "mua": "Cái",
+    "ban": "Cái",
+    "nguon": "dinh_muc",
+    "doi": false
+  },
+  {
+    "ma": "VT_PULY_DEN",
+    "ten": "PULY ĐEN CUỘN CỬA ĐỨC",
+    "ton": "Cái",
+    "mua": "Cái",
+    "ban": "Cái",
+    "nguon": "dinh_muc",
+    "doi": false
+  },
+  {
+    "ma": "VT_VIS",
+    "ten": "Vis",
+    "ton": "Kg",
+    "mua": "Kg",
+    "ban": "m2",
+    "nguon": "dinh_muc",
+    "doi": true,
+    "ly_do": "ĐM ghi KG/M2: vis mua cân ký, định mức tính theo m2 cửa"
+  },
+  {
+    "ma": "VT_V5_KEM",
+    "ten": "V4 KẼM",
+    "ton": "Mét",
+    "mua": "Mét",
+    "ban": "Mét",
+    "nguon": "ten_hang",
+    "doi": false
+  }
+]

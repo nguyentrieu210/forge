@@ -1,0 +1,455 @@
+{
+ "doctype": "Material Specification",
+ "so_ban_ghi": 28,
+ "nguon": "data/trong-luong-nhom.json, tách theo nhà cung cấp",
+ "ban_ghi": [
+  {
+   "name": "NHOM-TD-AL595",
+   "payload": {
+    "spec_code": "NHOM-TD-AL595",
+    "spec_name": "Nhôm AL595 — TD-AL595 (Tiến Đạt)",
+    "material_grade": "NHOM",
+    "item_group": "Tôn & nhôm cây",
+    "section_code": "AL595",
+    "theoretical_kg_per_m": 0.35,
+    "note": "kg/m lấy từ data/trong-luong-nhom.json, dòng \"TD-AL595\". Tệp nguồn tự ghi rằng cách đọc kg/mét-dài (thay vì kg/m2) là SUY RA, chưa xác nhận — lô nhập đầu tiên đối chiếu cân thực tế sẽ tự lộ đúng sai.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-nhom-2026-08-20"
+   },
+   "title": "Nhôm AL595",
+   "content": "NHOM-TD-AL595 AL595 TD-AL595 Tiến Đạt"
+  },
+  {
+   "name": "NHOM-TD-AL71N",
+   "payload": {
+    "spec_code": "NHOM-TD-AL71N",
+    "spec_name": "Nhôm AL71 — TD-AL71N (Tiến Đạt)",
+    "material_grade": "NHOM",
+    "item_group": "Tôn & nhôm cây",
+    "section_code": "AL71",
+    "theoretical_kg_per_m": 0.389,
+    "note": "kg/m lấy từ data/trong-luong-nhom.json, dòng \"TD-AL71N\". Tệp nguồn tự ghi rằng cách đọc kg/mét-dài (thay vì kg/m2) là SUY RA, chưa xác nhận — lô nhập đầu tiên đối chiếu cân thực tế sẽ tự lộ đúng sai.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-nhom-2026-08-20"
+   },
+   "title": "Nhôm AL71",
+   "content": "NHOM-TD-AL71N AL71 TD-AL71N Tiến Đạt"
+  },
+  {
+   "name": "NHOM-TD-MTH-AL71M6",
+   "payload": {
+    "spec_code": "NHOM-TD-MTH-AL71M6",
+    "spec_name": "Nhôm AL71 — TD-MTH-AL71M6 (MTH)",
+    "material_grade": "NHOM",
+    "item_group": "Tôn & nhôm cây",
+    "section_code": "AL71",
+    "theoretical_kg_per_m": 0.377,
+    "note": "kg/m lấy từ data/trong-luong-nhom.json, dòng \"TD-MTH-AL71M6\". Tệp nguồn tự ghi rằng cách đọc kg/mét-dài (thay vì kg/m2) là SUY RA, chưa xác nhận — lô nhập đầu tiên đối chiếu cân thực tế sẽ tự lộ đúng sai.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-nhom-2026-08-20"
+   },
+   "title": "Nhôm AL71",
+   "content": "NHOM-TD-MTH-AL71M6 AL71 TD-MTH-AL71M6 MTH"
+  },
+  {
+   "name": "NHOM-TD-AL503",
+   "payload": {
+    "spec_code": "NHOM-TD-AL503",
+    "spec_name": "Nhôm AL503 — TD-AL503 (Tiến Đạt)",
+    "material_grade": "NHOM",
+    "item_group": "Tôn & nhôm cây",
+    "section_code": "AL503",
+    "theoretical_kg_per_m": 0.411,
+    "note": "kg/m lấy từ data/trong-luong-nhom.json, dòng \"TD-AL503\". Tệp nguồn tự ghi rằng cách đọc kg/mét-dài (thay vì kg/m2) là SUY RA, chưa xác nhận — lô nhập đầu tiên đối chiếu cân thực tế sẽ tự lộ đúng sai.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-nhom-2026-08-20"
+   },
+   "title": "Nhôm AL503",
+   "content": "NHOM-TD-AL503 AL503 TD-AL503 Tiến Đạt"
+  },
+  {
+   "name": "NHOM-TD-AL503N26",
+   "payload": {
+    "spec_code": "NHOM-TD-AL503N26",
+    "spec_name": "Nhôm AL503 — TD-AL503N26 (Tiến Đạt)",
+    "material_grade": "NHOM",
+    "item_group": "Tôn & nhôm cây",
+    "section_code": "AL503",
+    "theoretical_kg_per_m": 0.411,
+    "note": "kg/m lấy từ data/trong-luong-nhom.json, dòng \"TD-AL503N26\". Tệp nguồn tự ghi rằng cách đọc kg/mét-dài (thay vì kg/m2) là SUY RA, chưa xác nhận — lô nhập đầu tiên đối chiếu cân thực tế sẽ tự lộ đúng sai.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-nhom-2026-08-20"
+   },
+   "title": "Nhôm AL503",
+   "content": "NHOM-TD-AL503N26 AL503 TD-AL503N26 Tiến Đạt"
+  },
+  {
+   "name": "NHOM-TD-AL548N",
+   "payload": {
+    "spec_code": "NHOM-TD-AL548N",
+    "spec_name": "Nhôm AL548 — TD-AL548N (Tiến Đạt)",
+    "material_grade": "NHOM",
+    "item_group": "Tôn & nhôm cây",
+    "section_code": "AL548",
+    "theoretical_kg_per_m": 0.425,
+    "note": "kg/m lấy từ data/trong-luong-nhom.json, dòng \"TD-AL548N\". Tệp nguồn tự ghi rằng cách đọc kg/mét-dài (thay vì kg/m2) là SUY RA, chưa xác nhận — lô nhập đầu tiên đối chiếu cân thực tế sẽ tự lộ đúng sai.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-nhom-2026-08-20"
+   },
+   "title": "Nhôm AL548",
+   "content": "NHOM-TD-AL548N AL548 TD-AL548N Tiến Đạt"
+  },
+  {
+   "name": "NHOM-TD-ALD-548",
+   "payload": {
+    "spec_code": "NHOM-TD-ALD-548",
+    "spec_name": "Nhôm AL548 — TD-ALD-548 (ALD)",
+    "material_grade": "NHOM",
+    "item_group": "Tôn & nhôm cây",
+    "section_code": "AL548",
+    "theoretical_kg_per_m": 0.451,
+    "note": "kg/m lấy từ data/trong-luong-nhom.json, dòng \"TD-ALD-548\". Tệp nguồn tự ghi rằng cách đọc kg/mét-dài (thay vì kg/m2) là SUY RA, chưa xác nhận — lô nhập đầu tiên đối chiếu cân thực tế sẽ tự lộ đúng sai.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-nhom-2026-08-20"
+   },
+   "title": "Nhôm AL548",
+   "content": "NHOM-TD-ALD-548 AL548 TD-ALD-548 ALD"
+  },
+  {
+   "name": "NHOM-TD-AL501",
+   "payload": {
+    "spec_code": "NHOM-TD-AL501",
+    "spec_name": "Nhôm AL501 — TD-AL501 (Tiến Đạt)",
+    "material_grade": "NHOM",
+    "item_group": "Tôn & nhôm cây",
+    "section_code": "AL501",
+    "theoretical_kg_per_m": 0.504,
+    "note": "kg/m lấy từ data/trong-luong-nhom.json, dòng \"TD-AL501\". Tệp nguồn tự ghi rằng cách đọc kg/mét-dài (thay vì kg/m2) là SUY RA, chưa xác nhận — lô nhập đầu tiên đối chiếu cân thực tế sẽ tự lộ đúng sai.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-nhom-2026-08-20"
+   },
+   "title": "Nhôm AL501",
+   "content": "NHOM-TD-AL501 AL501 TD-AL501 Tiến Đạt"
+  },
+  {
+   "name": "NHOM-TD-AL501N",
+   "payload": {
+    "spec_code": "NHOM-TD-AL501N",
+    "spec_name": "Nhôm AL501 — TD-AL501N (Tiến Đạt)",
+    "material_grade": "NHOM",
+    "item_group": "Tôn & nhôm cây",
+    "section_code": "AL501",
+    "theoretical_kg_per_m": 0.466,
+    "note": "kg/m lấy từ data/trong-luong-nhom.json, dòng \"TD-AL501N\". Tệp nguồn tự ghi rằng cách đọc kg/mét-dài (thay vì kg/m2) là SUY RA, chưa xác nhận — lô nhập đầu tiên đối chiếu cân thực tế sẽ tự lộ đúng sai.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-nhom-2026-08-20"
+   },
+   "title": "Nhôm AL501",
+   "content": "NHOM-TD-AL501N AL501 TD-AL501N Tiến Đạt"
+  },
+  {
+   "name": "NHOM-MTH-B652M5",
+   "payload": {
+    "spec_code": "NHOM-MTH-B652M5",
+    "spec_name": "Nhôm AL652 — MTH-B652M5 (MTH)",
+    "material_grade": "NHOM",
+    "item_group": "Tôn & nhôm cây",
+    "section_code": "AL652",
+    "theoretical_kg_per_m": 0.483,
+    "note": "kg/m lấy từ data/trong-luong-nhom.json, dòng \"MTH-B652M5\". Tệp nguồn tự ghi rằng cách đọc kg/mét-dài (thay vì kg/m2) là SUY RA, chưa xác nhận — lô nhập đầu tiên đối chiếu cân thực tế sẽ tự lộ đúng sai.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-nhom-2026-08-20"
+   },
+   "title": "Nhôm AL652",
+   "content": "NHOM-MTH-B652M5 AL652 MTH-B652M5 MTH"
+  },
+  {
+   "name": "NHOM-TD-MTH-B652",
+   "payload": {
+    "spec_code": "NHOM-TD-MTH-B652",
+    "spec_name": "Nhôm AL652 — TD-MTH-B652 (MTH)",
+    "material_grade": "NHOM",
+    "item_group": "Tôn & nhôm cây",
+    "section_code": "AL652",
+    "theoretical_kg_per_m": 0.469,
+    "note": "kg/m lấy từ data/trong-luong-nhom.json, dòng \"TD-MTH-B652\". Tệp nguồn tự ghi rằng cách đọc kg/mét-dài (thay vì kg/m2) là SUY RA, chưa xác nhận — lô nhập đầu tiên đối chiếu cân thực tế sẽ tự lộ đúng sai.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-nhom-2026-08-20"
+   },
+   "title": "Nhôm AL652",
+   "content": "NHOM-TD-MTH-B652 AL652 TD-MTH-B652 MTH"
+  },
+  {
+   "name": "NHOM-ALD-DL552",
+   "payload": {
+    "spec_code": "NHOM-ALD-DL552",
+    "spec_name": "Nhôm AL552 — ALD-DL552 (ALD)",
+    "material_grade": "NHOM",
+    "item_group": "Tôn & nhôm cây",
+    "section_code": "AL552",
+    "theoretical_kg_per_m": 0.565,
+    "note": "kg/m lấy từ data/trong-luong-nhom.json, dòng \"ALD-DL552\". Tệp nguồn tự ghi rằng cách đọc kg/mét-dài (thay vì kg/m2) là SUY RA, chưa xác nhận — lô nhập đầu tiên đối chiếu cân thực tế sẽ tự lộ đúng sai.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-nhom-2026-08-20"
+   },
+   "title": "Nhôm AL552",
+   "content": "NHOM-ALD-DL552 AL552 ALD-DL552 ALD"
+  },
+  {
+   "name": "NHOM-TD-ALD-DL552",
+   "payload": {
+    "spec_code": "NHOM-TD-ALD-DL552",
+    "spec_name": "Nhôm AL552 — TD-ALD-DL552 (ALD)",
+    "material_grade": "NHOM",
+    "item_group": "Tôn & nhôm cây",
+    "section_code": "AL552",
+    "theoretical_kg_per_m": 0.565,
+    "note": "kg/m lấy từ data/trong-luong-nhom.json, dòng \"TD-ALD-DL552\". Tệp nguồn tự ghi rằng cách đọc kg/mét-dài (thay vì kg/m2) là SUY RA, chưa xác nhận — lô nhập đầu tiên đối chiếu cân thực tế sẽ tự lộ đúng sai.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-nhom-2026-08-20"
+   },
+   "title": "Nhôm AL552",
+   "content": "NHOM-TD-ALD-DL552 AL552 TD-ALD-DL552 ALD"
+  },
+  {
+   "name": "NHOM-TD-AL752N",
+   "payload": {
+    "spec_code": "NHOM-TD-AL752N",
+    "spec_name": "Nhôm AL752 — TD-AL752N (Tiến Đạt)",
+    "material_grade": "NHOM",
+    "item_group": "Tôn & nhôm cây",
+    "section_code": "AL752",
+    "theoretical_kg_per_m": 0.541,
+    "note": "kg/m lấy từ data/trong-luong-nhom.json, dòng \"TD-AL752N\". Tệp nguồn tự ghi rằng cách đọc kg/mét-dài (thay vì kg/m2) là SUY RA, chưa xác nhận — lô nhập đầu tiên đối chiếu cân thực tế sẽ tự lộ đúng sai.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-nhom-2026-08-20"
+   },
+   "title": "Nhôm AL752",
+   "content": "NHOM-TD-AL752N AL752 TD-AL752N Tiến Đạt"
+  },
+  {
+   "name": "NHOM-TD-MITH-AL752M7",
+   "payload": {
+    "spec_code": "NHOM-TD-MITH-AL752M7",
+    "spec_name": "Nhôm AL752 — TD-MITH-AL752M7 (MITH)",
+    "material_grade": "NHOM",
+    "item_group": "Tôn & nhôm cây",
+    "section_code": "AL752",
+    "theoretical_kg_per_m": 0.524,
+    "note": "kg/m lấy từ data/trong-luong-nhom.json, dòng \"TD-MITH-AL752M7\". Tệp nguồn tự ghi rằng cách đọc kg/mét-dài (thay vì kg/m2) là SUY RA, chưa xác nhận — lô nhập đầu tiên đối chiếu cân thực tế sẽ tự lộ đúng sai.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-nhom-2026-08-20"
+   },
+   "title": "Nhôm AL752",
+   "content": "NHOM-TD-MITH-AL752M7 AL752 TD-MITH-AL752M7 MITH"
+  },
+  {
+   "name": "NHOM-AL50",
+   "payload": {
+    "spec_code": "NHOM-AL50",
+    "spec_name": "Nhôm AL50 — AL50 (không ghi nguồn)",
+    "material_grade": "NHOM",
+    "item_group": "Tôn & nhôm cây",
+    "section_code": "AL50",
+    "theoretical_kg_per_m": 0.577,
+    "note": "kg/m lấy từ data/trong-luong-nhom.json, dòng \"AL50\". Tệp nguồn tự ghi rằng cách đọc kg/mét-dài (thay vì kg/m2) là SUY RA, chưa xác nhận — lô nhập đầu tiên đối chiếu cân thực tế sẽ tự lộ đúng sai.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-nhom-2026-08-20"
+   },
+   "title": "Nhôm AL50",
+   "content": "NHOM-AL50 AL50 AL50 không ghi nguồn"
+  },
+  {
+   "name": "NHOM-TD-AL50",
+   "payload": {
+    "spec_code": "NHOM-TD-AL50",
+    "spec_name": "Nhôm AL50 — TD-AL50 (Tiến Đạt)",
+    "material_grade": "NHOM",
+    "item_group": "Tôn & nhôm cây",
+    "section_code": "AL50",
+    "theoretical_kg_per_m": 0.553,
+    "note": "kg/m lấy từ data/trong-luong-nhom.json, dòng \"TD-AL50\". Tệp nguồn tự ghi rằng cách đọc kg/mét-dài (thay vì kg/m2) là SUY RA, chưa xác nhận — lô nhập đầu tiên đối chiếu cân thực tế sẽ tự lộ đúng sai.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-nhom-2026-08-20"
+   },
+   "title": "Nhôm AL50",
+   "content": "NHOM-TD-AL50 AL50 TD-AL50 Tiến Đạt"
+  },
+  {
+   "name": "NHOM-ALVIP50",
+   "payload": {
+    "spec_code": "NHOM-ALVIP50",
+    "spec_name": "Nhôm ALVIP50 — ALVIP50 (không ghi nguồn)",
+    "material_grade": "NHOM",
+    "item_group": "Tôn & nhôm cây",
+    "section_code": "ALVIP50",
+    "theoretical_kg_per_m": 0.625,
+    "note": "kg/m lấy từ data/trong-luong-nhom.json, dòng \"ALVIP50\". Tệp nguồn tự ghi rằng cách đọc kg/mét-dài (thay vì kg/m2) là SUY RA, chưa xác nhận — lô nhập đầu tiên đối chiếu cân thực tế sẽ tự lộ đúng sai.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-nhom-2026-08-20"
+   },
+   "title": "Nhôm ALVIP50",
+   "content": "NHOM-ALVIP50 ALVIP50 ALVIP50 không ghi nguồn"
+  },
+  {
+   "name": "NHOM-TD-ALVIP50",
+   "payload": {
+    "spec_code": "NHOM-TD-ALVIP50",
+    "spec_name": "Nhôm ALVIP50 — TD-ALVIP50 (Tiến Đạt)",
+    "material_grade": "NHOM",
+    "item_group": "Tôn & nhôm cây",
+    "section_code": "ALVIP50",
+    "theoretical_kg_per_m": 0.625,
+    "note": "kg/m lấy từ data/trong-luong-nhom.json, dòng \"TD-ALVIP50\". Tệp nguồn tự ghi rằng cách đọc kg/mét-dài (thay vì kg/m2) là SUY RA, chưa xác nhận — lô nhập đầu tiên đối chiếu cân thực tế sẽ tự lộ đúng sai.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-nhom-2026-08-20"
+   },
+   "title": "Nhôm ALVIP50",
+   "content": "NHOM-TD-ALVIP50 ALVIP50 TD-ALVIP50 Tiến Đạt"
+  },
+  {
+   "name": "NHOM-VIPST500",
+   "payload": {
+    "spec_code": "NHOM-VIPST500",
+    "spec_name": "Nhôm ALVIPST500 — VIPST500 (không ghi nguồn)",
+    "material_grade": "NHOM",
+    "item_group": "Tôn & nhôm cây",
+    "section_code": "ALVIPST500",
+    "theoretical_kg_per_m": 0.737,
+    "note": "kg/m lấy từ data/trong-luong-nhom.json, dòng \"VIPST500\". Tệp nguồn tự ghi rằng cách đọc kg/mét-dài (thay vì kg/m2) là SUY RA, chưa xác nhận — lô nhập đầu tiên đối chiếu cân thực tế sẽ tự lộ đúng sai.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-nhom-2026-08-20"
+   },
+   "title": "Nhôm ALVIPST500",
+   "content": "NHOM-VIPST500 ALVIPST500 VIPST500 không ghi nguồn"
+  },
+  {
+   "name": "NHOM-TD-VIPST500",
+   "payload": {
+    "spec_code": "NHOM-TD-VIPST500",
+    "spec_name": "Nhôm ALVIPST500 — TD-VIPST500 (Tiến Đạt)",
+    "material_grade": "NHOM",
+    "item_group": "Tôn & nhôm cây",
+    "section_code": "ALVIPST500",
+    "theoretical_kg_per_m": 0.737,
+    "note": "kg/m lấy từ data/trong-luong-nhom.json, dòng \"TD-VIPST500\". Tệp nguồn tự ghi rằng cách đọc kg/mét-dài (thay vì kg/m2) là SUY RA, chưa xác nhận — lô nhập đầu tiên đối chiếu cân thực tế sẽ tự lộ đúng sai.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-nhom-2026-08-20"
+   },
+   "title": "Nhôm ALVIPST500",
+   "content": "NHOM-TD-VIPST500 ALVIPST500 TD-VIPST500 Tiến Đạt"
+  },
+  {
+   "name": "NHOM-VIPST700",
+   "payload": {
+    "spec_code": "NHOM-VIPST700",
+    "spec_name": "Nhôm ALVIPST700 — VIPST700 (không ghi nguồn)",
+    "material_grade": "NHOM",
+    "item_group": "Tôn & nhôm cây",
+    "section_code": "ALVIPST700",
+    "theoretical_kg_per_m": 0.753,
+    "note": "kg/m lấy từ data/trong-luong-nhom.json, dòng \"VIPST700\". Tệp nguồn tự ghi rằng cách đọc kg/mét-dài (thay vì kg/m2) là SUY RA, chưa xác nhận — lô nhập đầu tiên đối chiếu cân thực tế sẽ tự lộ đúng sai.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-nhom-2026-08-20"
+   },
+   "title": "Nhôm ALVIPST700",
+   "content": "NHOM-VIPST700 ALVIPST700 VIPST700 không ghi nguồn"
+  },
+  {
+   "name": "NHOM-TD-VIPST700",
+   "payload": {
+    "spec_code": "NHOM-TD-VIPST700",
+    "spec_name": "Nhôm ALVIPST700 — TD-VIPST700 (Tiến Đạt)",
+    "material_grade": "NHOM",
+    "item_group": "Tôn & nhôm cây",
+    "section_code": "ALVIPST700",
+    "theoretical_kg_per_m": 0.753,
+    "note": "kg/m lấy từ data/trong-luong-nhom.json, dòng \"TD-VIPST700\". Tệp nguồn tự ghi rằng cách đọc kg/mét-dài (thay vì kg/m2) là SUY RA, chưa xác nhận — lô nhập đầu tiên đối chiếu cân thực tế sẽ tự lộ đúng sai.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-nhom-2026-08-20"
+   },
+   "title": "Nhôm ALVIPST700",
+   "content": "NHOM-TD-VIPST700 ALVIPST700 TD-VIPST700 Tiến Đạt"
+  },
+  {
+   "name": "NHOM-AL70-1-LOP",
+   "payload": {
+    "spec_code": "NHOM-AL70-1-LOP",
+    "spec_name": "Nhôm AL70 1LOP — AL70-1 LỚP (không ghi nguồn)",
+    "material_grade": "NHOM",
+    "item_group": "Tôn & nhôm cây",
+    "section_code": "AL70 1LOP",
+    "theoretical_kg_per_m": 0.53,
+    "note": "kg/m lấy từ data/trong-luong-nhom.json, dòng \"AL70-1 LỚP\". Tệp nguồn tự ghi rằng cách đọc kg/mét-dài (thay vì kg/m2) là SUY RA, chưa xác nhận — lô nhập đầu tiên đối chiếu cân thực tế sẽ tự lộ đúng sai.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-nhom-2026-08-20"
+   },
+   "title": "Nhôm AL70_1LOP",
+   "content": "NHOM-AL70-1-LOP AL70_1LOP AL70-1 LỚP không ghi nguồn"
+  },
+  {
+   "name": "NHOM-TD-AL70",
+   "payload": {
+    "spec_code": "NHOM-TD-AL70",
+    "spec_name": "Nhôm AL70 2LOP — TD-AL70 (Tiến Đạt)",
+    "material_grade": "NHOM",
+    "item_group": "Tôn & nhôm cây",
+    "section_code": "AL70 2LOP",
+    "theoretical_kg_per_m": 0.354,
+    "note": "kg/m lấy từ data/trong-luong-nhom.json, dòng \"TD-AL70\". Tệp nguồn tự ghi rằng cách đọc kg/mét-dài (thay vì kg/m2) là SUY RA, chưa xác nhận — lô nhập đầu tiên đối chiếu cân thực tế sẽ tự lộ đúng sai.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-nhom-2026-08-20"
+   },
+   "title": "Nhôm AL70_2LOP",
+   "content": "NHOM-TD-AL70 AL70_2LOP TD-AL70 Tiến Đạt"
+  },
+  {
+   "name": "NHOM-TD-AL70-CU",
+   "payload": {
+    "spec_code": "NHOM-TD-AL70-CU",
+    "spec_name": "Nhôm AL70 2LOP — TD-AL70 (CŨ) (Tiến Đạt)",
+    "material_grade": "NHOM",
+    "item_group": "Tôn & nhôm cây",
+    "section_code": "AL70 2LOP",
+    "theoretical_kg_per_m": 0.337,
+    "note": "kg/m lấy từ data/trong-luong-nhom.json, dòng \"TD-AL70 (CŨ)\". Tệp nguồn tự ghi rằng cách đọc kg/mét-dài (thay vì kg/m2) là SUY RA, chưa xác nhận — lô nhập đầu tiên đối chiếu cân thực tế sẽ tự lộ đúng sai.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-nhom-2026-08-20"
+   },
+   "title": "Nhôm AL70_2LOP",
+   "content": "NHOM-TD-AL70-CU AL70_2LOP TD-AL70 (CŨ) Tiến Đạt"
+  },
+  {
+   "name": "NHOM-TD-AL70-15MM",
+   "payload": {
+    "spec_code": "NHOM-TD-AL70-15MM",
+    "spec_name": "Nhôm AL70 2LOP — TD-AL70-15mm (Tiến Đạt)",
+    "material_grade": "NHOM",
+    "item_group": "Tôn & nhôm cây",
+    "section_code": "AL70 2LOP",
+    "theoretical_kg_per_m": 0.703,
+    "note": "kg/m lấy từ data/trong-luong-nhom.json, dòng \"TD-AL70-15mm\". Tệp nguồn tự ghi rằng cách đọc kg/mét-dài (thay vì kg/m2) là SUY RA, chưa xác nhận — lô nhập đầu tiên đối chiếu cân thực tế sẽ tự lộ đúng sai.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-nhom-2026-08-20"
+   },
+   "title": "Nhôm AL70_2LOP",
+   "content": "NHOM-TD-AL70-15MM AL70_2LOP TD-AL70-15mm Tiến Đạt"
+  },
+  {
+   "name": "NHOM-AL75",
+   "payload": {
+    "spec_code": "NHOM-AL75",
+    "spec_name": "Nhôm AL75 — AL75 (không ghi nguồn)",
+    "material_grade": "NHOM",
+    "item_group": "Tôn & nhôm cây",
+    "section_code": "AL75",
+    "theoretical_kg_per_m": 0.503,
+    "note": "kg/m lấy từ data/trong-luong-nhom.json, dòng \"AL75\". Tệp nguồn tự ghi rằng cách đọc kg/mét-dài (thay vì kg/m2) là SUY RA, chưa xác nhận — lô nhập đầu tiên đối chiếu cân thực tế sẽ tự lộ đúng sai.",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-nhom-2026-08-20"
+   },
+   "title": "Nhôm AL75",
+   "content": "NHOM-AL75 AL75 AL75 không ghi nguồn"
+  }
+ ]
+}

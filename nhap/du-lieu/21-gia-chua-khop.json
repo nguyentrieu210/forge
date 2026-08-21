@@ -1,0 +1,578 @@
+{
+ "ghi_chu": "Tên có giá trong ĐM nhưng không khớp mặt hàng nào — cần chủ xưởng đối chiếu.",
+ "so_ten": 143,
+ "ten": [
+  {
+   "ten": "TRỤC 114_1.8LY  [KG/M]",
+   "so_dong": 1
+  },
+  {
+   "ten": "TRỤC 114_2.1LY  [KG/M]",
+   "so_dong": 1
+  },
+  {
+   "ten": "PHỤ THU SƠN RAY MSK  [M]",
+   "so_dong": 1
+  },
+  {
+   "ten": "BỘ BA LÁ ĐÁY  [M]",
+   "so_dong": 1
+  },
+  {
+   "ten": "RON ĐÁY ĐỨC  [M]",
+   "so_dong": 1
+  },
+  {
+   "ten": "RON NHỰA + INOX  [M]",
+   "so_dong": 1
+  },
+  {
+   "ten": "RON NHỰA ĐÁY RAY  [M]",
+   "so_dong": 1
+  },
+  {
+   "ten": "RON INOX ĐÁY RAY  [M]",
+   "so_dong": 1
+  },
+  {
+   "ten": "RON NHỰA CẠNH RAY  [M]",
+   "so_dong": 1
+  },
+  {
+   "ten": "RON LÔNG CẠNH RAY  [M]",
+   "so_dong": 1
+  },
+  {
+   "ten": "BỌ 2VIS-501-552  [CON]",
+   "so_dong": 1
+  },
+  {
+   "ten": "TP-Tanker-Alumax-Lac36  [cái]",
+   "so_dong": 4
+  },
+  {
+   "ten": "JG_Bacdannhao  [BỘ]",
+   "so_dong": 2
+  },
+  {
+   "ten": "BẮN BƯỚM SẮT ĐÀI LOAN  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "BẮN BƯỚM SẮT SIÊU TRƯỜNG  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "PULY ÚC 34  [CÁI]",
+   "so_dong": 1
+  },
+  {
+   "ten": "PULY ÚC 114  [CÁI]",
+   "so_dong": 1
+  },
+  {
+   "ten": "SẮT VUÔNG 3X6M  [M]",
+   "so_dong": 1
+  },
+  {
+   "ten": "XỐP NHỎ  [TẤM]",
+   "so_dong": 1
+  },
+  {
+   "ten": "XỐP LỚN  [TẤM]",
+   "so_dong": 1
+  },
+  {
+   "ten": "VÒNG NHỰA HÃM TRỤC  [KG]",
+   "so_dong": 1
+  },
+  {
+   "ten": "TRỤC PHI 34  [M]",
+   "so_dong": 1
+  },
+  {
+   "ten": "TRỤC PHI 90  [M]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CÂY KÉO CỬA INOX  [CÂY]",
+   "so_dong": 1
+  },
+  {
+   "ten": "THANH ĐÁY ÚC_KTD  [KG]",
+   "so_dong": 1
+  },
+  {
+   "ten": "RON ĐÁY ÚC  [M]",
+   "so_dong": 1
+  },
+  {
+   "ten": "Ổ KHÓA NGANG  [BỘ]",
+   "so_dong": 1
+  },
+  {
+   "ten": "TI KHÓA NGANG  [KG/M]",
+   "so_dong": 1
+  },
+  {
+   "ten": "RAY SẮT U70 (KHÔNG RON)  [M]",
+   "so_dong": 1
+  },
+  {
+   "ten": "RAY SẮT U100-1.2ly (KHÔNG RON)  [M]",
+   "so_dong": 1
+  },
+  {
+   "ten": "RAY SẮT U100-1.2ly (CÓ RON)  [M]",
+   "so_dong": 1
+  },
+  {
+   "ten": "RAY SẮT U100-1.4ly (KHÔNG RON)  [M]",
+   "so_dong": 1
+  },
+  {
+   "ten": "RAY SẮT U100-1.4ly (CÓ RON)  [M]",
+   "so_dong": 1
+  },
+  {
+   "ten": "RAY SẮT U100-1.4ly (CÓ RON+TỰ DỪNG)  [M]",
+   "so_dong": 1
+  },
+  {
+   "ten": "V4_3ly  [M]",
+   "so_dong": 1
+  },
+  {
+   "ten": "PHỤ THU_CỬA ĐỨC < 8m²  [CHUYẾN]",
+   "so_dong": 1
+  },
+  {
+   "ten": "PHỤ THU_PHỤ KIỆN ĐỨC < 5tr  [CHUYẾN]",
+   "so_dong": 1
+  },
+  {
+   "ten": "PHỤ THU_CỬA ÚC < 7m²  [BỘ]",
+   "so_dong": 1
+  },
+  {
+   "ten": "PHỤ THU_PHỤ KIỆN ÚC < 5tr  [CHUYẾN]",
+   "so_dong": 1
+  },
+  {
+   "ten": "PHỤ THU_CỬA ĐÀI LOAN< 8m²  [CHUYẾN]",
+   "so_dong": 1
+  },
+  {
+   "ten": "PHỤ THU_PHỤ KIỆN ĐÀI LOAN< 8m²  [CHUYẾN]",
+   "so_dong": 1
+  },
+  {
+   "ten": "PHỤ THU_CỬA LƯỚI< 8m²  [CHUYẾN]",
+   "so_dong": 1
+  },
+  {
+   "ten": "PHỤ THU_CỬA LƯỚI <3tr  [CHUYẾN]",
+   "so_dong": 1
+  },
+  {
+   "ten": "PHỤ THU_SƠN VÂN GỖ_LÁ ĐỨC  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "V4_KẼM  [M]",
+   "so_dong": 2
+  },
+  {
+   "ten": "V4_STĐ  [M]",
+   "so_dong": 2
+  },
+  {
+   "ten": "TP LÁ ĐÀI LOAN 6D_XN-VK  [KG]",
+   "so_dong": 1
+  },
+  {
+   "ten": "TP LÁ ĐÀI LOAN 6D_XN-XLC  [KG]",
+   "so_dong": 1
+  },
+  {
+   "ten": "TP LÁ ĐÀI LOAN 7D_XN-VK  [KG]",
+   "so_dong": 1
+  },
+  {
+   "ten": "TP LÁ ĐÀI LOAN 7D_XN-XLC  [KG]",
+   "so_dong": 1
+  },
+  {
+   "ten": "TP LÁ ĐÀI LOAN 8D_XN-VK  [KG]",
+   "so_dong": 1
+  },
+  {
+   "ten": "TP LÁ ĐÀI LOAN 8D_XN-XLC  [KG]",
+   "so_dong": 1
+  },
+  {
+   "ten": "TP LÁ ĐÀI LOAN 1LY_XN-VK  [KG]",
+   "so_dong": 1
+  },
+  {
+   "ten": "TP LÁ ĐÀI LOAN 1LY_XN-XLC  [KG]",
+   "so_dong": 1
+  },
+  {
+   "ten": "LÁ ĐÀI LOAN STĐ 1.2LY  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL6D XN-VK_TRỌN BỘ >10m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "PHỤ THU CHUYỂN ĐỔI CỬA KÉO TAY  [M2]",
+   "so_dong": 17
+  },
+  {
+   "ten": "CỬA ĐL6D XN-XLC_TRỌN BỘ >10m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL6D XN-XLC_TRỌN BỘ_9-10m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL6D XN-VK_TRỌN BỘ_9-10m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL6D XN-XLC_TRỌN BỘ_8-9m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL6D XN-VK_TRỌN BỘ_8-9m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL6D XN-VK_TRỌN BỘ_7-8m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL6D XN-XLC_TRỌN BỘ_7-8m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL6D XN-XLC_TRỌN BỘ_6-7m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL6D XN-VK_TRỌN BỘ_6-7m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL6D XN-XLC_TRỌN BỘ_5-6m²  [M2]",
+   "so_dong": 2
+  },
+  {
+   "ten": "CỬA ĐL6D XN-XLC_TRỌN BỘ_4-5m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL6D XN-VK_TRỌN BỘ_4-5m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL6D XN-VK_TRỌN BỘ_3-4m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL6D XN-XLC_TRỌN BỘ_3-4m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL7D XN-VK_TRỌN BỘ >10m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL7D XN-XLC_TRỌN BỘ >10m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL7D XN-XLC_TRỌN BỘ_9-10m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL7D XN-VK_TRỌN BỘ_9-10m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL7D XN-XLC_TRỌN BỘ_8-9m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL7D XN-VK_TRỌN BỘ_8-9m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL7D XN-VK_TRỌN BỘ_7-8m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL7D XN-XLC_TRỌN BỘ_7-8m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL7D XN-XLC_TRỌN BỘ_6-7m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL7D XN-VK_TRỌN BỘ_6-7m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL7D XN-XLC_TRỌN BỘ_5-6m²  [M2]",
+   "so_dong": 2
+  },
+  {
+   "ten": "CỬA ĐL7D XN-XLC_TRỌN BỘ_4-5m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL7D XN-VK_TRỌN BỘ_4-5m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL7D XN-VK_TRỌN BỘ_3-4m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL7D XN-XLC_TRỌN BỘ_3-4m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL8D XN-VK_TRỌN BỘ >10m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL8D XN-XLC_TRỌN BỘ >10m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL8D XN-XLC_TRỌN BỘ_9-10m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL8D XN-VK_TRỌN BỘ_9-10m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL8D XN-XLC_TRỌN BỘ_8-9m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL8D XN-VK_TRỌN BỘ_8-9m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL8D XN-VK_TRỌN BỘ_7-8m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL8D XN-XLC_TRỌN BỘ_7-8m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL8D XN-XLC_TRỌN BỘ_6-7m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL8D XN-VK_TRỌN BỘ_6-7m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL8D XN-XLC_TRỌN BỘ_5-6m²  [M2]",
+   "so_dong": 2
+  },
+  {
+   "ten": "CỬA ĐL8D XN-XLC_TRỌN BỘ_4-5m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL8D XN-VK_TRỌN BỘ_4-5m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL8D XN-VK_TRỌN BỘ_3-4m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL8D XN-XLC_TRỌN BỘ_3-4m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL1LY XN-VK_TRỌN BỘ >10m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL1LY XN-XLC_TRỌN BỘ >10m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_9-10m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL1LY XN-VK_TRỌN BỘ_9-10m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_8-9m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL1LY XN-VK_TRỌN BỘ_8-9m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL1LY XN-VK_TRỌN BỘ_7-8m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_7-8m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_6-7m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL1LY XN-VK_TRỌN BỘ_6-7m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_5-6m²  [M2]",
+   "so_dong": 2
+  },
+  {
+   "ten": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_4-5m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL1LY XN-VK_TRỌN BỘ_4-5m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL1LY XN-VK_TRỌN BỘ_3-4m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_3-4m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ >10m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 9-10m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 8-9m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 7-8m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 6-7m²  [M2]",
+   "so_dong": 2
+  },
+  {
+   "ten": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 5-6m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 4-5m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 3-4m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ >10m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 9-10m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 8-10m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 7-8m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 6-7m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 5-6m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 4-5m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 3-4m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "CỬA ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ >10m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 9-10m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 8-9m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 7-8m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 6-7m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 5-6m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 4-5m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 3-4m²  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "LÁ SIÊU TRƯỜNG 1LY_XN-VK  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "LÁ ĐÀI LOAN 1.1LY_MSK  [M2]",
+   "so_dong": 1
+  },
+  {
+   "ten": "LÁ ĐÀI LOAN 1.2LY_MSK  [M2]",
+   "so_dong": 3
+  }
+ ]
+}

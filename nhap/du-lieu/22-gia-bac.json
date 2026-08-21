@@ -1,0 +1,1141 @@
+{
+ "doctype": "Item Price",
+ "so_ban_ghi": 63,
+ "nguon": "alumdoor-gia-bac-dien-tich-2026-08-20",
+ "ban_ghi": [
+  {
+   "name": "Alumdoor 2026:CDL_DLM_6D:m2:TRON_BO:DT-TREN-10M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDL_DLM_6D",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-TREN-10M2",
+    "price_variant": "TRON_BO",
+    "rate": "380000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"6D mạ màu\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "6D mạ màu",
+   "content": "CDL_DLM_6D 6D mạ màu DT-TREN-10M2"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_6D:m2:TRON_BO:DT-9-10M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDL_DLM_6D",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-9-10M2",
+    "price_variant": "TRON_BO",
+    "rate": "390000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"6D mạ màu\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "6D mạ màu",
+   "content": "CDL_DLM_6D 6D mạ màu DT-9-10M2"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_6D:m2:TRON_BO:DT-8-9M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDL_DLM_6D",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-8-9M2",
+    "price_variant": "TRON_BO",
+    "rate": "400000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"6D mạ màu\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "6D mạ màu",
+   "content": "CDL_DLM_6D 6D mạ màu DT-8-9M2"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_6D:m2:TRON_BO:DT-7-8M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDL_DLM_6D",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-7-8M2",
+    "price_variant": "TRON_BO",
+    "rate": "410000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"6D mạ màu\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "6D mạ màu",
+   "content": "CDL_DLM_6D 6D mạ màu DT-7-8M2"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_6D:m2:TRON_BO:DT-6-7M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDL_DLM_6D",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-6-7M2",
+    "price_variant": "TRON_BO",
+    "rate": "420000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"6D mạ màu\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "6D mạ màu",
+   "content": "CDL_DLM_6D 6D mạ màu DT-6-7M2"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_6D:m2:TRON_BO:DT-5-6M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDL_DLM_6D",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-5-6M2",
+    "price_variant": "TRON_BO",
+    "rate": "430000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"6D mạ màu\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "6D mạ màu",
+   "content": "CDL_DLM_6D 6D mạ màu DT-5-6M2"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_6D:m2:TRON_BO:DT-4-5M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDL_DLM_6D",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-4-5M2",
+    "price_variant": "TRON_BO",
+    "rate": "440000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"6D mạ màu\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "6D mạ màu",
+   "content": "CDL_DLM_6D 6D mạ màu DT-4-5M2"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_6D:m2:TRON_BO:DT-3-4M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDL_DLM_6D",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-3-4M2",
+    "price_variant": "TRON_BO",
+    "rate": "450000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"6D mạ màu\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "6D mạ màu",
+   "content": "CDL_DLM_6D 6D mạ màu DT-3-4M2"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_7D:m2:TRON_BO:DT-TREN-10M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDL_DLM_7D",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-TREN-10M2",
+    "price_variant": "TRON_BO",
+    "rate": "410000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"7D mạ màu\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "7D mạ màu",
+   "content": "CDL_DLM_7D 7D mạ màu DT-TREN-10M2"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_7D:m2:TRON_BO:DT-9-10M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDL_DLM_7D",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-9-10M2",
+    "price_variant": "TRON_BO",
+    "rate": "420000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"7D mạ màu\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "7D mạ màu",
+   "content": "CDL_DLM_7D 7D mạ màu DT-9-10M2"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_7D:m2:TRON_BO:DT-8-9M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDL_DLM_7D",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-8-9M2",
+    "price_variant": "TRON_BO",
+    "rate": "430000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"7D mạ màu\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "7D mạ màu",
+   "content": "CDL_DLM_7D 7D mạ màu DT-8-9M2"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_7D:m2:TRON_BO:DT-7-8M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDL_DLM_7D",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-7-8M2",
+    "price_variant": "TRON_BO",
+    "rate": "440000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"7D mạ màu\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "7D mạ màu",
+   "content": "CDL_DLM_7D 7D mạ màu DT-7-8M2"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_7D:m2:TRON_BO:DT-6-7M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDL_DLM_7D",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-6-7M2",
+    "price_variant": "TRON_BO",
+    "rate": "450000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"7D mạ màu\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "7D mạ màu",
+   "content": "CDL_DLM_7D 7D mạ màu DT-6-7M2"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_7D:m2:TRON_BO:DT-5-6M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDL_DLM_7D",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-5-6M2",
+    "price_variant": "TRON_BO",
+    "rate": "460000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"7D mạ màu\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "7D mạ màu",
+   "content": "CDL_DLM_7D 7D mạ màu DT-5-6M2"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_7D:m2:TRON_BO:DT-4-5M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDL_DLM_7D",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-4-5M2",
+    "price_variant": "TRON_BO",
+    "rate": "470000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"7D mạ màu\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "7D mạ màu",
+   "content": "CDL_DLM_7D 7D mạ màu DT-4-5M2"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_7D:m2:TRON_BO:DT-3-4M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDL_DLM_7D",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-3-4M2",
+    "price_variant": "TRON_BO",
+    "rate": "480000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"7D mạ màu\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "7D mạ màu",
+   "content": "CDL_DLM_7D 7D mạ màu DT-3-4M2"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_8D:m2:TRON_BO:DT-TREN-10M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDL_DLM_8D",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-TREN-10M2",
+    "price_variant": "TRON_BO",
+    "rate": "440000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"8D mạ màu\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "8D mạ màu",
+   "content": "CDL_DLM_8D 8D mạ màu DT-TREN-10M2"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_8D:m2:TRON_BO:DT-9-10M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDL_DLM_8D",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-9-10M2",
+    "price_variant": "TRON_BO",
+    "rate": "450000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"8D mạ màu\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "8D mạ màu",
+   "content": "CDL_DLM_8D 8D mạ màu DT-9-10M2"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_8D:m2:TRON_BO:DT-8-9M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDL_DLM_8D",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-8-9M2",
+    "price_variant": "TRON_BO",
+    "rate": "460000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"8D mạ màu\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "8D mạ màu",
+   "content": "CDL_DLM_8D 8D mạ màu DT-8-9M2"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_8D:m2:TRON_BO:DT-7-8M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDL_DLM_8D",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-7-8M2",
+    "price_variant": "TRON_BO",
+    "rate": "470000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"8D mạ màu\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "8D mạ màu",
+   "content": "CDL_DLM_8D 8D mạ màu DT-7-8M2"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_8D:m2:TRON_BO:DT-6-7M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDL_DLM_8D",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-6-7M2",
+    "price_variant": "TRON_BO",
+    "rate": "480000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"8D mạ màu\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "8D mạ màu",
+   "content": "CDL_DLM_8D 8D mạ màu DT-6-7M2"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_8D:m2:TRON_BO:DT-5-6M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDL_DLM_8D",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-5-6M2",
+    "price_variant": "TRON_BO",
+    "rate": "490000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"8D mạ màu\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "8D mạ màu",
+   "content": "CDL_DLM_8D 8D mạ màu DT-5-6M2"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_8D:m2:TRON_BO:DT-4-5M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDL_DLM_8D",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-4-5M2",
+    "price_variant": "TRON_BO",
+    "rate": "500000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"8D mạ màu\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "8D mạ màu",
+   "content": "CDL_DLM_8D 8D mạ màu DT-4-5M2"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_8D:m2:TRON_BO:DT-3-4M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDL_DLM_8D",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-3-4M2",
+    "price_variant": "TRON_BO",
+    "rate": "520000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"8D mạ màu\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "8D mạ màu",
+   "content": "CDL_DLM_8D 8D mạ màu DT-3-4M2"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_1LY:m2:TRON_BO:DT-TREN-10M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDL_DLM_1LY",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-TREN-10M2",
+    "price_variant": "TRON_BO",
+    "rate": "520000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"1LY mạ màu\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "1LY mạ màu",
+   "content": "CDL_DLM_1LY 1LY mạ màu DT-TREN-10M2"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_1LY:m2:TRON_BO:DT-9-10M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDL_DLM_1LY",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-9-10M2",
+    "price_variant": "TRON_BO",
+    "rate": "530000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"1LY mạ màu\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "1LY mạ màu",
+   "content": "CDL_DLM_1LY 1LY mạ màu DT-9-10M2"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_1LY:m2:TRON_BO:DT-8-9M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDL_DLM_1LY",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-8-9M2",
+    "price_variant": "TRON_BO",
+    "rate": "540000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"1LY mạ màu\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "1LY mạ màu",
+   "content": "CDL_DLM_1LY 1LY mạ màu DT-8-9M2"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_1LY:m2:TRON_BO:DT-7-8M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDL_DLM_1LY",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-7-8M2",
+    "price_variant": "TRON_BO",
+    "rate": "550000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"1LY mạ màu\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "1LY mạ màu",
+   "content": "CDL_DLM_1LY 1LY mạ màu DT-7-8M2"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_1LY:m2:TRON_BO:DT-6-7M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDL_DLM_1LY",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-6-7M2",
+    "price_variant": "TRON_BO",
+    "rate": "560000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"1LY mạ màu\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "1LY mạ màu",
+   "content": "CDL_DLM_1LY 1LY mạ màu DT-6-7M2"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_1LY:m2:TRON_BO:DT-5-6M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDL_DLM_1LY",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-5-6M2",
+    "price_variant": "TRON_BO",
+    "rate": "570000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"1LY mạ màu\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "1LY mạ màu",
+   "content": "CDL_DLM_1LY 1LY mạ màu DT-5-6M2"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_1LY:m2:TRON_BO:DT-4-5M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDL_DLM_1LY",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-4-5M2",
+    "price_variant": "TRON_BO",
+    "rate": "580000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"1LY mạ màu\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "1LY mạ màu",
+   "content": "CDL_DLM_1LY 1LY mạ màu DT-4-5M2"
+  },
+  {
+   "name": "Alumdoor 2026:CDL_DLM_1LY:m2:TRON_BO:DT-3-4M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "CDL_DLM_1LY",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-3-4M2",
+    "price_variant": "TRON_BO",
+    "rate": "590000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"1LY mạ màu\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "1LY mạ màu",
+   "content": "CDL_DLM_1LY 1LY mạ màu DT-3-4M2"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_8D_TRONBO:m2:TRON_BO:DT-TREN-10M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_DLK_8D_TRONBO",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-TREN-10M2",
+    "price_variant": "TRON_BO",
+    "rate": "500000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"8 DEM sơn tĩnh điện\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "8 DEM sơn tĩnh điện",
+   "content": "LA_DLK_8D_TRONBO 8 DEM sơn tĩnh điện DT-TREN-10M2"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_8D_TRONBO:m2:TRON_BO:DT-9-10M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_DLK_8D_TRONBO",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-9-10M2",
+    "price_variant": "TRON_BO",
+    "rate": "510000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"8 DEM sơn tĩnh điện\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "8 DEM sơn tĩnh điện",
+   "content": "LA_DLK_8D_TRONBO 8 DEM sơn tĩnh điện DT-9-10M2"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_8D_TRONBO:m2:TRON_BO:DT-8-9M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_DLK_8D_TRONBO",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-8-9M2",
+    "price_variant": "TRON_BO",
+    "rate": "520000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"8 DEM sơn tĩnh điện\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "8 DEM sơn tĩnh điện",
+   "content": "LA_DLK_8D_TRONBO 8 DEM sơn tĩnh điện DT-8-9M2"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_8D_TRONBO:m2:TRON_BO:DT-7-8M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_DLK_8D_TRONBO",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-7-8M2",
+    "price_variant": "TRON_BO",
+    "rate": "530000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"8 DEM sơn tĩnh điện\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "8 DEM sơn tĩnh điện",
+   "content": "LA_DLK_8D_TRONBO 8 DEM sơn tĩnh điện DT-7-8M2"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_8D_TRONBO:m2:TRON_BO:DT-6-7M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_DLK_8D_TRONBO",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-6-7M2",
+    "price_variant": "TRON_BO",
+    "rate": "540000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"8 DEM sơn tĩnh điện\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "8 DEM sơn tĩnh điện",
+   "content": "LA_DLK_8D_TRONBO 8 DEM sơn tĩnh điện DT-6-7M2"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_8D_TRONBO:m2:TRON_BO:DT-5-6M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_DLK_8D_TRONBO",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-5-6M2",
+    "price_variant": "TRON_BO",
+    "rate": "550000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"8 DEM sơn tĩnh điện\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "8 DEM sơn tĩnh điện",
+   "content": "LA_DLK_8D_TRONBO 8 DEM sơn tĩnh điện DT-5-6M2"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_8D_TRONBO:m2:TRON_BO:DT-4-5M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_DLK_8D_TRONBO",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-4-5M2",
+    "price_variant": "TRON_BO",
+    "rate": "560000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"8 DEM sơn tĩnh điện\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "8 DEM sơn tĩnh điện",
+   "content": "LA_DLK_8D_TRONBO 8 DEM sơn tĩnh điện DT-4-5M2"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_8D_TRONBO:m2:TRON_BO:DT-3-4M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_DLK_8D_TRONBO",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-3-4M2",
+    "price_variant": "TRON_BO",
+    "rate": "570000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"8 DEM sơn tĩnh điện\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "8 DEM sơn tĩnh điện",
+   "content": "LA_DLK_8D_TRONBO 8 DEM sơn tĩnh điện DT-3-4M2"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1LY_TRONBO:m2:TRON_BO:DT-TREN-10M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_DLK_1LY_TRONBO",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-TREN-10M2",
+    "price_variant": "TRON_BO",
+    "rate": "560000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"1LY sơn tĩnh điện\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "1LY sơn tĩnh điện",
+   "content": "LA_DLK_1LY_TRONBO 1LY sơn tĩnh điện DT-TREN-10M2"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1LY_TRONBO:m2:TRON_BO:DT-9-10M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_DLK_1LY_TRONBO",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-9-10M2",
+    "price_variant": "TRON_BO",
+    "rate": "570000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"1LY sơn tĩnh điện\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "1LY sơn tĩnh điện",
+   "content": "LA_DLK_1LY_TRONBO 1LY sơn tĩnh điện DT-9-10M2"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1LY_TRONBO:m2:TRON_BO:DT-8-9M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_DLK_1LY_TRONBO",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-8-9M2",
+    "price_variant": "TRON_BO",
+    "rate": "580000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"1LY sơn tĩnh điện\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "1LY sơn tĩnh điện",
+   "content": "LA_DLK_1LY_TRONBO 1LY sơn tĩnh điện DT-8-9M2"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1LY_TRONBO:m2:TRON_BO:DT-7-8M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_DLK_1LY_TRONBO",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-7-8M2",
+    "price_variant": "TRON_BO",
+    "rate": "590000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"1LY sơn tĩnh điện\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "1LY sơn tĩnh điện",
+   "content": "LA_DLK_1LY_TRONBO 1LY sơn tĩnh điện DT-7-8M2"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1LY_TRONBO:m2:TRON_BO:DT-6-7M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_DLK_1LY_TRONBO",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-6-7M2",
+    "price_variant": "TRON_BO",
+    "rate": "600000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"1LY sơn tĩnh điện\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "1LY sơn tĩnh điện",
+   "content": "LA_DLK_1LY_TRONBO 1LY sơn tĩnh điện DT-6-7M2"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1LY_TRONBO:m2:TRON_BO:DT-5-6M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_DLK_1LY_TRONBO",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-5-6M2",
+    "price_variant": "TRON_BO",
+    "rate": "610000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"1LY sơn tĩnh điện\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "1LY sơn tĩnh điện",
+   "content": "LA_DLK_1LY_TRONBO 1LY sơn tĩnh điện DT-5-6M2"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1LY_TRONBO:m2:TRON_BO:DT-4-5M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_DLK_1LY_TRONBO",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-4-5M2",
+    "price_variant": "TRON_BO",
+    "rate": "620000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"1LY sơn tĩnh điện\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "1LY sơn tĩnh điện",
+   "content": "LA_DLK_1LY_TRONBO 1LY sơn tĩnh điện DT-4-5M2"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1LY_TRONBO:m2:TRON_BO:DT-3-4M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_DLK_1LY_TRONBO",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-3-4M2",
+    "price_variant": "TRON_BO",
+    "rate": "630000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"1LY sơn tĩnh điện\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "1LY sơn tĩnh điện",
+   "content": "LA_DLK_1LY_TRONBO 1LY sơn tĩnh điện DT-3-4M2"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1_2LY_TRONBO:m2:TRON_BO:DT-TREN-10M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_DLK_1_2LY_TRONBO",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-TREN-10M2",
+    "price_variant": "TRON_BO",
+    "rate": "620000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"1.2LY sơn tĩnh điện\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "1.2LY sơn tĩnh điện",
+   "content": "LA_DLK_1_2LY_TRONBO 1.2LY sơn tĩnh điện DT-TREN-10M2"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1_2LY_TRONBO:m2:TRON_BO:DT-9-10M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_DLK_1_2LY_TRONBO",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-9-10M2",
+    "price_variant": "TRON_BO",
+    "rate": "630000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"1.2LY sơn tĩnh điện\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "1.2LY sơn tĩnh điện",
+   "content": "LA_DLK_1_2LY_TRONBO 1.2LY sơn tĩnh điện DT-9-10M2"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1_2LY_TRONBO:m2:TRON_BO:DT-8-9M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_DLK_1_2LY_TRONBO",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-8-9M2",
+    "price_variant": "TRON_BO",
+    "rate": "640000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"1.2LY sơn tĩnh điện\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "1.2LY sơn tĩnh điện",
+   "content": "LA_DLK_1_2LY_TRONBO 1.2LY sơn tĩnh điện DT-8-9M2"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1_2LY_TRONBO:m2:TRON_BO:DT-7-8M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_DLK_1_2LY_TRONBO",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-7-8M2",
+    "price_variant": "TRON_BO",
+    "rate": "650000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"1.2LY sơn tĩnh điện\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "1.2LY sơn tĩnh điện",
+   "content": "LA_DLK_1_2LY_TRONBO 1.2LY sơn tĩnh điện DT-7-8M2"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1_2LY_TRONBO:m2:TRON_BO:DT-6-7M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_DLK_1_2LY_TRONBO",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-6-7M2",
+    "price_variant": "TRON_BO",
+    "rate": "660000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"1.2LY sơn tĩnh điện\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "1.2LY sơn tĩnh điện",
+   "content": "LA_DLK_1_2LY_TRONBO 1.2LY sơn tĩnh điện DT-6-7M2"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1_2LY_TRONBO:m2:TRON_BO:DT-5-6M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_DLK_1_2LY_TRONBO",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-5-6M2",
+    "price_variant": "TRON_BO",
+    "rate": "670000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"1.2LY sơn tĩnh điện\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "1.2LY sơn tĩnh điện",
+   "content": "LA_DLK_1_2LY_TRONBO 1.2LY sơn tĩnh điện DT-5-6M2"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1_2LY_TRONBO:m2:TRON_BO:DT-4-5M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_DLK_1_2LY_TRONBO",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-4-5M2",
+    "price_variant": "TRON_BO",
+    "rate": "680000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"1.2LY sơn tĩnh điện\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "1.2LY sơn tĩnh điện",
+   "content": "LA_DLK_1_2LY_TRONBO 1.2LY sơn tĩnh điện DT-4-5M2"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1_2LY_TRONBO:m2:TRON_BO:DT-3-4M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_DLK_1_2LY_TRONBO",
+    "item_group": "Cửa Đài Loan",
+    "uom": "m2",
+    "area_tier": "DT-3-4M2",
+    "price_variant": "TRON_BO",
+    "rate": "690000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 trọn bộ, cột \"1.2LY sơn tĩnh điện\", áp dụng từ 07/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "1.2LY sơn tĩnh điện",
+   "content": "LA_DLK_1_2LY_TRONBO 1.2LY sơn tĩnh điện DT-3-4M2"
+  },
+  {
+   "name": "Alumdoor 2026:TON_DLM_6D_K124:m2:TACH_MON:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TON_DLM_6D_K124",
+    "item_group": "Nan/lá cửa",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "TACH_MON",
+    "rate": "280000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 TÁCH MÓN: Lá Đài Loan mạ màu bản 75 — 6D. Áp dụng từ 31/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "Lá Đài Loan mạ màu bản 75 — 6D",
+   "content": "TON_DLM_6D_K124 Lá Đài Loan mạ màu bản 75 — 6D"
+  },
+  {
+   "name": "Alumdoor 2026:TON_DLM_7D_K124:m2:TACH_MON:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TON_DLM_7D_K124",
+    "item_group": "Nan/lá cửa",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "TACH_MON",
+    "rate": "300000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 TÁCH MÓN: Lá Đài Loan mạ màu bản 75 — 7D. Áp dụng từ 31/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "Lá Đài Loan mạ màu bản 75 — 7D",
+   "content": "TON_DLM_7D_K124 Lá Đài Loan mạ màu bản 75 — 7D"
+  },
+  {
+   "name": "Alumdoor 2026:TON_DLM_8D_K124:m2:TACH_MON:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TON_DLM_8D_K124",
+    "item_group": "Nan/lá cửa",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "TACH_MON",
+    "rate": "320000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 TÁCH MÓN: Lá Đài Loan mạ màu bản 75 — 8D. Áp dụng từ 31/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "Lá Đài Loan mạ màu bản 75 — 8D",
+   "content": "TON_DLM_8D_K124 Lá Đài Loan mạ màu bản 75 — 8D"
+  },
+  {
+   "name": "Alumdoor 2026:TON_DLM_1LY_K124:m2:TACH_MON:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TON_DLM_1LY_K124",
+    "item_group": "Nan/lá cửa",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "TACH_MON",
+    "rate": "380000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 TÁCH MÓN: Lá Đài Loan mạ màu bản 75 — 1 ly. Áp dụng từ 31/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "Lá Đài Loan mạ màu bản 75 — 1 ly",
+   "content": "TON_DLM_1LY_K124 Lá Đài Loan mạ màu bản 75 — 1 ly"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_8D:m2:TACH_MON:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_DLK_8D",
+    "item_group": "Nan/lá cửa",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "TACH_MON",
+    "rate": "410000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 TÁCH MÓN: Lá Đài Loan sơn tĩnh điện bản 75 — 8D. Áp dụng từ 31/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "Lá Đài Loan sơn tĩnh điện bản 75 — 8D",
+   "content": "LA_DLK_8D Lá Đài Loan sơn tĩnh điện bản 75 — 8D"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1LY:m2:TACH_MON:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_DLK_1LY",
+    "item_group": "Nan/lá cửa",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "TACH_MON",
+    "rate": "460000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 TÁCH MÓN: Lá Đài Loan sơn tĩnh điện bản 75 — 1 ly. Áp dụng từ 31/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "Lá Đài Loan sơn tĩnh điện bản 75 — 1 ly",
+   "content": "LA_DLK_1LY Lá Đài Loan sơn tĩnh điện bản 75 — 1 ly"
+  },
+  {
+   "name": "Alumdoor 2026:LA_DLK_1_2LY:m2:TACH_MON:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "LA_DLK_1_2LY",
+    "item_group": "Nan/lá cửa",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "TACH_MON",
+    "rate": "510000",
+    "currency": "VND",
+    "note": "Bảng giá Đài Loan bản 75 TÁCH MÓN: Lá Đài Loan sơn tĩnh điện bản 75 — 1.2 ly. Áp dụng từ 31/07/2026.",
+    "disabled": false,
+    "_migration_source": "alumdoor-gia-bac-dien-tich-2026-08-20"
+   },
+   "title": "Lá Đài Loan sơn tĩnh điện bản 75 — 1.2 ly",
+   "content": "LA_DLK_1_2LY Lá Đài Loan sơn tĩnh điện bản 75 — 1.2 ly"
+  }
+ ]
+}

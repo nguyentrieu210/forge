@@ -1,0 +1,102 @@
+{
+ "doctype": "Pricing Scope",
+ "so_ban_ghi": 3,
+ "nguon": "alumdoor-chinh-sach-gia-2026-08-21",
+ "ban_ghi": [
+  {
+   "name": "Ray TD và ray sắt không ron",
+   "payload": {
+    "scope_name": "Ray TD và ray sắt không ron",
+    "members": [
+     {
+      "member_type": "Item",
+      "item_code": "RT_RAYHOP",
+      "note": "RAY HỘP TD U76"
+     },
+     {
+      "member_type": "Item",
+      "item_code": "RT_RAY_HOP_TD_U100",
+      "note": "RAY HỘP TD U100"
+     },
+     {
+      "member_type": "Item",
+      "item_code": "RT_TD87A1",
+      "note": "RAY ĐƠN TD U76"
+     },
+     {
+      "member_type": "Item",
+      "item_code": "RT_RAY_U100_KRON",
+      "note": "RAY SẮT U100 (KHÔNG RON)"
+     },
+     {
+      "member_type": "Item",
+      "item_code": "RT_RAY_U100_1.4LY_KRON",
+      "note": "RAY SẮT U100-1.4ly (KHÔNG RON)"
+     },
+     {
+      "member_type": "Item",
+      "item_code": "RT_RAY_U100_1.2LY_KRON",
+      "note": "RAY SẮT U100-1.2ly (KHÔNG RON)"
+     },
+     {
+      "member_type": "Item",
+      "item_code": "RT_RAY_U70_KRON",
+      "note": "RAY SẮT U70 (KHÔNG RON)"
+     }
+    ],
+    "note": "Bảy mã ray chủ xưởng chỉ đích danh cho phụ thu sơn: ray hộp TD, ray hộp TD U100, ray đơn TD, và ray sắt không ron (bốn mã theo khổ).",
+    "disabled": false
+   },
+   "title": "Ray TD và ray sắt không ron",
+   "content": "Ray TD và ray sắt không ron"
+  },
+  {
+   "name": "Cửa được sơn vân gỗ",
+   "payload": {
+    "scope_name": "Cửa được sơn vân gỗ",
+    "members": [
+     {
+      "member_type": "Item Group",
+      "item_group": "Cửa CN Đức"
+     },
+     {
+      "member_type": "Item Group",
+      "item_group": "Cửa tấm liền Úc"
+     },
+     {
+      "member_type": "Item Group",
+      "item_group": "Cửa Siêu Trường"
+     },
+     {
+      "member_type": "Item Group",
+      "item_group": "Cửa Đài Loan"
+     }
+    ],
+    "note": "Bốn dòng cửa nhận sơn vân gỗ theo bản chốt 21/08/2026. Cửa Lưới và Đài Loan Inox KHÔNG nằm trong danh sách này.",
+    "disabled": false
+   },
+   "title": "Cửa được sơn vân gỗ",
+   "content": "Cửa được sơn vân gỗ"
+  },
+  {
+   "name": "Cửa chịu phụ vận chuyển dưới 8m²",
+   "payload": {
+    "scope_name": "Cửa chịu phụ vận chuyển dưới 8m²",
+    "members": [
+     {
+      "member_type": "Item Group",
+      "item_group": "Cửa CN Đức"
+     },
+     {
+      "member_type": "Item Group",
+      "item_group": "Cửa Lưới"
+     }
+    ],
+    "note": "Chỉ cửa Đức và cửa Lưới. Cửa Úc có luật riêng theo bậc 4–7m², không dùng luật này.",
+    "disabled": false
+   },
+   "title": "Cửa chịu phụ vận chuyển dưới 8m²",
+   "content": "Cửa chịu phụ vận chuyển dưới 8m²"
+  }
+ ]
+}

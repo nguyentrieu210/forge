@@ -1,0 +1,593 @@
+[
+  {
+    "ma": "VT_LACPHU40",
+    "ten": "LẮC PHỤ 40",
+    "dvt_dung": "Cái",
+    "doi": true,
+    "ly_do": "lắc phụ là chi tiết cơ khí rời, đếm theo cái"
+  },
+  {
+    "ma": "VT_LACPHU40_L168",
+    "ten": "LẮC PHỤ 40 LỖ 168",
+    "dvt_dung": "Cái",
+    "doi": true,
+    "ly_do": "lắc phụ là chi tiết cơ khí rời, đếm theo cái"
+  },
+  {
+    "ma": "VT_LUOIMV_INOX",
+    "ten": "LƯỚI MV INOX",
+    "dvt_dung": "m2",
+    "doi": true,
+    "ly_do": "lưới inox là lưới tấm, tính theo diện tích"
+  },
+  {
+    "ma": "VT_LUOISN13X26_INOX",
+    "ten": "LƯỚI SN VUÔNG PHI 13X26 INOX",
+    "dvt_dung": "m2",
+    "doi": true,
+    "ly_do": "lưới inox là lưới tấm, tính theo diện tích"
+  },
+  {
+    "ma": "VT_LUOISNPHI19_INOX",
+    "ten": "LƯỚI SN TRÒN PHI 19 INOX",
+    "dvt_dung": "m2",
+    "doi": true,
+    "ly_do": "lưới inox là lưới tấm, tính theo diện tích"
+  },
+  {
+    "ma": "VT_LV_6.0_X_70_X_53V",
+    "ten": "HH LÒ XO 53V",
+    "dvt_dung": "Kg",
+    "doi": false
+  },
+  {
+    "ma": "VT_LV_6.5_X_80_X_63V",
+    "ten": "HH LÒ XO 63V",
+    "dvt_dung": "Kg",
+    "doi": false
+  },
+  {
+    "ma": "VT_LV_6.5_X_80_X_68V",
+    "ten": "HH LÒ XO 68V",
+    "dvt_dung": "Kg",
+    "doi": false
+  },
+  {
+    "ma": "VT_LV_7.0_X_90_X_65V",
+    "ten": "HH LÒ XO 65V",
+    "dvt_dung": "Kg",
+    "doi": false
+  },
+  {
+    "ma": "VT_LV_7.0_X_90_X_73V",
+    "ten": "HH LÒ XO 73V",
+    "dvt_dung": "Kg",
+    "doi": false
+  },
+  {
+    "ma": "VT_LV_7.0_X_90_X_83V",
+    "ten": "HH LÒ XO 83V",
+    "dvt_dung": "Kg",
+    "doi": false
+  },
+  {
+    "ma": "VT_LX_5.5_X_70_X_46V",
+    "ten": "HH LÒ XO 46V",
+    "dvt_dung": "Kg",
+    "doi": false
+  },
+  {
+    "ma": "VT_LX_5.5_X_70_X_50V",
+    "ten": "HH LÒ XO 50V",
+    "dvt_dung": "Kg",
+    "doi": false
+  },
+  {
+    "ma": "VT_LX5.5X70X46V",
+    "ten": "LÒ XO 46 V",
+    "dvt_dung": "Cái",
+    "doi": true,
+    "ly_do": "lò xo thành phẩm đếm theo cái đúng danh mục gốc"
+  },
+  {
+    "ma": "VT_LX5.5X70X50V",
+    "ten": "LÒ XO 50 V",
+    "dvt_dung": "Cái",
+    "doi": true,
+    "ly_do": "lò xo thành phẩm đếm theo cái đúng danh mục gốc"
+  },
+  {
+    "ma": "VT_LX6.0X70X53V",
+    "ten": "LÒ XO 53 V",
+    "dvt_dung": "Cái",
+    "doi": true,
+    "ly_do": "lò xo thành phẩm đếm theo cái đúng danh mục gốc"
+  },
+  {
+    "ma": "VT_LX6.5X80X62V",
+    "ten": "LÒ XO 62 V",
+    "dvt_dung": "Cái",
+    "doi": true,
+    "ly_do": "lò xo thành phẩm đếm theo cái đúng danh mục gốc"
+  },
+  {
+    "ma": "VT_LX6.5X80X63V",
+    "ten": "LÒ XO 63 V",
+    "dvt_dung": "Cái",
+    "doi": true,
+    "ly_do": "lò xo thành phẩm đếm theo cái đúng danh mục gốc"
+  },
+  {
+    "ma": "VT_LX6.5X80X68V",
+    "ten": "LÒ XO 68 V",
+    "dvt_dung": "Cái",
+    "doi": true,
+    "ly_do": "lò xo thành phẩm đếm theo cái đúng danh mục gốc"
+  },
+  {
+    "ma": "VT_LX7.0X90X65",
+    "ten": "LÒ XO 65 V",
+    "dvt_dung": "Cái",
+    "doi": true,
+    "ly_do": "lò xo thành phẩm đếm theo cái đúng danh mục gốc"
+  },
+  {
+    "ma": "VT_LX7.0X90X73",
+    "ten": "LÒ XO 73 V",
+    "dvt_dung": "Cái",
+    "doi": true,
+    "ly_do": "lò xo thành phẩm đếm theo cái đúng danh mục gốc"
+  },
+  {
+    "ma": "VT_LX7.0X90X83",
+    "ten": "LÒ XO 83 V",
+    "dvt_dung": "Cái",
+    "doi": true,
+    "ly_do": "lò xo thành phẩm đếm theo cái đúng danh mục gốc"
+  },
+  {
+    "ma": "VT_MUI_MAI_HOP_KIM",
+    "ten": "MŨI MÀI HỘP KIM",
+    "dvt_dung": "Cái",
+    "doi": true,
+    "ly_do": "mũi mài là dụng cụ rời, đếm theo cái"
+  },
+  {
+    "ma": "VT_NAPCHUP_BACDAN",
+    "ten": "BẠC ĐẠN + NẮP CHỤP",
+    "dvt_dung": "Bộ",
+    "doi": false
+  },
+  {
+    "ma": "VT_NHAN",
+    "ten": "NHẪN",
+    "dvt_dung": "Cái",
+    "doi": true,
+    "ly_do": "nhẫn là chi tiết cơ khí rời, đếm theo cái"
+  },
+  {
+    "ma": "VT_OKHOA",
+    "ten": "Ổ KHÓA NGANG",
+    "dvt_dung": "Cái",
+    "doi": true,
+    "ly_do": "ổ khóa ngang là phụ kiện đếm được, danh mục gốc ghi cái"
+  },
+  {
+    "ma": "VT_OTPHI13.8",
+    "ten": "ỐNG THÉP PHI 13.8",
+    "dvt_dung": "Kg",
+    "doi": false
+  },
+  {
+    "ma": "VT_OTPHI19",
+    "ten": "ỐNG THÉP PHI 19",
+    "dvt_dung": "Kg",
+    "doi": false
+  },
+  {
+    "ma": "VT_PAT_BOS",
+    "ten": "PHÍM ÂM TƯỜNG ÚC BOSTECH",
+    "dvt_dung": "Cái",
+    "doi": true,
+    "ly_do": "phím âm tường là thiết bị điện, đếm theo cái chứ không cân ký"
+  },
+  {
+    "ma": "VT_PE25",
+    "ten": "Màng PE 25 CM",
+    "dvt_dung": "Cuộn",
+    "doi": true,
+    "ly_do": "màng PE bán theo cuộn"
+  },
+  {
+    "ma": "VT_PE2X1.05X150",
+    "ten": "MÀNG PE FOAM 2x1.05x150 (CẮT 4)",
+    "dvt_dung": "Cuộn",
+    "doi": true,
+    "ly_do": "màng PE foam bán theo cuộn"
+  },
+  {
+    "ma": "VT_PE2X1.05X150CAT2",
+    "ten": "MÀNG PE FOAM 2x1.05x150 (CẮT 2)",
+    "dvt_dung": "Cuộn",
+    "doi": true,
+    "ly_do": "màng PE foam bán theo cuộn"
+  },
+  {
+    "ma": "VT_PE3X1.05X100CAT2",
+    "ten": "MÀNG PE FOAM 3x1.05x100 (CẮT 2)",
+    "dvt_dung": "Cuộn",
+    "doi": true,
+    "ly_do": "màng PE foam bán theo cuộn"
+  },
+  {
+    "ma": "VT_PE3X1.05X100CAT4",
+    "ten": "MÀNG PE FOAM 3x1.05x100 (CẮT 4)",
+    "dvt_dung": "Cuộn",
+    "doi": true,
+    "ly_do": "màng PE foam bán theo cuộn"
+  },
+  {
+    "ma": "VT_PE50",
+    "ten": "Màng PE 50 CM",
+    "dvt_dung": "Cuộn",
+    "doi": true,
+    "ly_do": "màng PE bán theo cuộn"
+  },
+  {
+    "ma": "VT_PHOTLONG4X5X400M",
+    "ten": "LÔNG NHEO 4X5",
+    "dvt_dung": "Mét",
+    "doi": true,
+    "ly_do": "lông nheo mã ghi rõ 400M nên quản lý theo mét"
+  },
+  {
+    "ma": "VT_PHOTLONG5X6X400M",
+    "ten": "LÔNG NHEO 5X6",
+    "dvt_dung": "Mét",
+    "doi": true,
+    "ly_do": "lông nheo mã ghi rõ 400M nên quản lý theo mét"
+  },
+  {
+    "ma": "VT_PULYGAI",
+    "ten": "PULY GAI",
+    "dvt_dung": "Kg",
+    "doi": false
+  },
+  {
+    "ma": "VT_PULYUC114",
+    "ten": "PULY ÚC 114",
+    "dvt_dung": "Cái",
+    "doi": true,
+    "ly_do": "puly là chi tiết cơ khí rời, đếm theo cái"
+  },
+  {
+    "ma": "VT_PULYUC114_CAM",
+    "ten": "PULY ÚC 114 CAM",
+    "dvt_dung": "Cái",
+    "doi": true,
+    "ly_do": "puly là chi tiết cơ khí rời, đếm theo cái"
+  },
+  {
+    "ma": "VT_PULYUC114_DEN",
+    "ten": "PULY ÚC 114 ĐEN",
+    "dvt_dung": "Cái",
+    "doi": true,
+    "ly_do": "puly là chi tiết cơ khí rời, đếm theo cái"
+  },
+  {
+    "ma": "VT_PULYUC34",
+    "ten": "PULY ÚC 34",
+    "dvt_dung": "Cái",
+    "doi": true,
+    "ly_do": "puly là chi tiết cơ khí rời, đếm theo cái"
+  },
+  {
+    "ma": "VT_RON_DD",
+    "ten": "RON ĐÁY ĐỨC",
+    "dvt_dung": "Mét",
+    "doi": true,
+    "ly_do": "ron đáy là gioăng dạng dải, bán theo mét"
+  },
+  {
+    "ma": "VT_RONDAYUC",
+    "ten": "RON ĐÁY ÚC",
+    "dvt_dung": "Mét",
+    "doi": true,
+    "ly_do": "ron đáy là gioăng dạng dải, bán theo mét"
+  },
+  {
+    "ma": "VT_RONNHUA_INOX",
+    "ten": "RON NHỰA + INOX",
+    "dvt_dung": "Mét",
+    "doi": true,
+    "ly_do": "ron nhựa + inox dạng dải, tính theo mét"
+  },
+  {
+    "ma": "VT_RONNHUAVANGCANHAY_RSU100",
+    "ten": "RONNHUAVANGCANHAY RSU100",
+    "dvt_dung": "Kg",
+    "doi": false
+  },
+  {
+    "ma": "VT_RONNHUAVANGCANHAY_RSU70",
+    "ten": "RONNHUAVANGCANHAY RSU70",
+    "dvt_dung": "Kg",
+    "doi": false
+  },
+  {
+    "ma": "VT_TDK_BOS",
+    "ten": "TAY ĐIỀU KHIỂN BOSTECH",
+    "dvt_dung": "Cái",
+    "doi": true,
+    "ly_do": "tay điều khiển là thiết bị điện tử, đếm theo cái"
+  },
+  {
+    "ma": "VT_TDKDT",
+    "ten": "TAY ĐIỀU KHIỂN ĐIỆN THOẠI",
+    "dvt_dung": "Cái",
+    "doi": true,
+    "ly_do": "tay điều khiển là thiết bị điện tử, đếm theo cái"
+  },
+  {
+    "ma": "VT_TDKMTDOI_CH",
+    "ten": "TAY ĐIỀU KHIỂN TAIWAN",
+    "dvt_dung": "Cái",
+    "doi": true,
+    "ly_do": "tay điều khiển là thiết bị điện tử, đếm theo cái"
+  },
+  {
+    "ma": "VT_TIINOX",
+    "ten": "TI KHÓA NGANG",
+    "dvt_dung": "Kg",
+    "doi": false
+  },
+  {
+    "ma": "VT_V4",
+    "ten": "V4",
+    "dvt_dung": "Mét",
+    "doi": true,
+    "ly_do": "V4 là thanh profile, quản lý theo mét như các mã V4 cùng họ"
+  },
+  {
+    "ma": "VT_V4_INOX",
+    "ten": "V4 INOX 2ly",
+    "dvt_dung": "Mét",
+    "doi": true,
+    "ly_do": "V4 inox dạng thanh, tính theo mét"
+  },
+  {
+    "ma": "VT_V4_INOX_3LY",
+    "ten": "V4 3ly",
+    "dvt_dung": "Mét",
+    "doi": true,
+    "ly_do": "V4 inox dạng thanh, tính theo mét"
+  },
+  {
+    "ma": "VT_V5",
+    "ten": "V5",
+    "dvt_dung": "Kg",
+    "doi": false
+  },
+  {
+    "ma": "VT_VAIHAMXO",
+    "ten": "VAI HÃM XO",
+    "dvt_dung": "Cái",
+    "doi": true,
+    "ly_do": "vai hãm xo là chi tiết cơ khí rời, đếm theo cái"
+  },
+  {
+    "ma": "VT_VDAY_TDU",
+    "ten": "V ĐÁY (THANH ĐÁY ÚC)",
+    "dvt_dung": "Kg",
+    "doi": false
+  },
+  {
+    "ma": "VT_VDAY_TDU_KTD",
+    "ten": "THANH ĐÁY ÚC KTD",
+    "dvt_dung": "Kg",
+    "doi": false
+  },
+  {
+    "ma": "VT_VIS_BANLO2P",
+    "ten": "VIS BẮN LÔ 2P",
+    "dvt_dung": "Con",
+    "doi": true,
+    "ly_do": "vis bắn lô đếm theo con đúng danh mục gốc"
+  },
+  {
+    "ma": "VT_VISDD_BANLO",
+    "ten": "VIS ĐẦU DÙ BẮN LÔ",
+    "dvt_dung": "Con",
+    "doi": true,
+    "ly_do": "vis đầu dù bắn lô đếm theo con đúng danh mục gốc"
+  },
+  {
+    "ma": "VT_VUONG3",
+    "ten": "VUÔNG KẼM 30X30X1.2LY",
+    "dvt_dung": "Cây",
+    "doi": true,
+    "ly_do": "hộp kẽm vuông 30x30 bán theo cây"
+  },
+  {
+    "ma": "VT_XOP_N45",
+    "ten": "XỐP NHỎ",
+    "dvt_dung": "Tấm",
+    "doi": true,
+    "ly_do": "xốp bán theo tấm"
+  },
+  {
+    "ma": "VT_XOP_N90",
+    "ten": "XỐP LỚN",
+    "dvt_dung": "Tấm",
+    "doi": true,
+    "ly_do": "xốp bán theo tấm"
+  },
+  {
+    "ma": "VT_XOP_N95",
+    "ten": "XỐP LỚN (90cm)",
+    "dvt_dung": "Tấm",
+    "doi": true,
+    "ly_do": "xốp bán theo tấm"
+  },
+  {
+    "ma": "VT_BATSAT",
+    "ten": "BÁT SẮT",
+    "dvt_dung": "Cái",
+    "doi": false
+  },
+  {
+    "ma": "VT_BO_1VIS_503N_71_595",
+    "ten": "BỌ 1VIS 503N-71-595",
+    "dvt_dung": "Con",
+    "doi": true,
+    "ly_do": "bọ đếm theo con đúng danh mục gốc"
+  },
+  {
+    "ma": "VT_BO_2VIS_501_552",
+    "ten": "BỌ 2VIS-501-552",
+    "dvt_dung": "Con",
+    "doi": true,
+    "ly_do": "bọ đếm theo con đúng danh mục gốc"
+  },
+  {
+    "ma": "VT_BO_2VIS_652_548C",
+    "ten": "BỌ 2VIS-652-548C",
+    "dvt_dung": "Con",
+    "doi": true,
+    "ly_do": "bọ đếm theo con đúng danh mục gốc"
+  },
+  {
+    "ma": "VT_BO1VIS_503C",
+    "ten": "BỌ 1VIS 503C",
+    "dvt_dung": "Kg",
+    "doi": false
+  },
+  {
+    "ma": "VT_BO2VIS_501N_552",
+    "ten": "BỌ 2VIS 501N-552",
+    "dvt_dung": "Kg",
+    "doi": false
+  },
+  {
+    "ma": "VT_BO2VIS_652_548C",
+    "ten": "BỌ 2VIS 652-548C",
+    "dvt_dung": "Kg",
+    "doi": false
+  },
+  {
+    "ma": "VT_BO2VIS_752_ST700",
+    "ten": "BỌ 2VIS 752 ST700",
+    "dvt_dung": "Kg",
+    "doi": false
+  },
+  {
+    "ma": "VT_CBD",
+    "ten": "CÒI BÁO ĐỘNG",
+    "dvt_dung": "Cái",
+    "doi": true,
+    "ly_do": "còi báo động là thiết bị điện, đếm theo cái chứ không cân ký"
+  },
+  {
+    "ma": "VT_CLNHUA",
+    "ten": "CON LĂN NHỰA",
+    "dvt_dung": "Cái",
+    "doi": true,
+    "ly_do": "con lăn nhựa là chi tiết cơ khí rời, đếm theo cái"
+  },
+  {
+    "ma": "VT_COI",
+    "ten": "CÒI",
+    "dvt_dung": "Cái",
+    "doi": true,
+    "ly_do": "còi là thiết bị điện, đếm theo cái chứ không cân ký"
+  },
+  {
+    "ma": "VT_CON_LAN",
+    "ten": "CON LĂN",
+    "dvt_dung": "Cặp",
+    "doi": true,
+    "ly_do": "con lăn lắp theo cặp đúng danh mục gốc"
+  },
+  {
+    "ma": "VT_HTTD",
+    "ten": "HỆ THỐNG TỰ DỪNG",
+    "dvt_dung": "Bộ",
+    "doi": false
+  },
+  {
+    "ma": "VT_PHOTLONG4X5",
+    "ten": "LÔNG NHEO NHỎ",
+    "dvt_dung": "Cuộn",
+    "doi": true,
+    "ly_do": "lông nheo (phớt lông) bán theo cuộn"
+  },
+  {
+    "ma": "VT_PHOTLONG5X6",
+    "ten": "LÔNG NHEO LỚN",
+    "dvt_dung": "Cuộn",
+    "doi": true,
+    "ly_do": "lông nheo (phớt lông) bán theo cuộn"
+  },
+  {
+    "ma": "VT_PL114_LON",
+    "ten": "PULY 114 LỚN",
+    "dvt_dung": "Cái",
+    "doi": true,
+    "ly_do": "puly là chi tiết cơ khí rời, đếm theo cái"
+  },
+  {
+    "ma": "VT_PL114_NHO",
+    "ten": "PULY 114 NHỎ",
+    "dvt_dung": "Cái",
+    "doi": true,
+    "ly_do": "puly là chi tiết cơ khí rời, đếm theo cái"
+  },
+  {
+    "ma": "VT_PULY_114L",
+    "ten": "PULY 114L",
+    "dvt_dung": "Cái",
+    "doi": true,
+    "ly_do": "puly là chi tiết cơ khí rời, đếm theo cái"
+  },
+  {
+    "ma": "VT_PULY_114N",
+    "ten": "PULY 114N",
+    "dvt_dung": "Cái",
+    "doi": true,
+    "ly_do": "puly là chi tiết cơ khí rời, đếm theo cái"
+  },
+  {
+    "ma": "VT_PULY_140",
+    "ten": "PULY 140",
+    "dvt_dung": "Cái",
+    "doi": true,
+    "ly_do": "puly là chi tiết cơ khí rời, đếm theo cái"
+  },
+  {
+    "ma": "VT_PULY_168",
+    "ten": "PULY 168",
+    "dvt_dung": "Cái",
+    "doi": true,
+    "ly_do": "puly là chi tiết cơ khí rời, đếm theo cái"
+  },
+  {
+    "ma": "VT_PULY_DEN",
+    "ten": "PULY ĐEN CUỘN CỬA ĐỨC",
+    "dvt_dung": "Cái",
+    "doi": true,
+    "ly_do": "puly cuộn cửa là chi tiết cơ khí rời, đếm theo cái"
+  },
+  {
+    "ma": "VT_VIS",
+    "ten": "Vis",
+    "dvt_dung": "Kg",
+    "doi": false
+  },
+  {
+    "ma": "VT_V5_KEM",
+    "ten": "V4 KẼM",
+    "dvt_dung": "Mét",
+    "doi": true,
+    "ly_do": "V4 kẽm là thanh profile, tính theo mét"
+  }
+]

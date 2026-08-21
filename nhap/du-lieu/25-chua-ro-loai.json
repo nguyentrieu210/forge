@@ -1,0 +1,606 @@
+{
+ "ghi_chu": "Sheet DANH MỤC để TRỐNG cột KH/NCC cho những dòng này. Nhóm giá (Đại lý / Lẻ) là ô bắt buộc và quyết định cách tính tiền, nên KHÔNG đoán. Chủ xưởng phân loại rồi nhập sau.",
+ "so_dong": 120,
+ "dong": [
+  {
+   "ten": "ANH NGUYỄN NHÂN GV",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "ANH NGUYỄN TRUNG THÀNH",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "ANH NHÂN MITIDOOR",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "ANH NHUẬN",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "ANH PHI ĐỒNG XOÀI",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "ANH PHONG - 0907219579",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "ANH PHONG CỬA CUỐN ANH CHÂU",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "ANH PHONG VĨNH LỘC",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "ANH PHƯỚC THỢ",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "ANH PHƯƠNG NEWDOOR",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "ANH QUỐC THỢ",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "ANH SƠN",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "ANH THẠCH",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "ANH THẢO",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "ANH THE GIANG",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "ANH TIẾN ANH",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "ANH TIẾN BIÊN HÒA",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "ANH TĨNH CỬA CUỐN QUỐC ĐẠT",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "ANH TRẦN THÁI NGUYÊN",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "ANH TRẦN VĂN DƯƠNG",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "ANH TRÍ CAI LẬY",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "ANH TRỌNG NHÂN",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "ANH TRUNG NHÔM",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "ANH TRƯỜNG PHÚC",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "ANH TÚ TOÀN",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "ANH TUẤN CỬA CUỐN QUỐC TUẤN",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "ANH TUẤN DẦU DÂY",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "ANH TUẤN PHÚ QUỐC",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "ANH TUẤN Q7",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "ANH VĂN HUY",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "ANH VINH",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "ANH VŨ SÓC TRĂNG",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "ANH VỸ",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "CHỊ DƯ BIÊN HÒA",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "CHỊ HUỆ - ANH HÂN",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "CHỊ LAM AUSTDOOR",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "CHỊ QUÂN NASA",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "CHỊ THẮM BIÊN HÒA",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "CHỊ THU - KHÁCH LẺ",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "CHỊ TRANG BIÊN HÒA",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "CHỊ VÂN - HAVADOOR",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "CHÚ NGỌC",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "CT WINDOW ĐÀ LẠT",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "CỬA CUỐN BÌNH AN",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "CỬA CUỐN BÌNH MINH",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "CỬA CUỐN MIỀN NAM",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "CỬA CUỐN MINH PHƯƠNG",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "CỬA CUỐN TRẦN GIA",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "ĐỨC HOÀNG ĐẠT",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "HOÀNG CƯ",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "KHÁCH LẺ",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "NGỌC HIẾU CỦ CHI",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "NGÔ GIA PHÁT CỦ CHI",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "NGUYỄN MINH QUÂN",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "NHÔM KÍNH THIÊN PHÚ",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "SG THÀNH TÂM",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "SỬA CHỮA CỬA CUỐN",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "THÀNH VƯƠNG",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "THUẬN LỢI ĐÀ LẠT",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "TIẾN NGA",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "TRUNG HẬN",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "TRƯỜNG TUYNH",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "VIETDOOR",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "XƯỞNG MỚI",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "YHDOOR",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "ANH BẢO BỌ",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "ANH ĐẠT MOTOR",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "ANH HOÀ",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "ANH HUY BẠC ĐẠN",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "ANH MÙI PMDOOR",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "ANH QUANG HÀ NỘI",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "ANH THÁI BỌ",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "ANH TRUNG MT STEEL",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "BIDICA",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "CHÁNH HOÀ",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "CHỊ MÂY",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "CHÚ THANH",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "CID",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "CTY CÁCH NHIỆT HÀ BẮC",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "CTY ĐỨC HƯNG THỊNH",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "CTY NHỰA APC",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "CTY QUỐC GIA BẢO",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "CTY THÉP TOÀN THẮNG",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "ĐỨC TÀI",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "GIA HOÀ",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "GIẤY ANH TẬP",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "HẢI KỲ",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "HOÀNG CƯ",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "HÙNG THỊNH",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "KIM HƯNG LONG",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "MINH HOÀ",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "NETPRINT",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "PHÁT AN KHANG",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "PHỤ KIỆN ÔNG GIÀ",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "PHÚ XUÂN VIỆT",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "TEM LÊ GIA PHÁT",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "TIẾN ĐẠT",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "TÚI CANVAS ALUM",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "VIETDOOR",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "VIỆT ĐÔNG HƯNG",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "ANH TÚ BÌNH TÂN",
+   "phu_trach": "LÊ THẾ ĐÔN",
+   "loai": ""
+  },
+  {
+   "ten": "ANH HƯNG VĨNH LỘC",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "TRƯỜNG TUYNH",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "NHÔM KÍNH NĂM HÊN",
+   "phu_trach": "LƯ CHÍ CƯỜNG",
+   "loai": ""
+  },
+  {
+   "ten": "MR SOVANN",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "ANH TOÀN BIÊN HÒA",
+   "phu_trach": "THÁI SƠN",
+   "loai": ""
+  },
+  {
+   "ten": "HOÀNG LAI HÓC MÔN",
+   "phu_trach": "LÊ THẾ ĐÔN",
+   "loai": ""
+  },
+  {
+   "ten": "HOÀNG GIA ĐÀ LẠT",
+   "phu_trach": "LÊ THẾ ĐÔN",
+   "loai": ""
+  },
+  {
+   "ten": "CDOOR",
+   "phu_trach": "LÊ THẾ ĐÔN",
+   "loai": ""
+  },
+  {
+   "ten": "CƠ KHÍ TIẾN HƯNG",
+   "phu_trach": "LÊ THẾ ĐÔN",
+   "loai": ""
+  },
+  {
+   "ten": "BẢO GIA KHANG GIA LAI",
+   "phu_trach": "LÊ THẾ ĐÔN",
+   "loai": ""
+  },
+  {
+   "ten": "ĐỨC TÍN ĐỒNG XOÀI",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "ANH DƯƠNG - 0903378345",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "TRUNG TÂM CỬA CUỐN HP",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "BẢO AN DOOR GIA LAI",
+   "phu_trach": "LƯ CHÍ CƯỜNG",
+   "loai": ""
+  },
+  {
+   "ten": "ĐỨC HOÀNG ĐẠT",
+   "phu_trach": "LÊ THUÝ",
+   "loai": ""
+  },
+  {
+   "ten": "LÊ THẾ ĐÔN",
+   "phu_trach": "LÊ THẾ ĐÔN",
+   "loai": ""
+  },
+  {
+   "ten": "CỬA CUỐN HOÀNG PHÁT",
+   "phu_trach": "",
+   "loai": ""
+  },
+  {
+   "ten": "ANH BÔN",
+   "phu_trach": "LÊ THÚY",
+   "loai": ""
+  },
+  {
+   "ten": "CÔNG TY CỔ PHẦN BAO BÌ CÔNG NGHIỆP ECO VIỆT NAM",
+   "phu_trach": "",
+   "loai": ""
+  }
+ ]
+}

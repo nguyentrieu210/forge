@@ -1,0 +1,167 @@
+[
+ {
+  "ma": "RT_TRUC_114_1.8LY",
+  "ten": "TRỤC 114 1.8LY",
+  "spec": "QC-TRUC-THEP-PHI114-1_8"
+ },
+ {
+  "ma": "RT_TRUC_114_2.1LY",
+  "ten": "TRỤC 114 2.1LY",
+  "spec": "QC-TRUC-THEP-PHI114-2_1"
+ },
+ {
+  "ma": "RT_RAYHOP",
+  "ten": "RAY HỘP TD U76",
+  "spec": "QC-RAY-THEP-U76"
+ },
+ {
+  "ma": "RT_TD87A1",
+  "ten": "RAY ĐƠN TD U76",
+  "spec": "QC-RAY-THEP-U76"
+ },
+ {
+  "ma": "RT_RAY_HOP_TD_U100",
+  "ten": "RAY HỘP TD U100",
+  "spec": "QC-RAY-THEP-U100"
+ },
+ {
+  "ma": "RT_RNHUA_DR",
+  "ten": "RON NHỰA ĐÁY RAY",
+  "spec": "QC-RON-NHUA-DAY"
+ },
+ {
+  "ma": "RT_PHOTLONG12_5X5X120M",
+  "ten": "RON LÔNG CẠNH RAY",
+  "spec": "QC-RON-LONG-CANH"
+ },
+ {
+  "ma": "RT_RAYNHOMUC",
+  "ten": "RAY NHÔM ÚC",
+  "spec": "QC-RAY-NHOM-THUONG"
+ },
+ {
+  "ma": "RT_TRUC34",
+  "ten": "TRỤC PHI 34",
+  "spec": "QC-TRUC-THEP-PHI34"
+ },
+ {
+  "ma": "RT_TRUC90",
+  "ten": "TRỤC PHI 90",
+  "spec": "QC-TRUC-THEP-PHI90"
+ },
+ {
+  "ma": "RT_TRUC140",
+  "ten": "TRỤC 140",
+  "spec": "QC-TRUC-THEP-PHI140"
+ },
+ {
+  "ma": "RT_TRUC114_2.4LY",
+  "ten": "TRỤC 114 2.4LY",
+  "spec": "QC-TRUC-THEP-PHI114-2_4"
+ },
+ {
+  "ma": "RT_TRUC168",
+  "ten": "TRỤC 168",
+  "spec": "QC-TRUC-THEP-PHI168"
+ },
+ {
+  "ma": "RT_TRUC168_5LY",
+  "ten": "TRỤC168 5LY",
+  "spec": "QC-TRUC-THEP-PHI168-5"
+ },
+ {
+  "ma": "RT_RAY_U70_KRON",
+  "ten": "RAY SẮT U70 (KHÔNG RON)",
+  "spec": "QC-RAY-THEP-U70"
+ },
+ {
+  "ma": "RT_RAY_U100_1.2LY_KRON",
+  "ten": "RAY SẮT U100-1.2ly (KHÔNG RON)",
+  "spec": "QC-RAY-THEP-U100-1_2"
+ },
+ {
+  "ma": "RT_RAY_U100_1.2LY_RON",
+  "ten": "RAY SẮT U100-1.2ly (CÓ RON)",
+  "spec": "QC-RAY-THEP-U100-1_2"
+ },
+ {
+  "ma": "RT_RAY_U100_1.4LY_KRON",
+  "ten": "RAY SẮT U100-1.4ly (KHÔNG RON)",
+  "spec": "QC-RAY-THEP-U100-1_4"
+ },
+ {
+  "ma": "RT_RAY_U100_1.4LY_RON",
+  "ten": "RAY SẮT U100-1.4ly (CÓ RON)",
+  "spec": "QC-RAY-THEP-U100-1_4"
+ },
+ {
+  "ma": "RT_RAY_U100_1.4LY_RON_TD",
+  "ten": "RAY SẮT U100-1.4ly (CÓ RON+TỰ DỪNG)",
+  "spec": "QC-RAY-THEP-U100-1_4"
+ },
+ {
+  "ma": "RT_RAYINOX_6P_RON",
+  "ten": "RAY INOX 6P CÓ RON",
+  "spec": "QC-RAY-INOX-6P"
+ },
+ {
+  "ma": "RT_RAYINOX_8P_RON",
+  "ten": "RAY INOX 8P CÓ RON",
+  "spec": "QC-RAY-INOX-8P"
+ },
+ {
+  "ma": "RT_RAYINOX_7P_KHONGRON",
+  "ten": "RAY INOX 7P KHÔNG RON",
+  "spec": "QC-RAY-INOX-7P"
+ },
+ {
+  "ma": "RT_RAY_U70_RON",
+  "ten": "RAY SẮT U70 (CÓ RON)",
+  "spec": "QC-RAY-THEP-U70"
+ },
+ {
+  "ma": "RT_RAY_U100_KRON",
+  "ten": "RAY SẮT U100 (KHÔNG RON)",
+  "spec": "QC-RAY-THEP-U100"
+ },
+ {
+  "ma": "RT_RAY_U100_RON",
+  "ten": "RAY SẮT U100 (CÓ RON)",
+  "spec": "QC-RAY-THEP-U100"
+ },
+ {
+  "ma": "RT_ONGKEM34",
+  "ten": "TRỤC 34",
+  "spec": "QC-TRUC-THEP-PHI34"
+ },
+ {
+  "ma": "RT_RNHUA_CR",
+  "ten": "RON NHỰA CẠNH RAY",
+  "spec": "QC-RON-NHUA-CANH"
+ },
+ {
+  "ma": "RT_RINOX_DR",
+  "ten": "RON INOX ĐÁY RAY",
+  "spec": "QC-RON-INOX-DAY"
+ },
+ {
+  "ma": "RT_TR114_1.8",
+  "ten": "TRỤC 114 (1.8 mm)",
+  "spec": "QC-TRUC-THEP-PHI114-1_8"
+ },
+ {
+  "ma": "RT_TR114_2.1",
+  "ten": "TRỤC 114 (2.1 mm)",
+  "spec": "QC-TRUC-THEP-PHI114-2_1"
+ },
+ {
+  "ma": "RT_TR140",
+  "ten": "TRỤC 140 (2.5 mm)",
+  "spec": "QC-TRUC-THEP-PHI140-2_5"
+ },
+ {
+  "ma": "RT_TR168",
+  "ten": "TRỤC 168 (4.0 mm)",
+  "spec": "QC-TRUC-THEP-PHI168-4"
+ }
+]

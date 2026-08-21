@@ -1,0 +1,2130 @@
+[
+ {
+  "ma": "VT_CNHUA",
+  "ten": "CỤC NHỰA",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_BULON12.12",
+  "ten": "BÙ LON 12x12",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Con",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_CONTAN12",
+  "ten": "CON TÁN 12",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Con",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_BACDAN",
+  "ten": "BẠC ĐẠN",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_UPS_E1000I",
+  "ten": "Bình lưu điện Alumax E1000i",
+  "nhom": "Bình lưu điện",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_UPS_E800I",
+  "ten": "Bình lưu điện Alumax E800i",
+  "nhom": "Bình lưu điện",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_UPS_YH1000",
+  "ten": "Bình lưu điện YH1000",
+  "nhom": "Bình lưu điện",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_UPS_YH2000",
+  "ten": "Bình lưu điện YH2000",
+  "nhom": "Bình lưu điện",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_BDK_TANKER_ALUMAX",
+  "ten": "BỘ ĐIỀU KHIỂN TANKER ALUMAX",
+  "nhom": "Điều khiển & phụ kiện điện",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_BDKDT_MULLER",
+  "ten": "BỘ ĐIỀU KHIỂN ĐIỆN THOẠI MULLER",
+  "nhom": "Điều khiển & phụ kiện điện",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_BOSTEC_BODIEUKHIEN",
+  "ten": "BOSTEC BỘ ĐIỀU KHIỂN",
+  "nhom": "Điều khiển & phụ kiện điện",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_CHTAIWAN_BODIEUKHIEN",
+  "ten": "CHTAIWAN BỘ ĐIỀU KHIỂN",
+  "nhom": "Điều khiển & phụ kiện điện",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_JG_BODK",
+  "ten": "JG BỘ ĐIỀU KHIỂN",
+  "nhom": "Điều khiển & phụ kiện điện",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_JG_TAYDK",
+  "ten": "JG TAY ĐIỀU KHIỂN",
+  "nhom": "Điều khiển & phụ kiện điện",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_MTT_BOSTEC_TAYDK",
+  "ten": "BOSTEC TAY ĐIỀU KHIỂN",
+  "nhom": "Điều khiển & phụ kiện điện",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_MTT_CHTAIWAN_TAYDK",
+  "ten": "CHTAIWAN-TAY ĐIỀU KHIỂN",
+  "nhom": "Điều khiển & phụ kiện điện",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TANKER_ALUMAX_BODK",
+  "ten": "BỘ ĐK TANKER ALUMAX",
+  "nhom": "Điều khiển & phụ kiện điện",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_TANKER_ALUMAX_TAYDK",
+  "ten": "TAY ĐIỀU KHIỂN TANKER",
+  "nhom": "Điều khiển & phụ kiện điện",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TDK_MULLER",
+  "ten": "TAY ĐIỀU KHIỂN ĐIỆN THOẠI MULLER",
+  "nhom": "Điều khiển & phụ kiện điện",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_YHLD_BDK",
+  "ten": "BỘ ĐIỀU KHIỂN YHLD",
+  "nhom": "Điều khiển & phụ kiện điện",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_YHLD_HDK",
+  "ten": "HỘP ĐIỀU KHIỂN YHLD",
+  "nhom": "Điều khiển & phụ kiện điện",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_YHLD_TAYDK",
+  "ten": "YHLD TAY ĐIỀU KHIỂN",
+  "nhom": "Điều khiển & phụ kiện điện",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_YHTAIWAN_BODK",
+  "ten": "YHTAIWAN BỘ ĐIỀU KHIỂN",
+  "nhom": "Điều khiển & phụ kiện điện",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_YHTAIWAN_TAYDK",
+  "ten": "YHTAIWAN TAY ĐIỀU KHIỂN",
+  "nhom": "Điều khiển & phụ kiện điện",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_ALUMAX_PATCD",
+  "ten": "ALUMAX PHÍM ÂM TƯỜNG CÓ DÂY",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_BACDAN_MT",
+  "ten": "BẠC ĐẠN MOTOR",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_COT",
+  "ten": "CỐT",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cây",
+  "dvt_ban": "Cây",
+  "dvt_goc": "Cây"
+ },
+ {
+  "ma": "VT_DAYDIEN_PATCD",
+  "ten": "DÂY ĐIỆN PHÍM ÂM TƯỜNG",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Mét",
+  "dvt_ban": "Mét",
+  "dvt_goc": "Mét"
+ },
+ {
+  "ma": "VT_HDKMT_AL",
+  "ten": "HỘP ĐIỀU KHIỂN MOTOR ALUMAX",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_HDKMT_JG",
+  "ten": "HỘP ĐIỀU KHIỂN MOTOR JG",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_HDKMT_TANKER",
+  "ten": "HỘP ĐIỀU KHIỂN MOTOR TANKER",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_HDKMT_YH",
+  "ten": "HỘP ĐIỀU KHIỂN YH",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_HOAKHE",
+  "ten": "HOA KHẾ (3 CHẤU)",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_JG_BDN",
+  "ten": "JG BẠC ĐẠN",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_JG_PATCD",
+  "ten": "JG PHÍM ÂM TƯỜNG CÓ DÂY",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LACJG1000_1500KG",
+  "ten": "JG LacJG1000-1500KG",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LACJG33",
+  "ten": "JG LacJG33",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LACPHU33_1LO",
+  "ten": "LẮC PHỤ 33-1 LỔ",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LACPHU33_3LO",
+  "ten": "LẮC PHỤ 33-3 LỔ (ĐÀI LOAN)",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LACPHU36_1LO",
+  "ten": "LẮC PHỤ 36-1 LỔ",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LACPHU36_3LO",
+  "ten": "LẮC PHỤ 36-3 LỔ (ĐÀI LOAN)",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LACYHLD300_500KG",
+  "ten": "LẮC YH 300 500KG",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LACYHLD800_1000KG",
+  "ten": "LẮC YH 800 1000KG",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LMT_AL400",
+  "ten": "LẮC MOTOR ALUMAX 400 KG",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LMT_AL600",
+  "ten": "LẮC MOTOR ALUMAX 600 KG",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LMT_JG1000",
+  "ten": "LẮC MOTOR JG 1000KG (CHÍNH HÃNG)",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LMT_JG1500",
+  "ten": "LẮC MOTOR JG 1500KG (CHÍNH HÃNG)",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LMT_JG300_600",
+  "ten": "LẮC MOTOR JG 300KG-600KG (CHÍNH HÃNG)",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LMT_JG500",
+  "ten": "LẮC MOTOR JG 500KG (CHÍNH HÃNG)",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LMT_JG600",
+  "ten": "LẮC MOTOR JG 600KG (CHÍNH HÃNG)",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LMT_JG800_1000",
+  "ten": "LẮC MOTOR JG 800KG-1000KG (CHÍNH HÃNG)",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LMT_TK800_1000",
+  "ten": "LẮC MOTOR TANKER 800 KG -1000 KG",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LMT_YHLD1000",
+  "ten": "LẮC MOTOR YH LD 1000KG LOẠI 1 (DÂY ĐỒNG)",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LMT_YHLD1200",
+  "ten": "LẮC MOTOR YH LD 1200KG LOẠI 1 (DÂY ĐỒNG)",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LMT_YHLD300_500",
+  "ten": "LẮC MOTOR YH LD 300/500KG LOẠI 1 (DÂY ĐỒNG)",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LMT_YHLD800",
+  "ten": "LẮC MOTOR YH LD 800KG LOẠI 1 (DÂY ĐỒNG)",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LMT33_TK400_600",
+  "ten": "LẮC 32-33 MOTOR TANKER 400 KG 600 KG",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LMT36_TK400_600",
+  "ten": "LẮC 36 MOTOR TANKER 400 KG 600 KG",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LONGDEN",
+  "ten": "LÔNG ĐỀN",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_MTT_BOSTEC_DOI_P",
+  "ten": "MTT BOSTEC ĐÔI PHẢI",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_MTT_BOSTEC_DOI_T",
+  "ten": "MTT BOSTEC ĐÔI TRÁI",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_MTT_BOSTEC_DON_P",
+  "ten": "MTT BOSTEC ĐƠN PHẢI",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_MTT_BOSTEC_DON_T",
+  "ten": "MTT BOSTEC ĐƠN TRÁI",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_MTT_BOSTEC_PAT",
+  "ten": "BOSTEC PHÍM ÂM TƯỜNG",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_MTT_CHTAIWAN_DOI_P",
+  "ten": "MTT CHTAIWAN ĐÔI PHẢI",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_MTT_CHTAIWAN_DOI_T",
+  "ten": "MTT CHTAIWAN ĐÔI TRÁI",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_MTT_CHTAIWAN_DON_P",
+  "ten": "MTT CHTAIWAN ĐƠN PHẢI",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_MTT_CHTAIWAN_DON_T",
+  "ten": "MTT CHTAIWAN ĐƠN TRÁI",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_MTT_CHTAIWAN_PAT",
+  "ten": "CHTAIWAN-PHÍM ÂM TƯỜNG",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_NAPCHUP_MT",
+  "ten": "NẮP CHỤP MOTOR",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_NAPNHIN",
+  "ten": "NẮP NHÌN",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_PAT_CH",
+  "ten": "PHÍM ÂM TƯỜNG CH ÚC (Motor trong)",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_PAT_CODAY",
+  "ten": "PHÍM ÂM TƯỜNG CÓ DÂY",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_PAT_KHONGDAY",
+  "ten": "PHÍM ÂM TƯỜNG KHÔNG DÂY",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TANKER_ALUMAX_HDK",
+  "ten": "HỘP ĐK TANKER ALUMAX",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TANKER_ALUMAX_LAC33",
+  "ten": "LẮC TANKER ALUMAX 33",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TANKER_ALUMAX_LAC36",
+  "ten": "LẮC TANKER ALUMAX 36",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TANKER_LAC800_1000KG",
+  "ten": "LẮC TANKER 800-1000KG",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TANKER_PATCD",
+  "ten": "TANKER PHÍM ÂM TƯỜNG CÓ DÂY",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_TDKMT_AL",
+  "ten": "TAY ĐIỀU KHIỂN MOTOR ALUMAX",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TDKMT_JG",
+  "ten": "TAY ĐIỀU KHIỂN MOTOR JG",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TDKMT_TANKER",
+  "ten": "TAY ĐIỀU KHIỂN MOTOR TANKER",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TDKMT_YH",
+  "ten": "TAY ĐIỀU KHIỂN YH",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TMT_AL400",
+  "ten": "THÂN MOTOR ALUMAX 400 KG",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TMT_AL600",
+  "ten": "THÂN MOTOR ALUMAX 600 KG",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TMT_JG1000",
+  "ten": "THÂN MOTOR JG 1000KG (CHÍNH HÃNG)",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TMT_JG1500",
+  "ten": "THÂN MOTOR JG 1500KG (CHÍNH HÃNG)",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TMT_JG300",
+  "ten": "THÂN MOTOR JG 300KG (CHÍNH HÃNG)",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TMT_JG400",
+  "ten": "THÂN MOTOR JG 400KG (CHÍNH HÃNG)",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TMT_JG500",
+  "ten": "THÂN MOTOR JG 500KG (CHÍNH HÃNG)",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TMT_JG600",
+  "ten": "THÂN MOTOR JG 600KG (CHÍNH HÃNG)",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TMT_JG800",
+  "ten": "THÂN MOTOR JG 800KG (CHÍNH HÃNG)",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TMT_TK1000",
+  "ten": "THÂN MOTOR TANKER 1000 KG",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TMT_TK400",
+  "ten": "THÂN MOTOR TANKER 400 KG",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TMT_TK600",
+  "ten": "THÂN MOTOR TANKER 600 KG",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TMT_TK800",
+  "ten": "THÂN MOTOR TANKER 800 KG",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TMT_YHLD1000",
+  "ten": "THÂN MOTOR YH LD 1000KG LOẠI 1 (DÂY ĐỒNG)",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TMT_YHLD1200",
+  "ten": "THÂN MOTOR YH LD 1200KG LOẠI 1 (DÂY ĐỒNG)",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TMT_YHLD300",
+  "ten": "THÂN MOTOR YH LD 300KG LOẠI 1 (DÂY ĐỒNG)",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TMT_YHLD500",
+  "ten": "THÂN MOTOR YH LD 500KG LOẠI 1 (DÂY ĐỒNG)",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TMT_YHLD800",
+  "ten": "THÂN MOTOR YH LD 800KG LOẠI 1 (DÂY ĐỒNG)",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TMTDOI_BOS_PHAI",
+  "ten": "THÂN MOTOR BOSTECH ĐÔI PHẢI",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TMTDOI_BOS_TRAI",
+  "ten": "THÂN MOTOR BOSTECH ĐÔI TRÁI",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TMTDON_BOS_PHAI",
+  "ten": "THÂN MOTOR BOSTECH ĐƠN PHẢI",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TMTDON_BOS_TRAI",
+  "ten": "THÂN MOTOR BOSTECH ĐƠN TRÁI",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TMTDON_CH",
+  "ten": "THÂN MOTOR CH TAIWAN",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_UPS_ALE1000",
+  "ten": "ALUMAX UPS E-1000KG",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_UPS_ALE800",
+  "ten": "ALUMAX UPS E-800KG",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_YHLD_PATCD",
+  "ten": "YHLD PHÍM ÂM TƯỜNG CÓ DÂY",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_YHTAIWAN_HDK",
+  "ten": "YHTAIWAN HopDK",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_YHTAIWAN_LAYHTW1000_1200KG",
+  "ten": "YHTAIWAN LẮC 1000-1200KG",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_YHTAIWAN_LAYHTW300_400_500KG",
+  "ten": "YHTAIWAN LẮC 300-400-500KG",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_YHTAIWAN_LAYHTW600_700_800KG",
+  "ten": "YHTAIWAN LẮC 600-700-800KG",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_YHTAIWAN_PATCD",
+  "ten": "YHTAIWAN PHÍM ÂM TƯỜNG CÓ DÂY",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_YHTAIWAN_THAN1000KG",
+  "ten": "YHTAIWAN Thân 1000KG",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_YHTAIWAN_THAN300KG",
+  "ten": "YHTAIWAN Thân 300KG",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_YHTAIWAN_THAN400KG",
+  "ten": "YHTAIWAN Thân 400KG",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_YHTAIWAN_THAN500KG",
+  "ten": "YHTAIWAN Thân 500KG",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_YHTAIWAN_THAN600KG",
+  "ten": "YHTAIWAN Thân 600KG",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_YHTAIWAN_THAN700KG",
+  "ten": "YHTAIWAN Thân 700KG",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_YHTAIWAN_THAN800KG",
+  "ten": "YHTAIWAN Thân 800KG",
+  "nhom": "Linh kiện motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_MT_ALUMAX400KG",
+  "ten": "MOTOR ALUMAX 400KG",
+  "nhom": "Motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_MT_ALUMAX600KG",
+  "ten": "MOTOR ALUMAX 600KG",
+  "nhom": "Motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_MT_JG1000KG",
+  "ten": "MOTOR JG 1000KG",
+  "nhom": "Motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_MT_JG1500KG",
+  "ten": "MOTOR JG 1500KG",
+  "nhom": "Motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_MT_JG300KG",
+  "ten": "MOTOR JG 300KG",
+  "nhom": "Motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_MT_JG400KG",
+  "ten": "MOTOR JG 400KG",
+  "nhom": "Motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_MT_JG500KG",
+  "ten": "MOTOR JG 500KG",
+  "nhom": "Motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_MT_JG600KG",
+  "ten": "MOTOR JG 600KG",
+  "nhom": "Motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_MT_JG800KG",
+  "ten": "MOTOR JG 800KG",
+  "nhom": "Motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_MT_TANKE800KG",
+  "ten": "MOTOR TANKER 800KG",
+  "nhom": "Motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_MT_TANKER1000KG",
+  "ten": "MOTOR TANKER 1000KG",
+  "nhom": "Motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_MT_TANKER400KG",
+  "ten": "MOTOR TANKER 400KG",
+  "nhom": "Motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_MT_TANKER600KG",
+  "ten": "MOTOR TANKER 600KG",
+  "nhom": "Motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_MT_YHLD1000KG",
+  "ten": "MOTOR YHLD 1000KG",
+  "nhom": "Motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_MT_YHLD300KG",
+  "ten": "MOTOR YHLD 300KG",
+  "nhom": "Motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_MT_YHLD500KG",
+  "ten": "MOTOR YHLD 500KG",
+  "nhom": "Motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_MT_YHLD800KG",
+  "ten": "MOTOR YHLD 800KG",
+  "nhom": "Motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_MT_YHTAIWAN_CH_1000KG",
+  "ten": "MOTOR YHTAIWAN CH 1000KG",
+  "nhom": "Motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_MT_YHTAIWAN_CH_300KG",
+  "ten": "MOTOR YHTAIWAN CH 300KG",
+  "nhom": "Motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_MT_YHTAIWAN_CH_400KG",
+  "ten": "MOTOR YHTAIWAN CH 400KG",
+  "nhom": "Motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_MT_YHTAIWAN_CH_500KG",
+  "ten": "MOTOR YHTAIWAN CH 500KG",
+  "nhom": "Motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_MT_YHTAIWAN_CH_600KG",
+  "ten": "MOTOR YHTAIWAN CH 600KG",
+  "nhom": "Motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_MT_YHTAIWAN_CH_700KG",
+  "ten": "MOTOR YHTAIWAN CH 700KG",
+  "nhom": "Motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_MT_YHTAIWAN_CH_800KG",
+  "ten": "MOTOR YHTAIWAN CH 800KG",
+  "nhom": "Motor",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_TANKER_NHONG",
+  "ten": "NHÔNG MOTOR TANKER",
+  "nhom": "Motor",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_CROMATE_3",
+  "ten": "CROMATE 3+",
+  "nhom": "Phụ kiện cần sơn tĩnh điện",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_LUOIMV",
+  "ten": "LƯỚI MV",
+  "nhom": "Phụ kiện cần sơn tĩnh điện",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_LUOISN13X26",
+  "ten": "LƯỚI SN VUÔNG PHI 13X26",
+  "nhom": "Phụ kiện cần sơn tĩnh điện",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_LUOISNPHI19",
+  "ten": "LƯỚI SN TRÒN PHI 19",
+  "nhom": "Phụ kiện cần sơn tĩnh điện",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_TAY_NHOM",
+  "ten": "TẨY NHÔM",
+  "nhom": "Phụ kiện cần sơn tĩnh điện",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_3X6M",
+  "ten": "SẮT VUÔNG 3X6M",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Mét",
+  "dvt_ban": "Mét",
+  "dvt_goc": "Mét"
+ },
+ {
+  "ma": "VT_BANBUOM_FE",
+  "ten": "BẮN BƯỚM (SẮT)",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Mét",
+  "dvt_ban": "Mét",
+  "dvt_goc": "Mét"
+ },
+ {
+  "ma": "VT_BANBUOM_INOX",
+  "ten": "BẮN BƯỚM (INOX)",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Mét",
+  "dvt_ban": "Mét",
+  "dvt_goc": "Mét"
+ },
+ {
+  "ma": "VT_BANGKT_5P",
+  "ten": "BĂNG KEO TRONG",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_BKAN",
+  "ten": "BÁT KHÓA ÂM NỀN",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cặp",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_BOLSN",
+  "ten": "BỌ LUỚI SONG NGANG MÓNG NGỰA SONG NGANG",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_BOMV",
+  "ten": "BỌ MẮT VÕNG",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_BUOMFE_DL",
+  "ten": "BƯỚM SẮT ĐÀI LOAN",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_BUOMFE_ST",
+  "ten": "BƯỚM SẮT SIÊU TRƯỜNG",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_CHNHUA",
+  "ten": "VÒNG NHỰA HÃM TRỤC",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_CHONGXOLO",
+  "ten": "CHỐNG XỔ LÔ",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_CONTAN_MV",
+  "ten": "CON TÁN",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_DINHTAN_MV",
+  "ten": "ĐINH TÁN MẮT VÕNG",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_DINHTAN_SN",
+  "ten": "ĐINH TÁN SONG NGANG",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_GIAT",
+  "ten": "GIÁ T",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Cặp",
+  "dvt_ban": "Cặp",
+  "dvt_goc": "Cặp"
+ },
+ {
+  "ma": "VT_GOIFE",
+  "ten": "GỐI SẮT",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_GOIGANG",
+  "ten": "GỐI GANG",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cặp",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_HDK_MULLER",
+  "ten": "HỘP ĐIỀU KHIỂN MULLER",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_HDKDT",
+  "ten": "BỘ ĐIỀU KHIỂN ĐIỆN THOẠI",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_HDKMT_BOS",
+  "ten": "HỘP ĐIỀU KHIỂN BOSTECH",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_HDKMTDON_CH",
+  "ten": "HỘP ĐIỀU KHIỂN TAIWAN",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_HOPKEM_1.2LY",
+  "ten": "HỘP KỄM 30X30X1.2LY",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Cây",
+  "dvt_ban": "Cây",
+  "dvt_goc": "Cây"
+ },
+ {
+  "ma": "VT_INOX",
+  "ten": "INOX KÉO TAY 6mét",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Cây",
+  "dvt_ban": "Cây",
+  "dvt_goc": "Cây"
+ },
+ {
+  "ma": "VT_KN",
+  "ten": "KHÓA NGANG",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_LACPHU33",
+  "ten": "LẮC PHỤ 33",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LACPHU33_3L",
+  "ten": "LẮC PHỤ 33 (3 LỖ)",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LACPHU36",
+  "ten": "LẮC PHỤ 36",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LACPHU40",
+  "ten": "LẮC PHỤ 40",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LACPHU40_L168",
+  "ten": "LẮC PHỤ 40 LỖ 168",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LUOIMV_INOX",
+  "ten": "LƯỚI MV INOX",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "m2",
+  "dvt_goc": "m2"
+ },
+ {
+  "ma": "VT_LUOISN13X26_INOX",
+  "ten": "LƯỚI SN VUÔNG PHI 13X26 INOX",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "m2",
+  "dvt_goc": "m2"
+ },
+ {
+  "ma": "VT_LUOISNPHI19_INOX",
+  "ten": "LƯỚI SN TRÒN PHI 19 INOX",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "m2",
+  "dvt_goc": "m2"
+ },
+ {
+  "ma": "VT_LV_6.0_X_70_X_53V",
+  "ten": "HH LÒ XO 53V",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_LV_6.5_X_80_X_63V",
+  "ten": "HH LÒ XO 63V",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_LV_6.5_X_80_X_68V",
+  "ten": "HH LÒ XO 68V",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_LV_7.0_X_90_X_65V",
+  "ten": "HH LÒ XO 65V",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_LV_7.0_X_90_X_73V",
+  "ten": "HH LÒ XO 73V",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_LV_7.0_X_90_X_83V",
+  "ten": "HH LÒ XO 83V",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_LX_5.5_X_70_X_46V",
+  "ten": "HH LÒ XO 46V",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_LX_5.5_X_70_X_50V",
+  "ten": "HH LÒ XO 50V",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_LX5.5X70X46V",
+  "ten": "LÒ XO 46 V",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LX5.5X70X50V",
+  "ten": "LÒ XO 50 V",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LX6.0X70X53V",
+  "ten": "LÒ XO 53 V",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LX6.5X80X62V",
+  "ten": "LÒ XO 62 V",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LX6.5X80X63V",
+  "ten": "LÒ XO 63 V",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LX6.5X80X68V",
+  "ten": "LÒ XO 68 V",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LX7.0X90X65",
+  "ten": "LÒ XO 65 V",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LX7.0X90X73",
+  "ten": "LÒ XO 73 V",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_LX7.0X90X83",
+  "ten": "LÒ XO 83 V",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_MUI_MAI_HOP_KIM",
+  "ten": "MŨI MÀI HỘP KIM",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_NAPCHUP_BACDAN",
+  "ten": "BẠC ĐẠN + NẮP CHỤP",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_NHAN",
+  "ten": "NHẪN",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_OKHOA",
+  "ten": "Ổ KHÓA NGANG",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_OTPHI13.8",
+  "ten": "ỐNG THÉP PHI 13.8",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_OTPHI19",
+  "ten": "ỐNG THÉP PHI 19",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_PAT_BOS",
+  "ten": "PHÍM ÂM TƯỜNG ÚC BOSTECH",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_PE25",
+  "ten": "Màng PE 25 CM",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cuộn",
+  "dvt_goc": "Cuộn"
+ },
+ {
+  "ma": "VT_PE2X1.05X150",
+  "ten": "MÀNG PE FOAM 2x1.05x150 (CẮT 4)",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cuộn",
+  "dvt_goc": "Cuộn"
+ },
+ {
+  "ma": "VT_PE2X1.05X150CAT2",
+  "ten": "MÀNG PE FOAM 2x1.05x150 (CẮT 2)",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cuộn",
+  "dvt_goc": "Cuộn"
+ },
+ {
+  "ma": "VT_PE3X1.05X100CAT2",
+  "ten": "MÀNG PE FOAM 3x1.05x100 (CẮT 2)",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cuộn",
+  "dvt_goc": "Cuộn"
+ },
+ {
+  "ma": "VT_PE3X1.05X100CAT4",
+  "ten": "MÀNG PE FOAM 3x1.05x100 (CẮT 4)",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cuộn",
+  "dvt_goc": "Cuộn"
+ },
+ {
+  "ma": "VT_PE50",
+  "ten": "Màng PE 50 CM",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cuộn",
+  "dvt_goc": "Cuộn"
+ },
+ {
+  "ma": "VT_PHOTLONG4X5X400M",
+  "ten": "LÔNG NHEO 4X5",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Mét",
+  "dvt_goc": "Mét"
+ },
+ {
+  "ma": "VT_PHOTLONG5X6X400M",
+  "ten": "LÔNG NHEO 5X6",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Mét",
+  "dvt_goc": "Mét"
+ },
+ {
+  "ma": "VT_PULYGAI",
+  "ten": "PULY GAI",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_PULYUC114",
+  "ten": "PULY ÚC 114",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_PULYUC114_CAM",
+  "ten": "PULY ÚC 114 CAM",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_PULYUC114_DEN",
+  "ten": "PULY ÚC 114 ĐEN",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_PULYUC34",
+  "ten": "PULY ÚC 34",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_RON_DD",
+  "ten": "RON ĐÁY ĐỨC",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Mét",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_RONDAYUC",
+  "ten": "RON ĐÁY ÚC",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Mét",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_RONNHUA_INOX",
+  "ten": "RON NHỰA + INOX",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Mét",
+  "dvt_goc": "Mét"
+ },
+ {
+  "ma": "VT_RONNHUAVANGCANHAY_RSU100",
+  "ten": "RONNHUAVANGCANHAY RSU100",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_RONNHUAVANGCANHAY_RSU70",
+  "ten": "RONNHUAVANGCANHAY RSU70",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_TDK_BOS",
+  "ten": "TAY ĐIỀU KHIỂN BOSTECH",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TDKDT",
+  "ten": "TAY ĐIỀU KHIỂN ĐIỆN THOẠI",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TDKMTDOI_CH",
+  "ten": "TAY ĐIỀU KHIỂN TAIWAN",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_TIINOX",
+  "ten": "TI KHÓA NGANG",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Mét",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_V4",
+  "ten": "V4",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Mét",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_V4_INOX",
+  "ten": "V4 INOX 2ly",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Mét",
+  "dvt_goc": "Mét"
+ },
+ {
+  "ma": "VT_V4_INOX_3LY",
+  "ten": "V4 3ly",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Mét",
+  "dvt_goc": "Mét"
+ },
+ {
+  "ma": "VT_V5",
+  "ten": "V5",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_VAIHAMXO",
+  "ten": "VAI HÃM XO",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_VDAY_TDU",
+  "ten": "V ĐÁY (THANH ĐÁY ÚC)",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_VDAY_TDU_KTD",
+  "ten": "THANH ĐÁY ÚC KTD",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_VIS_BANLO2P",
+  "ten": "VIS BẮN LÔ 2P",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Con",
+  "dvt_goc": "Con"
+ },
+ {
+  "ma": "VT_VISDD_BANLO",
+  "ten": "VIS ĐẦU DÙ BẮN LÔ",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Con",
+  "dvt_goc": "Con"
+ },
+ {
+  "ma": "VT_VUONG3",
+  "ten": "VUÔNG KẼM 30X30X1.2LY",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cây",
+  "dvt_goc": "Cây"
+ },
+ {
+  "ma": "VT_XOP_N45",
+  "ten": "XỐP NHỎ",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Tấm",
+  "dvt_goc": "Tấm"
+ },
+ {
+  "ma": "VT_XOP_N90",
+  "ten": "XỐP LỚN",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Tấm",
+  "dvt_goc": "Tấm"
+ },
+ {
+  "ma": "VT_XOP_N95",
+  "ten": "XỐP LỚN (90cm)",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Tấm",
+  "dvt_goc": "Tấm"
+ },
+ {
+  "ma": "VT_BATSAT",
+  "ten": "BÁT SẮT",
+  "nhom": "Phụ kiện CN Đức",
+  "dvt_hien_tai": "Cái",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_BO_1VIS_503N_71_595",
+  "ten": "BỌ 1VIS 503N-71-595",
+  "nhom": "Phụ kiện CN Đức",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Con",
+  "dvt_goc": "Con"
+ },
+ {
+  "ma": "VT_BO_2VIS_501_552",
+  "ten": "BỌ 2VIS-501-552",
+  "nhom": "Phụ kiện CN Đức",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Con",
+  "dvt_goc": "Con"
+ },
+ {
+  "ma": "VT_BO_2VIS_652_548C",
+  "ten": "BỌ 2VIS-652-548C",
+  "nhom": "Phụ kiện CN Đức",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Con",
+  "dvt_goc": "Con"
+ },
+ {
+  "ma": "VT_BO1VIS_503C",
+  "ten": "BỌ 1VIS 503C",
+  "nhom": "Phụ kiện CN Đức",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_BO2VIS_501N_552",
+  "ten": "BỌ 2VIS 501N-552",
+  "nhom": "Phụ kiện CN Đức",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_BO2VIS_652_548C",
+  "ten": "BỌ 2VIS 652-548C",
+  "nhom": "Phụ kiện CN Đức",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_BO2VIS_752_ST700",
+  "ten": "BỌ 2VIS 752 ST700",
+  "nhom": "Phụ kiện CN Đức",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_CBD",
+  "ten": "CÒI BÁO ĐỘNG",
+  "nhom": "Phụ kiện CN Đức",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_CLNHUA",
+  "ten": "CON LĂN NHỰA",
+  "nhom": "Phụ kiện CN Đức",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_COI",
+  "ten": "CÒI",
+  "nhom": "Phụ kiện CN Đức",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_CON_LAN",
+  "ten": "CON LĂN",
+  "nhom": "Phụ kiện CN Đức",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cặp",
+  "dvt_goc": "Cặp"
+ },
+ {
+  "ma": "VT_HTTD",
+  "ten": "HỆ THỐNG TỰ DỪNG",
+  "nhom": "Phụ kiện CN Đức",
+  "dvt_hien_tai": "Bộ",
+  "dvt_ban": "Bộ",
+  "dvt_goc": "Bộ"
+ },
+ {
+  "ma": "VT_PHOTLONG4X5",
+  "ten": "LÔNG NHEO NHỎ",
+  "nhom": "Phụ kiện CN Đức",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cuộn",
+  "dvt_goc": "Cuộn"
+ },
+ {
+  "ma": "VT_PHOTLONG5X6",
+  "ten": "LÔNG NHEO LỚN",
+  "nhom": "Phụ kiện CN Đức",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cuộn",
+  "dvt_goc": "Cuộn"
+ },
+ {
+  "ma": "VT_PL114_LON",
+  "ten": "PULY 114 LỚN",
+  "nhom": "Phụ kiện CN Đức",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_PL114_NHO",
+  "ten": "PULY 114 NHỎ",
+  "nhom": "Phụ kiện CN Đức",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_PULY_114L",
+  "ten": "PULY 114L",
+  "nhom": "Phụ kiện CN Đức",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_PULY_114N",
+  "ten": "PULY 114N",
+  "nhom": "Phụ kiện CN Đức",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_PULY_140",
+  "ten": "PULY 140",
+  "nhom": "Phụ kiện CN Đức",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_PULY_168",
+  "ten": "PULY 168",
+  "nhom": "Phụ kiện CN Đức",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_PULY_DEN",
+  "ten": "PULY ĐEN CUỘN CỬA ĐỨC",
+  "nhom": "Phụ kiện CN Đức",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Cái",
+  "dvt_goc": "Cái"
+ },
+ {
+  "ma": "VT_VIS",
+  "ten": "Vis",
+  "nhom": "Phụ kiện CN Đức",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Kg",
+  "dvt_goc": "Kg"
+ },
+ {
+  "ma": "VT_V5_KEM",
+  "ten": "V4 KẼM",
+  "nhom": "Phụ kiện chung",
+  "dvt_hien_tai": "Kg",
+  "dvt_ban": "Mét",
+  "dvt_goc": "Mét"
+ }
+]

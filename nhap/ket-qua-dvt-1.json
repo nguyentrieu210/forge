@@ -1,0 +1,625 @@
+[
+ {
+  "ma": "VT_CNHUA",
+  "ten": "CỤC NHỰA",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_BULON12.12",
+  "ten": "BÙ LON 12x12",
+  "dvt_dung": "Kg",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_CONTAN12",
+  "ten": "CON TÁN 12",
+  "dvt_dung": "Kg",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_BACDAN",
+  "ten": "BẠC ĐẠN",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_UPS_E1000I",
+  "ten": "Bình lưu điện Alumax E1000i",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_UPS_E800I",
+  "ten": "Bình lưu điện Alumax E800i",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_UPS_YH1000",
+  "ten": "Bình lưu điện YH1000",
+  "dvt_dung": "Bộ",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_UPS_YH2000",
+  "ten": "Bình lưu điện YH2000",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_BDK_TANKER_ALUMAX",
+  "ten": "BỘ ĐIỀU KHIỂN TANKER ALUMAX",
+  "dvt_dung": "Bộ",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_BDKDT_MULLER",
+  "ten": "BỘ ĐIỀU KHIỂN ĐIỆN THOẠI MULLER",
+  "dvt_dung": "Bộ",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_BOSTEC_BODIEUKHIEN",
+  "ten": "BOSTEC BỘ ĐIỀU KHIỂN",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_CHTAIWAN_BODIEUKHIEN",
+  "ten": "CHTAIWAN BỘ ĐIỀU KHIỂN",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_JG_BODK",
+  "ten": "JG BỘ ĐIỀU KHIỂN",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_JG_TAYDK",
+  "ten": "JG TAY ĐIỀU KHIỂN",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MTT_BOSTEC_TAYDK",
+  "ten": "BOSTEC TAY ĐIỀU KHIỂN",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MTT_CHTAIWAN_TAYDK",
+  "ten": "CHTAIWAN-TAY ĐIỀU KHIỂN",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TANKER_ALUMAX_BODK",
+  "ten": "BỘ ĐK TANKER ALUMAX",
+  "dvt_dung": "Bộ",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TANKER_ALUMAX_TAYDK",
+  "ten": "TAY ĐIỀU KHIỂN TANKER",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TDK_MULLER",
+  "ten": "TAY ĐIỀU KHIỂN ĐIỆN THOẠI MULLER",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_YHLD_BDK",
+  "ten": "BỘ ĐIỀU KHIỂN YHLD",
+  "dvt_dung": "Bộ",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_YHLD_HDK",
+  "ten": "HỘP ĐIỀU KHIỂN YHLD",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_YHLD_TAYDK",
+  "ten": "YHLD TAY ĐIỀU KHIỂN",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_YHTAIWAN_BODK",
+  "ten": "YHTAIWAN BỘ ĐIỀU KHIỂN",
+  "dvt_dung": "Bộ",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_YHTAIWAN_TAYDK",
+  "ten": "YHTAIWAN TAY ĐIỀU KHIỂN",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_ALUMAX_PATCD",
+  "ten": "ALUMAX PHÍM ÂM TƯỜNG CÓ DÂY",
+  "dvt_dung": "Bộ",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_BACDAN_MT",
+  "ten": "BẠC ĐẠN MOTOR",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_COT",
+  "ten": "CỐT",
+  "dvt_dung": "Cây",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_DAYDIEN_PATCD",
+  "ten": "DÂY ĐIỆN PHÍM ÂM TƯỜNG",
+  "dvt_dung": "Mét",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_HDKMT_AL",
+  "ten": "HỘP ĐIỀU KHIỂN MOTOR ALUMAX",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_HDKMT_JG",
+  "ten": "HỘP ĐIỀU KHIỂN MOTOR JG",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_HDKMT_TANKER",
+  "ten": "HỘP ĐIỀU KHIỂN MOTOR TANKER",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_HDKMT_YH",
+  "ten": "HỘP ĐIỀU KHIỂN YH",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_HOAKHE",
+  "ten": "HOA KHẾ (3 CHẤU)",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_JG_BDN",
+  "ten": "JG BẠC ĐẠN",
+  "dvt_dung": "Bộ",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_JG_PATCD",
+  "ten": "JG PHÍM ÂM TƯỜNG CÓ DÂY",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_LACJG1000_1500KG",
+  "ten": "JG LacJG1000-1500KG",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_LACJG33",
+  "ten": "JG LacJG33",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_LACPHU33_1LO",
+  "ten": "LẮC PHỤ 33-1 LỔ",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_LACPHU33_3LO",
+  "ten": "LẮC PHỤ 33-3 LỔ (ĐÀI LOAN)",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_LACPHU36_1LO",
+  "ten": "LẮC PHỤ 36-1 LỔ",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_LACPHU36_3LO",
+  "ten": "LẮC PHỤ 36-3 LỔ (ĐÀI LOAN)",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_LACYHLD300_500KG",
+  "ten": "LẮC YH 300 500KG",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_LACYHLD800_1000KG",
+  "ten": "LẮC YH 800 1000KG",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_LMT_AL400",
+  "ten": "LẮC MOTOR ALUMAX 400 KG",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_LMT_AL600",
+  "ten": "LẮC MOTOR ALUMAX 600 KG",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_LMT_JG1000",
+  "ten": "LẮC MOTOR JG 1000KG (CHÍNH HÃNG)",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_LMT_JG1500",
+  "ten": "LẮC MOTOR JG 1500KG (CHÍNH HÃNG)",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_LMT_JG300_600",
+  "ten": "LẮC MOTOR JG 300KG-600KG (CHÍNH HÃNG)",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_LMT_JG500",
+  "ten": "LẮC MOTOR JG 500KG (CHÍNH HÃNG)",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_LMT_JG600",
+  "ten": "LẮC MOTOR JG 600KG (CHÍNH HÃNG)",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_LMT_JG800_1000",
+  "ten": "LẮC MOTOR JG 800KG-1000KG (CHÍNH HÃNG)",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_LMT_TK800_1000",
+  "ten": "LẮC MOTOR TANKER 800 KG -1000 KG",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_LMT_YHLD1000",
+  "ten": "LẮC MOTOR YH LD 1000KG LOẠI 1 (DÂY ĐỒNG)",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_LMT_YHLD1200",
+  "ten": "LẮC MOTOR YH LD 1200KG LOẠI 1 (DÂY ĐỒNG)",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_LMT_YHLD300_500",
+  "ten": "LẮC MOTOR YH LD 300/500KG LOẠI 1 (DÂY ĐỒNG)",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_LMT_YHLD800",
+  "ten": "LẮC MOTOR YH LD 800KG LOẠI 1 (DÂY ĐỒNG)",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_LMT33_TK400_600",
+  "ten": "LẮC 32-33 MOTOR TANKER 400 KG 600 KG",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_LMT36_TK400_600",
+  "ten": "LẮC 36 MOTOR TANKER 400 KG 600 KG",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_LONGDEN",
+  "ten": "LÔNG ĐỀN",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MTT_BOSTEC_DOI_P",
+  "ten": "MTT BOSTEC ĐÔI PHẢI",
+  "dvt_dung": "Bộ",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MTT_BOSTEC_DOI_T",
+  "ten": "MTT BOSTEC ĐÔI TRÁI",
+  "dvt_dung": "Bộ",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MTT_BOSTEC_DON_P",
+  "ten": "MTT BOSTEC ĐƠN PHẢI",
+  "dvt_dung": "Bộ",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MTT_BOSTEC_DON_T",
+  "ten": "MTT BOSTEC ĐƠN TRÁI",
+  "dvt_dung": "Bộ",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MTT_BOSTEC_PAT",
+  "ten": "BOSTEC PHÍM ÂM TƯỜNG",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MTT_CHTAIWAN_DOI_P",
+  "ten": "MTT CHTAIWAN ĐÔI PHẢI",
+  "dvt_dung": "Bộ",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MTT_CHTAIWAN_DOI_T",
+  "ten": "MTT CHTAIWAN ĐÔI TRÁI",
+  "dvt_dung": "Bộ",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MTT_CHTAIWAN_DON_P",
+  "ten": "MTT CHTAIWAN ĐƠN PHẢI",
+  "dvt_dung": "Bộ",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MTT_CHTAIWAN_DON_T",
+  "ten": "MTT CHTAIWAN ĐƠN TRÁI",
+  "dvt_dung": "Bộ",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_MTT_CHTAIWAN_PAT",
+  "ten": "CHTAIWAN-PHÍM ÂM TƯỜNG",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_NAPCHUP_MT",
+  "ten": "NẮP CHỤP MOTOR",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_NAPNHIN",
+  "ten": "NẮP NHÌN",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_PAT_CH",
+  "ten": "PHÍM ÂM TƯỜNG CH ÚC (Motor trong)",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_PAT_CODAY",
+  "ten": "PHÍM ÂM TƯỜNG CÓ DÂY",
+  "dvt_dung": "Bộ",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_PAT_KHONGDAY",
+  "ten": "PHÍM ÂM TƯỜNG KHÔNG DÂY",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TANKER_ALUMAX_HDK",
+  "ten": "HỘP ĐK TANKER ALUMAX",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TANKER_ALUMAX_LAC33",
+  "ten": "LẮC TANKER ALUMAX 33",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TANKER_ALUMAX_LAC36",
+  "ten": "LẮC TANKER ALUMAX 36",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TANKER_LAC800_1000KG",
+  "ten": "LẮC TANKER 800-1000KG",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TANKER_PATCD",
+  "ten": "TANKER PHÍM ÂM TƯỜNG CÓ DÂY",
+  "dvt_dung": "Bộ",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TDKMT_AL",
+  "ten": "TAY ĐIỀU KHIỂN MOTOR ALUMAX",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TDKMT_JG",
+  "ten": "TAY ĐIỀU KHIỂN MOTOR JG",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TDKMT_TANKER",
+  "ten": "TAY ĐIỀU KHIỂN MOTOR TANKER",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TDKMT_YH",
+  "ten": "TAY ĐIỀU KHIỂN YH",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TMT_AL400",
+  "ten": "THÂN MOTOR ALUMAX 400 KG",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TMT_AL600",
+  "ten": "THÂN MOTOR ALUMAX 600 KG",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TMT_JG1000",
+  "ten": "THÂN MOTOR JG 1000KG (CHÍNH HÃNG)",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TMT_JG1500",
+  "ten": "THÂN MOTOR JG 1500KG (CHÍNH HÃNG)",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TMT_JG300",
+  "ten": "THÂN MOTOR JG 300KG (CHÍNH HÃNG)",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ },
+ {
+  "ma": "VT_TMT_JG400",
+  "ten": "THÂN MOTOR JG 400KG (CHÍNH HÃNG)",
+  "dvt_dung": "Cái",
+  "doi": false,
+  "ly_do": ""
+ }
+]

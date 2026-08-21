@@ -1,0 +1,107 @@
+{
+ "doctype": "Supplier",
+ "so_ban_ghi": 8,
+ "nguon": "alumdoor-khach-hang-2026-08-20",
+ "ban_ghi": [
+  {
+   "name": "CTY NAM PHÁT",
+   "payload": {
+    "supplier_name": "CTY NAM PHÁT",
+    "supplier_group": "Khác",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"NCC\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CTY NAM PHÁT",
+   "content": "CTY NAM PHÁT"
+  },
+  {
+   "name": "ANH BẢO BỌ - LỘC PHÁT",
+   "payload": {
+    "supplier_name": "ANH BẢO BỌ - LỘC PHÁT",
+    "supplier_group": "Phụ kiện",
+    "contact_person": "THÁI SƠN",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"NCC\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH BẢO BỌ - LỘC PHÁT",
+   "content": "ANH BẢO BỌ - LỘC PHÁT"
+  },
+  {
+   "name": "CÔNG TY TNHH TMSX DƯƠNG HỒ",
+   "payload": {
+    "supplier_name": "CÔNG TY TNHH TMSX DƯƠNG HỒ",
+    "supplier_group": "Khác",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"NCC\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CÔNG TY TNHH TMSX DƯƠNG HỒ",
+   "content": "CÔNG TY TNHH TMSX DƯƠNG HỒ"
+  },
+  {
+   "name": "CÔNG TY TNHH  LOGISTICS APM",
+   "payload": {
+    "supplier_name": "CÔNG TY TNHH  LOGISTICS APM",
+    "supplier_group": "Vận chuyển",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"NCC\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CÔNG TY TNHH  LOGISTICS APM",
+   "content": "CÔNG TY TNHH  LOGISTICS APM"
+  },
+  {
+   "name": "ANH THÀNH TÔN",
+   "payload": {
+    "supplier_name": "ANH THÀNH TÔN",
+    "supplier_group": "Nhôm",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"NCC\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH THÀNH TÔN",
+   "content": "ANH THÀNH TÔN"
+  },
+  {
+   "name": "TRẦN ĐẠT BẾN TRE",
+   "payload": {
+    "supplier_name": "TRẦN ĐẠT BẾN TRE",
+    "supplier_group": "Khác",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"NCC\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "TRẦN ĐẠT BẾN TRE",
+   "content": "TRẦN ĐẠT BẾN TRE"
+  },
+  {
+   "name": "ANH TRÌNH ĐỒNG THÁP",
+   "payload": {
+    "supplier_name": "ANH TRÌNH ĐỒNG THÁP",
+    "supplier_group": "Khác",
+    "contact_person": "LƯ CHÍ CƯỜNG",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"NCC\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "ANH TRÌNH ĐỒNG THÁP",
+   "content": "ANH TRÌNH ĐỒNG THÁP"
+  },
+  {
+   "name": "CÔNG TY TNHH VẬN TẢI SQS THIÊN ÂN",
+   "payload": {
+    "supplier_name": "CÔNG TY TNHH VẬN TẢI SQS THIÊN ÂN",
+    "supplier_group": "Vận chuyển",
+    "note": "Nhập từ sheet DANH MỤC, cột KH/NCC = \"NCC\".",
+    "disabled": false,
+    "_migration_source": "alumdoor-khach-hang-2026-08-20"
+   },
+   "title": "CÔNG TY TNHH VẬN TẢI SQS THIÊN ÂN",
+   "content": "CÔNG TY TNHH VẬN TẢI SQS THIÊN ÂN"
+  }
+ ]
+}

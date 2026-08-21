@@ -1,0 +1,206 @@
+{
+  "doctype": "UOM",
+  "trich_luc_luc": "2026-08-20T10:57:40.783Z",
+  "nguon": "D1 cục bộ — fixture app alumdoor 2.10.0 + seed canonical layer0",
+  "so_ban_ghi": 18,
+  "ban_ghi": [
+    {
+      "name": "Bình",
+      "payload": {
+        "uom_name": "Bình",
+        "must_be_whole_number": true,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Bình",
+      "content": "Bình"
+    },
+    {
+      "name": "Bộ",
+      "payload": {
+        "uom_name": "Bộ",
+        "must_be_whole_number": true,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Bộ",
+      "content": "Bộ"
+    },
+    {
+      "name": "Con",
+      "payload": {
+        "uom_name": "Con",
+        "must_be_whole_number": true,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Con",
+      "content": "Con"
+    },
+    {
+      "name": "Cuộn",
+      "payload": {
+        "uom_name": "Cuộn",
+        "must_be_whole_number": true,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Cuộn",
+      "content": "Cuộn"
+    },
+    {
+      "name": "Cái",
+      "payload": {
+        "uom_name": "Cái",
+        "must_be_whole_number": true,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Cái",
+      "content": "Cái"
+    },
+    {
+      "name": "Cây",
+      "payload": {
+        "uom_name": "Cây",
+        "must_be_whole_number": true,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Cây",
+      "content": "Cây"
+    },
+    {
+      "name": "Cặp",
+      "payload": {
+        "uom_name": "Cặp",
+        "must_be_whole_number": true,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Cặp",
+      "content": "Cặp"
+    },
+    {
+      "name": "Hộp",
+      "payload": {
+        "uom_name": "Hộp",
+        "must_be_whole_number": true,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Hộp",
+      "content": "Hộp"
+    },
+    {
+      "name": "Kg",
+      "payload": {
+        "uom_name": "Kg",
+        "must_be_whole_number": false,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Kg",
+      "content": "Kg"
+    },
+    {
+      "name": "Lá",
+      "payload": {
+        "uom_name": "Lá",
+        "must_be_whole_number": true,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Lá",
+      "content": "Lá"
+    },
+    {
+      "name": "Lít",
+      "payload": {
+        "uom_name": "Lít",
+        "must_be_whole_number": false,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Lít",
+      "content": "Lít"
+    },
+    {
+      "name": "Mét",
+      "payload": {
+        "uom_name": "Mét",
+        "must_be_whole_number": false,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Mét",
+      "content": "Mét"
+    },
+    {
+      "name": "Sợi",
+      "payload": {
+        "uom_name": "Sợi",
+        "must_be_whole_number": true,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Sợi",
+      "content": "Sợi"
+    },
+    {
+      "name": "Thanh",
+      "payload": {
+        "uom_name": "Thanh",
+        "must_be_whole_number": true,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Thanh",
+      "content": "Thanh"
+    },
+    {
+      "name": "Thân",
+      "payload": {
+        "uom_name": "Thân",
+        "must_be_whole_number": true,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Thân",
+      "content": "Thân"
+    },
+    {
+      "name": "Túi",
+      "payload": {
+        "uom_name": "Túi",
+        "must_be_whole_number": true,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Túi",
+      "content": "Túi"
+    },
+    {
+      "name": "Tấm",
+      "payload": {
+        "uom_name": "Tấm",
+        "must_be_whole_number": true,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "Tấm",
+      "content": "Tấm"
+    },
+    {
+      "name": "m2",
+      "payload": {
+        "uom_name": "m2",
+        "must_be_whole_number": false,
+        "disabled": false,
+        "_metadata_revision": 2
+      },
+      "title": "m2",
+      "content": "m2"
+    }
+  ]
+}

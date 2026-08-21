@@ -1,0 +1,504 @@
+{
+ "doctype": "Material Specification",
+ "trich_luc_luc": "2026-08-20T13:30:35.830Z",
+ "nguon": "suy từ mã + tên hàng trong D1",
+ "so_ban_ghi": 26,
+ "ban_ghi": [
+  {
+   "name": "QC-LA-INOX-6D",
+   "payload": {
+    "spec_code": "QC-LA-INOX-6D",
+    "spec_name": "Lá inox Đài Loan 6D",
+    "material_grade": "LA-INOX",
+    "spec_type": "Cuộn",
+    "item_group": "Nan/lá cửa",
+    "thickness_mm": 0.6,
+    "note": "Mặt hàng dùng: TP-LA-INOX-6D",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-vat-lieu-2026-08-20"
+   },
+   "_ma_dung": [
+    "TP-LA-INOX-6D"
+   ],
+   "title": "Lá inox Đài Loan 6D",
+   "content": "QC-LA-INOX-6D Lá inox Đài Loan 6D"
+  },
+  {
+   "name": "QC-LA-INOX-7D",
+   "payload": {
+    "spec_code": "QC-LA-INOX-7D",
+    "spec_name": "Lá inox Đài Loan 7D",
+    "material_grade": "LA-INOX",
+    "spec_type": "Cuộn",
+    "item_group": "Nan/lá cửa",
+    "thickness_mm": 0.7,
+    "note": "Mặt hàng dùng: TP-LA-INOX-7D",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-vat-lieu-2026-08-20"
+   },
+   "_ma_dung": [
+    "TP-LA-INOX-7D"
+   ],
+   "title": "Lá inox Đài Loan 7D",
+   "content": "QC-LA-INOX-7D Lá inox Đài Loan 7D"
+  },
+  {
+   "name": "QC-LA-INOX-8D",
+   "payload": {
+    "spec_code": "QC-LA-INOX-8D",
+    "spec_name": "Lá inox Đài Loan 8D",
+    "material_grade": "LA-INOX",
+    "spec_type": "Cuộn",
+    "item_group": "Nan/lá cửa",
+    "thickness_mm": 0.8,
+    "note": "Mặt hàng dùng: TP-LA-INOX-8D",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-vat-lieu-2026-08-20"
+   },
+   "_ma_dung": [
+    "TP-LA-INOX-8D"
+   ],
+   "title": "Lá inox Đài Loan 8D",
+   "content": "QC-LA-INOX-8D Lá inox Đài Loan 8D"
+  },
+  {
+   "name": "QC-LA-INOX-1LY",
+   "payload": {
+    "spec_code": "QC-LA-INOX-1LY",
+    "spec_name": "Lá inox Đài Loan 1LY",
+    "material_grade": "LA-INOX",
+    "spec_type": "Cuộn",
+    "item_group": "Nan/lá cửa",
+    "thickness_mm": 1,
+    "note": "Mặt hàng dùng: TP-LA-INOX-1LY",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-vat-lieu-2026-08-20"
+   },
+   "_ma_dung": [
+    "TP-LA-INOX-1LY"
+   ],
+   "title": "Lá inox Đài Loan 1LY",
+   "content": "QC-LA-INOX-1LY Lá inox Đài Loan 1LY"
+  },
+  {
+   "name": "QC-TON-DL-KEM-6D",
+   "payload": {
+    "spec_code": "QC-TON-DL-KEM-6D",
+    "spec_name": "Tôn kẽm Đài Loan 8D",
+    "material_grade": "TON-DL-KEM",
+    "spec_type": "Cuộn",
+    "item_group": "Nan/lá cửa",
+    "thickness_mm": 0.6,
+    "note": "Xưởng gọi \"8D\" (=0.8 mm) nhưng mã ghi 0.6 mm — lệch 0.20 mm. Lý do CHƯA biết; ghi cả hai, không sửa bên nào. Mặt hàng dùng: TP-LA-DLK-8D · TP-CUA-DLK-8D",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-vat-lieu-2026-08-20"
+   },
+   "_ma_dung": [
+    "TP-LA-DLK-8D",
+    "TP-CUA-DLK-8D"
+   ],
+   "title": "Tôn kẽm Đài Loan 8D",
+   "content": "QC-TON-DL-KEM-6D Tôn kẽm Đài Loan 8D"
+  },
+  {
+   "name": "QC-TON-DL-KEM-6D-K124",
+   "payload": {
+    "spec_code": "QC-TON-DL-KEM-6D-K124",
+    "spec_name": "Tôn kẽm Đài Loan 6D khổ 124",
+    "material_grade": "TON-DL-KEM",
+    "spec_type": "Cuộn",
+    "item_group": "Nan/lá cửa",
+    "thickness_mm": 0.6,
+    "note": "Khổ ghi trong mã: \"124\" — CHƯA rõ mm hay cm, để trống ô Khổ rộng. Mặt hàng dùng: NVL-TON-DLK-6D-K124",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-vat-lieu-2026-08-20"
+   },
+   "_ma_dung": [
+    "NVL-TON-DLK-6D-K124"
+   ],
+   "title": "Tôn kẽm Đài Loan 6D",
+   "content": "QC-TON-DL-KEM-6D-K124 Tôn kẽm Đài Loan 6D 124"
+  },
+  {
+   "name": "QC-TON-DL-KEM-8D",
+   "payload": {
+    "spec_code": "QC-TON-DL-KEM-8D",
+    "spec_name": "Tôn kẽm Đài Loan 1LY",
+    "material_grade": "TON-DL-KEM",
+    "spec_type": "Cuộn",
+    "item_group": "Nan/lá cửa",
+    "thickness_mm": 0.8,
+    "note": "Xưởng gọi \"1LY\" (=1 mm) nhưng mã ghi 0.8 mm — lệch 0.20 mm. Lý do CHƯA biết; ghi cả hai, không sửa bên nào. Mặt hàng dùng: TP-LA-DLK-1LY · TP-CUA-DLK-1LY",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-vat-lieu-2026-08-20"
+   },
+   "_ma_dung": [
+    "TP-LA-DLK-1LY",
+    "TP-CUA-DLK-1LY"
+   ],
+   "title": "Tôn kẽm Đài Loan 1LY",
+   "content": "QC-TON-DL-KEM-8D Tôn kẽm Đài Loan 1LY"
+  },
+  {
+   "name": "QC-TON-DL-KEM-8D-K124",
+   "payload": {
+    "spec_code": "QC-TON-DL-KEM-8D-K124",
+    "spec_name": "Tôn kẽm Đài Loan 8D khổ 124",
+    "material_grade": "TON-DL-KEM",
+    "spec_type": "Cuộn",
+    "item_group": "Nan/lá cửa",
+    "thickness_mm": 0.8,
+    "note": "Khổ ghi trong mã: \"124\" — CHƯA rõ mm hay cm, để trống ô Khổ rộng. Mặt hàng dùng: NVL-TON-DLK-8D-K124",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-vat-lieu-2026-08-20"
+   },
+   "_ma_dung": [
+    "NVL-TON-DLK-8D-K124"
+   ],
+   "title": "Tôn kẽm Đài Loan 8D",
+   "content": "QC-TON-DL-KEM-8D-K124 Tôn kẽm Đài Loan 8D 124"
+  },
+  {
+   "name": "QC-TON-DL-KEM-9.2D-K175",
+   "payload": {
+    "spec_code": "QC-TON-DL-KEM-9.2D-K175",
+    "spec_name": "Tôn kẽm Đài Loan 1LY khổ 175",
+    "material_grade": "TON-DL-KEM",
+    "spec_type": "Cuộn",
+    "item_group": "Nan/lá cửa",
+    "thickness_mm": 0.92,
+    "note": "Khổ ghi trong mã: \"175\" — CHƯA rõ mm hay cm, để trống ô Khổ rộng. Xưởng gọi \"1LY\" (=1 mm) nhưng mã ghi 0.92 mm — lệch 0.08 mm. Lý do CHƯA biết; ghi cả hai, không sửa bên nào. Mặt hàng dùng: NVL-TON-DLK-1LY-K175",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-vat-lieu-2026-08-20"
+   },
+   "_ma_dung": [
+    "NVL-TON-DLK-1LY-K175"
+   ],
+   "title": "Tôn kẽm Đài Loan 1LY",
+   "content": "QC-TON-DL-KEM-9.2D-K175 Tôn kẽm Đài Loan 1LY 175"
+  },
+  {
+   "name": "QC-TON-DL-KEM-1LY",
+   "payload": {
+    "spec_code": "QC-TON-DL-KEM-1LY",
+    "spec_name": "Tôn kẽm Đài Loan 1.2LY",
+    "material_grade": "TON-DL-KEM",
+    "spec_type": "Cuộn",
+    "item_group": "Nan/lá cửa",
+    "thickness_mm": 1,
+    "note": "Xưởng gọi \"1.2LY\" (=1.2 mm) nhưng mã ghi 1 mm — lệch 0.20 mm. Lý do CHƯA biết; ghi cả hai, không sửa bên nào. Mặt hàng dùng: TP-CUA-DLK-1.2LY",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-vat-lieu-2026-08-20"
+   },
+   "_ma_dung": [
+    "TP-CUA-DLK-1.2LY"
+   ],
+   "title": "Tôn kẽm Đài Loan 1.2LY",
+   "content": "QC-TON-DL-KEM-1LY Tôn kẽm Đài Loan 1.2LY"
+  },
+  {
+   "name": "QC-TON-DL-KEM-1LY-K124",
+   "payload": {
+    "spec_code": "QC-TON-DL-KEM-1LY-K124",
+    "spec_name": "Tôn kẽm Đài Loan 1LY khổ 124",
+    "material_grade": "TON-DL-KEM",
+    "spec_type": "Cuộn",
+    "item_group": "Nan/lá cửa",
+    "thickness_mm": 1,
+    "note": "Khổ ghi trong mã: \"124\" — CHƯA rõ mm hay cm, để trống ô Khổ rộng. Mặt hàng dùng: NVL-TON-DLK-1LY-K124",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-vat-lieu-2026-08-20"
+   },
+   "_ma_dung": [
+    "NVL-TON-DLK-1LY-K124"
+   ],
+   "title": "Tôn kẽm Đài Loan 1LY",
+   "content": "QC-TON-DL-KEM-1LY-K124 Tôn kẽm Đài Loan 1LY 124"
+  },
+  {
+   "name": "QC-TON-DL-KEM-1LY-K175",
+   "payload": {
+    "spec_code": "QC-TON-DL-KEM-1LY-K175",
+    "spec_name": "Tôn kẽm Đài Loan 1LY khổ 175",
+    "material_grade": "TON-DL-KEM",
+    "spec_type": "Cuộn",
+    "item_group": "Nan/lá cửa",
+    "thickness_mm": 1,
+    "note": "Khổ ghi trong mã: \"175\" — CHƯA rõ mm hay cm, để trống ô Khổ rộng. Mặt hàng dùng: NVL-TON-DLK-1LY-K175",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-vat-lieu-2026-08-20"
+   },
+   "_ma_dung": [
+    "NVL-TON-DLK-1LY-K175"
+   ],
+   "title": "Tôn kẽm Đài Loan 1LY",
+   "content": "QC-TON-DL-KEM-1LY-K175 Tôn kẽm Đài Loan 1LY 175"
+  },
+  {
+   "name": "QC-TON-DL-KEM-1.2LY",
+   "payload": {
+    "spec_code": "QC-TON-DL-KEM-1.2LY",
+    "spec_name": "Tôn kẽm Đài Loan 1.2LY",
+    "material_grade": "TON-DL-KEM",
+    "spec_type": "Cuộn",
+    "item_group": "Nan/lá cửa",
+    "thickness_mm": 1.2,
+    "note": "Mặt hàng dùng: TP-LA-DLK-1.2LY",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-vat-lieu-2026-08-20"
+   },
+   "_ma_dung": [
+    "TP-LA-DLK-1.2LY"
+   ],
+   "title": "Tôn kẽm Đài Loan 1.2LY",
+   "content": "QC-TON-DL-KEM-1.2LY Tôn kẽm Đài Loan 1.2LY"
+  },
+  {
+   "name": "QC-TON-DL-KEM-1LY2-K124",
+   "payload": {
+    "spec_code": "QC-TON-DL-KEM-1LY2-K124",
+    "spec_name": "Tôn kẽm Đài Loan 1LY2 khổ 124",
+    "material_grade": "TON-DL-KEM",
+    "spec_type": "Cuộn",
+    "item_group": "Nan/lá cửa",
+    "thickness_mm": 1.2,
+    "note": "Khổ ghi trong mã: \"124\" — CHƯA rõ mm hay cm, để trống ô Khổ rộng. Mặt hàng dùng: NVL-TON-DLK-1.2LY-K124",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-vat-lieu-2026-08-20"
+   },
+   "_ma_dung": [
+    "NVL-TON-DLK-1.2LY-K124"
+   ],
+   "title": "Tôn kẽm Đài Loan 1LY2",
+   "content": "QC-TON-DL-KEM-1LY2-K124 Tôn kẽm Đài Loan 1LY2 124"
+  },
+  {
+   "name": "QC-TON-DL-KEM-1.2LY-K175",
+   "payload": {
+    "spec_code": "QC-TON-DL-KEM-1.2LY-K175",
+    "spec_name": "Tôn kẽm Đài Loan 1.2LY khổ 175",
+    "material_grade": "TON-DL-KEM",
+    "spec_type": "Cuộn",
+    "item_group": "Nan/lá cửa",
+    "thickness_mm": 1.2,
+    "note": "Khổ ghi trong mã: \"175\" — CHƯA rõ mm hay cm, để trống ô Khổ rộng. Mặt hàng dùng: NVL-TON-DLK-1.2LY-K175",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-vat-lieu-2026-08-20"
+   },
+   "_ma_dung": [
+    "NVL-TON-DLK-1.2LY-K175"
+   ],
+   "title": "Tôn kẽm Đài Loan 1.2LY",
+   "content": "QC-TON-DL-KEM-1.2LY-K175 Tôn kẽm Đài Loan 1.2LY 175"
+  },
+  {
+   "name": "QC-TON-DL-KEM-1.3LY-K175",
+   "payload": {
+    "spec_code": "QC-TON-DL-KEM-1.3LY-K175",
+    "spec_name": "Tôn kẽm Đài Loan 1.3LY khổ 175",
+    "material_grade": "TON-DL-KEM",
+    "spec_type": "Cuộn",
+    "item_group": "Nan/lá cửa",
+    "thickness_mm": 1.3,
+    "note": "Khổ ghi trong mã: \"175\" — CHƯA rõ mm hay cm, để trống ô Khổ rộng. Mặt hàng dùng: NVL-TON-DLK-1.3LY-K175",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-vat-lieu-2026-08-20"
+   },
+   "_ma_dung": [
+    "NVL-TON-DLK-1.3LY-K175"
+   ],
+   "title": "Tôn kẽm Đài Loan 1.3LY",
+   "content": "QC-TON-DL-KEM-1.3LY-K175 Tôn kẽm Đài Loan 1.3LY 175"
+  },
+  {
+   "name": "QC-TON-DL-KEM-8D-9D",
+   "payload": {
+    "spec_code": "QC-TON-DL-KEM-8D-9D",
+    "spec_name": "Tôn kẽm Đài Loan 1.1LY",
+    "material_grade": "TON-DL-KEM",
+    "spec_type": "Cuộn",
+    "item_group": "Nan/lá cửa",
+    "thickness_mm": null,
+    "note": "Mã ghi cả một DẢI \"8D-9D\", không phải một độ dày. Mặt hàng dùng: TP-LA-DLK-1.1LY",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-vat-lieu-2026-08-20"
+   },
+   "_ma_dung": [
+    "TP-LA-DLK-1.1LY"
+   ],
+   "title": "Tôn kẽm Đài Loan 1.1LY",
+   "content": "QC-TON-DL-KEM-8D-9D Tôn kẽm Đài Loan 1.1LY"
+  },
+  {
+   "name": "QC-TON-DL-KEM-8D-9D-K175",
+   "payload": {
+    "spec_code": "QC-TON-DL-KEM-8D-9D-K175",
+    "spec_name": "Tôn kẽm Đài Loan 9D khổ 175",
+    "material_grade": "TON-DL-KEM",
+    "spec_type": "Cuộn",
+    "item_group": "Nan/lá cửa",
+    "thickness_mm": null,
+    "note": "Khổ ghi trong mã: \"175\" — CHƯA rõ mm hay cm, để trống ô Khổ rộng. Mã ghi cả một DẢI \"8D-9D\", không phải một độ dày. Mặt hàng dùng: NVL-TON-DLK-9D-K175",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-vat-lieu-2026-08-20"
+   },
+   "_ma_dung": [
+    "NVL-TON-DLK-9D-K175"
+   ],
+   "title": "Tôn kẽm Đài Loan 9D",
+   "content": "QC-TON-DL-KEM-8D-9D-K175 Tôn kẽm Đài Loan 9D 175"
+  },
+  {
+   "name": "QC-TON-DL-MAU-5.2D-K124",
+   "payload": {
+    "spec_code": "QC-TON-DL-MAU-5.2D-K124",
+    "spec_name": "Tôn màu Đài Loan 6D khổ 124",
+    "material_grade": "TON-DL-MAU",
+    "spec_type": "Cuộn",
+    "item_group": "Nan/lá cửa",
+    "thickness_mm": 0.52,
+    "note": "Khổ ghi trong mã: \"124\" — CHƯA rõ mm hay cm, để trống ô Khổ rộng. Xưởng gọi \"6D\" (=0.6 mm) nhưng mã ghi 0.52 mm — lệch 0.08 mm. Lý do CHƯA biết; ghi cả hai, không sửa bên nào. Mặt hàng dùng: NVL-TON-DLM-6D-K124",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-vat-lieu-2026-08-20"
+   },
+   "_ma_dung": [
+    "NVL-TON-DLM-6D-K124"
+   ],
+   "title": "Tôn màu Đài Loan 6D",
+   "content": "QC-TON-DL-MAU-5.2D-K124 Tôn màu Đài Loan 6D 124"
+  },
+  {
+   "name": "QC-TON-DL-MAU-6.2D-K124",
+   "payload": {
+    "spec_code": "QC-TON-DL-MAU-6.2D-K124",
+    "spec_name": "Tôn màu Đài Loan 7D khổ 124",
+    "material_grade": "TON-DL-MAU",
+    "spec_type": "Cuộn",
+    "item_group": "Nan/lá cửa",
+    "thickness_mm": 0.62,
+    "note": "Khổ ghi trong mã: \"124\" — CHƯA rõ mm hay cm, để trống ô Khổ rộng. Xưởng gọi \"7D\" (=0.7 mm) nhưng mã ghi 0.62 mm — lệch 0.08 mm. Lý do CHƯA biết; ghi cả hai, không sửa bên nào. Mặt hàng dùng: NVL-TON-DLM-7D-K124",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-vat-lieu-2026-08-20"
+   },
+   "_ma_dung": [
+    "NVL-TON-DLM-7D-K124"
+   ],
+   "title": "Tôn màu Đài Loan 7D",
+   "content": "QC-TON-DL-MAU-6.2D-K124 Tôn màu Đài Loan 7D 124"
+  },
+  {
+   "name": "QC-TON-DL-MAU-7.2D-K124",
+   "payload": {
+    "spec_code": "QC-TON-DL-MAU-7.2D-K124",
+    "spec_name": "Tôn màu Đài Loan 8D khổ 124",
+    "material_grade": "TON-DL-MAU",
+    "spec_type": "Cuộn",
+    "item_group": "Nan/lá cửa",
+    "thickness_mm": 0.72,
+    "note": "Khổ ghi trong mã: \"124\" — CHƯA rõ mm hay cm, để trống ô Khổ rộng. Xưởng gọi \"8D\" (=0.8 mm) nhưng mã ghi 0.72 mm — lệch 0.08 mm. Lý do CHƯA biết; ghi cả hai, không sửa bên nào. Mặt hàng dùng: NVL-TON-DLM-8D-K124",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-vat-lieu-2026-08-20"
+   },
+   "_ma_dung": [
+    "NVL-TON-DLM-8D-K124"
+   ],
+   "title": "Tôn màu Đài Loan 8D",
+   "content": "QC-TON-DL-MAU-7.2D-K124 Tôn màu Đài Loan 8D 124"
+  },
+  {
+   "name": "QC-TON-DL-MAU-9.2D-K124",
+   "payload": {
+    "spec_code": "QC-TON-DL-MAU-9.2D-K124",
+    "spec_name": "Tôn màu Đài Loan 1LY khổ 124",
+    "material_grade": "TON-DL-MAU",
+    "spec_type": "Cuộn",
+    "item_group": "Nan/lá cửa",
+    "thickness_mm": 0.92,
+    "note": "Khổ ghi trong mã: \"124\" — CHƯA rõ mm hay cm, để trống ô Khổ rộng. Xưởng gọi \"1LY\" (=1 mm) nhưng mã ghi 0.92 mm — lệch 0.08 mm. Lý do CHƯA biết; ghi cả hai, không sửa bên nào. Mặt hàng dùng: NVL-TON-DLM-1LY-K124",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-vat-lieu-2026-08-20"
+   },
+   "_ma_dung": [
+    "NVL-TON-DLM-1LY-K124"
+   ],
+   "title": "Tôn màu Đài Loan 1LY",
+   "content": "QC-TON-DL-MAU-9.2D-K124 Tôn màu Đài Loan 1LY 124"
+  },
+  {
+   "name": "QC-TON-DL-MAU-9.2D-K175",
+   "payload": {
+    "spec_code": "QC-TON-DL-MAU-9.2D-K175",
+    "spec_name": "Tôn màu Đài Loan 1LY khổ 175",
+    "material_grade": "TON-DL-MAU",
+    "spec_type": "Cuộn",
+    "item_group": "Nan/lá cửa",
+    "thickness_mm": 0.92,
+    "note": "Khổ ghi trong mã: \"175\" — CHƯA rõ mm hay cm, để trống ô Khổ rộng. Xưởng gọi \"1LY\" (=1 mm) nhưng mã ghi 0.92 mm — lệch 0.08 mm. Lý do CHƯA biết; ghi cả hai, không sửa bên nào. Mặt hàng dùng: TP-LA-DLM-1LY-K175",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-vat-lieu-2026-08-20"
+   },
+   "_ma_dung": [
+    "TP-LA-DLM-1LY-K175"
+   ],
+   "title": "Tôn màu Đài Loan 1LY",
+   "content": "QC-TON-DL-MAU-9.2D-K175 Tôn màu Đài Loan 1LY 175"
+  },
+  {
+   "name": "QC-TON-UC-0.35mm-K598",
+   "payload": {
+    "spec_code": "QC-TON-UC-0.35mm-K598",
+    "spec_name": "Tôn Úc 3.8D khổ 598",
+    "material_grade": "TON-UC",
+    "spec_type": "Cuộn",
+    "item_group": "Nan/lá cửa",
+    "thickness_mm": 0.35,
+    "note": "Khổ ghi trong mã: \"598\" — CHƯA rõ mm hay cm, để trống ô Khổ rộng. Xưởng gọi \"3.8D\" (=0.38 mm) nhưng mã ghi 0.35 mm — lệch 0.03 mm. Lý do CHƯA biết; ghi cả hai, không sửa bên nào. Mặt hàng dùng: NVL-TON-UC-3.8D-K598",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-vat-lieu-2026-08-20"
+   },
+   "_ma_dung": [
+    "NVL-TON-UC-3.8D-K598"
+   ],
+   "title": "Tôn Úc 3.8D",
+   "content": "QC-TON-UC-0.35mm-K598 Tôn Úc 3.8D 598"
+  },
+  {
+   "name": "QC-TON-UC-0.42mm-K598",
+   "payload": {
+    "spec_code": "QC-TON-UC-0.42mm-K598",
+    "spec_name": "Tôn Úc 4.4D khổ 598",
+    "material_grade": "TON-UC",
+    "spec_type": "Cuộn",
+    "item_group": "Nan/lá cửa",
+    "thickness_mm": 0.42,
+    "note": "Khổ ghi trong mã: \"598\" — CHƯA rõ mm hay cm, để trống ô Khổ rộng. Xưởng gọi \"4.4D\" (=0.44 mm) nhưng mã ghi 0.42 mm — lệch 0.02 mm. Lý do CHƯA biết; ghi cả hai, không sửa bên nào. Mặt hàng dùng: NVL-TON-UC-4.4D-K598",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-vat-lieu-2026-08-20"
+   },
+   "_ma_dung": [
+    "NVL-TON-UC-4.4D-K598"
+   ],
+   "title": "Tôn Úc 4.4D",
+   "content": "QC-TON-UC-0.42mm-K598 Tôn Úc 4.4D 598"
+  },
+  {
+   "name": "QC-TON-UC-0.48mm-K598",
+   "payload": {
+    "spec_code": "QC-TON-UC-0.48mm-K598",
+    "spec_name": "Tôn Úc 4.8D-5.5D khổ 598",
+    "material_grade": "TON-UC",
+    "spec_type": "Cuộn",
+    "item_group": "Nan/lá cửa",
+    "thickness_mm": 0.48,
+    "note": "Khổ ghi trong mã: \"598\" — CHƯA rõ mm hay cm, để trống ô Khổ rộng. Mặt hàng dùng: NVL-TON-UC-4.8D-K598",
+    "disabled": false,
+    "_migration_source": "alumdoor-quy-cach-vat-lieu-2026-08-20"
+   },
+   "_ma_dung": [
+    "NVL-TON-UC-4.8D-K598"
+   ],
+   "title": "Tôn Úc 4.8D-5.5D",
+   "content": "QC-TON-UC-0.48mm-K598 Tôn Úc 4.8D-5.5D 598"
+  }
+ ]
+}

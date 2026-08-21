@@ -1,0 +1,4484 @@
+{
+ "doctype": "Item Price",
+ "trich_luc_luc": "2026-08-20T13:30:35.704Z",
+ "nguon": "work/pricing-preimage.json (558 dòng cũ) qua nhap/du-lieu/anh-xa-ma.json",
+ "so_ban_ghi": 263,
+ "dung_tu": {
+  "dong_cu": 558,
+  "o": 263,
+  "luc": "2026-08-20T13:30:35.704Z"
+ },
+ "ban_ghi": [
+  {
+   "name": "Alumdoor 2026:JG-BODK:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "JG-BODK",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "460000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "JG_BODK"
+   },
+   "title": "JG-BODK · Cái · mọi diện tích",
+   "content": "JG-BODK Cái MOI-DIEN-TICH 460000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-3X6M:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-3X6M",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "25000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-3X6M"
+   },
+   "title": "NVL-3X6M · Mét · mọi diện tích",
+   "content": "NVL-3X6M Mét MOI-DIEN-TICH 25000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-CHNHUA:Kg:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-CHNHUA",
+    "uom": "Kg",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "75000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-CHNHUA"
+   },
+   "title": "NVL-CHNHUA · Kg · mọi diện tích",
+   "content": "NVL-CHNHUA Kg MOI-DIEN-TICH 75000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-Cot:Cây:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-Cot",
+    "uom": "Cây",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "80000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL_Cot"
+   },
+   "title": "NVL-Cot · Cây · mọi diện tích",
+   "content": "NVL-Cot Cây MOI-DIEN-TICH 80000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-GIAT:Cặp:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-GIAT",
+    "uom": "Cặp",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "120000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-GIAT"
+   },
+   "title": "NVL-GIAT · Cặp · mọi diện tích",
+   "content": "NVL-GIAT Cặp MOI-DIEN-TICH 120000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-GOIFE:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-GOIFE",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "65000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-GOIFE"
+   },
+   "title": "NVL-GOIFE · Cái · mọi diện tích",
+   "content": "NVL-GOIFE Cái MOI-DIEN-TICH 65000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-Hoakhe:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-Hoakhe",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "50000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL_Hoakhe"
+   },
+   "title": "NVL-Hoakhe · Cái · mọi diện tích",
+   "content": "NVL-Hoakhe Cái MOI-DIEN-TICH 50000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-Longden:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-Longden",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "50000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL_Longden"
+   },
+   "title": "NVL-Longden · Cái · mọi diện tích",
+   "content": "NVL-Longden Cái MOI-DIEN-TICH 50000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-LV-6.0-x-70-x-53V:Kg:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-LV-6.0-x-70-x-53V",
+    "uom": "Kg",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "45000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-LV-6.0 x 70 x 53V"
+   },
+   "title": "NVL-LV-6.0-x-70-x-53V · Kg · mọi diện tích",
+   "content": "NVL-LV-6.0-x-70-x-53V Kg MOI-DIEN-TICH 45000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-LV-6.5-x-80-x-63V:Kg:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-LV-6.5-x-80-x-63V",
+    "uom": "Kg",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "45000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-LV-6.5 x 80 x 63V"
+   },
+   "title": "NVL-LV-6.5-x-80-x-63V · Kg · mọi diện tích",
+   "content": "NVL-LV-6.5-x-80-x-63V Kg MOI-DIEN-TICH 45000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-LV-6.5-x-80-x-68V:Kg:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-LV-6.5-x-80-x-68V",
+    "uom": "Kg",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "45000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-LV-6.5 x 80 x 68V"
+   },
+   "title": "NVL-LV-6.5-x-80-x-68V · Kg · mọi diện tích",
+   "content": "NVL-LV-6.5-x-80-x-68V Kg MOI-DIEN-TICH 45000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-LV-7.0-x-90-x-65V:Kg:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-LV-7.0-x-90-x-65V",
+    "uom": "Kg",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "45000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-LV-7.0 x 90 x 65V"
+   },
+   "title": "NVL-LV-7.0-x-90-x-65V · Kg · mọi diện tích",
+   "content": "NVL-LV-7.0-x-90-x-65V Kg MOI-DIEN-TICH 45000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-LV-7.0-x-90-x-73V:Kg:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-LV-7.0-x-90-x-73V",
+    "uom": "Kg",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "45000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-LV-7.0 x 90 x 73V"
+   },
+   "title": "NVL-LV-7.0-x-90-x-73V · Kg · mọi diện tích",
+   "content": "NVL-LV-7.0-x-90-x-73V Kg MOI-DIEN-TICH 45000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-LV-7.0-x-90-x-83V:Kg:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-LV-7.0-x-90-x-83V",
+    "uom": "Kg",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "45000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-LV-7.0 x 90 x 83V"
+   },
+   "title": "NVL-LV-7.0-x-90-x-83V · Kg · mọi diện tích",
+   "content": "NVL-LV-7.0-x-90-x-83V Kg MOI-DIEN-TICH 45000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-LX-5.5-X-70-X-46V:Kg:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-LX-5.5-X-70-X-46V",
+    "uom": "Kg",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "45000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-LX-5.5 X 70 X 46V"
+   },
+   "title": "NVL-LX-5.5-X-70-X-46V · Kg · mọi diện tích",
+   "content": "NVL-LX-5.5-X-70-X-46V Kg MOI-DIEN-TICH 45000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-LX-5.5-x-70-x-50V:Kg:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-LX-5.5-x-70-x-50V",
+    "uom": "Kg",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "45000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-LX-5.5 x 70 x 50V"
+   },
+   "title": "NVL-LX-5.5-x-70-x-50V · Kg · mọi diện tích",
+   "content": "NVL-LX-5.5-x-70-x-50V Kg MOI-DIEN-TICH 45000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-Napchup+Bacdan:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-Napchup+Bacdan",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "100000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL_Napchup+Bacdan"
+   },
+   "title": "NVL-Napchup+Bacdan · Bộ · mọi diện tích",
+   "content": "NVL-Napchup+Bacdan Bộ MOI-DIEN-TICH 100000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-OKHOA:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-OKHOA",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "100000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-OKHOA"
+   },
+   "title": "NVL-OKHOA · Bộ · mọi diện tích",
+   "content": "NVL-OKHOA Bộ MOI-DIEN-TICH 100000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-PHOTLONG12,5X5X120M:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-PHOTLONG12,5X5X120M",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "7000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-PHOTLONG12,5X5X120M"
+   },
+   "title": "NVL-PHOTLONG12,5X5X120M · Mét · mọi diện tích",
+   "content": "NVL-PHOTLONG12,5X5X120M Mét MOI-DIEN-TICH 7000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-PULYUC114:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-PULYUC114",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "38000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-PULYUC114"
+   },
+   "title": "NVL-PULYUC114 · Cái · mọi diện tích",
+   "content": "NVL-PULYUC114 Cái MOI-DIEN-TICH 38000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-PULYUC34:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-PULYUC34",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "36000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-PULYUC34"
+   },
+   "title": "NVL-PULYUC34 · Cái · mọi diện tích",
+   "content": "NVL-PULYUC34 Cái MOI-DIEN-TICH 36000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-RAY-U100-1.2LY-KRON:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-RAY-U100-1.2LY-KRON",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "90000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-TOLE1.4x270x1.2ly-KRON"
+   },
+   "title": "NVL-RAY-U100-1.2LY-KRON · Mét · mọi diện tích",
+   "content": "NVL-RAY-U100-1.2LY-KRON Mét MOI-DIEN-TICH 90000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-RAY-U100-1.2LY-RON:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-RAY-U100-1.2LY-RON",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "95000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-TOLE1.4x270x1.2ly-CRON"
+   },
+   "title": "NVL-RAY-U100-1.2LY-RON · Mét · mọi diện tích",
+   "content": "NVL-RAY-U100-1.2LY-RON Mét MOI-DIEN-TICH 95000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-RAY-U100-1.4LY-KRON:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-RAY-U100-1.4LY-KRON",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "105000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-TOLE1.4x270x1.4ly-KRON"
+   },
+   "title": "NVL-RAY-U100-1.4LY-KRON · Mét · mọi diện tích",
+   "content": "NVL-RAY-U100-1.4LY-KRON Mét MOI-DIEN-TICH 105000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-RAY-U100-1.4LY-RON:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-RAY-U100-1.4LY-RON",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "110000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-TOLE1.4x270x1.4ly-CRON"
+   },
+   "title": "NVL-RAY-U100-1.4LY-RON · Mét · mọi diện tích",
+   "content": "NVL-RAY-U100-1.4LY-RON Mét MOI-DIEN-TICH 110000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-RAY-U100-1.4LY-RON-TD:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-RAY-U100-1.4LY-RON-TD",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "135000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-TOLE1.4x270x1.4ly-CRON+TD"
+   },
+   "title": "NVL-RAY-U100-1.4LY-RON-TD · Mét · mọi diện tích",
+   "content": "NVL-RAY-U100-1.4LY-RON-TD Mét MOI-DIEN-TICH 135000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-RAY-U70-KRON:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-RAY-U70-KRON",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "70000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-TOLE1.2x190-KRON"
+   },
+   "title": "NVL-RAY-U70-KRON · Mét · mọi diện tích",
+   "content": "NVL-RAY-U70-KRON Mét MOI-DIEN-TICH 70000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-Tanker-nhong:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-Tanker-nhong",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "70000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL_Tanker-nhong"
+   },
+   "title": "NVL-Tanker-nhong · Cái · mọi diện tích",
+   "content": "NVL-Tanker-nhong Cái MOI-DIEN-TICH 70000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-TIINOX:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-TIINOX",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "150000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-TIINOX"
+   },
+   "title": "NVL-TIINOX · Mét · mọi diện tích",
+   "content": "NVL-TIINOX Mét MOI-DIEN-TICH 150000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-TON-DLM-1LY-K124:Kg:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-TON-DLM-1LY-K124",
+    "uom": "Kg",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "380000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-TON-DL9.2Dx124-XNVK · NVL-TON-DL9.2Dx124-XNXLC"
+   },
+   "title": "NVL-TON-DLM-1LY-K124 · Kg · mọi diện tích",
+   "content": "NVL-TON-DLM-1LY-K124 Kg MOI-DIEN-TICH 380000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-TON-DLM-6D-K124:Kg:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-TON-DLM-6D-K124",
+    "uom": "Kg",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "280000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-TON-DL5.2Dx124-XNVK · NVL-TON-DL5.2Dx124-XNXLC"
+   },
+   "title": "NVL-TON-DLM-6D-K124 · Kg · mọi diện tích",
+   "content": "NVL-TON-DLM-6D-K124 Kg MOI-DIEN-TICH 280000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-TON-DLM-7D-K124:Kg:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-TON-DLM-7D-K124",
+    "uom": "Kg",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "300000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-TON-DL6.2Dx124-XNVK · NVL-TON-DL6.2Dx124-XNXLC"
+   },
+   "title": "NVL-TON-DLM-7D-K124 · Kg · mọi diện tích",
+   "content": "NVL-TON-DLM-7D-K124 Kg MOI-DIEN-TICH 300000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-TON-DLM-8D-K124:Kg:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-TON-DLM-8D-K124",
+    "uom": "Kg",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "320000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-TON-DL7.2Dx124-XNVK · NVL-TON-DL7.2Dx124-XNXLC"
+   },
+   "title": "NVL-TON-DLM-8D-K124 · Kg · mọi diện tích",
+   "content": "NVL-TON-DLM-8D-K124 Kg MOI-DIEN-TICH 320000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-TRUC34:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-TRUC34",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "150000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-TRUC34"
+   },
+   "title": "NVL-TRUC34 · Mét · mọi diện tích",
+   "content": "NVL-TRUC34 Mét MOI-DIEN-TICH 150000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-TRUC90:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-TRUC90",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "120000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-TRUC90"
+   },
+   "title": "NVL-TRUC90 · Mét · mọi diện tích",
+   "content": "NVL-TRUC90 Mét MOI-DIEN-TICH 120000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-V4-KEM:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-V4-KEM",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "70000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-V4_KEM_STD"
+   },
+   "title": "NVL-V4-KEM · Mét · mọi diện tích",
+   "content": "NVL-V4-KEM Mét MOI-DIEN-TICH 70000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-V4-KEM-TOLE75:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-V4-KEM-TOLE75",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "55000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-V4-KEM_TOLE75_STD"
+   },
+   "title": "NVL-V4-KEM-TOLE75 · Mét · mọi diện tích",
+   "content": "NVL-V4-KEM-TOLE75 Mét MOI-DIEN-TICH 55000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-V5-KEM:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-V5-KEM",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "75000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-V5_KEM_STD"
+   },
+   "title": "NVL-V5-KEM · Mét · mọi diện tích",
+   "content": "NVL-V5-KEM Mét MOI-DIEN-TICH 75000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-VDAY-TDU-KTD:Kg:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-VDAY-TDU-KTD",
+    "uom": "Kg",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "118000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-VDAY-TDU-KTD"
+   },
+   "title": "NVL-VDAY-TDU-KTD · Kg · mọi diện tích",
+   "content": "NVL-VDAY-TDU-KTD Kg MOI-DIEN-TICH 118000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-XOP-N45:Tấm:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-XOP-N45",
+    "uom": "Tấm",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "18000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-XOP-N45"
+   },
+   "title": "NVL-XOP-N45 · Tấm · mọi diện tích",
+   "content": "NVL-XOP-N45 Tấm MOI-DIEN-TICH 18000"
+  },
+  {
+   "name": "Alumdoor 2026:NVL-XOP-N90:Tấm:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "NVL-XOP-N90",
+    "uom": "Tấm",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "24000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-XOP-N90"
+   },
+   "title": "NVL-XOP-N90 · Tấm · mọi diện tích",
+   "content": "NVL-XOP-N90 Tấm MOI-DIEN-TICH 24000"
+  },
+  {
+   "name": "Alumdoor 2026:RNHUA-DR:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "RNHUA-DR",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "20000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "RNHUA-DR"
+   },
+   "title": "RNHUA-DR · Mét · mọi diện tích",
+   "content": "RNHUA-DR Mét MOI-DIEN-TICH 20000"
+  },
+  {
+   "name": "Alumdoor 2026:RNHUA/LONG-CR:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "RNHUA/LONG-CR",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "6000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "RNHUA/LONG-CR"
+   },
+   "title": "RNHUA/LONG-CR · Mét · mọi diện tích",
+   "content": "RNHUA/LONG-CR Mét MOI-DIEN-TICH 6000"
+  },
+  {
+   "name": "Alumdoor 2026:RNINOX-DR:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "RNINOX-DR",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "15000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "RNINOX-DR"
+   },
+   "title": "RNINOX-DR · Mét · mọi diện tích",
+   "content": "RNINOX-DR Mét MOI-DIEN-TICH 15000"
+  },
+  {
+   "name": "Alumdoor 2026:RON-DD:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "RON-DD",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "10000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "RON-DD"
+   },
+   "title": "RON-DD · Mét · mọi diện tích",
+   "content": "RON-DD Mét MOI-DIEN-TICH 10000"
+  },
+  {
+   "name": "Alumdoor 2026:RONDAYUC:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "RONDAYUC",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "10000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "RONDAYUC"
+   },
+   "title": "RONDAYUC · Mét · mọi diện tích",
+   "content": "RONDAYUC Mét MOI-DIEN-TICH 10000"
+  },
+  {
+   "name": "Alumdoor 2026:RONNHUA-INOX:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "RONNHUA-INOX",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "30000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "RONNHUA_INOX"
+   },
+   "title": "RONNHUA-INOX · Mét · mọi diện tích",
+   "content": "RONNHUA-INOX Mét MOI-DIEN-TICH 30000"
+  },
+  {
+   "name": "Alumdoor 2026:TD-AL595:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TD-AL595",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1095000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TD-AL595 GS"
+   },
+   "title": "TD-AL595 · m2 · mọi diện tích",
+   "content": "TD-AL595 m2 MOI-DIEN-TICH 1095000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-A282:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-A282",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "170000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-A282"
+   },
+   "title": "TP-A282 · Mét · mọi diện tích",
+   "content": "TP-A282 Mét MOI-DIEN-TICH 170000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-AL70-1LOP:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-AL70-1LOP",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1242000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-AL70-1LOP THÔ"
+   },
+   "title": "TP-AL70-1LOP · m2 · mọi diện tích",
+   "content": "TP-AL70-1LOP m2 MOI-DIEN-TICH 1242000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-AL75:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-AL75",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1403000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-AL75 GS · TP-AL75 THO · TP-AL75 VK"
+   },
+   "title": "TP-AL75 · m2 · mọi diện tích",
+   "content": "TP-AL75 m2 MOI-DIEN-TICH 1403000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-ALD-548N:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-ALD-548N",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1390000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-ALD-548N GS · TP-ALD-548N THO · TP-ALD-548N VK"
+   },
+   "title": "TP-ALD-548N · m2 · mọi diện tích",
+   "content": "TP-ALD-548N m2 MOI-DIEN-TICH 1390000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-ALD-DL552:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-ALD-DL552",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1666000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-ALD-DL552 GS · TP-ALD-DL552 THO · TP-ALD-DL552 VK"
+   },
+   "title": "TP-ALD-DL552 · m2 · mọi diện tích",
+   "content": "TP-ALD-DL552 m2 MOI-DIEN-TICH 1666000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-ALVIP50:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-ALVIP50",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1912000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-ALVIP50 GS · TP-ALVIP50 THO"
+   },
+   "title": "TP-ALVIP50 · m2 · mọi diện tích",
+   "content": "TP-ALVIP50 m2 MOI-DIEN-TICH 1912000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-ALVIPST500:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-ALVIPST500",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "2268000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-ALVIPST500 THO"
+   },
+   "title": "TP-ALVIPST500 · m2 · mọi diện tích",
+   "content": "TP-ALVIPST500 m2 MOI-DIEN-TICH 2268000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-ALVIPST700:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-ALVIPST700",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "2392000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-ALVIPST700 THO"
+   },
+   "title": "TP-ALVIPST700 · m2 · mọi diện tích",
+   "content": "TP-ALVIPST700 m2 MOI-DIEN-TICH 2392000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-BDK-TANKER-ALUMAX:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-BDK-TANKER-ALUMAX",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "270000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-BDK-TANKER-ALUMAX"
+   },
+   "title": "TP-BDK-TANKER-ALUMAX · Bộ · mọi diện tích",
+   "content": "TP-BDK-TANKER-ALUMAX Bộ MOI-DIEN-TICH 270000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-BDKDT-MULLER:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-BDKDT-MULLER",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "750000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-BDKDT_MULLER"
+   },
+   "title": "TP-BDKDT-MULLER · Bộ · mọi diện tích",
+   "content": "TP-BDKDT-MULLER Bộ MOI-DIEN-TICH 750000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-BKAN:Cặp:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-BKAN",
+    "uom": "Cặp",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "88000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-BKAN"
+   },
+   "title": "TP-BKAN · Cặp · mọi diện tích",
+   "content": "TP-BKAN Cặp MOI-DIEN-TICH 88000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-BO-1VIS-503N-71-595:Con:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-BO-1VIS-503N-71-595",
+    "uom": "Con",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1500",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-BO 1VIS 503N-71-595"
+   },
+   "title": "TP-BO-1VIS-503N-71-595 · Con · mọi diện tích",
+   "content": "TP-BO-1VIS-503N-71-595 Con MOI-DIEN-TICH 1500"
+  },
+  {
+   "name": "Alumdoor 2026:TP-BO-1VIS-AL503C:Con:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-BO-1VIS-AL503C",
+    "uom": "Con",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1500",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-BO 1VIS AL503C"
+   },
+   "title": "TP-BO-1VIS-AL503C · Con · mọi diện tích",
+   "content": "TP-BO-1VIS-AL503C Con MOI-DIEN-TICH 1500"
+  },
+  {
+   "name": "Alumdoor 2026:TP-BO-1VIS-AL701LOP:Con:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-BO-1VIS-AL701LOP",
+    "uom": "Con",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1500",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-BO 1VIS AL701LOP"
+   },
+   "title": "TP-BO-1VIS-AL701LOP · Con · mọi diện tích",
+   "content": "TP-BO-1VIS-AL701LOP Con MOI-DIEN-TICH 1500"
+  },
+  {
+   "name": "Alumdoor 2026:TP-BO-1VIS-AL702LOP:Con:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-BO-1VIS-AL702LOP",
+    "uom": "Con",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1500",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-BO 1VIS AL702LOP"
+   },
+   "title": "TP-BO-1VIS-AL702LOP · Con · mọi diện tích",
+   "content": "TP-BO-1VIS-AL702LOP Con MOI-DIEN-TICH 1500"
+  },
+  {
+   "name": "Alumdoor 2026:TP-BO-1VIS-AL75:Con:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-BO-1VIS-AL75",
+    "uom": "Con",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1500",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-BO 1VIS AL75"
+   },
+   "title": "TP-BO-1VIS-AL75 · Con · mọi diện tích",
+   "content": "TP-BO-1VIS-AL75 Con MOI-DIEN-TICH 1500"
+  },
+  {
+   "name": "Alumdoor 2026:TP-BO-2VIS-501-552:Con:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-BO-2VIS-501-552",
+    "uom": "Con",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "2500",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-BO 2VIS-501-552"
+   },
+   "title": "TP-BO-2VIS-501-552 · Con · mọi diện tích",
+   "content": "TP-BO-2VIS-501-552 Con MOI-DIEN-TICH 2500"
+  },
+  {
+   "name": "Alumdoor 2026:TP-BO-2VIS-652-548C:Con:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-BO-2VIS-652-548C",
+    "uom": "Con",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "2500",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-BO 2VIS-652-548C"
+   },
+   "title": "TP-BO-2VIS-652-548C · Con · mọi diện tích",
+   "content": "TP-BO-2VIS-652-548C Con MOI-DIEN-TICH 2500"
+  },
+  {
+   "name": "Alumdoor 2026:TP-BO-2VIS-752-VIPST700:Con:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-BO-2VIS-752-VIPST700",
+    "uom": "Con",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "2500",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-BO 2VIS 752-VIPST700"
+   },
+   "title": "TP-BO-2VIS-752-VIPST700 · Con · mọi diện tích",
+   "content": "TP-BO-2VIS-752-VIPST700 Con MOI-DIEN-TICH 2500"
+  },
+  {
+   "name": "Alumdoor 2026:TP-BO-2VIS-AL50-VIP50-AL548-ST500:Con:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-BO-2VIS-AL50-VIP50-AL548-ST500",
+    "uom": "Con",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "2500",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-BO 2VIS AL50-VIP50-AL548-ST500"
+   },
+   "title": "TP-BO-2VIS-AL50-VIP50-AL548-ST500 · Con · mọi diện tích",
+   "content": "TP-BO-2VIS-AL50-VIP50-AL548-ST500 Con MOI-DIEN-TICH 2500"
+  },
+  {
+   "name": "Alumdoor 2026:TP-BO3LADAY:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-BO3LADAY",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "230000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-BO3LADAY"
+   },
+   "title": "TP-BO3LADAY · Mét · mọi diện tích",
+   "content": "TP-BO3LADAY Mét MOI-DIEN-TICH 230000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-BOSTEC-BODIEUKHIEN:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-BOSTEC-BODIEUKHIEN",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1850000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP_BOSTEC_BODIEUKHIEN"
+   },
+   "title": "TP-BOSTEC-BODIEUKHIEN · Cái · mọi diện tích",
+   "content": "TP-BOSTEC-BODIEUKHIEN Cái MOI-DIEN-TICH 1850000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-BUOMINOX:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-BUOMINOX",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "60000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-BUOMINOX"
+   },
+   "title": "TP-BUOMINOX · m2 · mọi diện tích",
+   "content": "TP-BUOMINOX m2 MOI-DIEN-TICH 60000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-BUOMSAT-DL:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-BUOMSAT-DL",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "30000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-BUOMSAT-DL"
+   },
+   "title": "TP-BUOMSAT-DL · m2 · mọi diện tích",
+   "content": "TP-BUOMSAT-DL m2 MOI-DIEN-TICH 30000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-BUOMSAT-ST:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-BUOMSAT-ST",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "30000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-BUOMSAT-ST"
+   },
+   "title": "TP-BUOMSAT-ST · m2 · mọi diện tích",
+   "content": "TP-BUOMSAT-ST m2 MOI-DIEN-TICH 30000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CHONGXOLO:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CHONGXOLO",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "65000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CHONGXOLO"
+   },
+   "title": "TP-CHONGXOLO · Cái · mọi diện tích",
+   "content": "TP-CHONGXOLO Cái MOI-DIEN-TICH 65000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CHTAIWAN-BODIEUKHIEN:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CHTAIWAN-BODIEUKHIEN",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "2400000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP_CHTAIWAN_BODIEUKHIEN"
+   },
+   "title": "TP-CHTAIWAN-BODIEUKHIEN · Cái · mọi diện tích",
+   "content": "TP-CHTAIWAN-BODIEUKHIEN Cái MOI-DIEN-TICH 2400000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-COI:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-COI",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "70000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-COI"
+   },
+   "title": "TP-COI · Cái · mọi diện tích",
+   "content": "TP-COI Cái MOI-DIEN-TICH 70000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CON-LĂN:Cặp:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CON-LĂN",
+    "uom": "Cặp",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "100000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CON LĂN"
+   },
+   "title": "TP-CON-LĂN · Cặp · mọi diện tích",
+   "content": "TP-CON-LĂN Cặp MOI-DIEN-TICH 100000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLK-1.2LY:m2:STANDARD:DT-3-4M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLK-1.2LY",
+    "uom": "m2",
+    "area_tier": "DT-3-4M2",
+    "price_variant": "STANDARD",
+    "rate": "690000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TOLEKEM124_1LY_TRONBO_3-4m²_MSK"
+   },
+   "title": "TP-CUA-DLK-1.2LY · m2 · DT-3-4M2",
+   "content": "TP-CUA-DLK-1.2LY m2 DT-3-4M2 690000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLK-1.2LY:m2:STANDARD:DT-4-5M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLK-1.2LY",
+    "uom": "m2",
+    "area_tier": "DT-4-5M2",
+    "price_variant": "STANDARD",
+    "rate": "680000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TOLEKEM124_1LY_TRONBO_4-5m²_MSK"
+   },
+   "title": "TP-CUA-DLK-1.2LY · m2 · DT-4-5M2",
+   "content": "TP-CUA-DLK-1.2LY m2 DT-4-5M2 680000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLK-1.2LY:m2:STANDARD:DT-5-6M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLK-1.2LY",
+    "uom": "m2",
+    "area_tier": "DT-5-6M2",
+    "price_variant": "STANDARD",
+    "rate": "670000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TOLEKEM124_1LY_TRONBO_5-6m²_MSK"
+   },
+   "title": "TP-CUA-DLK-1.2LY · m2 · DT-5-6M2",
+   "content": "TP-CUA-DLK-1.2LY m2 DT-5-6M2 670000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLK-1.2LY:m2:STANDARD:DT-6-7M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLK-1.2LY",
+    "uom": "m2",
+    "area_tier": "DT-6-7M2",
+    "price_variant": "STANDARD",
+    "rate": "660000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TOLEKEM124_1LY_TRONBO_6-7m²_MSK"
+   },
+   "title": "TP-CUA-DLK-1.2LY · m2 · DT-6-7M2",
+   "content": "TP-CUA-DLK-1.2LY m2 DT-6-7M2 660000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLK-1.2LY:m2:STANDARD:DT-7-8M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLK-1.2LY",
+    "uom": "m2",
+    "area_tier": "DT-7-8M2",
+    "price_variant": "STANDARD",
+    "rate": "650000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TOLEKEM124_1LY_TRONBO_7-8m²_MSK"
+   },
+   "title": "TP-CUA-DLK-1.2LY · m2 · DT-7-8M2",
+   "content": "TP-CUA-DLK-1.2LY m2 DT-7-8M2 650000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLK-1.2LY:m2:STANDARD:DT-8-9M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLK-1.2LY",
+    "uom": "m2",
+    "area_tier": "DT-8-9M2",
+    "price_variant": "STANDARD",
+    "rate": "640000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TOLEKEM124_1LY_TRONBO_8-9m²_MSK"
+   },
+   "title": "TP-CUA-DLK-1.2LY · m2 · DT-8-9M2",
+   "content": "TP-CUA-DLK-1.2LY m2 DT-8-9M2 640000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLK-1.2LY:m2:STANDARD:DT-9-10M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLK-1.2LY",
+    "uom": "m2",
+    "area_tier": "DT-9-10M2",
+    "price_variant": "STANDARD",
+    "rate": "630000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TOLEKEM124_1LY_TRONBO_9-10m²_MSK"
+   },
+   "title": "TP-CUA-DLK-1.2LY · m2 · DT-9-10M2",
+   "content": "TP-CUA-DLK-1.2LY m2 DT-9-10M2 630000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLK-1.2LY:m2:STANDARD:DT-TREN-10M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLK-1.2LY",
+    "uom": "m2",
+    "area_tier": "DT-TREN-10M2",
+    "price_variant": "STANDARD",
+    "rate": "620000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TOLEKEM124_1LY_TRONBO>10m²_MSK"
+   },
+   "title": "TP-CUA-DLK-1.2LY · m2 · DT-TREN-10M2",
+   "content": "TP-CUA-DLK-1.2LY m2 DT-TREN-10M2 620000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLK-1LY:m2:STANDARD:DT-3-4M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLK-1LY",
+    "uom": "m2",
+    "area_tier": "DT-3-4M2",
+    "price_variant": "STANDARD",
+    "rate": "660000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TOLEKEM124_8D_TRONBO_3-4m²_MSK"
+   },
+   "title": "TP-CUA-DLK-1LY · m2 · DT-3-4M2",
+   "content": "TP-CUA-DLK-1LY m2 DT-3-4M2 660000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLK-1LY:m2:STANDARD:DT-4-5M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLK-1LY",
+    "uom": "m2",
+    "area_tier": "DT-4-5M2",
+    "price_variant": "STANDARD",
+    "rate": "640000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TOLEKEM124_8D_TRONBO_4-5m²_MSK"
+   },
+   "title": "TP-CUA-DLK-1LY · m2 · DT-4-5M2",
+   "content": "TP-CUA-DLK-1LY m2 DT-4-5M2 640000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLK-1LY:m2:STANDARD:DT-5-6M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLK-1LY",
+    "uom": "m2",
+    "area_tier": "DT-5-6M2",
+    "price_variant": "STANDARD",
+    "rate": "620000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TOLEKEM124_8D_TRONBO_5-6m²_MSK"
+   },
+   "title": "TP-CUA-DLK-1LY · m2 · DT-5-6M2",
+   "content": "TP-CUA-DLK-1LY m2 DT-5-6M2 620000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLK-1LY:m2:STANDARD:DT-6-7M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLK-1LY",
+    "uom": "m2",
+    "area_tier": "DT-6-7M2",
+    "price_variant": "STANDARD",
+    "rate": "610000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TOLEKEM124_8D_TRONBO_6-7m²_MSK"
+   },
+   "title": "TP-CUA-DLK-1LY · m2 · DT-6-7M2",
+   "content": "TP-CUA-DLK-1LY m2 DT-6-7M2 610000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLK-1LY:m2:STANDARD:DT-7-8M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLK-1LY",
+    "uom": "m2",
+    "area_tier": "DT-7-8M2",
+    "price_variant": "STANDARD",
+    "rate": "590000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TOLEKEM124_8D_TRONBO_7-8m²_MSK"
+   },
+   "title": "TP-CUA-DLK-1LY · m2 · DT-7-8M2",
+   "content": "TP-CUA-DLK-1LY m2 DT-7-8M2 590000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLK-1LY:m2:STANDARD:DT-8-9M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLK-1LY",
+    "uom": "m2",
+    "area_tier": "DT-8-9M2",
+    "price_variant": "STANDARD",
+    "rate": "580000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TOLEKEM124_8D_TRONBO_8-9m²_MSK"
+   },
+   "title": "TP-CUA-DLK-1LY · m2 · DT-8-9M2",
+   "content": "TP-CUA-DLK-1LY m2 DT-8-9M2 580000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLK-1LY:m2:STANDARD:DT-9-10M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLK-1LY",
+    "uom": "m2",
+    "area_tier": "DT-9-10M2",
+    "price_variant": "STANDARD",
+    "rate": "570000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TOLEKEM124_8D_TRONBO_9-10m²_MSK"
+   },
+   "title": "TP-CUA-DLK-1LY · m2 · DT-9-10M2",
+   "content": "TP-CUA-DLK-1LY m2 DT-9-10M2 570000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLK-1LY:m2:STANDARD:DT-TREN-10M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLK-1LY",
+    "uom": "m2",
+    "area_tier": "DT-TREN-10M2",
+    "price_variant": "STANDARD",
+    "rate": "560000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TOLEKEM124_8D_TRONBO>10m²_MSK"
+   },
+   "title": "TP-CUA-DLK-1LY · m2 · DT-TREN-10M2",
+   "content": "TP-CUA-DLK-1LY m2 DT-TREN-10M2 560000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLK-8D:m2:STANDARD:DT-3-4M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLK-8D",
+    "uom": "m2",
+    "area_tier": "DT-3-4M2",
+    "price_variant": "STANDARD",
+    "rate": "570000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TOLEKEM124_6D_TRONBO_3-4m²_MSK"
+   },
+   "title": "TP-CUA-DLK-8D · m2 · DT-3-4M2",
+   "content": "TP-CUA-DLK-8D m2 DT-3-4M2 570000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLK-8D:m2:STANDARD:DT-4-5M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLK-8D",
+    "uom": "m2",
+    "area_tier": "DT-4-5M2",
+    "price_variant": "STANDARD",
+    "rate": "560000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TOLEKEM124_6D_TRONBO_4-5m²_MSK"
+   },
+   "title": "TP-CUA-DLK-8D · m2 · DT-4-5M2",
+   "content": "TP-CUA-DLK-8D m2 DT-4-5M2 560000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLK-8D:m2:STANDARD:DT-5-6M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLK-8D",
+    "uom": "m2",
+    "area_tier": "DT-5-6M2",
+    "price_variant": "STANDARD",
+    "rate": "550000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TOLEKEM124_6D_TRONBO_5-6m²_MSK"
+   },
+   "title": "TP-CUA-DLK-8D · m2 · DT-5-6M2",
+   "content": "TP-CUA-DLK-8D m2 DT-5-6M2 550000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLK-8D:m2:STANDARD:DT-6-7M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLK-8D",
+    "uom": "m2",
+    "area_tier": "DT-6-7M2",
+    "price_variant": "STANDARD",
+    "rate": "540000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TOLEKEM124_6D_TRONBO_6-7m²_MSK"
+   },
+   "title": "TP-CUA-DLK-8D · m2 · DT-6-7M2",
+   "content": "TP-CUA-DLK-8D m2 DT-6-7M2 540000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLK-8D:m2:STANDARD:DT-7-8M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLK-8D",
+    "uom": "m2",
+    "area_tier": "DT-7-8M2",
+    "price_variant": "STANDARD",
+    "rate": "530000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TOLEKEM124_6D_TRONBO_7-8m²_MSK"
+   },
+   "title": "TP-CUA-DLK-8D · m2 · DT-7-8M2",
+   "content": "TP-CUA-DLK-8D m2 DT-7-8M2 530000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLK-8D:m2:STANDARD:DT-8-9M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLK-8D",
+    "uom": "m2",
+    "area_tier": "DT-8-9M2",
+    "price_variant": "STANDARD",
+    "rate": "520000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TOLEKEM124_6D_TRONBO_8-9m²_MSK"
+   },
+   "title": "TP-CUA-DLK-8D · m2 · DT-8-9M2",
+   "content": "TP-CUA-DLK-8D m2 DT-8-9M2 520000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLK-8D:m2:STANDARD:DT-9-10M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLK-8D",
+    "uom": "m2",
+    "area_tier": "DT-9-10M2",
+    "price_variant": "STANDARD",
+    "rate": "510000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TOLEKEM124_6D_TRONBO_9-10m²_MSK"
+   },
+   "title": "TP-CUA-DLK-8D · m2 · DT-9-10M2",
+   "content": "TP-CUA-DLK-8D m2 DT-9-10M2 510000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLK-8D:m2:STANDARD:DT-TREN-10M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLK-8D",
+    "uom": "m2",
+    "area_tier": "DT-TREN-10M2",
+    "price_variant": "STANDARD",
+    "rate": "500000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TOLEKEM124_6D_TRONBO>10m²_MSK"
+   },
+   "title": "TP-CUA-DLK-8D · m2 · DT-TREN-10M2",
+   "content": "TP-CUA-DLK-8D m2 DT-TREN-10M2 500000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLM-1LY:m2:STANDARD:DT-3-4M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLM-1LY",
+    "uom": "m2",
+    "area_tier": "DT-3-4M2",
+    "price_variant": "STANDARD",
+    "rate": "590000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CUADL1LY XN-VK_TRONBO_3-4m² · TP-CUADL1LY XN-XLC_TRONBO_3-4m²"
+   },
+   "title": "TP-CUA-DLM-1LY · m2 · DT-3-4M2",
+   "content": "TP-CUA-DLM-1LY m2 DT-3-4M2 590000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLM-1LY:m2:STANDARD:DT-4-5M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLM-1LY",
+    "uom": "m2",
+    "area_tier": "DT-4-5M2",
+    "price_variant": "STANDARD",
+    "rate": "580000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CUADL1LY XN-VK_TRONBO_4-5m² · TP-CUADL1LY XN-XLC_TRONBO_4-5m²"
+   },
+   "title": "TP-CUA-DLM-1LY · m2 · DT-4-5M2",
+   "content": "TP-CUA-DLM-1LY m2 DT-4-5M2 580000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLM-1LY:m2:STANDARD:DT-5-6M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLM-1LY",
+    "uom": "m2",
+    "area_tier": "DT-5-6M2",
+    "price_variant": "STANDARD",
+    "rate": "570000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CUADL1LY XN-VK_TRONBO_5-6m² · TP-CUADL1LY XN-XLC_TRONBO_5-6m²"
+   },
+   "title": "TP-CUA-DLM-1LY · m2 · DT-5-6M2",
+   "content": "TP-CUA-DLM-1LY m2 DT-5-6M2 570000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLM-1LY:m2:STANDARD:DT-6-7M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLM-1LY",
+    "uom": "m2",
+    "area_tier": "DT-6-7M2",
+    "price_variant": "STANDARD",
+    "rate": "560000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CUADL1LY XN-VK_TRONBO_6-7m² · TP-CUADL1LY XN-XLC_TRONBO_6-7m²"
+   },
+   "title": "TP-CUA-DLM-1LY · m2 · DT-6-7M2",
+   "content": "TP-CUA-DLM-1LY m2 DT-6-7M2 560000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLM-1LY:m2:STANDARD:DT-7-8M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLM-1LY",
+    "uom": "m2",
+    "area_tier": "DT-7-8M2",
+    "price_variant": "STANDARD",
+    "rate": "550000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CUADL1LY XN-VK_TRONBO_7-8m² · TP-CUADL1LY XN-XLC_TRONBO_7-8m²"
+   },
+   "title": "TP-CUA-DLM-1LY · m2 · DT-7-8M2",
+   "content": "TP-CUA-DLM-1LY m2 DT-7-8M2 550000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLM-1LY:m2:STANDARD:DT-8-9M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLM-1LY",
+    "uom": "m2",
+    "area_tier": "DT-8-9M2",
+    "price_variant": "STANDARD",
+    "rate": "540000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CUADL1LY XN-VK_TRONBO_8-9m² · TP-CUADL1LY XN-XLC_TRONBO_8-9m²"
+   },
+   "title": "TP-CUA-DLM-1LY · m2 · DT-8-9M2",
+   "content": "TP-CUA-DLM-1LY m2 DT-8-9M2 540000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLM-1LY:m2:STANDARD:DT-9-10M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLM-1LY",
+    "uom": "m2",
+    "area_tier": "DT-9-10M2",
+    "price_variant": "STANDARD",
+    "rate": "530000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CUADL1LY XN-VK_TRONBO_9-10m² · TP-CUADL1LY XN-XLC_TRONBO_9-10m²"
+   },
+   "title": "TP-CUA-DLM-1LY · m2 · DT-9-10M2",
+   "content": "TP-CUA-DLM-1LY m2 DT-9-10M2 530000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLM-1LY:m2:STANDARD:DT-TREN-10M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLM-1LY",
+    "uom": "m2",
+    "area_tier": "DT-TREN-10M2",
+    "price_variant": "STANDARD",
+    "rate": "520000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CUADL1LY XN-VK_TRONBO>10m² · TP-CUADL1LY XN-XLC_TRONBO>10m²"
+   },
+   "title": "TP-CUA-DLM-1LY · m2 · DT-TREN-10M2",
+   "content": "TP-CUA-DLM-1LY m2 DT-TREN-10M2 520000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLM-6D:m2:STANDARD:DT-3-4M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLM-6D",
+    "uom": "m2",
+    "area_tier": "DT-3-4M2",
+    "price_variant": "STANDARD",
+    "rate": "450000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CUADL6D XN-VK_TRONBO_3-4m² · TP-CUADL6D XN-XLC_TRONBO_3-4m²"
+   },
+   "title": "TP-CUA-DLM-6D · m2 · DT-3-4M2",
+   "content": "TP-CUA-DLM-6D m2 DT-3-4M2 450000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLM-6D:m2:STANDARD:DT-4-5M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLM-6D",
+    "uom": "m2",
+    "area_tier": "DT-4-5M2",
+    "price_variant": "STANDARD",
+    "rate": "440000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CUADL6D XN-VK_TRONBO_4-5m² · TP-CUADL6D XN-XLC_TRONBO_4-5m²"
+   },
+   "title": "TP-CUA-DLM-6D · m2 · DT-4-5M2",
+   "content": "TP-CUA-DLM-6D m2 DT-4-5M2 440000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLM-6D:m2:STANDARD:DT-5-6M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLM-6D",
+    "uom": "m2",
+    "area_tier": "DT-5-6M2",
+    "price_variant": "STANDARD",
+    "rate": "430000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CUADL6D XN-VK_TRONBO_5-6m² · TP-CUADL6D XN-XLC_TRONBO_5-6m²"
+   },
+   "title": "TP-CUA-DLM-6D · m2 · DT-5-6M2",
+   "content": "TP-CUA-DLM-6D m2 DT-5-6M2 430000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLM-6D:m2:STANDARD:DT-6-7M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLM-6D",
+    "uom": "m2",
+    "area_tier": "DT-6-7M2",
+    "price_variant": "STANDARD",
+    "rate": "420000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CUADL6D XN-VK_TRONBO_6-7m² · TP-CUADL6D XN-XLC_TRONBO_6-7m²"
+   },
+   "title": "TP-CUA-DLM-6D · m2 · DT-6-7M2",
+   "content": "TP-CUA-DLM-6D m2 DT-6-7M2 420000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLM-6D:m2:STANDARD:DT-7-8M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLM-6D",
+    "uom": "m2",
+    "area_tier": "DT-7-8M2",
+    "price_variant": "STANDARD",
+    "rate": "410000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CUADL6D XN-VK_TRONBO_7-8m² · TP-CUADL6D XN-XLC_TRONBO_7-8m²"
+   },
+   "title": "TP-CUA-DLM-6D · m2 · DT-7-8M2",
+   "content": "TP-CUA-DLM-6D m2 DT-7-8M2 410000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLM-6D:m2:STANDARD:DT-8-9M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLM-6D",
+    "uom": "m2",
+    "area_tier": "DT-8-9M2",
+    "price_variant": "STANDARD",
+    "rate": "400000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CUADL6D XN-VK_TRONBO_8-9m² · TP-CUADL6D XN-XLC_TRONBO_8-9m²"
+   },
+   "title": "TP-CUA-DLM-6D · m2 · DT-8-9M2",
+   "content": "TP-CUA-DLM-6D m2 DT-8-9M2 400000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLM-6D:m2:STANDARD:DT-9-10M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLM-6D",
+    "uom": "m2",
+    "area_tier": "DT-9-10M2",
+    "price_variant": "STANDARD",
+    "rate": "390000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CUADL6D XN-VK_TRONBO_9-10m² · TP-CUADL6D XN-XLC_TRONBO_9-10m²"
+   },
+   "title": "TP-CUA-DLM-6D · m2 · DT-9-10M2",
+   "content": "TP-CUA-DLM-6D m2 DT-9-10M2 390000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLM-6D:m2:STANDARD:DT-TREN-10M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLM-6D",
+    "uom": "m2",
+    "area_tier": "DT-TREN-10M2",
+    "price_variant": "STANDARD",
+    "rate": "380000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CUADL6D XN-VK_TRONBO>10m² · TP-CUADL6D XN-XLC_TRONBO>10m²"
+   },
+   "title": "TP-CUA-DLM-6D · m2 · DT-TREN-10M2",
+   "content": "TP-CUA-DLM-6D m2 DT-TREN-10M2 380000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLM-7D:m2:STANDARD:DT-3-4M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLM-7D",
+    "uom": "m2",
+    "area_tier": "DT-3-4M2",
+    "price_variant": "STANDARD",
+    "rate": "480000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CUADL7D XN-VK_TRONBO_3-4m² · TP-CUADL7D XN-XLC_TRONBO_3-4m²"
+   },
+   "title": "TP-CUA-DLM-7D · m2 · DT-3-4M2",
+   "content": "TP-CUA-DLM-7D m2 DT-3-4M2 480000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLM-7D:m2:STANDARD:DT-4-5M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLM-7D",
+    "uom": "m2",
+    "area_tier": "DT-4-5M2",
+    "price_variant": "STANDARD",
+    "rate": "470000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CUADL7D XN-VK_TRONBO_4-5m² · TP-CUADL7D XN-XLC_TRONBO_4-5m²"
+   },
+   "title": "TP-CUA-DLM-7D · m2 · DT-4-5M2",
+   "content": "TP-CUA-DLM-7D m2 DT-4-5M2 470000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLM-7D:m2:STANDARD:DT-5-6M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLM-7D",
+    "uom": "m2",
+    "area_tier": "DT-5-6M2",
+    "price_variant": "STANDARD",
+    "rate": "460000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CUADL7D XN-VK_TRONBO_5-6m² · TP-CUADL7D XN-XLC_TRONBO_5-6m²"
+   },
+   "title": "TP-CUA-DLM-7D · m2 · DT-5-6M2",
+   "content": "TP-CUA-DLM-7D m2 DT-5-6M2 460000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLM-7D:m2:STANDARD:DT-6-7M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLM-7D",
+    "uom": "m2",
+    "area_tier": "DT-6-7M2",
+    "price_variant": "STANDARD",
+    "rate": "450000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CUADL7D XN-VK_TRONBO_6-7m² · TP-CUADL7D XN-XLC_TRONBO_6-7m²"
+   },
+   "title": "TP-CUA-DLM-7D · m2 · DT-6-7M2",
+   "content": "TP-CUA-DLM-7D m2 DT-6-7M2 450000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLM-7D:m2:STANDARD:DT-7-8M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLM-7D",
+    "uom": "m2",
+    "area_tier": "DT-7-8M2",
+    "price_variant": "STANDARD",
+    "rate": "440000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CUADL7D XN-VK_TRONBO_7-8m² · TP-CUADL7D XN-XLC_TRONBO_7-8m²"
+   },
+   "title": "TP-CUA-DLM-7D · m2 · DT-7-8M2",
+   "content": "TP-CUA-DLM-7D m2 DT-7-8M2 440000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLM-7D:m2:STANDARD:DT-8-9M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLM-7D",
+    "uom": "m2",
+    "area_tier": "DT-8-9M2",
+    "price_variant": "STANDARD",
+    "rate": "430000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CUADL7D XN-VK_TRONBO_8-9m² · TP-CUADL7D XN-XLC_TRONBO_8-9m²"
+   },
+   "title": "TP-CUA-DLM-7D · m2 · DT-8-9M2",
+   "content": "TP-CUA-DLM-7D m2 DT-8-9M2 430000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLM-7D:m2:STANDARD:DT-9-10M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLM-7D",
+    "uom": "m2",
+    "area_tier": "DT-9-10M2",
+    "price_variant": "STANDARD",
+    "rate": "420000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CUADL7D XN-VK_TRONBO_9-10m² · TP-CUADL7D XN-XLC_TRONBO_9-10m²"
+   },
+   "title": "TP-CUA-DLM-7D · m2 · DT-9-10M2",
+   "content": "TP-CUA-DLM-7D m2 DT-9-10M2 420000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLM-7D:m2:STANDARD:DT-TREN-10M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLM-7D",
+    "uom": "m2",
+    "area_tier": "DT-TREN-10M2",
+    "price_variant": "STANDARD",
+    "rate": "410000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CUADL7D XN-VK_TRONBO>10m² · TP-CUADL7D XN-XLC_TRONBO>10m²"
+   },
+   "title": "TP-CUA-DLM-7D · m2 · DT-TREN-10M2",
+   "content": "TP-CUA-DLM-7D m2 DT-TREN-10M2 410000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLM-8D:m2:STANDARD:DT-3-4M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLM-8D",
+    "uom": "m2",
+    "area_tier": "DT-3-4M2",
+    "price_variant": "STANDARD",
+    "rate": "520000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CUADL8D XN-VK_TRONBO_3-4m² · TP-CUADL8D XN-XLC_TRONBO_3-4m²"
+   },
+   "title": "TP-CUA-DLM-8D · m2 · DT-3-4M2",
+   "content": "TP-CUA-DLM-8D m2 DT-3-4M2 520000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLM-8D:m2:STANDARD:DT-4-5M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLM-8D",
+    "uom": "m2",
+    "area_tier": "DT-4-5M2",
+    "price_variant": "STANDARD",
+    "rate": "500000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CUADL8D XN-VK_TRONBO_4-5m² · TP-CUADL8D XN-XLC_TRONBO_4-5m²"
+   },
+   "title": "TP-CUA-DLM-8D · m2 · DT-4-5M2",
+   "content": "TP-CUA-DLM-8D m2 DT-4-5M2 500000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLM-8D:m2:STANDARD:DT-5-6M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLM-8D",
+    "uom": "m2",
+    "area_tier": "DT-5-6M2",
+    "price_variant": "STANDARD",
+    "rate": "490000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CUADL8D XN-VK_TRONBO_5-6m² · TP-CUADL8D XN-XLC_TRONBO_5-6m²"
+   },
+   "title": "TP-CUA-DLM-8D · m2 · DT-5-6M2",
+   "content": "TP-CUA-DLM-8D m2 DT-5-6M2 490000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLM-8D:m2:STANDARD:DT-6-7M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLM-8D",
+    "uom": "m2",
+    "area_tier": "DT-6-7M2",
+    "price_variant": "STANDARD",
+    "rate": "480000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CUADL8D XN-VK_TRONBO_6-7m² · TP-CUADL8D XN-XLC_TRONBO_6-7m²"
+   },
+   "title": "TP-CUA-DLM-8D · m2 · DT-6-7M2",
+   "content": "TP-CUA-DLM-8D m2 DT-6-7M2 480000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLM-8D:m2:STANDARD:DT-7-8M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLM-8D",
+    "uom": "m2",
+    "area_tier": "DT-7-8M2",
+    "price_variant": "STANDARD",
+    "rate": "470000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CUADL8D XN-VK_TRONBO_7-8m² · TP-CUADL8D XN-XLC_TRONBO_7-8m²"
+   },
+   "title": "TP-CUA-DLM-8D · m2 · DT-7-8M2",
+   "content": "TP-CUA-DLM-8D m2 DT-7-8M2 470000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLM-8D:m2:STANDARD:DT-8-9M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLM-8D",
+    "uom": "m2",
+    "area_tier": "DT-8-9M2",
+    "price_variant": "STANDARD",
+    "rate": "460000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CUADL8D XN-VK_TRONBO_8-9m² · TP-CUADL8D XN-XLC_TRONBO_8-9m²"
+   },
+   "title": "TP-CUA-DLM-8D · m2 · DT-8-9M2",
+   "content": "TP-CUA-DLM-8D m2 DT-8-9M2 460000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLM-8D:m2:STANDARD:DT-9-10M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLM-8D",
+    "uom": "m2",
+    "area_tier": "DT-9-10M2",
+    "price_variant": "STANDARD",
+    "rate": "450000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CUADL8D XN-VK_TRONBO_9-10m² · TP-CUADL8D XN-XLC_TRONBO_9-10m²"
+   },
+   "title": "TP-CUA-DLM-8D · m2 · DT-9-10M2",
+   "content": "TP-CUA-DLM-8D m2 DT-9-10M2 450000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-CUA-DLM-8D:m2:STANDARD:DT-TREN-10M2",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-CUA-DLM-8D",
+    "uom": "m2",
+    "area_tier": "DT-TREN-10M2",
+    "price_variant": "STANDARD",
+    "rate": "440000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-CUADL8D XN-VK_TRONBO>10m² · TP-CUADL8D XN-XLC_TRONBO>10m²"
+   },
+   "title": "TP-CUA-DLM-8D · m2 · DT-TREN-10M2",
+   "content": "TP-CUA-DLM-8D m2 DT-TREN-10M2 440000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-DUC-KT-AL70:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-DUC-KT-AL70",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "890000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-DUC-KT AL70 STĐ MSK"
+   },
+   "title": "TP-DUC-KT-AL70 · m2 · mọi diện tích",
+   "content": "TP-DUC-KT-AL70 m2 MOI-DIEN-TICH 890000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-DUC-KT-AL70-(2-LỚP):m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-DUC-KT-AL70-(2-LỚP)",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "890000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-DUC-KT AL70 (2 LỚP) STĐ MSK"
+   },
+   "title": "TP-DUC-KT-AL70-(2-LỚP) · m2 · mọi diện tích",
+   "content": "TP-DUC-KT-AL70-(2-LỚP) m2 MOI-DIEN-TICH 890000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-GOIGANG:Cặp:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-GOIGANG",
+    "uom": "Cặp",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "90000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-GOIGANG"
+   },
+   "title": "TP-GOIGANG · Cặp · mọi diện tích",
+   "content": "TP-GOIGANG Cặp MOI-DIEN-TICH 90000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-HTTD:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-HTTD",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "80000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-HTTD"
+   },
+   "title": "TP-HTTD · Bộ · mọi diện tích",
+   "content": "TP-HTTD Bộ MOI-DIEN-TICH 80000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-JG-TayDK:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-JG-TayDK",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "190000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-JG_TayDK"
+   },
+   "title": "TP-JG-TayDK · Cái · mọi diện tích",
+   "content": "TP-JG-TayDK Cái MOI-DIEN-TICH 190000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-KN:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-KN",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "250000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-KN"
+   },
+   "title": "TP-KN · Bộ · mọi diện tích",
+   "content": "TP-KN Bộ MOI-DIEN-TICH 250000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-LA-DLK-1.1LY:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-LA-DLK-1.1LY",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "490000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-TOLEKEM175_8D-9D_STD_MSK"
+   },
+   "title": "TP-LA-DLK-1.1LY · m2 · mọi diện tích",
+   "content": "TP-LA-DLK-1.1LY m2 MOI-DIEN-TICH 490000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-LA-DLK-1.2LY:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-LA-DLK-1.2LY",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "510000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TOLEKEM124_1.2LY"
+   },
+   "title": "TP-LA-DLK-1.2LY · m2 · mọi diện tích",
+   "content": "TP-LA-DLK-1.2LY m2 MOI-DIEN-TICH 510000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-LA-DLK-1.2LY-K175:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-LA-DLK-1.2LY-K175",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "520000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-TON-ST-1LYx175-_MSK"
+   },
+   "title": "TP-LA-DLK-1.2LY-K175 · m2 · mọi diện tích",
+   "content": "TP-LA-DLK-1.2LY-K175 m2 MOI-DIEN-TICH 520000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-LA-DLK-1LY:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-LA-DLK-1LY",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "460000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TOLEKEM124_8D"
+   },
+   "title": "TP-LA-DLK-1LY · m2 · mọi diện tích",
+   "content": "TP-LA-DLK-1LY m2 MOI-DIEN-TICH 460000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-LA-DLK-8D:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-LA-DLK-8D",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "410000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TOLEKEM124_6D"
+   },
+   "title": "TP-LA-DLK-8D · m2 · mọi diện tích",
+   "content": "TP-LA-DLK-8D m2 MOI-DIEN-TICH 410000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-LA-DLM-1LY-K175:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-LA-DLM-1LY-K175",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "440000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "NVL-TON-DL9.2Dx175-XNVK"
+   },
+   "title": "TP-LA-DLM-1LY-K175 · m2 · mọi diện tích",
+   "content": "TP-LA-DLM-1LY-K175 m2 MOI-DIEN-TICH 440000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-LÁ-ĐỨC-AL70-(2-lớp):m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-LÁ-ĐỨC-AL70-(2-lớp)",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "909000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP  LÁ ĐỨC AL70 (2 lớp) - GS"
+   },
+   "title": "TP-LÁ-ĐỨC-AL70-(2-lớp) · m2 · mọi diện tích",
+   "content": "TP-LÁ-ĐỨC-AL70-(2-lớp) m2 MOI-DIEN-TICH 909000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-LA-INOX-1LY:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-LA-INOX-1LY",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1650000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-LADLINOX_1LY"
+   },
+   "title": "TP-LA-INOX-1LY · m2 · mọi diện tích",
+   "content": "TP-LA-INOX-1LY m2 MOI-DIEN-TICH 1650000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-LA-INOX-6D:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-LA-INOX-6D",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1040000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-LADLINOX_6D"
+   },
+   "title": "TP-LA-INOX-6D · m2 · mọi diện tích",
+   "content": "TP-LA-INOX-6D m2 MOI-DIEN-TICH 1040000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-LA-INOX-7D:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-LA-INOX-7D",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1160000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-LADLINOX_7D"
+   },
+   "title": "TP-LA-INOX-7D · m2 · mọi diện tích",
+   "content": "TP-LA-INOX-7D m2 MOI-DIEN-TICH 1160000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-LA-INOX-8D:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-LA-INOX-8D",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1290000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-LADLINOX_8D"
+   },
+   "title": "TP-LA-INOX-8D · m2 · mọi diện tích",
+   "content": "TP-LA-INOX-8D m2 MOI-DIEN-TICH 1290000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-LÁ-RUỘT-AL71N:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-LÁ-RUỘT-AL71N",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1178000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP LÁ RUỘT  AL71N VK"
+   },
+   "title": "TP-LÁ-RUỘT-AL71N · m2 · mọi diện tích",
+   "content": "TP-LÁ-RUỘT-AL71N m2 MOI-DIEN-TICH 1178000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-LACPHU33-1LO:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-LACPHU33-1LO",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "65000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-LACPHU33_1LO"
+   },
+   "title": "TP-LACPHU33-1LO · Cái · mọi diện tích",
+   "content": "TP-LACPHU33-1LO Cái MOI-DIEN-TICH 65000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-LACPHU33-3LO:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-LACPHU33-3LO",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "65000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-LACPHU33_3LO"
+   },
+   "title": "TP-LACPHU33-3LO · Cái · mọi diện tích",
+   "content": "TP-LACPHU33-3LO Cái MOI-DIEN-TICH 65000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-LACPHU36-1LO:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-LACPHU36-1LO",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "70000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-LACPHU36_1LO"
+   },
+   "title": "TP-LACPHU36-1LO · Cái · mọi diện tích",
+   "content": "TP-LACPHU36-1LO Cái MOI-DIEN-TICH 70000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-LACPHU36-3LO:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-LACPHU36-3LO",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "70000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-LACPHU36_3LO"
+   },
+   "title": "TP-LACPHU36-3LO · Cái · mọi diện tích",
+   "content": "TP-LACPHU36-3LO Cái MOI-DIEN-TICH 70000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-LacYHLD300&500KG:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-LacYHLD300&500KG",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "650000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-LacYHLD300&500KG"
+   },
+   "title": "TP-LacYHLD300&500KG · Cái · mọi diện tích",
+   "content": "TP-LacYHLD300&500KG Cái MOI-DIEN-TICH 650000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-LacYHLD800&1000KG:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-LacYHLD800&1000KG",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "750000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-LacYHLD800&1000KG"
+   },
+   "title": "TP-LacYHLD800&1000KG · Cái · mọi diện tích",
+   "content": "TP-LacYHLD800&1000KG Cái MOI-DIEN-TICH 750000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-LUOI-MV-TM:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-LUOI-MV-TM",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "450000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-LUOI-MV-STD - TM"
+   },
+   "title": "TP-LUOI-MV-TM · m2 · mọi diện tích",
+   "content": "TP-LUOI-MV-TM m2 MOI-DIEN-TICH 450000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-LUOI-MV-TRONBO:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-LUOI-MV-TRONBO",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "590000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-LUOI-MV-STD - TRONBO"
+   },
+   "title": "TP-LUOI-MV-TRONBO · m2 · mọi diện tích",
+   "content": "TP-LUOI-MV-TRONBO m2 MOI-DIEN-TICH 590000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-LUOI-SN-TM:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-LUOI-SN-TM",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "490000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-LUOI-SN-STD - TM"
+   },
+   "title": "TP-LUOI-SN-TM · m2 · mọi diện tích",
+   "content": "TP-LUOI-SN-TM m2 MOI-DIEN-TICH 490000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-LUOI-SN-TRONBO:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-LUOI-SN-TRONBO",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "630000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-LUOI-SN-STD - TRONBO"
+   },
+   "title": "TP-LUOI-SN-TRONBO · m2 · mọi diện tích",
+   "content": "TP-LUOI-SN-TRONBO m2 MOI-DIEN-TICH 630000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-LUOI-SN13x26-INOX-TACHMON:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-LUOI-SN13x26-INOX-TACHMON",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1500000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-LUOI-SN13x26-INOX - TACHMON"
+   },
+   "title": "TP-LUOI-SN13x26-INOX-TACHMON · m2 · mọi diện tích",
+   "content": "TP-LUOI-SN13x26-INOX-TACHMON m2 MOI-DIEN-TICH 1500000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-LUOI-SN13x26-INOX-TRONBO:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-LUOI-SN13x26-INOX-TRONBO",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1710000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-LUOI-SN13x26-INOX - TRONBO"
+   },
+   "title": "TP-LUOI-SN13x26-INOX-TRONBO · m2 · mọi diện tích",
+   "content": "TP-LUOI-SN13x26-INOX-TRONBO m2 MOI-DIEN-TICH 1710000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-LUOI-SN13x26-TACHMON:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-LUOI-SN13x26-TACHMON",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "570000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-LUOI-SN13x26-STD - TACHMON"
+   },
+   "title": "TP-LUOI-SN13x26-TACHMON · m2 · mọi diện tích",
+   "content": "TP-LUOI-SN13x26-TACHMON m2 MOI-DIEN-TICH 570000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-LUOI-SN13x26-TRONBO:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-LUOI-SN13x26-TRONBO",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "750000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-LUOI-SN13x26-STD - TRONBO"
+   },
+   "title": "TP-LUOI-SN13x26-TRONBO · m2 · mọi diện tích",
+   "content": "TP-LUOI-SN13x26-TRONBO m2 MOI-DIEN-TICH 750000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-LUOI-SNPHI19-INOX-TM:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-LUOI-SNPHI19-INOX-TM",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1290000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-LUOI-SNPHI19-INOX - TM"
+   },
+   "title": "TP-LUOI-SNPHI19-INOX-TM · m2 · mọi diện tích",
+   "content": "TP-LUOI-SNPHI19-INOX-TM m2 MOI-DIEN-TICH 1290000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-LUOI-SNPHI19-INOX-TRONBO:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-LUOI-SNPHI19-INOX-TRONBO",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1530000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-LUOI-SNPHI19-INOX - TRONBO"
+   },
+   "title": "TP-LUOI-SNPHI19-INOX-TRONBO · m2 · mọi diện tích",
+   "content": "TP-LUOI-SNPHI19-INOX-TRONBO m2 MOI-DIEN-TICH 1530000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-LUOIMV-INOX-TM:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-LUOIMV-INOX-TM",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1290000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-LUOIMV-INOX- TM"
+   },
+   "title": "TP-LUOIMV-INOX-TM · m2 · mọi diện tích",
+   "content": "TP-LUOIMV-INOX-TM m2 MOI-DIEN-TICH 1290000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-LUOIMV-INOX-TRONBO:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-LUOIMV-INOX-TRONBO",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1530000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-LUOIMV-INOX- TRONBO"
+   },
+   "title": "TP-LUOIMV-INOX-TRONBO · m2 · mọi diện tích",
+   "content": "TP-LUOIMV-INOX-TRONBO m2 MOI-DIEN-TICH 1530000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MT-ALUMAX400KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MT-ALUMAX400KG",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "2200000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MT-ALUMAX400KG"
+   },
+   "title": "TP-MT-ALUMAX400KG · Bộ · mọi diện tích",
+   "content": "TP-MT-ALUMAX400KG Bộ MOI-DIEN-TICH 2200000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MT-ALUMAX600KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MT-ALUMAX600KG",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "2300000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MT-ALUMAX600KG"
+   },
+   "title": "TP-MT-ALUMAX600KG · Bộ · mọi diện tích",
+   "content": "TP-MT-ALUMAX600KG Bộ MOI-DIEN-TICH 2300000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MT-JG1000KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MT-JG1000KG",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "7650000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MT-JG1000KG"
+   },
+   "title": "TP-MT-JG1000KG · Bộ · mọi diện tích",
+   "content": "TP-MT-JG1000KG Bộ MOI-DIEN-TICH 7650000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MT-JG1500KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MT-JG1500KG",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "8050000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MT-JG1500KG"
+   },
+   "title": "TP-MT-JG1500KG · Bộ · mọi diện tích",
+   "content": "TP-MT-JG1500KG Bộ MOI-DIEN-TICH 8050000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MT-JG300KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MT-JG300KG",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "3650000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MT-JG300KG"
+   },
+   "title": "TP-MT-JG300KG · Bộ · mọi diện tích",
+   "content": "TP-MT-JG300KG Bộ MOI-DIEN-TICH 3650000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MT-JG400KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MT-JG400KG",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "4150000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MT-JG400KG"
+   },
+   "title": "TP-MT-JG400KG · Bộ · mọi diện tích",
+   "content": "TP-MT-JG400KG Bộ MOI-DIEN-TICH 4150000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MT-JG500KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MT-JG500KG",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "4200000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MT-JG500KG"
+   },
+   "title": "TP-MT-JG500KG · Bộ · mọi diện tích",
+   "content": "TP-MT-JG500KG Bộ MOI-DIEN-TICH 4200000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MT-JG600KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MT-JG600KG",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "4300000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MT-JG600KG"
+   },
+   "title": "TP-MT-JG600KG · Bộ · mọi diện tích",
+   "content": "TP-MT-JG600KG Bộ MOI-DIEN-TICH 4300000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MT-JG800KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MT-JG800KG",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "5250000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MT-JG800KG"
+   },
+   "title": "TP-MT-JG800KG · Bộ · mọi diện tích",
+   "content": "TP-MT-JG800KG Bộ MOI-DIEN-TICH 5250000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MT-TANKE800KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MT-TANKE800KG",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "3700000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MT-TANKE800KG"
+   },
+   "title": "TP-MT-TANKE800KG · Bộ · mọi diện tích",
+   "content": "TP-MT-TANKE800KG Bộ MOI-DIEN-TICH 3700000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MT-TANKER1000KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MT-TANKER1000KG",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "3900000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MT-TANKER1000KG"
+   },
+   "title": "TP-MT-TANKER1000KG · Bộ · mọi diện tích",
+   "content": "TP-MT-TANKER1000KG Bộ MOI-DIEN-TICH 3900000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MT-TANKER400KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MT-TANKER400KG",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1750000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MT-TANKER400KG"
+   },
+   "title": "TP-MT-TANKER400KG · Bộ · mọi diện tích",
+   "content": "TP-MT-TANKER400KG Bộ MOI-DIEN-TICH 1750000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MT-TANKER600KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MT-TANKER600KG",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1850000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MT-TANKER600KG"
+   },
+   "title": "TP-MT-TANKER600KG · Bộ · mọi diện tích",
+   "content": "TP-MT-TANKER600KG Bộ MOI-DIEN-TICH 1850000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MT-YHLD1000KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MT-YHLD1000KG",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "7000000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MT-YHLD1000KG"
+   },
+   "title": "TP-MT-YHLD1000KG · Bộ · mọi diện tích",
+   "content": "TP-MT-YHLD1000KG Bộ MOI-DIEN-TICH 7000000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MT-YHLD300KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MT-YHLD300KG",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "2750000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MT-YHLD300KG"
+   },
+   "title": "TP-MT-YHLD300KG · Bộ · mọi diện tích",
+   "content": "TP-MT-YHLD300KG Bộ MOI-DIEN-TICH 2750000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MT-YHLD500KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MT-YHLD500KG",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "2850000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MT-YHLD500KG"
+   },
+   "title": "TP-MT-YHLD500KG · Bộ · mọi diện tích",
+   "content": "TP-MT-YHLD500KG Bộ MOI-DIEN-TICH 2850000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MT-YHLD800KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MT-YHLD800KG",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "5900000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MT-YHLD800KG"
+   },
+   "title": "TP-MT-YHLD800KG · Bộ · mọi diện tích",
+   "content": "TP-MT-YHLD800KG Bộ MOI-DIEN-TICH 5900000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MT-YHTAIWAN-CH-1000KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MT-YHTAIWAN-CH-1000KG",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "13600000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MT-YHTAIWAN CH 1000KG"
+   },
+   "title": "TP-MT-YHTAIWAN-CH-1000KG · Bộ · mọi diện tích",
+   "content": "TP-MT-YHTAIWAN-CH-1000KG Bộ MOI-DIEN-TICH 13600000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MT-YHTAIWAN-CH-300KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MT-YHTAIWAN-CH-300KG",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "6350000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MT-YHTAIWAN CH 300KG"
+   },
+   "title": "TP-MT-YHTAIWAN-CH-300KG · Bộ · mọi diện tích",
+   "content": "TP-MT-YHTAIWAN-CH-300KG Bộ MOI-DIEN-TICH 6350000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MT-YHTAIWAN-CH-400KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MT-YHTAIWAN-CH-400KG",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "7000000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MT-YHTAIWAN CH 400KG"
+   },
+   "title": "TP-MT-YHTAIWAN-CH-400KG · Bộ · mọi diện tích",
+   "content": "TP-MT-YHTAIWAN-CH-400KG Bộ MOI-DIEN-TICH 7000000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MT-YHTAIWAN-CH-500KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MT-YHTAIWAN-CH-500KG",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "7900000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MT-YHTAIWAN CH 500KG"
+   },
+   "title": "TP-MT-YHTAIWAN-CH-500KG · Bộ · mọi diện tích",
+   "content": "TP-MT-YHTAIWAN-CH-500KG Bộ MOI-DIEN-TICH 7900000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MT-YHTAIWAN-CH-600KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MT-YHTAIWAN-CH-600KG",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "11900000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MT-YHTAIWAN CH 600KG"
+   },
+   "title": "TP-MT-YHTAIWAN-CH-600KG · Bộ · mọi diện tích",
+   "content": "TP-MT-YHTAIWAN-CH-600KG Bộ MOI-DIEN-TICH 11900000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MT-YHTAIWAN-CH-700KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MT-YHTAIWAN-CH-700KG",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "12900000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MT-YHTAIWAN CH 700KG"
+   },
+   "title": "TP-MT-YHTAIWAN-CH-700KG · Bộ · mọi diện tích",
+   "content": "TP-MT-YHTAIWAN-CH-700KG Bộ MOI-DIEN-TICH 12900000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MT-YHTAIWAN-CH-800KG:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MT-YHTAIWAN-CH-800KG",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "13600000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MT-YHTAIWAN CH 800KG"
+   },
+   "title": "TP-MT-YHTAIWAN-CH-800KG · Bộ · mọi diện tích",
+   "content": "TP-MT-YHTAIWAN-CH-800KG Bộ MOI-DIEN-TICH 13600000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MTT-BOSTEC-DOI(P):Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MTT-BOSTEC-DOI(P)",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "3800000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MTT_BOSTEC-DOI(P)"
+   },
+   "title": "TP-MTT-BOSTEC-DOI(P) · Bộ · mọi diện tích",
+   "content": "TP-MTT-BOSTEC-DOI(P) Bộ MOI-DIEN-TICH 3800000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MTT-BOSTEC-DOI(T):Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MTT-BOSTEC-DOI(T)",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "3800000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MTT_BOSTEC-DOI(T)"
+   },
+   "title": "TP-MTT-BOSTEC-DOI(T) · Bộ · mọi diện tích",
+   "content": "TP-MTT-BOSTEC-DOI(T) Bộ MOI-DIEN-TICH 3800000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MTT-BOSTEC-DON(P):Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MTT-BOSTEC-DON(P)",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "3300000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MTT_BOSTEC-DON(P)"
+   },
+   "title": "TP-MTT-BOSTEC-DON(P) · Bộ · mọi diện tích",
+   "content": "TP-MTT-BOSTEC-DON(P) Bộ MOI-DIEN-TICH 3300000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MTT-BOSTEC-DON(T):Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MTT-BOSTEC-DON(T)",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "3300000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MTT_BOSTEC-DON(T)"
+   },
+   "title": "TP-MTT-BOSTEC-DON(T) · Bộ · mọi diện tích",
+   "content": "TP-MTT-BOSTEC-DON(T) Bộ MOI-DIEN-TICH 3300000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MTT-BOSTEC-PAT:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MTT-BOSTEC-PAT",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "250000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MTT-BOSTEC-PAT"
+   },
+   "title": "TP-MTT-BOSTEC-PAT · Cái · mọi diện tích",
+   "content": "TP-MTT-BOSTEC-PAT Cái MOI-DIEN-TICH 250000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MTT-BOSTEC-TAYDK:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MTT-BOSTEC-TAYDK",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "270000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MTT-BOSTEC-TAYDK"
+   },
+   "title": "TP-MTT-BOSTEC-TAYDK · Cái · mọi diện tích",
+   "content": "TP-MTT-BOSTEC-TAYDK Cái MOI-DIEN-TICH 270000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MTT-CHTAIWAN-DOI(P):Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MTT-CHTAIWAN-DOI(P)",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "5300000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MTT_CHTAIWAN-DOI(P)"
+   },
+   "title": "TP-MTT-CHTAIWAN-DOI(P) · Bộ · mọi diện tích",
+   "content": "TP-MTT-CHTAIWAN-DOI(P) Bộ MOI-DIEN-TICH 5300000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MTT-CHTAIWAN-DOI(T):Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MTT-CHTAIWAN-DOI(T)",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "5300000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MTT_CHTAIWAN-DOI(T)"
+   },
+   "title": "TP-MTT-CHTAIWAN-DOI(T) · Bộ · mọi diện tích",
+   "content": "TP-MTT-CHTAIWAN-DOI(T) Bộ MOI-DIEN-TICH 5300000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MTT-CHTAIWAN-DON(P):Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MTT-CHTAIWAN-DON(P)",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "4950000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MTT_CHTAIWAN-DON(P)"
+   },
+   "title": "TP-MTT-CHTAIWAN-DON(P) · Bộ · mọi diện tích",
+   "content": "TP-MTT-CHTAIWAN-DON(P) Bộ MOI-DIEN-TICH 4950000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MTT-CHTAIWAN-DON(T):Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MTT-CHTAIWAN-DON(T)",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "4950000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MTT_CHTAIWAN-DON(T)"
+   },
+   "title": "TP-MTT-CHTAIWAN-DON(T) · Bộ · mọi diện tích",
+   "content": "TP-MTT-CHTAIWAN-DON(T) Bộ MOI-DIEN-TICH 4950000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MTT-CHTAIWAN-PAT:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MTT-CHTAIWAN-PAT",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "600000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MTT-CHTAIWAN-PAT"
+   },
+   "title": "TP-MTT-CHTAIWAN-PAT · Cái · mọi diện tích",
+   "content": "TP-MTT-CHTAIWAN-PAT Cái MOI-DIEN-TICH 600000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-MTT-CHTAIWAN-TAYDK:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-MTT-CHTAIWAN-TAYDK",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "320000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-MTT-CHTAIWAN-TAYDK"
+   },
+   "title": "TP-MTT-CHTAIWAN-TAYDK · Cái · mọi diện tích",
+   "content": "TP-MTT-CHTAIWAN-TAYDK Cái MOI-DIEN-TICH 320000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-NAPNHIN:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-NAPNHIN",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "170000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-NAPNHIN"
+   },
+   "title": "TP-NAPNHIN · Cái · mọi diện tích",
+   "content": "TP-NAPNHIN Cái MOI-DIEN-TICH 170000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-PAT-CODAY:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-PAT-CODAY",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "150000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP_PAT_CODAY"
+   },
+   "title": "TP-PAT-CODAY · Bộ · mọi diện tích",
+   "content": "TP-PAT-CODAY Bộ MOI-DIEN-TICH 150000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-PAT-KHONGDAY:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-PAT-KHONGDAY",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "80000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-PAT_KHONGDAY"
+   },
+   "title": "TP-PAT-KHONGDAY · Cái · mọi diện tích",
+   "content": "TP-PAT-KHONGDAY Cái MOI-DIEN-TICH 80000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-PHOTLONG4X5X400M:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-PHOTLONG4X5X400M",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "2000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-PHOTLONG4X5X400M"
+   },
+   "title": "TP-PHOTLONG4X5X400M · Mét · mọi diện tích",
+   "content": "TP-PHOTLONG4X5X400M Mét MOI-DIEN-TICH 2000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-PHOTLONG5X6X400M:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-PHOTLONG5X6X400M",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "2000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-PHOTLONG5X6X400M"
+   },
+   "title": "TP-PHOTLONG5X6X400M · Mét · mọi diện tích",
+   "content": "TP-PHOTLONG5X6X400M Mét MOI-DIEN-TICH 2000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-PULY-114L:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-PULY-114L",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "30000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-PULY 114L"
+   },
+   "title": "TP-PULY-114L · Cái · mọi diện tích",
+   "content": "TP-PULY-114L Cái MOI-DIEN-TICH 30000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-PULY-114N:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-PULY-114N",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "22000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-PULY 114N"
+   },
+   "title": "TP-PULY-114N · Cái · mọi diện tích",
+   "content": "TP-PULY-114N Cái MOI-DIEN-TICH 22000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-PULY-140:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-PULY-140",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "33000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-PULY 140"
+   },
+   "title": "TP-PULY-140 · Cái · mọi diện tích",
+   "content": "TP-PULY-140 Cái MOI-DIEN-TICH 33000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-PULY-168:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-PULY-168",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "43000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-PULY 168"
+   },
+   "title": "TP-PULY-168 · Cái · mọi diện tích",
+   "content": "TP-PULY-168 Cái MOI-DIEN-TICH 43000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-RAY-HỘP-TD-U100:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-RAY-HỘP-TD-U100",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "250000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-RAY HỘP TD U100"
+   },
+   "title": "TP-RAY-HỘP-TD-U100 · Mét · mọi diện tích",
+   "content": "TP-RAY-HỘP-TD-U100 Mét MOI-DIEN-TICH 250000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-RAYHOP:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-RAYHOP",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "190000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-RAYHOP"
+   },
+   "title": "TP-RAYHOP · Mét · mọi diện tích",
+   "content": "TP-RAYHOP Mét MOI-DIEN-TICH 190000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-RAYINOX-6P-RON:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-RAYINOX-6P-RON",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "220000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-RAYINOX-6P-RON"
+   },
+   "title": "TP-RAYINOX-6P-RON · Mét · mọi diện tích",
+   "content": "TP-RAYINOX-6P-RON Mét MOI-DIEN-TICH 220000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-RAYINOX-7P-KHONGRON:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-RAYINOX-7P-KHONGRON",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "250000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-RAYINOX-7P-KHONGRON"
+   },
+   "title": "TP-RAYINOX-7P-KHONGRON · Mét · mọi diện tích",
+   "content": "TP-RAYINOX-7P-KHONGRON Mét MOI-DIEN-TICH 250000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-RAYINOX-8P-RON:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-RAYINOX-8P-RON",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "270000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-RAYINOX-8P-RON"
+   },
+   "title": "TP-RAYINOX-8P-RON · Mét · mọi diện tích",
+   "content": "TP-RAYINOX-8P-RON Mét MOI-DIEN-TICH 270000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-RAYNHOMUC:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-RAYNHOMUC",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "195000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-RAYNHOMUC"
+   },
+   "title": "TP-RAYNHOMUC · Mét · mọi diện tích",
+   "content": "TP-RAYNHOMUC Mét MOI-DIEN-TICH 195000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-RS7P-(CÓ-RON):Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-RS7P-(CÓ-RON)",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "75000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-RS7P (CÓ RON)"
+   },
+   "title": "TP-RS7P-(CÓ-RON) · Mét · mọi diện tích",
+   "content": "TP-RS7P-(CÓ-RON) Mét MOI-DIEN-TICH 75000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-TANKER-ALUMAX-BODK:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-TANKER-ALUMAX-BODK",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "270000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TANKER_ALUMAX_BODK"
+   },
+   "title": "TP-TANKER-ALUMAX-BODK · Bộ · mọi diện tích",
+   "content": "TP-TANKER-ALUMAX-BODK Bộ MOI-DIEN-TICH 270000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-Tanker-Alumax-HDK:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-Tanker-Alumax-HDK",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "150000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-Tanker-Alumax-HDK"
+   },
+   "title": "TP-Tanker-Alumax-HDK · Cái · mọi diện tích",
+   "content": "TP-Tanker-Alumax-HDK Cái MOI-DIEN-TICH 150000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-Tanker-Alumax-Lac33:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-Tanker-Alumax-Lac33",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "450000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-Tanker-Alumax-Lac33"
+   },
+   "title": "TP-Tanker-Alumax-Lac33 · Cái · mọi diện tích",
+   "content": "TP-Tanker-Alumax-Lac33 Cái MOI-DIEN-TICH 450000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-Tanker-Alumax-Lac36:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-Tanker-Alumax-Lac36",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "500000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-Tanker-Alumax-Lac36"
+   },
+   "title": "TP-Tanker-Alumax-Lac36 · Cái · mọi diện tích",
+   "content": "TP-Tanker-Alumax-Lac36 Cái MOI-DIEN-TICH 500000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-Tanker-Alumax-TayDK:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-Tanker-Alumax-TayDK",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "120000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-Tanker-Alumax_TayDK"
+   },
+   "title": "TP-Tanker-Alumax-TayDK · Cái · mọi diện tích",
+   "content": "TP-Tanker-Alumax-TayDK Cái MOI-DIEN-TICH 120000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-Tanker-Lac800&1000KG:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-Tanker-Lac800&1000KG",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "600000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-Tanker-Lac800&1000KG"
+   },
+   "title": "TP-Tanker-Lac800&1000KG · Cái · mọi diện tích",
+   "content": "TP-Tanker-Lac800&1000KG Cái MOI-DIEN-TICH 600000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-TD-AL50:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-TD-AL50",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1815000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TD-AL50 GS · TP-TD-AL50 THO · TP-TD-AL50 VK"
+   },
+   "title": "TP-TD-AL50 · m2 · mọi diện tích",
+   "content": "TP-TD-AL50 m2 MOI-DIEN-TICH 1815000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-TD-AL501N:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-TD-AL501N",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1471000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TD-AL501N GS · TP-TD-AL501N VK"
+   },
+   "title": "TP-TD-AL501N · m2 · mọi diện tích",
+   "content": "TP-TD-AL501N m2 MOI-DIEN-TICH 1471000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-TD-AL501NTHO:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-TD-AL501NTHO",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1471000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TD-AL501NTHO"
+   },
+   "title": "TP-TD-AL501NTHO · m2 · mọi diện tích",
+   "content": "TP-TD-AL501NTHO m2 MOI-DIEN-TICH 1471000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-TD-AL503N26:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-TD-AL503N26",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1295000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TD-AL503N26 GS · TP-TD-AL503N26 THO · TP-TD-AL503N26 VK"
+   },
+   "title": "TP-TD-AL503N26 · m2 · mọi diện tích",
+   "content": "TP-TD-AL503N26 m2 MOI-DIEN-TICH 1295000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-TD-AL595:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-TD-AL595",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1095000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TD-AL595 THÔ · TP-TD-AL595 VK"
+   },
+   "title": "TP-TD-AL595 · m2 · mọi diện tích",
+   "content": "TP-TD-AL595 m2 MOI-DIEN-TICH 1095000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-TD-AL652:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-TD-AL652",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1548000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TD-AL652 GS · TP-TD-AL652 VK"
+   },
+   "title": "TP-TD-AL652 · m2 · mọi diện tích",
+   "content": "TP-TD-AL652 m2 MOI-DIEN-TICH 1548000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-TD-AL652N:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-TD-AL652N",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1548000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TD-AL652N THO"
+   },
+   "title": "TP-TD-AL652N · m2 · mọi diện tích",
+   "content": "TP-TD-AL652N m2 MOI-DIEN-TICH 1548000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-TD-AL70:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-TD-AL70",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "909000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TD-AL70 GS · TP-TD-AL70 THÔ · TP-TD-AL70 VK"
+   },
+   "title": "TP-TD-AL70 · m2 · mọi diện tích",
+   "content": "TP-TD-AL70 m2 MOI-DIEN-TICH 909000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-TD-AL71N:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-TD-AL71N",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1178000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TD-AL71N GS · TP-TD-AL71N THÔ · TP-TD-AL71N VK"
+   },
+   "title": "TP-TD-AL71N · m2 · mọi diện tích",
+   "content": "TP-TD-AL71N m2 MOI-DIEN-TICH 1178000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-TD-AL752N:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-TD-AL752N",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1686000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TD-AL752N GS · TP-TD-AL752N THO · TP-TD-AL752N VK"
+   },
+   "title": "TP-TD-AL752N · m2 · mọi diện tích",
+   "content": "TP-TD-AL752N m2 MOI-DIEN-TICH 1686000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-TD325:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-TD325",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "130000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TD325"
+   },
+   "title": "TP-TD325 · Mét · mọi diện tích",
+   "content": "TP-TD325 Mét MOI-DIEN-TICH 130000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-TD326:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-TD326",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "80000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TD326"
+   },
+   "title": "TP-TD326 · Mét · mọi diện tích",
+   "content": "TP-TD326 Mét MOI-DIEN-TICH 80000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-TD327:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-TD327",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "46000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TD327"
+   },
+   "title": "TP-TD327 · Mét · mọi diện tích",
+   "content": "TP-TD327 Mét MOI-DIEN-TICH 46000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-TD87A1:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-TD87A1",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "145000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TD87A1 GS"
+   },
+   "title": "TP-TD87A1 · Mét · mọi diện tích",
+   "content": "TP-TD87A1 Mét MOI-DIEN-TICH 145000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-TDK-MULLER:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-TDK-MULLER",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "280000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TDK_MULLER"
+   },
+   "title": "TP-TDK-MULLER · Cái · mọi diện tích",
+   "content": "TP-TDK-MULLER Cái MOI-DIEN-TICH 280000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-TRUC140:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-TRUC140",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "180000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TRUC140"
+   },
+   "title": "TP-TRUC140 · Mét · mọi diện tích",
+   "content": "TP-TRUC140 Mét MOI-DIEN-TICH 180000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-TRUC168:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-TRUC168",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "500000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-TRUC168"
+   },
+   "title": "TP-TRUC168 · Mét · mọi diện tích",
+   "content": "TP-TRUC168 Mét MOI-DIEN-TICH 500000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-UC-KT-4.6D:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-UC-KT-4.6D",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "395000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-UC KT 4.6D KU-GU · TP-UC KT 4.6D TRẮNG-XLC · TP-UC KT 4.6D XN-VK · TP-UC KT 4.6D XR-CF"
+   },
+   "title": "TP-UC-KT-4.6D · m2 · mọi diện tích",
+   "content": "TP-UC-KT-4.6D m2 MOI-DIEN-TICH 395000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-UC-KT-4D:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-UC-KT-4D",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "365000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-UC KT 4D XN-VK"
+   },
+   "title": "TP-UC-KT-4D · m2 · mọi diện tích",
+   "content": "TP-UC-KT-4D m2 MOI-DIEN-TICH 365000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-UC-KT-5.5D:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-UC-KT-5.5D",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "425000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-UC KT 5.5D KU-GU · TP-UC KT 5.5D TR-XLC · TP-UC KT 5.5D XN-VK · TP-UC KT 5.5D XR-CF"
+   },
+   "title": "TP-UC-KT-5.5D · m2 · mọi diện tích",
+   "content": "TP-UC-KT-5.5D m2 MOI-DIEN-TICH 425000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-UC-KT-6D:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-UC-KT-6D",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "465000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-UC KT 6D STĐ MSK"
+   },
+   "title": "TP-UC-KT-6D · m2 · mọi diện tích",
+   "content": "TP-UC-KT-6D m2 MOI-DIEN-TICH 465000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-UC-MTN-4.6D:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-UC-MTN-4.6D",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "375000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-UC MTN 4.6D GU-KU · TP-UC MTN 4.6D TR-XLC · TP-UC MTN 4.6D XN-VK · TP-UC MTN 4.6D XR-CF"
+   },
+   "title": "TP-UC-MTN-4.6D · m2 · mọi diện tích",
+   "content": "TP-UC-MTN-4.6D m2 MOI-DIEN-TICH 375000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-UC-MTN-4D:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-UC-MTN-4D",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "345000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-UC MTN 4D XN-VK"
+   },
+   "title": "TP-UC-MTN-4D · m2 · mọi diện tích",
+   "content": "TP-UC-MTN-4D m2 MOI-DIEN-TICH 345000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-UC-MTN-5.5D:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-UC-MTN-5.5D",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "405000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-UC MTN 5.5D GU-KU · TP-UC MTN 5.5D TR-XLC · TP-UC MTN 5.5D XN-VK · TP-UC MTN 5.5D XR-CF"
+   },
+   "title": "TP-UC-MTN-5.5D · m2 · mọi diện tích",
+   "content": "TP-UC-MTN-5.5D m2 MOI-DIEN-TICH 405000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-UC-MTN-6D:m2:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-UC-MTN-6D",
+    "uom": "m2",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "465000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-UC MTN 6D STD MSK"
+   },
+   "title": "TP-UC-MTN-6D · m2 · mọi diện tích",
+   "content": "TP-UC-MTN-6D m2 MOI-DIEN-TICH 465000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-UPS-E1000i:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-UPS-E1000i",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "2700000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP_UPS-E1000i"
+   },
+   "title": "TP-UPS-E1000i · Cái · mọi diện tích",
+   "content": "TP-UPS-E1000i Cái MOI-DIEN-TICH 2700000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-UPS-E800i:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-UPS-E800i",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1800000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP_UPS-E800i"
+   },
+   "title": "TP-UPS-E800i · Cái · mọi diện tích",
+   "content": "TP-UPS-E800i Cái MOI-DIEN-TICH 1800000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-UPS-YH1000:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-UPS-YH1000",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1800000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP_UPS-YH1000"
+   },
+   "title": "TP-UPS-YH1000 · Cái · mọi diện tích",
+   "content": "TP-UPS-YH1000 Cái MOI-DIEN-TICH 1800000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-UPS-YH2000:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-UPS-YH2000",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "2700000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP_UPS-YH2000"
+   },
+   "title": "TP-UPS-YH2000 · Cái · mọi diện tích",
+   "content": "TP-UPS-YH2000 Cái MOI-DIEN-TICH 2700000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-V4-INOX:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-V4-INOX",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "180000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-V4_INOX"
+   },
+   "title": "TP-V4-INOX · Mét · mọi diện tích",
+   "content": "TP-V4-INOX Mét MOI-DIEN-TICH 180000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-V4-INOX-3LY:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-V4-INOX-3LY",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "250000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-V4_INOX_3LY"
+   },
+   "title": "TP-V4-INOX-3LY · Mét · mọi diện tích",
+   "content": "TP-V4-INOX-3LY Mét MOI-DIEN-TICH 250000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-YHLD-TayDK:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-YHLD-TayDK",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "180000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-YHLD_TayDK"
+   },
+   "title": "TP-YHLD-TayDK · Cái · mọi diện tích",
+   "content": "TP-YHLD-TayDK Cái MOI-DIEN-TICH 180000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-YHTaiwan-BODK:Bộ:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-YHTaiwan-BODK",
+    "uom": "Bộ",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "1050000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-YHTaiwan-BODK"
+   },
+   "title": "TP-YHTaiwan-BODK · Bộ · mọi diện tích",
+   "content": "TP-YHTaiwan-BODK Bộ MOI-DIEN-TICH 1050000"
+  },
+  {
+   "name": "Alumdoor 2026:TP-YHTaiwan-TayDK:Cái:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TP-YHTaiwan-TayDK",
+    "uom": "Cái",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "350000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TP-YHTaiwan-TayDK"
+   },
+   "title": "TP-YHTaiwan-TayDK · Cái · mọi diện tích",
+   "content": "TP-YHTaiwan-TayDK Cái MOI-DIEN-TICH 350000"
+  },
+  {
+   "name": "Alumdoor 2026:TRỤC-114-1.8LY:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TRỤC-114-1.8LY",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "180000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TRỤC 114_1.8LY"
+   },
+   "title": "TRỤC-114-1.8LY · Mét · mọi diện tích",
+   "content": "TRỤC-114-1.8LY Mét MOI-DIEN-TICH 180000"
+  },
+  {
+   "name": "Alumdoor 2026:TRỤC-114-2.1LY:Mét:STANDARD:MOI-DIEN-TICH",
+   "payload": {
+    "price_list": "Alumdoor 2026",
+    "item_code": "TRỤC-114-2.1LY",
+    "uom": "Mét",
+    "area_tier": "MOI-DIEN-TICH",
+    "price_variant": "STANDARD",
+    "rate": "200000",
+    "currency": "VND",
+    "disabled": false,
+    "_migration_source": "alumdoor-bang-gia-2026-08-20",
+    "_gop_tu": "TRỤC 114_2.1LY"
+   },
+   "title": "TRỤC-114-2.1LY · Mét · mọi diện tích",
+   "content": "TRỤC-114-2.1LY Mét MOI-DIEN-TICH 200000"
+  }
+ ]
+}

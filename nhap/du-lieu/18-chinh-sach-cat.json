@@ -1,0 +1,413 @@
+{
+ "doctype": "Cutting Policy",
+ "so_ban_ghi": 5,
+ "nguon": "alumdoor-cong-thuc-cua-2026-08-20",
+ "ban_ghi": [
+  {
+   "name": "CS-CUA-DUC",
+   "payload": {
+    "policy_name": "Cửa CN Đức",
+    "door_type": "Cửa Đức",
+    "geometry_profile": "GP-CUA-DUC",
+    "ray_type": "Ray hộp/đơn U76",
+    "dealer_cut_deduction_m": 0.02,
+    "retail_cut_deduction_m": 0.08,
+    "dealer_width_basis": "Phủ bì nhựa",
+    "retail_width_basis": "Phủ bì ray",
+    "dealer_split_sales_basis": "Phủ bì nhựa",
+    "dealer_full_sales_basis": "Phủ bì nhựa",
+    "retail_sales_basis": "Phủ bì ray",
+    "purchase_formula": "Kg thực tế",
+    "purchase_height_basis": "Cao phủ bì",
+    "purchase_width_basis": "Rộng cắt lá",
+    "leaf_formula": "Kiểu Đức",
+    "leaf_divisor_source": "Hằng số của chính sách",
+    "leaf_divisor_const": 0.465,
+    "leaf_rounding": "Nấc 0-0.3-0.7-1",
+    "leaf_variants": [
+     {
+      "variant_label": "Motor trong / kéo tay",
+      "addend": 2,
+      "note": "(Cao pb chia 0,465) cộng 2"
+     },
+     {
+      "variant_label": "Motor ngoài, không tự dừng",
+      "addend": 1.5,
+      "note": "(Cao pb chia 0,465) cộng 1,5"
+     },
+     {
+      "variant_label": "Motor ngoài, có tự dừng",
+      "addend": 1.3,
+      "note": "(Cao pb chia 0,465) cộng 1,3"
+     }
+    ],
+    "geometry_rules": [
+     {
+      "rule_code": "DUC-LA-DL",
+      "target_field": "RONG-CAT-LA",
+      "source_field": "RONG-PB-NHUA",
+      "operator": "SUBTRACT",
+      "operand_m": 0.02,
+      "priority": 0,
+      "sequence": 1,
+      "customer_group": "Đại lý",
+      "note": "Công thức 2: Rộng cắt lá = Rộng phủ bì nhựa trừ 0,02"
+     },
+     {
+      "rule_code": "DUC-LA-LE",
+      "target_field": "RONG-CAT-LA",
+      "source_field": "RONG-PB-RAY",
+      "operator": "SUBTRACT",
+      "operand_m": 0.08,
+      "priority": 0,
+      "sequence": 2,
+      "customer_group": "Lẻ",
+      "note": "Công thức 1: Rộng cắt lá = Rộng phủ bì ray trừ 0,08"
+     },
+     {
+      "rule_code": "DUC-RAY",
+      "target_field": "DAI-RAY",
+      "source_field": "CAO-PB",
+      "operator": "SUBTRACT",
+      "operand_m": 0.2,
+      "priority": 0,
+      "sequence": 3,
+      "note": "Đơn giá tặng ray: ray hộp TĐ = Cao pb trừ 0,2. Chỉ áp cho cửa trên 10 m2."
+     },
+     {
+      "rule_code": "DUC-DT",
+      "target_field": "DIEN-TICH",
+      "source_field": "CAO-PB",
+      "operator": "COPY",
+      "operand_m": 0,
+      "priority": 0,
+      "sequence": 9,
+      "note": "Diện tích = Cao pb nhân Rộng theo cơ sở bán của nhóm khách"
+     }
+    ],
+    "priority": 0,
+    "disabled": false,
+    "note": "Dựng từ QUY CÁCH (3).xlsx (CT TT-SX, ĐƠN GIÁ TRỌN BỘ) và 25.7 QUY TRÌNH (2).docx.",
+    "_migration_source": "alumdoor-cong-thuc-cua-2026-08-20"
+   },
+   "title": "Cửa CN Đức",
+   "content": "CS-CUA-DUC Cửa CN Đức"
+  },
+  {
+   "name": "CS-CUA-UC",
+   "payload": {
+    "policy_name": "Cửa tấm liền Úc",
+    "door_type": "Cửa Úc",
+    "geometry_profile": "GP-CUA-UC",
+    "ray_type": "Ray sắt U70",
+    "dealer_cut_deduction_m": 0.03,
+    "retail_cut_deduction_m": 0.03,
+    "dealer_width_basis": "Phủ bì ray",
+    "retail_width_basis": "Phủ bì ray",
+    "dealer_split_sales_basis": "Phủ bì ray",
+    "dealer_full_sales_basis": "Phủ bì ray",
+    "retail_sales_basis": "Phủ bì ray",
+    "purchase_formula": "Barem kg/m2",
+    "purchase_height_basis": "Cao phủ bì",
+    "purchase_width_basis": "Rộng cắt lá",
+    "leaf_formula": "Kiểu tấm liền Úc",
+    "leaf_divisor_source": "Hằng số của chính sách",
+    "leaf_divisor_const": 0.068,
+    "leaf_height_deduction_m": 0.13,
+    "leaf_rounding": "Làm tròn xuống",
+    "geometry_rules": [
+     {
+      "rule_code": "UC-LA",
+      "target_field": "RONG-CAT-LA",
+      "source_field": "RONG-PB-RAY",
+      "operator": "SUBTRACT",
+      "operand_m": 0.03,
+      "priority": 0,
+      "sequence": 1,
+      "note": "Rộng cắt lá = Rộng phủ bì ray trừ 0,03"
+     },
+     {
+      "rule_code": "UC-RAY",
+      "target_field": "DAI-RAY",
+      "source_field": "CAO-PB",
+      "operator": "SUBTRACT",
+      "operand_m": 0.1,
+      "priority": 0,
+      "sequence": 2,
+      "ray_type": "Ray sắt U70",
+      "note": "Trọn bộ: ray sắt U70 không ron = Cao pb trừ 0,1"
+     },
+     {
+      "rule_code": "UC-DT",
+      "target_field": "DIEN-TICH",
+      "source_field": "CAO-PB",
+      "operator": "COPY",
+      "operand_m": 0,
+      "priority": 0,
+      "sequence": 9
+     }
+    ],
+    "priority": 0,
+    "disabled": false,
+    "note": "Dựng từ QUY CÁCH (3).xlsx (CT TT-SX, ĐƠN GIÁ TRỌN BỘ) và 25.7 QUY TRÌNH (2).docx.",
+    "_migration_source": "alumdoor-cong-thuc-cua-2026-08-20"
+   },
+   "title": "Cửa tấm liền Úc",
+   "content": "CS-CUA-UC Cửa tấm liền Úc"
+  },
+  {
+   "name": "CS-CUA-DAI-LOAN",
+   "payload": {
+    "policy_name": "Cửa Đài Loan",
+    "door_type": "Cửa Đài Loan",
+    "geometry_profile": "GP-CUA-DAI-LOAN",
+    "ray_type": "Ray sắt U70",
+    "dealer_cut_deduction_m": 0.03,
+    "retail_cut_deduction_m": 0.03,
+    "butterfly_cut_deduction_m": 0.035,
+    "dealer_width_basis": "Phủ bì ray",
+    "retail_width_basis": "Phủ bì ray",
+    "dealer_split_sales_basis": "Rộng cắt lá",
+    "dealer_full_sales_basis": "Phủ bì ray",
+    "retail_sales_basis": "Phủ bì ray",
+    "purchase_formula": "Barem kg/m2",
+    "purchase_height_basis": "Cao lưới",
+    "purchase_width_basis": "Rộng cắt lá",
+    "leaf_formula": "Kiểu Đài Loan Lưới",
+    "leaf_divisor_source": "Bản lá của bộ quy cách",
+    "leaf_rounding": "Nấc 0-0.3-0.7-1",
+    "geometry_rules": [
+     {
+      "rule_code": "LA-THUONG",
+      "target_field": "RONG-CAT-LA",
+      "source_field": "RONG-PB-RAY",
+      "operator": "SUBTRACT",
+      "operand_m": 0.03,
+      "priority": 0,
+      "sequence": 1,
+      "note": "Rộng cắt lá = Rộng phủ bì ray trừ 0,03"
+     },
+     {
+      "rule_code": "LA-BUOM",
+      "target_field": "RONG-CAT-LA",
+      "source_field": "RONG-PB-RAY",
+      "operator": "SUBTRACT",
+      "operand_m": 0.035,
+      "priority": 10,
+      "sequence": 2,
+      "has_butterfly_bracket": true,
+      "note": "Có lá Đài Loan bắn bướm thì trừ 0,035"
+     },
+     {
+      "rule_code": "RAY",
+      "target_field": "DAI-RAY",
+      "source_field": "CAO-PB",
+      "operator": "SUBTRACT",
+      "operand_m": 0.1,
+      "priority": 0,
+      "sequence": 3,
+      "ray_type": "Ray sắt U70",
+      "note": "Trọn bộ: ray sắt U70 có ron = Cao pb trừ 0,1"
+     },
+     {
+      "rule_code": "V4",
+      "target_field": "DAI-V4",
+      "source_field": "RONG-PB-RAY",
+      "operator": "SUBTRACT",
+      "operand_m": 0.03,
+      "priority": 0,
+      "sequence": 4,
+      "note": "Trọn bộ: V4 = Rộng pb ray trừ 0,03"
+     },
+     {
+      "rule_code": "TRUC",
+      "target_field": "DAI-TRUC",
+      "source_field": "RONG-PB-RAY",
+      "operator": "SUBTRACT",
+      "operand_m": 0.05,
+      "priority": 0,
+      "sequence": 5,
+      "note": "Trọn bộ: trục 114-1ly8 = Rộng pb ray trừ 0,05"
+     },
+     {
+      "rule_code": "DT",
+      "target_field": "DIEN-TICH",
+      "source_field": "CAO-PB",
+      "operator": "COPY",
+      "operand_m": 0,
+      "priority": 0,
+      "sequence": 9
+     }
+    ],
+    "priority": 0,
+    "disabled": false,
+    "note": "Dựng từ QUY CÁCH (3).xlsx (CT TT-SX, ĐƠN GIÁ TRỌN BỘ) và 25.7 QUY TRÌNH (2).docx.",
+    "_migration_source": "alumdoor-cong-thuc-cua-2026-08-20"
+   },
+   "title": "Cửa Đài Loan",
+   "content": "CS-CUA-DAI-LOAN Cửa Đài Loan"
+  },
+  {
+   "name": "CS-CUA-LUOI",
+   "payload": {
+    "policy_name": "Cửa Lưới",
+    "door_type": "Cửa Lưới",
+    "geometry_profile": "GP-CUA-LUOI",
+    "ray_type": "Ray sắt U70",
+    "dealer_cut_deduction_m": 0.03,
+    "retail_cut_deduction_m": 0.03,
+    "butterfly_cut_deduction_m": 0.035,
+    "dealer_width_basis": "Phủ bì ray",
+    "retail_width_basis": "Phủ bì ray",
+    "dealer_split_sales_basis": "Rộng cắt lá",
+    "dealer_full_sales_basis": "Phủ bì ray",
+    "retail_sales_basis": "Phủ bì ray",
+    "purchase_formula": "Barem kg/m2",
+    "purchase_height_basis": "Cao lưới",
+    "purchase_width_basis": "Rộng cắt lá",
+    "leaf_formula": "Kiểu Đài Loan Lưới",
+    "leaf_divisor_source": "Bản lá của bộ quy cách",
+    "leaf_rounding": "Nấc 0-0.3-0.7-1",
+    "geometry_rules": [
+     {
+      "rule_code": "LA-THUONG",
+      "target_field": "RONG-CAT-LA",
+      "source_field": "RONG-PB-RAY",
+      "operator": "SUBTRACT",
+      "operand_m": 0.03,
+      "priority": 0,
+      "sequence": 1,
+      "note": "Rộng cắt lá = Rộng phủ bì ray trừ 0,03"
+     },
+     {
+      "rule_code": "LA-BUOM",
+      "target_field": "RONG-CAT-LA",
+      "source_field": "RONG-PB-RAY",
+      "operator": "SUBTRACT",
+      "operand_m": 0.035,
+      "priority": 10,
+      "sequence": 2,
+      "has_butterfly_bracket": true,
+      "note": "Có lá Đài Loan bắn bướm thì trừ 0,035"
+     },
+     {
+      "rule_code": "RAY",
+      "target_field": "DAI-RAY",
+      "source_field": "CAO-PB",
+      "operator": "SUBTRACT",
+      "operand_m": 0.1,
+      "priority": 0,
+      "sequence": 3,
+      "ray_type": "Ray sắt U70",
+      "note": "Trọn bộ: ray sắt U70 có ron = Cao pb trừ 0,1"
+     },
+     {
+      "rule_code": "V4",
+      "target_field": "DAI-V4",
+      "source_field": "RONG-PB-RAY",
+      "operator": "SUBTRACT",
+      "operand_m": 0.03,
+      "priority": 0,
+      "sequence": 4,
+      "note": "Trọn bộ: V4 = Rộng pb ray trừ 0,03"
+     },
+     {
+      "rule_code": "TRUC",
+      "target_field": "DAI-TRUC",
+      "source_field": "RONG-PB-RAY",
+      "operator": "SUBTRACT",
+      "operand_m": 0.05,
+      "priority": 0,
+      "sequence": 5,
+      "note": "Trọn bộ: trục 114-1ly8 = Rộng pb ray trừ 0,05"
+     },
+     {
+      "rule_code": "DT",
+      "target_field": "DIEN-TICH",
+      "source_field": "CAO-PB",
+      "operator": "COPY",
+      "operand_m": 0,
+      "priority": 0,
+      "sequence": 9
+     }
+    ],
+    "priority": 0,
+    "disabled": false,
+    "note": "Dựng từ QUY CÁCH (3).xlsx (CT TT-SX, ĐƠN GIÁ TRỌN BỘ) và 25.7 QUY TRÌNH (2).docx.",
+    "_migration_source": "alumdoor-cong-thuc-cua-2026-08-20"
+   },
+   "title": "Cửa Lưới",
+   "content": "CS-CUA-LUOI Cửa Lưới"
+  },
+  {
+   "name": "CS-CUA-SIEU-TRUONG",
+   "payload": {
+    "policy_name": "Cửa Siêu Trường",
+    "door_type": "Cửa Siêu Trường",
+    "geometry_profile": "GP-CUA-SIEU-TRUONG",
+    "ray_type": "Ray sắt U70",
+    "dealer_cut_deduction_m": 0.03,
+    "retail_cut_deduction_m": 0.03,
+    "butterfly_cut_deduction_m": 0.035,
+    "dealer_width_basis": "Phủ bì ray",
+    "retail_width_basis": "Phủ bì ray",
+    "dealer_split_sales_basis": "Rộng cắt lá",
+    "dealer_full_sales_basis": "Rộng cắt lá",
+    "retail_sales_basis": "Phủ bì ray",
+    "purchase_formula": "Barem kg/m2",
+    "purchase_height_basis": "Cao lưới",
+    "purchase_width_basis": "Rộng cắt lá",
+    "leaf_formula": "Kiểu Đài Loan Lưới",
+    "leaf_divisor_source": "Bản lá của bộ quy cách",
+    "leaf_rounding": "Nấc 0-0.3-0.7-1",
+    "geometry_rules": [
+     {
+      "rule_code": "ST-LA",
+      "target_field": "RONG-CAT-LA",
+      "source_field": "RONG-PB-RAY",
+      "operator": "SUBTRACT",
+      "operand_m": 0.03,
+      "priority": 0,
+      "sequence": 1,
+      "note": "Rộng cắt lá = Rộng phủ bì ray trừ 0,03"
+     },
+     {
+      "rule_code": "ST-BUOM",
+      "target_field": "RONG-CAT-LA",
+      "source_field": "RONG-PB-RAY",
+      "operator": "SUBTRACT",
+      "operand_m": 0.035,
+      "priority": 10,
+      "sequence": 2,
+      "has_butterfly_bracket": true
+     },
+     {
+      "rule_code": "ST-RAY",
+      "target_field": "DAI-RAY",
+      "source_field": "CAO-PB",
+      "operator": "SUBTRACT",
+      "operand_m": 0.1,
+      "priority": 0,
+      "sequence": 3,
+      "ray_type": "Ray sắt U70"
+     },
+     {
+      "rule_code": "ST-DT",
+      "target_field": "DIEN-TICH",
+      "source_field": "CAO-PB",
+      "operator": "COPY",
+      "operand_m": 0,
+      "priority": 0,
+      "sequence": 9
+     }
+    ],
+    "priority": 0,
+    "disabled": false,
+    "note": "Dựng từ QUY CÁCH (3).xlsx (CT TT-SX, ĐƠN GIÁ TRỌN BỘ) và 25.7 QUY TRÌNH (2).docx.",
+    "_migration_source": "alumdoor-cong-thuc-cua-2026-08-20"
+   },
+   "title": "Cửa Siêu Trường",
+   "content": "CS-CUA-SIEU-TRUONG Cửa Siêu Trường"
+  }
+ ]
+}

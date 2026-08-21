@@ -1,0 +1,896 @@
+{
+ "doctype": "Item",
+ "trich_luc_luc": "2026-08-20T16:46:46.143Z",
+ "nguon": "06-hang-hoa.json nhóm 'Ray và trục'; mã RT_ + ASCII; ĐVT bán lấy từ ĐM.md; hệ số để trống",
+ "so_ban_ghi": 40,
+ "ban_ghi": [
+  {
+   "name": "RT_TRUC_114_1.8LY",
+   "payload": {
+    "item_code": "RT_TRUC_114_1.8LY",
+    "item_name": "TRỤC 114 1.8LY",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Ống/trục",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [
+     {
+      "uom": "Mét",
+      "conversion_factor": 0,
+      "note": "Chưa có hệ số — xưởng cân rồi điền"
+     }
+    ],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_TRUC_114_2.1LY",
+   "payload": {
+    "item_code": "RT_TRUC_114_2.1LY",
+    "item_name": "TRỤC 114 2.1LY",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Ống/trục",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [
+     {
+      "uom": "Mét",
+      "conversion_factor": 0,
+      "note": "Chưa có hệ số — xưởng cân rồi điền"
+     }
+    ],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_RAYHOP",
+   "payload": {
+    "item_code": "RT_RAYHOP",
+    "item_name": "RAY HỘP TD U76",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Ống/trục",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [
+     {
+      "uom": "Mét",
+      "conversion_factor": 0,
+      "note": "Chưa có hệ số — xưởng cân rồi điền"
+     }
+    ],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_TD87A1",
+   "payload": {
+    "item_code": "RT_TD87A1",
+    "item_name": "RAY ĐƠN TD U76",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Ống/trục",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [
+     {
+      "uom": "Mét",
+      "conversion_factor": 0,
+      "note": "Chưa có hệ số — xưởng cân rồi điền"
+     }
+    ],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_RAY_HOP_TD_U100",
+   "payload": {
+    "item_code": "RT_RAY_HOP_TD_U100",
+    "item_name": "RAY HỘP TD U100",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Ống/trục",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [
+     {
+      "uom": "Mét",
+      "conversion_factor": 0,
+      "note": "Chưa có hệ số — xưởng cân rồi điền"
+     }
+    ],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_RNHUA_DR",
+   "payload": {
+    "item_code": "RT_RNHUA_DR",
+    "item_name": "RON NHỰA ĐÁY RAY",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Nhôm cây/lá",
+    "stock_uom": "Mét",
+    "default_purchase_uom": "Mét",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_RNINOX_DR",
+   "payload": {
+    "item_code": "RT_RNINOX_DR",
+    "item_name": "RON INOX ĐÁY RAY",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Nhôm cây/lá",
+    "stock_uom": "Mét",
+    "default_purchase_uom": "Mét",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_RNHUA_LONG_CR",
+   "payload": {
+    "item_code": "RT_RNHUA_LONG_CR",
+    "item_name": "RON NHỰA CẠNH RAY",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Nhôm cây/lá",
+    "stock_uom": "Mét",
+    "default_purchase_uom": "Mét",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_PHOTLONG12_5X5X120M",
+   "payload": {
+    "item_code": "RT_PHOTLONG12_5X5X120M",
+    "item_name": "RON LÔNG CẠNH RAY",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Nhôm cây/lá",
+    "stock_uom": "Mét",
+    "default_purchase_uom": "Mét",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_RAYNHOMUC",
+   "payload": {
+    "item_code": "RT_RAYNHOMUC",
+    "item_name": "RAY NHÔM ÚC",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Nhôm cây/lá",
+    "stock_uom": "Mét",
+    "default_purchase_uom": "Mét",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_TRUC34",
+   "payload": {
+    "item_code": "RT_TRUC34",
+    "item_name": "TRỤC PHI 34",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Ống/trục",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [
+     {
+      "uom": "Mét",
+      "conversion_factor": 0,
+      "note": "Chưa có hệ số — xưởng cân rồi điền"
+     }
+    ],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_TRUC90",
+   "payload": {
+    "item_code": "RT_TRUC90",
+    "item_name": "TRỤC PHI 90",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Nhôm cây/lá",
+    "stock_uom": "Mét",
+    "default_purchase_uom": "Mét",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_TRUC140",
+   "payload": {
+    "item_code": "RT_TRUC140",
+    "item_name": "TRỤC 140",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Nhôm cây/lá",
+    "stock_uom": "Mét",
+    "default_purchase_uom": "Mét",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_TRUC114_2.4LY",
+   "payload": {
+    "item_code": "RT_TRUC114_2.4LY",
+    "item_name": "TRỤC140 2.4LY",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Ống/trục",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_TRUC168",
+   "payload": {
+    "item_code": "RT_TRUC168",
+    "item_name": "TRỤC 168",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Nhôm cây/lá",
+    "stock_uom": "Mét",
+    "default_purchase_uom": "Mét",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_TRUC168_5LY",
+   "payload": {
+    "item_code": "RT_TRUC168_5LY",
+    "item_name": "TRỤC168 5LY",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Ống/trục",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_RAY_U70_KRON",
+   "payload": {
+    "item_code": "RT_RAY_U70_KRON",
+    "item_name": "RAY SẮT U70 (KHÔNG RON)",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Ống/trục",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [
+     {
+      "uom": "Mét",
+      "conversion_factor": 0,
+      "note": "Chưa có hệ số — xưởng cân rồi điền"
+     }
+    ],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_RAY_U100_1.2LY_KRON",
+   "payload": {
+    "item_code": "RT_RAY_U100_1.2LY_KRON",
+    "item_name": "RAY SẮT U100-1.2ly (KHÔNG RON)",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Nhôm cây/lá",
+    "stock_uom": "Mét",
+    "default_purchase_uom": "Mét",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_RAY_U100_1.2LY_RON",
+   "payload": {
+    "item_code": "RT_RAY_U100_1.2LY_RON",
+    "item_name": "RAY SẮT U100-1.2ly (CÓ RON)",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Nhôm cây/lá",
+    "stock_uom": "Mét",
+    "default_purchase_uom": "Mét",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_RAY_U100_1.4LY_KRON",
+   "payload": {
+    "item_code": "RT_RAY_U100_1.4LY_KRON",
+    "item_name": "RAY SẮT U100-1.4ly (KHÔNG RON)",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Nhôm cây/lá",
+    "stock_uom": "Mét",
+    "default_purchase_uom": "Mét",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_RAY_U100_1.4LY_RON",
+   "payload": {
+    "item_code": "RT_RAY_U100_1.4LY_RON",
+    "item_name": "RAY SẮT U100-1.4ly (CÓ RON)",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Nhôm cây/lá",
+    "stock_uom": "Mét",
+    "default_purchase_uom": "Mét",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_RAY_U100_1.4LY_RON_TD",
+   "payload": {
+    "item_code": "RT_RAY_U100_1.4LY_RON_TD",
+    "item_name": "RAY SẮT U100-1.4ly (CÓ RON+TỰ DỪNG)",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Nhôm cây/lá",
+    "stock_uom": "Mét",
+    "default_purchase_uom": "Mét",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_RS7P_CO_RON",
+   "payload": {
+    "item_code": "RT_RS7P_CO_RON",
+    "item_name": "RAY SẮT U70 (CÓ RON)",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Nhôm cây/lá",
+    "stock_uom": "Mét",
+    "default_purchase_uom": "Mét",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_RAYINOX_6P_RON",
+   "payload": {
+    "item_code": "RT_RAYINOX_6P_RON",
+    "item_name": "RAY INOX 6P CÓ RON",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Nhôm cây/lá",
+    "stock_uom": "Mét",
+    "default_purchase_uom": "Mét",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_RAYINOX_8P_RON",
+   "payload": {
+    "item_code": "RT_RAYINOX_8P_RON",
+    "item_name": "RAY INOX 8P CÓ RON",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Nhôm cây/lá",
+    "stock_uom": "Mét",
+    "default_purchase_uom": "Mét",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_RAYINOX_7P_KHONGRON",
+   "payload": {
+    "item_code": "RT_RAYINOX_7P_KHONGRON",
+    "item_name": "RAY INOX 7P KHÔNG RON",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Nhôm cây/lá",
+    "stock_uom": "Mét",
+    "default_purchase_uom": "Mét",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_RAY_U70_RON",
+   "payload": {
+    "item_code": "RT_RAY_U70_RON",
+    "item_name": "RAY SẮT U70 (CÓ RON)",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Ống/trục",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_RAY_U100_KRON",
+   "payload": {
+    "item_code": "RT_RAY_U100_KRON",
+    "item_name": "RAY SẮT U100 (KHÔNG RON)",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Nhôm cây/lá",
+    "stock_uom": "Mét",
+    "default_purchase_uom": "Mét",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_RAY_U100_RON",
+   "payload": {
+    "item_code": "RT_RAY_U100_RON",
+    "item_name": "RAY SẮT U100 (CÓ RON)",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Nhôm cây/lá",
+    "stock_uom": "Mét",
+    "default_purchase_uom": "Mét",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_ONGKEM34",
+   "payload": {
+    "item_code": "RT_ONGKEM34",
+    "item_name": "TRỤC 34",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Ống/trục",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_RHM8",
+   "payload": {
+    "item_code": "RT_RHM8",
+    "item_name": "RAY HỘP TD U76",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Ống/trục",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": true
+   }
+  },
+  {
+   "name": "RT_R87A1",
+   "payload": {
+    "item_code": "RT_R87A1",
+    "item_name": "RAY ĐƠN TD U76",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Ống/trục",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": true
+   }
+  },
+  {
+   "name": "RT_RHU100",
+   "payload": {
+    "item_code": "RT_RHU100",
+    "item_name": "RAY HỘP TD U100",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Ống/trục",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": true
+   }
+  },
+  {
+   "name": "RT_NVL_RNHUA_DR",
+   "payload": {
+    "item_code": "RT_NVL_RNHUA_DR",
+    "item_name": "RON NHỰA ĐÁY RAY",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Ống/trục",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Mét",
+    "uom_conversions": [
+     {
+      "uom": "Mét",
+      "conversion_factor": 0,
+      "note": "Chưa có hệ số — xưởng cân rồi điền"
+     }
+    ],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_RNHUA_CR",
+   "payload": {
+    "item_code": "RT_RNHUA_CR",
+    "item_name": "RON NHỰA CẠNH RAY",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Ống/trục",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": true
+   }
+  },
+  {
+   "name": "RT_RINOX_DR",
+   "payload": {
+    "item_code": "RT_RINOX_DR",
+    "item_name": "RON INOX ĐÁY RAY",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Ống/trục",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_TR114_1.8",
+   "payload": {
+    "item_code": "RT_TR114_1.8",
+    "item_name": "TRỤC 114 (1.8 mm)",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Ống/trục",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_TR114_2.1",
+   "payload": {
+    "item_code": "RT_TR114_2.1",
+    "item_name": "TRỤC 114 (2.1 mm)",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Ống/trục",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_TR140",
+   "payload": {
+    "item_code": "RT_TR140",
+    "item_name": "TRỤC 140 (2.5 mm)",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Ống/trục",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   }
+  },
+  {
+   "name": "RT_TR168",
+   "payload": {
+    "item_code": "RT_TR168",
+    "item_name": "TRỤC 168 (4.0 mm)",
+    "item_group": "Ray và trục",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": false,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Ống/trục",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Kg",
+    "uom_conversions": [],
+    "disabled": false
+   }
+  }
+ ]
+}

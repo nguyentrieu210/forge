@@ -1,0 +1,372 @@
+{
+ "doctype": "Geometry Profile",
+ "so_ban_ghi": 5,
+ "nguon": "alumdoor-cong-thuc-cua-2026-08-20",
+ "ban_ghi": [
+  {
+   "name": "GP-CUA-DUC",
+   "payload": {
+    "profile_code": "GP-CUA-DUC",
+    "profile_name": "Cửa CN Đức",
+    "item_groups": [
+     {
+      "item_group": "Cửa CN Đức"
+     }
+    ],
+    "fields": [
+     {
+      "geometry_field": "CAO-PB",
+      "role": "INPUT",
+      "required": true,
+      "visible": true,
+      "editable": true,
+      "sequence": 1
+     },
+     {
+      "geometry_field": "RONG-PB-RAY",
+      "role": "INPUT",
+      "required": true,
+      "visible": true,
+      "editable": true,
+      "sequence": 2
+     },
+     {
+      "geometry_field": "RONG-PB-NHUA",
+      "role": "INPUT",
+      "required": true,
+      "visible": true,
+      "editable": true,
+      "sequence": 3
+     },
+     {
+      "geometry_field": "RONG-CAT-LA",
+      "role": "CALCULATED",
+      "required": false,
+      "visible": true,
+      "editable": false,
+      "sequence": 4
+     },
+     {
+      "geometry_field": "DAI-RAY",
+      "role": "CALCULATED",
+      "required": false,
+      "visible": true,
+      "editable": false,
+      "sequence": 5
+     },
+     {
+      "geometry_field": "DIEN-TICH",
+      "role": "CALCULATED",
+      "required": false,
+      "visible": true,
+      "editable": false,
+      "sequence": 6
+     }
+    ],
+    "note": "Dựng từ QUY CÁCH (3).xlsx sheet CT TT-SX.",
+    "disabled": false,
+    "_migration_source": "alumdoor-cong-thuc-cua-2026-08-20"
+   },
+   "title": "Cửa CN Đức",
+   "content": "GP-CUA-DUC Cửa CN Đức"
+  },
+  {
+   "name": "GP-CUA-UC",
+   "payload": {
+    "profile_code": "GP-CUA-UC",
+    "profile_name": "Cửa tấm liền Úc",
+    "item_groups": [
+     {
+      "item_group": "Cửa tấm liền Úc"
+     }
+    ],
+    "fields": [
+     {
+      "geometry_field": "CAO-PB",
+      "role": "INPUT",
+      "required": true,
+      "visible": true,
+      "editable": true,
+      "sequence": 1
+     },
+     {
+      "geometry_field": "RONG-PB-RAY",
+      "role": "INPUT",
+      "required": true,
+      "visible": true,
+      "editable": true,
+      "sequence": 2
+     },
+     {
+      "geometry_field": "RONG-CAT-LA",
+      "role": "CALCULATED",
+      "required": false,
+      "visible": true,
+      "editable": false,
+      "sequence": 3
+     },
+     {
+      "geometry_field": "DAI-RAY",
+      "role": "CALCULATED",
+      "required": false,
+      "visible": true,
+      "editable": false,
+      "sequence": 4
+     },
+     {
+      "geometry_field": "DIEN-TICH",
+      "role": "CALCULATED",
+      "required": false,
+      "visible": true,
+      "editable": false,
+      "sequence": 5
+     }
+    ],
+    "note": "Dựng từ QUY CÁCH (3).xlsx sheet CT TT-SX.",
+    "disabled": false,
+    "_migration_source": "alumdoor-cong-thuc-cua-2026-08-20"
+   },
+   "title": "Cửa tấm liền Úc",
+   "content": "GP-CUA-UC Cửa tấm liền Úc"
+  },
+  {
+   "name": "GP-CUA-DAI-LOAN",
+   "payload": {
+    "profile_code": "GP-CUA-DAI-LOAN",
+    "profile_name": "Cửa Đài Loan",
+    "item_groups": [
+     {
+      "item_group": "Cửa Đài Loan"
+     },
+     {
+      "item_group": "Cửa Đài Loan Inox"
+     },
+     {
+      "item_group": "Cửa kéo Đài Loan"
+     }
+    ],
+    "fields": [
+     {
+      "geometry_field": "CAO-PB",
+      "role": "INPUT",
+      "required": true,
+      "visible": true,
+      "editable": true,
+      "sequence": 1
+     },
+     {
+      "geometry_field": "RONG-PB-RAY",
+      "role": "INPUT",
+      "required": true,
+      "visible": true,
+      "editable": true,
+      "sequence": 2
+     },
+     {
+      "geometry_field": "CAO-LUOI",
+      "role": "INPUT",
+      "required": true,
+      "visible": true,
+      "editable": true,
+      "sequence": 3
+     },
+     {
+      "geometry_field": "RONG-CAT-LA",
+      "role": "CALCULATED",
+      "required": false,
+      "visible": true,
+      "editable": false,
+      "sequence": 4
+     },
+     {
+      "geometry_field": "DAI-RAY",
+      "role": "CALCULATED",
+      "required": false,
+      "visible": true,
+      "editable": false,
+      "sequence": 5
+     },
+     {
+      "geometry_field": "DAI-TRUC",
+      "role": "CALCULATED",
+      "required": false,
+      "visible": true,
+      "editable": false,
+      "sequence": 6
+     },
+     {
+      "geometry_field": "DAI-V4",
+      "role": "CALCULATED",
+      "required": false,
+      "visible": true,
+      "editable": false,
+      "sequence": 7
+     },
+     {
+      "geometry_field": "DIEN-TICH",
+      "role": "CALCULATED",
+      "required": false,
+      "visible": true,
+      "editable": false,
+      "sequence": 8
+     }
+    ],
+    "note": "Dựng từ QUY CÁCH (3).xlsx sheet CT TT-SX.",
+    "disabled": false,
+    "_migration_source": "alumdoor-cong-thuc-cua-2026-08-20"
+   },
+   "title": "Cửa Đài Loan",
+   "content": "GP-CUA-DAI-LOAN Cửa Đài Loan"
+  },
+  {
+   "name": "GP-CUA-LUOI",
+   "payload": {
+    "profile_code": "GP-CUA-LUOI",
+    "profile_name": "Cửa Lưới",
+    "item_groups": [
+     {
+      "item_group": "Cửa Lưới"
+     }
+    ],
+    "fields": [
+     {
+      "geometry_field": "CAO-PB",
+      "role": "INPUT",
+      "required": true,
+      "visible": true,
+      "editable": true,
+      "sequence": 1
+     },
+     {
+      "geometry_field": "RONG-PB-RAY",
+      "role": "INPUT",
+      "required": true,
+      "visible": true,
+      "editable": true,
+      "sequence": 2
+     },
+     {
+      "geometry_field": "CAO-LUOI",
+      "role": "INPUT",
+      "required": true,
+      "visible": true,
+      "editable": true,
+      "sequence": 3
+     },
+     {
+      "geometry_field": "RONG-CAT-LA",
+      "role": "CALCULATED",
+      "required": false,
+      "visible": true,
+      "editable": false,
+      "sequence": 4
+     },
+     {
+      "geometry_field": "DAI-RAY",
+      "role": "CALCULATED",
+      "required": false,
+      "visible": true,
+      "editable": false,
+      "sequence": 5
+     },
+     {
+      "geometry_field": "DAI-TRUC",
+      "role": "CALCULATED",
+      "required": false,
+      "visible": true,
+      "editable": false,
+      "sequence": 6
+     },
+     {
+      "geometry_field": "DAI-V4",
+      "role": "CALCULATED",
+      "required": false,
+      "visible": true,
+      "editable": false,
+      "sequence": 7
+     },
+     {
+      "geometry_field": "DIEN-TICH",
+      "role": "CALCULATED",
+      "required": false,
+      "visible": true,
+      "editable": false,
+      "sequence": 8
+     }
+    ],
+    "note": "Dựng từ QUY CÁCH (3).xlsx sheet CT TT-SX.",
+    "disabled": false,
+    "_migration_source": "alumdoor-cong-thuc-cua-2026-08-20"
+   },
+   "title": "Cửa Lưới",
+   "content": "GP-CUA-LUOI Cửa Lưới"
+  },
+  {
+   "name": "GP-CUA-SIEU-TRUONG",
+   "payload": {
+    "profile_code": "GP-CUA-SIEU-TRUONG",
+    "profile_name": "Cửa Siêu Trường",
+    "item_groups": [
+     {
+      "item_group": "Cửa Siêu Trường"
+     }
+    ],
+    "fields": [
+     {
+      "geometry_field": "CAO-PB",
+      "role": "INPUT",
+      "required": true,
+      "visible": true,
+      "editable": true,
+      "sequence": 1
+     },
+     {
+      "geometry_field": "RONG-PB-RAY",
+      "role": "INPUT",
+      "required": true,
+      "visible": true,
+      "editable": true,
+      "sequence": 2
+     },
+     {
+      "geometry_field": "CAO-LUOI",
+      "role": "INPUT",
+      "required": true,
+      "visible": true,
+      "editable": true,
+      "sequence": 3
+     },
+     {
+      "geometry_field": "RONG-CAT-LA",
+      "role": "CALCULATED",
+      "required": false,
+      "visible": true,
+      "editable": false,
+      "sequence": 4
+     },
+     {
+      "geometry_field": "DAI-RAY",
+      "role": "CALCULATED",
+      "required": false,
+      "visible": true,
+      "editable": false,
+      "sequence": 5
+     },
+     {
+      "geometry_field": "DIEN-TICH",
+      "role": "CALCULATED",
+      "required": false,
+      "visible": true,
+      "editable": false,
+      "sequence": 6
+     }
+    ],
+    "note": "Dựng từ QUY CÁCH (3).xlsx sheet CT TT-SX.",
+    "disabled": false,
+    "_migration_source": "alumdoor-cong-thuc-cua-2026-08-20"
+   },
+   "title": "Cửa Siêu Trường",
+   "content": "GP-CUA-SIEU-TRUONG Cửa Siêu Trường"
+  }
+ ]
+}

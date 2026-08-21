@@ -1,0 +1,110 @@
+{
+ "doctype": "Item",
+ "trich_luc_luc": "2026-08-20T13:40:00.000Z",
+ "nguon": "Chủ dự án đọc từng dòng, 2026-08-20. Nhóm hàng phải là NHÓM CON. Loại như bù lon: TỒN Kg · MUA Kg · BÁN Con/Cái. Hệ số quy đổi = số kg cho MỘT con/cái; chưa có số thật thì mặc định 10. BAT SAT da chuyen sang VT_BATSAT trong 11-hang-thuong.json.",
+ "so_ban_ghi": 4,
+ "ban_ghi": [
+  {
+   "name": "VT_CNHUA",
+   "payload": {
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "disabled": false,
+    "item_code": "VT_CNHUA",
+    "item_name": "CỤC NHỰA",
+    "stock_uom": "Cái",
+    "default_purchase_uom": "Cái",
+    "default_sales_uom": "Cái",
+    "uom_conversions": []
+   }
+  },
+  {
+   "name": "VT_BULON12.12",
+   "payload": {
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "disabled": false,
+    "item_code": "VT_BULON12.12",
+    "item_name": "BÙ LON 12x12",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Con",
+    "uom_conversions": [
+     {
+      "uom": "Con",
+      "conversion_factor": 0.096,
+      "note": "Hệ số THẬT do xưởng đọc 2026-08-20 (kg cho 1 con)"
+     }
+    ]
+   }
+  },
+  {
+   "name": "VT_CONTAN12",
+   "payload": {
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "disabled": false,
+    "item_code": "VT_CONTAN12",
+    "item_name": "CON TÁN 12",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Con",
+    "uom_conversions": [
+     {
+      "uom": "Con",
+      "conversion_factor": 0.00011,
+      "note": "Hệ số THẬT do xưởng đọc 2026-08-20 (kg cho 1 con)"
+     }
+    ]
+   }
+  },
+  {
+   "name": "VT_BACDAN",
+   "payload": {
+    "item_group": "Phụ kiện chung",
+    "item_nature": "Hàng tồn kho",
+    "material_stage": "Nguyên vật liệu",
+    "supply_type": "Mua ngoài",
+    "is_stock_item": true,
+    "is_purchase_item": true,
+    "is_sales_item": true,
+    "include_item_in_manufacturing": true,
+    "measurement_profile": "Hàng thường",
+    "disabled": false,
+    "item_code": "VT_BACDAN",
+    "item_name": "BẠC ĐẠN",
+    "stock_uom": "Kg",
+    "default_purchase_uom": "Kg",
+    "default_sales_uom": "Cái",
+    "uom_conversions": [
+     {
+      "uom": "Cái",
+      "conversion_factor": 0.036,
+      "note": "Hệ số THẬT do xưởng đọc 2026-08-20 (kg cho 1 cái)"
+     }
+    ]
+   }
+  }
+ ]
+}

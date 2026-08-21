@@ -1,0 +1,90 @@
+{
+ "ghi_chu": "Giá motor và bình lưu điện từ ảnh — chưa khớp mã vì tên trong danh mục viết khác. Cần đối chiếu tay.",
+ "dong": [
+  {
+   "ten": "MOTOR TANKER 400KG",
+   "rate": 1750000,
+   "dien_tich_dung": "<15m²"
+  },
+  {
+   "ten": "MOTOR TANKER 600KG",
+   "rate": 1850000,
+   "dien_tich_dung": "<18m²"
+  },
+  {
+   "ten": "MOTOR TANKER 800KG",
+   "rate": 3700000,
+   "dien_tich_dung": "<27m²"
+  },
+  {
+   "ten": "MOTOR ALUMAX 400KG",
+   "rate": 2200000,
+   "dien_tich_dung": "<15m²"
+  },
+  {
+   "ten": "MOTOR ALUMAX 600KG",
+   "rate": 2300000,
+   "dien_tich_dung": "<25m²"
+  },
+  {
+   "ten": "MOTOR JG 300KG",
+   "rate": 3550000,
+   "dien_tich_dung": "<18m²"
+  },
+  {
+   "ten": "MOTOR JG 400KG",
+   "rate": 4050000,
+   "dien_tich_dung": "<28m²"
+  },
+  {
+   "ten": "MOTOR JG 600KG",
+   "rate": 4250000,
+   "dien_tich_dung": "<36m²"
+  },
+  {
+   "ten": "MOTOR JG 800KG",
+   "rate": 5250000,
+   "dien_tich_dung": "<42m²"
+  },
+  {
+   "ten": "MOTOR JG 1000KG",
+   "rate": 7650000,
+   "dien_tich_dung": "<48m²"
+  },
+  {
+   "ten": "MOTOR JG 1500KG",
+   "rate": 8050000,
+   "dien_tich_dung": "<55m²"
+  },
+  {
+   "ten": "MOTOR YH LD 300KG",
+   "rate": 2750000,
+   "dien_tich_dung": "<15m²"
+  },
+  {
+   "ten": "MOTOR YH LD 500KG",
+   "rate": 2850000,
+   "dien_tich_dung": "<15m²"
+  },
+  {
+   "ten": "MOTOR YH LD 800KG",
+   "rate": 5900000,
+   "dien_tich_dung": "<25m²"
+  },
+  {
+   "ten": "MOTOR YH LD 1000KG",
+   "rate": 7000000,
+   "dien_tich_dung": "<35m²"
+  },
+  {
+   "ten": "ALUMAX UPS E-800KG",
+   "rate": 1800000,
+   "dien_tich_dung": "motor <600KG, 9 AH"
+  },
+  {
+   "ten": "ALUMAX UPS E-1000KG",
+   "rate": 2700000,
+   "dien_tich_dung": "motor <1000KG, 12 AH"
+  }
+ ]
+}
