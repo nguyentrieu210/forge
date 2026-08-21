@@ -255,10 +255,34 @@ function decomposeRuntimeFormula(line, formula) {
 function ruleInputForLine(line) {
   const parsed = parseFormula(line.quantity_formula_json);
   if (parsed) return decomposeRuntimeFormula(line, parsed);
+  // Owner overrides can rescue a line regardless of whether it carries a raw
+  // qty: they substitute their own complete formula, so they must be checked
+  // before (not inside) the raw-qty branch below.
+  const override = ownerOverrideFor(line);
+  if (override) return ownerSplit(line, override);
   const qty = number(line.qty, null);
-  if (qty !== null && qty > 0) {
-    const override = ownerOverrideFor(line);
-    if (override) return ownerSplit(line, override);
+  /**
+   * `qty` here can come from `blockedLine()` in build-alumdoor-canonical-bom-importable.mjs,
+   * which best-effort-parses a plain number out of the raw source cell EVEN WHEN the row is
+   * `source_value_status=PENDING` (i.e. Gate B explicitly could not resolve its UOM/conversion/
+   * formula/rounding authority). That qty is informational carry-through for a human reading the
+   * Draft BOM, not an authoritative quantity.
+   *
+   * Measured on the 2026-08-21 dry run: treating it as authoritative here silently promoted 264
+   * still-blocked rows into `authority_type:'SOURCE'` CONSTANT rules — including NVL-BKAN's
+   * `0.1925 KG/CẶP` (a rate, not a quantity, on an item whose stock_uom is `Cái`) and
+   * NVL-TR114-1.8's `1.7 Kg` (the KG/M rate for a length-formula component, promoted as a flat
+   * constant). Both matched their own `rate_uom_stock_mismatch` / `rate_uom_unresolved` strict
+   * blockers, so the underlying evidence gap was never actually closed — it was just hidden
+   * behind a rule that validates and imports cleanly.
+   *
+   * Only promote when the row itself is not PENDING: that is the same authority boundary the
+   * rest of this pipeline already enforces (BOM Draft rows and BOM Template both keep PENDING
+   * values un-authoritative). PENDING rows fall through to `pending[]` below with their real
+   * `source_pending_reason`, so the gap stays visible instead of silently resolving.
+   */
+  const pending = clean(line.source_value_status) === 'PENDING';
+  if (qty !== null && qty > 0 && !pending) {
     return {
       formula: constantFormula(qty),
       resultUom: clean(line.uom) || clean(line.stock_uom) || clean(line.source_uom),
@@ -285,7 +309,10 @@ for (const bom of source.boms) {
   for (const line of Array.isArray(bom.lines) ? bom.lines : []) {
     componentRows += 1;
     if (parseFormula(line.quantity_formula_json)) sourceRuntimeFormulaRows += 1;
-    else if (number(line.qty, null) > 0) fixedQuantityRows += 1;
+    // Mirror the authority boundary enforced in ruleInputForLine(): a PENDING row's `qty` is a
+    // best-effort carry-through of the raw source cell, not an authoritative fixed quantity, so
+    // it must not count as "fixed" here either.
+    else if (number(line.qty, null) > 0 && clean(line.source_value_status) !== 'PENDING') fixedQuantityRows += 1;
 
     const split = ruleInputForLine(line);
     if (!split) {
