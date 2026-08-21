@@ -13,6 +13,9 @@ export { errors, sha256Hex } from "../../core/src/index.js";
 // trùng tên của nền tảng, nên hai dòng giá cùng khớp một khoá lọt vào D1 được và chỉ lộ ra
 // bằng "Multiple active Item Price records match" giữa lúc lập đơn.
 export { areaTierBasisSqm, assertItemPriceTierIsUnambiguous } from "../../clouderp-pricing/src/index.js";
+// Trục số lượng mua của Item là ô `valueSource: "formula"` — server phải tính lại ở mỗi lượt
+// ghi. Luật nằm cạnh chỗ TIÊU THỤ nó (`applyUomConversion`), router chỉ gọi.
+export { derivePurchaseQuantityAxis } from "../../clouderp-core/src/uom.js";
 export {
   alumdoorCommercialBenefits,
   defaultAlumdoorDiscountPercent,

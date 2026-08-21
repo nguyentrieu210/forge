@@ -197,6 +197,53 @@ function applyRateUnit<T extends UomLine>(
   );
 }
 
+/**
+ * TRỤC SỐ LƯỢNG MUA của hàng đếm-được-cân-thực-tế — SERVER TỰ TÍNH, không ai gõ tay.
+ *
+ * Ba ô `purchase_stock_qty_field` / `purchase_allocation_qty_field` / `purchase_allocation_uom`
+ * trên `Item` khai `valueSource: "formula"` + `read_only` + `hidden`: hợp đồng metadata nói
+ * SERVER tính chúng. Nhưng không có chỗ nào tính, nên chúng rỗng vĩnh viễn — và hai luật khác
+ * lại ĐỌC chúng:
+ *
+ *   · `aluminumItemContract` (alumdoor-worker) TỪ CHỐI lưu mặt hàng nhôm khi ba ô này khác
+ *     `qty_bar`/`qty_bar`/`stock_uom`. Ô thì chỉ-đọc, gửi lên thì kernel ném "Field is
+ *     server-controlled". Đo ngày 21/08/2026 trên cổng 8810: KHÔNG tạo nổi một mã
+ *     `Nhôm cây/lá` nào qua API — nhóm hàng lõi của xưởng đứng hình, lỗi lại trỏ vào ô
+ *     người dùng không nhìn thấy.
+ *   · `applyUomConversion` ngay bên dưới: thiếu `purchase_stock_qty_field` thì lượt mua rơi
+ *     về `resolveFactorMicros`, mà hàng catch-weight CỐ Ý không có hệ số Kg↔Cây tĩnh, nên
+ *     phiếu mua chết với "chưa có quy đổi từ Kg sang đơn vị tồn Cây".
+ *
+ * Nên trục này được TÍNH LẠI ở mỗi lượt ghi `Item`, đúng như `fetch_from` được tính lại: giá
+ * trị client gửi lên bị thay, không phải bị tin.
+ *
+ * Trả về chuỗi rỗng cho mặt hàng không thuộc kiểu này — rỗng là "xoá ô", không phải "giữ
+ * nguyên ô cũ"; đổi một mã từ nhôm sang hàng thường mà để lại `qty_bar` là để lại một luật
+ * ngủ đúng chỗ nguy hiểm nhất.
+ */
+export interface PurchaseQuantityAxis {
+  purchase_stock_qty_field: string;
+  purchase_allocation_qty_field: string;
+  purchase_allocation_uom: string;
+}
+
+export function derivePurchaseQuantityAxis(item: JsonObject | null): PurchaseQuantityAxis {
+  const trong: PurchaseQuantityAxis = {
+    purchase_stock_qty_field: "",
+    purchase_allocation_qty_field: "",
+    purchase_allocation_uom: "",
+  };
+  if (!item) return trong;
+  if (itemText(item, "inventory_mode") !== "Nhôm cây/lá") return trong;
+  const stockUom = stockUomOf(item);
+  if (!stockUom) return trong;
+  return {
+    purchase_stock_qty_field: "qty_bar",
+    purchase_allocation_qty_field: "qty_bar",
+    purchase_allocation_uom: stockUom,
+  };
+}
+
 export async function applyUomConversion<T extends UomLine>(
   context: ControllerContext<JsonObject>,
   items: T[],

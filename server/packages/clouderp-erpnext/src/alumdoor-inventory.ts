@@ -428,7 +428,19 @@ export class StockReconciliationController extends AlumdoorController<StockRecon
       }
       const varianceQty = countedQty - bookQty;
       const varianceWeight = countedWeight == null || bookWeight == null ? null : countedWeight - bookWeight;
-      if ((varianceQty !== 0 || (varianceWeight != null && varianceWeight !== 0)) && !source.variance_reason) {
+      // Chỉ chặn khi GHI SỔ, đúng như lời văn của chính thông báo này và đúng như phép
+      // kiểm "Số sổ đã chụp không được sửa" ở ngay trên.
+      //
+      // VÌ SAO không chặn ngay lúc lưu nháp: chênh lệch được tính ở MÁY CHỦ (số sổ lấy từ
+      // `getTrackedStockState`), người đếm không hề biết dòng nào lệch cho tới khi lưu được
+      // phiếu. Chặn từ lúc tạo biến phiếu kiểm kê thành bài toán đoán mò: muốn biết có lệch
+      // thì phải lưu, mà muốn lưu thì phải khai trước nguyên nhân của cái lệch chưa nhìn thấy.
+      // Nháp vẫn lưu được, còn ghi sổ thì vẫn bắt buộc có nguyên nhân — không nới lỏng.
+      if (
+        context.command.action === "submit"
+        && (varianceQty !== 0 || (varianceWeight != null && varianceWeight !== 0))
+        && !source.variance_reason
+      ) {
         throw errors.validation(`Dòng ${source.item_code} có chênh lệch — phải chọn nguyên nhân trước khi ghi sổ`);
       }
       if (source.variance_reason === "Khác" && !source.variance_note) {
@@ -857,6 +869,43 @@ async function requireSubmittedBundle<T extends JsonObject>(
   return document.data;
 }
 
+/**
+ * Suy ra công ty duy nhất của tenant khi kho không tự khai công ty.
+ *
+ * VÌ SAO không dùng thẳng `listMasterRecordData("Company")`: hàm đó GỘP hai nguồn —
+ * bảng `documents` (công ty do người dùng tạo và nhìn thấy trong giao diện) và bảng
+ * `master_records` (bản gieo sẵn lúc dựng tenant, ví dụ "Demo" tiền USD và "ALUMDOOR").
+ * Một tenant thật vì thế đếm ra 3 công ty trong khi màn hình danh sách Công ty chỉ hiện
+ * 1, nên phép suy luận "đúng một công ty" luôn trượt và ném ra `Kho ... phải khai công ty`
+ * — một yêu cầu người dùng KHÔNG THỂ đáp ứng, vì DocType "Warehouse" không hề có ô
+ * `company` để khai. Hậu quả: không lập được phiếu kiểm kê lẫn phiếu cắt.
+ *
+ * Cách xử lý: ưu tiên nguồn `documents`, đúng thứ tự nguồn mà `listMasterRecords` trong
+ * `d1-store.ts` đã áp dụng sẵn (documents `source_rank` 0 thắng master_records `source_rank` 1)
+ * — bản ghi người dùng quản lý thắng bản gieo sẵn. Đây KHÔNG phải nới lỏng kiểm tra:
+ * khi vẫn còn nhiều hơn một ứng viên thì vẫn từ chối, chỉ khác là thông báo nêu đích danh
+ * các công ty tìm thấy để người dùng biết phải xử lý cái nào.
+ */
+async function soleCompanyOfTenant<T extends JsonObject>(
+  context: ControllerContext<T>,
+  warehouse: string,
+): Promise<string> {
+  const documentCompanies = (await context.reader.listDocumentsByDoctype(context.command.tenant_id, "Company"))
+    .filter((entry) => entry.docstatus !== 2 && entry.data.disabled !== true && entry.data.disabled !== 1)
+    .map((entry) => entry.name);
+  const candidates = documentCompanies.length
+    ? documentCompanies
+    : (await context.reader.listMasterRecordData(context.command.tenant_id, "Company")).map((entry) => entry.name);
+  if (candidates.length === 1) return candidates[0]!;
+  if (!candidates.length) {
+    throw errors.validation(`Chưa khai báo Công ty nào, không xác định được công ty cho kho ${warehouse}`);
+  }
+  throw errors.validation(
+    `Kho ${warehouse} không xác định được công ty vì tenant đang có ${candidates.length} công ty (${candidates.join(", ")}). `
+    + "Hãy giữ lại đúng một công ty đang dùng, hoặc ngừng dùng những công ty còn lại.",
+  );
+}
+
 async function companyForWarehouse<T extends JsonObject>(
   context: ControllerContext<T>,
   warehouse: string,
@@ -864,11 +913,7 @@ async function companyForWarehouse<T extends JsonObject>(
   const warehouseData = await context.reader.getMasterRecordData(context.command.tenant_id, "Warehouse", warehouse);
   if (!warehouseData) throw errors.reference(`Kho ${warehouse} không tồn tại hoặc đã ngừng dùng`);
   let company = typeof warehouseData.company === "string" ? warehouseData.company : "";
-  if (!company) {
-    const companies = await context.reader.listMasterRecordData(context.command.tenant_id, "Company");
-    if (companies.length !== 1) throw errors.validation(`Kho ${warehouse} phải khai công ty`);
-    company = companies[0]!.name;
-  }
+  if (!company) company = await soleCompanyOfTenant(context, warehouse);
   const companyData = await context.reader.getMasterRecordData(context.command.tenant_id, "Company", company);
   const currency = typeof companyData?.default_currency === "string" ? companyData.default_currency : "";
   if (!currency) throw errors.validation(`Công ty ${company} phải khai tiền tệ mặc định`);

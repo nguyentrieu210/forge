@@ -41,11 +41,22 @@ for (const m of ma) {
   if (!g.ok) { console.log(`  ✗ ${m.padEnd(26)} không đọc được (${g.status})`); hong += 1; continue; }
   const d = g.json.data ?? {};
 
-  /** Giữ mọi dòng quy đổi chủ xưởng tự thêm; chỉ đảm bảo có đúng một dòng Mét, không dòng Cây. */
+  /**
+   * Giữ mọi dòng quy đổi chủ xưởng tự thêm; chỉ đảm bảo có đúng một dòng Mét, không dòng Cây.
+   *
+   * HỆ SỐ Mét PHẢI VỀ 0, KHÔNG ĐƯỢC KẾ THỪA SỐ CŨ. Bản trước viết
+   * `conversion_factor: cu.find(...)?.conversion_factor ?? 0`, tức GIỮ LẠI con số đang có — mà
+   * con số đang có sinh ra với nghĩa "1 Mét = 1,083 KG" (Kg/m lý thuyết, do `dien-kg-tren-met.mjs`
+   * ghi khi đơn vị tồn còn là Kg). Đổi đơn vị tồn sang CÂY xong, đúng con số ấy được đọc thành
+   * "1 Mét = 1,083 CÂY": số giữ nguyên, đơn vị đổi nghĩa, sổ tồn sai ~6,5 lần và KHÔNG có lỗi
+   * nào nổ ra. Đo ngày 21/08/2026 trên bản chép D1 cổng 8810: cả 22 mã có Kg/m đều dính.
+   *
+   * Chính đầu tệp này đã chốt "hệ số Mét→Cây ĐỂ TRỐNG" — đây là làm cho mã khớp lời chốt đó.
+   */
   const cu = d.uom_conversions ?? [];
   const quyDoi = [
     ...cu.filter((c) => c.uom !== "Mét" && c.uom !== "Cây" && c.uom !== "Kg"),
-    { ...(cu.find((c) => c.uom === "Mét") ?? {}), uom: "Mét", conversion_factor: cu.find((c) => c.uom === "Mét")?.conversion_factor ?? 0 },
+    { ...(cu.find((c) => c.uom === "Mét") ?? {}), uom: "Mét", conversion_factor: 0 },
   ];
 
   const moi = {
@@ -62,7 +73,9 @@ for (const m of ma) {
   };
   const khac = ["stock_uom", "default_purchase_uom", "default_sales_uom", "measurement_profile", "has_catch_weight", "has_batch_no", "weight_uom"]
     .filter((k) => d[k] !== moi[k]);
-  if (!khac.length && cu.length === quyDoi.length && cu.every((c) => c.uom === "Mét")) { yen += 1; continue; }
+  const quyDoiDaSach = cu.length === quyDoi.length
+    && cu.every((c) => c.uom === "Mét" && Number(c.conversion_factor ?? 0) === 0);
+  if (!khac.length && quyDoiDaSach) { yen += 1; continue; }
   if (!THAT) { console.log(`  → ${m.padEnd(26)} tồn ${String(d.stock_uom).padEnd(5)}→ Cây · bộ ${String(d.measurement_profile).padEnd(12)}→ Ống/trục · bật cân thực tế`); doi += 1; continue; }
 
   const p = await goi(`/api/resource/Item/${encodeURIComponent(m)}`, { method: "PUT", body: moi });
