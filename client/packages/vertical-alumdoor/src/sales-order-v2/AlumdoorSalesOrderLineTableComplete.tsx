@@ -49,13 +49,30 @@ import {
   isDirectOrdinaryQuantityLine,
   isFullSetSalesItem,
   lineAdjustmentAmount,
+  lineAvailabilityStatus,
+  lineAvailableQty,
+  lineAvailableStockQty,
+  lineBlockingGaps,
+  lineCatalogWarnings,
   lineCommercialNeedsApproval,
+  lineConversionFactor,
+  lineDeliveredQty,
   lineDiscountAmount,
   lineDiscountNeedsApproval,
+  lineIsCatchWeight,
+  lineMissingUomConversion,
+  lineNeedsUomConversion,
   lineNetAmount,
   linePolicyDiscountPercentage,
   linePolicyDiscountRule,
+  linePriceExplanation,
   linePricedQuantity,
+  lineSalesUom,
+  lineShortage,
+  lineStockQty,
+  lineStockSnapshot,
+  lineStockUom,
+  lineUomGap,
   money,
   normalized,
   numberValue,
@@ -94,6 +111,8 @@ type ColumnId =
   | DynamicFieldName
   | "quantity"
   | "uom"
+  | "stock_conversion"
+  | "available"
   | "priced_qty"
   | "rate"
   | "gross_amount"
@@ -200,6 +219,8 @@ const DEFAULT_WIDTHS: Record<ColumnId, number> = {
   estimated_weight_kg: 92,
   quantity: 70,
   uom: 84,
+  stock_conversion: 108,
+  available: 108,
   priced_qty: 86,
   rate: 112,
   gross_amount: 118,
@@ -230,6 +251,8 @@ const MIN_WIDTHS: Partial<Record<ColumnId, number>> = {
   estimated_weight_kg: 78,
   quantity: 62,
   uom: 78,
+  stock_conversion: 92,
+  available: 92,
   priced_qty: 76,
   rate: 94,
   gross_amount: 100,
@@ -237,7 +260,8 @@ const MIN_WIDTHS: Partial<Record<ColumnId, number>> = {
 };
 
 // Tăng version khi thay cấu trúc cột để localStorage cũ không làm lệch vùng tiền.
-const COLUMN_WIDTH_STORAGE_KEY = "alumdoor:sales-order:grid-widths:v7";
+// v8: thêm "Quy ra tồn" + "Tồn khả dụng" (ĐVT bán ≠ ĐVT tồn của nhóm ray/trục).
+const COLUMN_WIDTH_STORAGE_KEY = "alumdoor:sales-order:grid-widths:v8";
 const FROZEN_COLUMNS: ColumnId[] = ["select", "index", "item_code", "item_name"];
 
 function loadStoredWidths(): Record<ColumnId, number> {
@@ -383,6 +407,8 @@ function BomBlock(props: {
   readOnly: boolean;
   colSpan: number;
   dynamicColumns: DynamicFieldName[];
+  showStockConversion: boolean;
+  showAvailability: boolean;
   widths: Record<ColumnId, number>;
   stickyStyle: (id: ColumnId) => CSSProperties;
   onToggle: () => void;
@@ -464,6 +490,14 @@ function BomBlock(props: {
         })}
         <TableCell style={{ width: props.widths.quantity }} className={`${tone} px-1.5 py-1.5 text-center tabular-nums`}>{salesQuantity === undefined ? "—" : quantity(salesQuantity)}</TableCell>
         <TableCell style={{ width: props.widths.uom }} className={`${tone} px-1.5 py-1.5 text-center`}>{text(component.uom) || "—"}</TableCell>
+        {props.showStockConversion ? (
+          <TableCell style={{ width: props.widths.stock_conversion }} className={`${tone} px-1.5 py-1.5 text-center tabular-nums text-muted-foreground`}>
+            {component.stock_qty == null ? "—" : `${quantity(component.stock_qty)} ${text(component.stock_uom)}`.trim()}
+          </TableCell>
+        ) : null}
+        {props.showAvailability ? (
+          <TableCell style={{ width: props.widths.available }} className={`${tone} px-1.5 py-1.5 text-center text-muted-foreground`}>—</TableCell>
+        ) : null}
         <TableCell style={{ width: props.widths.priced_qty }} className={`${tone} px-1.5 py-1.5 text-center font-semibold tabular-nums text-primary`}>{measuredQuantity === undefined ? "—" : quantity(measuredQuantity)}</TableCell>
         <TableCell style={{ width: props.widths.rate }} className={`${tone} px-1.5 py-1.5 text-center text-muted-foreground`}>—</TableCell>
         <TableCell style={{ width: props.widths.gross_amount }} className={`${tone} px-1.5 py-1.5 text-center text-muted-foreground`}>—</TableCell>
@@ -543,6 +577,8 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
           || lineAdjustmentAmount(line) !== 0
           || benefits > 0
           || lineCommercialNeedsApproval(line)
+          // Thiếu dữ liệu phải lộ ra NGAY lúc chọn hàng, không đợi tới lúc bấm Lưu mới báo.
+          || lineBlockingGaps(line).length > 0
           || Boolean(text(line._error) || text(line._pricingError));
       })
       .map((line) => line._key);
@@ -570,6 +606,9 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
 
   const activeLines = useMemo(() => props.lines.filter((line) => text(line.item_code)), [props.lines]);
   const visibleDynamicField = useCallback((line: SalesLine, fieldname: DynamicFieldName): boolean => {
+    // Rộng cắt lá KHÔNG lên cột: nó là số của xưởng ở phần lớn dòng. Nhưng với Đại lý mua tách
+    // món (cửa Lưới/Đài Loan/Siêu Trường) nó lại là cơ sở tính tiền, nên nó xuất hiện trong
+    // khối "Vì sao ra con số này" của dòng chi tiết thay vì chiếm một cột cho mọi đơn.
     if (fieldname === "cut_width_m") return false;
     if (isAreaDoor(line)) {
       if (fieldname === "width_pb_ray_m" || fieldname === "width_pb_nhua_m") {
@@ -584,11 +623,42 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
     () => DYNAMIC_FIELD_ORDER.filter((fieldname) => activeLines.some((line) => visibleDynamicField(line, fieldname))),
     [activeLines, visibleDynamicField],
   );
+  /**
+   * Hai cột kho chỉ hiện khi có dòng thật sự cần tới.
+   *
+   * Nhóm ray/trục mua Kg · tồn Cây/Kg · bán Mét: một dòng phải đọc được cả hai con số song song.
+   * Nhưng đơn toàn phụ kiện bán đúng ĐVT tồn thì hai cột này chỉ tổ chiếm chỗ, nên chúng đi theo
+   * cùng luật với cột thông số động: có dữ liệu mới xuất hiện.
+   */
+  const showStockConversion = useMemo(
+    () => activeLines.some((line) => lineNeedsUomConversion(line) || lineStockQty(line) !== undefined),
+    [activeLines],
+  );
+  /**
+   * Tồn khả dụng CHỈ có khi dòng mang kho xuất.
+   *
+   * `Sales Order Item.warehouse` đang là field internal/hidden và đầu đơn không có ô kho nào,
+   * nên trên thực tế `available_*` gần như luôn rỗng. Cột này vì vậy chỉ bật khi server thật sự
+   * trả về SỐ — dựng một cột luôn trống là hứa suông với người bán.
+   */
+  const showAvailability = useMemo(
+    () => activeLines.some((line) => {
+      const snapshot = lineStockSnapshot(line);
+      return lineAvailableQty(line) !== undefined
+        || lineAvailableStockQty(line) !== undefined
+        || numberValue(snapshot?.stock_qty) !== undefined
+        || numberValue(snapshot?.weight_qty) !== undefined;
+    }),
+    [activeLines],
+  );
   const columnOrder = useMemo<ColumnId[]>(() => [
     "select", "index", "item_code", "item_name", "color",
     ...dynamicColumns,
-    "quantity", "uom", "priced_qty", "rate", "gross_amount", "actions",
-  ], [dynamicColumns]);
+    "quantity", "uom",
+    ...(showStockConversion ? (["stock_conversion"] as ColumnId[]) : []),
+    ...(showAvailability ? (["available"] as ColumnId[]) : []),
+    "priced_qty", "rate", "gross_amount", "actions",
+  ], [dynamicColumns, showAvailability, showStockConversion]);
   const columnCount = columnOrder.length;
   const totalWidth = columnOrder.reduce((sum, id) => sum + widths[id], 0);
   const allSelected = props.lines.length > 0 && props.selectedKeys.size === props.lines.length;
@@ -718,6 +788,108 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
     );
   };
 
+  /**
+   * "Quy ra tồn" — số SẼ vào thẻ kho. Server tính (`qty × conversion_factor`); ở đây chỉ in ra.
+   *
+   * Thiếu hệ số quy đổi thì nói THIẾU, không nhân bừa với 1. Hệ số Mét→Cây của nhóm ray/trục
+   * đang cố ý để trống theo quyết định danh mục 19/08, nên đây là trạng thái bình thường phải
+   * đọc được, không phải sự cố.
+   */
+  const renderStockConversionCell = (line: SalesLine, rowTone: string) => {
+    const stockUom = lineStockUom(line);
+    const stockQty = lineStockQty(line);
+    const factor = lineConversionFactor(line);
+    const delivered = lineDeliveredQty(line);
+    const uomGap = lineUomGap(line);
+    const catchWeight = lineIsCatchWeight(line);
+    // Server nói trước; suy đoán ở client chỉ đỡ cho payload chưa có `uom_gap`.
+    const missing = lineMissingUomConversion(line);
+    const missingReason = text(uomGap?.message)
+      || `Chưa khai hệ số quy đổi ${lineSalesUom(line)} → ${stockUom}.`;
+    const missingFix = text(uomGap?.fix_where) || "Danh mục → Hàng hoá/Vật tư → Quy đổi đơn vị";
+    // "Chờ chủ xưởng chốt" và "lỗi cấu hình" phải TRÔNG khác nhau: một cái là ô đang đợi người
+    // điền, cái kia là thứ hỏng cần báo. Cùng một màu đỏ thì người bán không phân biệt được.
+    const intentional = uomGap?.intentional === true;
+    return (
+      <TableCell
+        key="stock_conversion"
+        style={{ width: widths.stock_conversion, minWidth: widths.stock_conversion, maxWidth: widths.stock_conversion }}
+        className={`${rowTone} overflow-hidden px-1.5 py-1.5 text-center align-middle`}
+      >
+        {!text(line.item_code) ? <span className="text-muted-foreground">—</span> : catchWeight && stockQty === undefined ? (
+          /* Cân thực tế: KHÔNG có hệ số cố định, và đó là đúng luật — xem `lineIsCatchWeight`. */
+          <div className="flex flex-col items-center justify-center leading-tight text-muted-foreground" title="Hàng cân thực tế: tiền theo Kg, tồn theo cây. Không có hệ số quy đổi cố định — cân từng chuyến mới ra số.">
+            <span className="text-[10px] font-medium">cân thực tế</span>
+            <span className="text-[9px]">không có hệ số cố định</span>
+          </div>
+        ) : missing ? (
+          <div
+            className={`flex flex-col items-center justify-center leading-tight ${intentional ? "text-amber-600" : "text-destructive"}`}
+            title={`${missingReason} Khai ở ${missingFix}.`}
+          >
+            <AlertTriangle className="size-3.5" />
+            <span className="text-[9px] font-medium">{intentional ? "chờ khai hệ số" : "chưa khai hệ số"}</span>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center leading-tight">
+            <span className="font-medium tabular-nums">{stockQty === undefined ? "—" : `${quantity(stockQty)} ${stockUom}`.trim()}</span>
+            {factor !== undefined && lineNeedsUomConversion(line)
+              ? <span className="text-[9px] text-muted-foreground">1 {lineSalesUom(line)} = {quantity(factor)} {stockUom}</span>
+              : null}
+            {delivered !== undefined && delivered > 0
+              ? <span className="text-[9px] text-muted-foreground">đã giao {quantity(delivered)}</span>
+              : null}
+          </div>
+        )}
+      </TableCell>
+    );
+  };
+
+  /**
+   * Tồn khả dụng — HAI TRỤC SONG SONG, cố ý không gộp.
+   *
+   * Nhóm ray/trục: tiền theo Kg, tồn theo Cây. Cộng hay quy đổi hai con số này vào nhau là
+   * đúng cái sai mà cả danh mục lẫn hợp đồng payload đều dặn tránh. `severity: "unknown"` là
+   * "không so được" — vẽ cảnh báo, KHÔNG vẽ màu đủ hàng.
+   */
+  const renderAvailabilityCell = (line: SalesLine, rowTone: string) => {
+    const snapshot = lineStockSnapshot(line);
+    const stockUom = text(snapshot?.stock_uom) || lineStockUom(line);
+    const onHandStock = numberValue(snapshot?.stock_qty) ?? lineAvailableStockQty(line);
+    const onHandWeight = numberValue(snapshot?.weight_qty);
+    const weightUom = text(snapshot?.weight_uom);
+    const onHandSales = numberValue(snapshot?.selected_qty) ?? lineAvailableQty(line);
+    const shortage = lineShortage(line);
+    const severity = text(shortage?.severity);
+    const tone = severity === "over" ? "text-destructive" : severity === "unknown" ? "text-amber-600" : "";
+    const title = [text(shortage?.message), text(snapshot?.selected_qty_blocked_reason), lineAvailabilityStatus(line)]
+      .filter(Boolean).join(" · ");
+    return (
+      <TableCell
+        key="available"
+        style={{ width: widths.available, minWidth: widths.available, maxWidth: widths.available }}
+        className={`${rowTone} overflow-hidden px-1.5 py-1.5 text-center align-middle`}
+      >
+        {!text(line.item_code) ? <span className="text-muted-foreground">—</span> : (
+          <div className={`flex flex-col items-center justify-center leading-tight ${tone}`} title={title || undefined}>
+            <span className="font-medium tabular-nums">
+              {onHandStock === undefined ? "—" : `${quantity(onHandStock)} ${stockUom}`.trim()}
+            </span>
+            {onHandWeight !== undefined
+              ? <span className="text-[9px] tabular-nums text-muted-foreground">{quantity(onHandWeight)} {weightUom || "Kg"}</span>
+              : null}
+            {onHandSales !== undefined && lineNeedsUomConversion(line)
+              ? <span className="text-[9px] tabular-nums text-muted-foreground">{quantity(onHandSales)} {lineSalesUom(line)}</span>
+              : null}
+            {severity === "over" || severity === "unknown"
+              ? <span className="inline-flex items-center gap-0.5 text-[9px] font-medium"><AlertTriangle className="size-2.5" />{severity === "over" ? "thiếu hàng" : "không so được"}</span>
+              : null}
+          </div>
+        )}
+      </TableCell>
+    );
+  };
+
   return <section className="overflow-hidden rounded-lg border-2 border-border bg-card" data-section="sales-v2-lines-complete">
     <div className="overflow-x-auto">
       <Table
@@ -736,6 +908,8 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
             {dynamicColumns.map((fieldname) => head(fieldname, dynamicHeaderLabel(fieldname), DYNAMIC_HEADER_UNITS[fieldname]))}
             {head("quantity", "SL")}
             {head("uom", "ĐVT")}
+            {showStockConversion ? head("stock_conversion", "Quy ra tồn") : null}
+            {showAvailability ? head("available", "Tồn khả dụng") : null}
             {head("priced_qty", "Khối lượng")}
             {head("rate", "Đơn giá", "VNĐ")}
             {head("gross_amount", "Thành tiền", "VNĐ")}
@@ -771,6 +945,11 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
             const productDescription = doorProductDescription(line, props.customerGroup);
             const hasAuxiliaryRow = Boolean(text(line.item_code));
             const auxiliaryDescription = productDescription || text(line._itemName) || text(line.item_code);
+            // Giải trình giá và danh sách thiếu đều đọc thẳng ảnh chụp server; không tính lại gì.
+            const explanation = linePriceExplanation(line);
+            const gaps = lineBlockingGaps(line);
+            const warnings = lineCatalogWarnings(line);
+            const availabilityStatus = lineAvailabilityStatus(line);
             const frozenClass = `${parentRowTone} bg-clip-padding`;
             const commercialLeadSpan = Math.max(1, columnCount - 4);
 
@@ -787,7 +966,13 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
                 <TableCell style={{ width: widths.item_code, ...stickyStyle("item_code") }} className={`${frozenClass} px-1.5 py-1.5 text-center align-middle`}>
                   <GridField rowKey={line._key} columnId="item_code" disabled={props.readOnly}><AlumdoorSalesOrderField id={`sales-v2-complete-item-${line._key}`} field={itemField} value={line.item_code} onChange={(value) => props.onCommit(line._key, "item_code", text(value) || undefined)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} required readOnly={props.readOnly} compact hideLabel className="[&_.mf-control]:!min-h-8 [&_input]:!text-center [&_button]:!h-8 [&_button]:!justify-center" /></GridField>
                 </TableCell>
-                <TableCell style={{ width: widths.item_name, ...stickyStyle("item_name") }} className={`${frozenClass} px-1.5 py-1.5 text-center align-middle`}><div className="truncate text-center font-medium leading-4" title={text(line._itemName) || text(line.item_code)}>{text(line._itemName) || text(line.item_code) || "—"}</div></TableCell>
+                <TableCell style={{ width: widths.item_name, ...stickyStyle("item_name") }} className={`${frozenClass} px-1.5 py-1.5 text-center align-middle`}>
+                  <div className="truncate text-center font-medium leading-4" title={text(line._itemName) || text(line.item_code)}>{text(line._itemName) || text(line.item_code) || "—"}</div>
+                  {/* "Còn N Mét · Giá Mét: 55.000 VND" — server đã dựng sẵn chuỗi này từ đợt đầu
+                      nhưng bản Complete đánh rơi nó. Đây là câu duy nhất trả lời tại chỗ hai câu
+                      hỏi trước khi hứa với khách: còn hàng không, và có giá chưa. */}
+                  {availabilityStatus ? <div className="mt-0.5 line-clamp-2 text-[9px] leading-3 text-muted-foreground" title={availabilityStatus}>{availabilityStatus}</div> : null}
+                </TableCell>
                 <TableCell style={{ width: widths.color }} className={`${parentRowTone} px-1.5 py-1.5 text-center align-middle`}>{allowedColors.length ? <GridField rowKey={line._key} columnId="color" disabled={props.readOnly}><AlumdoorSalesOrderField id={`sales-v2-complete-color-${line._key}`} field={colorField} value={line.color} onChange={(value) => props.onCommit(line._key, "color", text(value) || undefined)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} readOnly={props.readOnly} compact hideLabel className="[&_.mf-control]:!min-h-8 [&_input]:!text-center [&_button]:!h-8 [&_button]:!justify-center" /></GridField> : <div className="flex h-8 items-center justify-center truncate text-center text-muted-foreground">{text(line.color)}</div>}</TableCell>
                 {dynamicColumns.map((fieldname) => renderDynamicCell(line, fieldname, parentRowTone))}
                 <TableCell style={{ width: widths.quantity }} className={`${parentRowTone} px-1.5 py-1.5 text-center align-middle`}><GridField rowKey={line._key} columnId="quantity" disabled={props.readOnly || fieldReadonly(line, quantityField)}><AlumdoorSalesOrderField id={`sales-v2-complete-qty-${line._key}`} field={quantityDocField} value={line[quantityField]} onChange={(value) => {
@@ -800,13 +985,15 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
                   props.onCommit(line._key, quantityField, nextQuantity);
                 }} onCommit={() => props.onCommit(line._key, quantityField, line[quantityField])} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} required={fieldRequired(line, quantityField) || isAreaDoor(line)} readOnly={props.readOnly || fieldReadonly(line, quantityField)} compact hideLabel className="mx-auto [&_.mf-control]:!min-h-8 [&_input]:!h-8 [&_input]:!text-center" /></GridField></TableCell>
                 <TableCell style={{ width: widths.uom }} className={`${parentRowTone} overflow-hidden px-1 py-1.5 text-center align-middle`}>{allowedUoms.length > 1 ? <GridField rowKey={line._key} columnId="uom" disabled={props.readOnly}><AlumdoorSalesOrderField id={`sales-v2-complete-uom-${line._key}`} field={uomField} value={line.uom} onChange={(value) => props.onCommit(line._key, "uom", text(value) || undefined)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} readOnly={props.readOnly} compact hideLabel className="[&_.mf-control]:!min-h-8 [&_.mf-control]:!w-full [&_input]:!text-center [&_button]:!h-8 [&_button]:!w-full [&_button]:!justify-center [&_button]:!px-1" /></GridField> : <span className="inline-flex h-8 items-center justify-center">{text(line.uom) || text(line._context?.selected_uom) || "—"}</span>}</TableCell>
+                {showStockConversion ? renderStockConversionCell(line, parentRowTone) : null}
+                {showAvailability ? renderAvailabilityCell(line, parentRowTone) : null}
                 <TableCell style={{ width: widths.priced_qty }} className={`${parentRowTone} px-1.5 py-1.5 text-center align-middle tabular-nums`}><div className="font-semibold text-primary">{pricedQty === undefined ? "—" : quantity(pricedQty)}</div></TableCell>
                 <TableCell style={{ width: widths.rate }} className={`${parentRowTone} px-1.5 py-1.5 text-center align-middle`}><div className="flex h-8 items-center justify-center font-medium tabular-nums" title="Đơn giá tự động theo bảng giá">{numberValue(line.rate) === undefined ? "—" : money(line.rate)}</div></TableCell>
                 <TableCell style={{ width: widths.gross_amount }} className={`${parentRowTone} px-1.5 py-1.5 text-center align-middle tabular-nums`}><strong>{grossAmount === undefined ? "—" : `${money(grossAmount)} ₫`}</strong></TableCell>
                 <TableCell style={{ width: widths.actions }} className={`${parentRowTone} px-1 py-1.5 text-center align-middle`}><div className="flex items-center justify-center"><Button type="button" variant="ghost" size="icon-sm" disabled={props.readOnly || !text(line.item_code)} onClick={() => props.onDuplicate(line._key)} title="Nhân bản" aria-label={`Nhân bản dòng ${rowIndex + 1}`}><Copy className="size-3.5" /></Button><Button type="button" variant="ghost" size="icon-sm" disabled={props.readOnly || props.lines.length <= 1} onClick={() => props.onDelete(line._key)} title="Xóa" aria-label={`Xóa dòng ${rowIndex + 1}`}><Trash2 className="size-3.5" /></Button></div></TableCell>
               </TableRow>
 
-              <BomBlock line={line} lineNumber={rowIndex + 1} expanded={expanded.has(line._key)} readOnly={props.readOnly} colSpan={columnCount} dynamicColumns={dynamicColumns} widths={widths} stickyStyle={stickyStyle} onToggle={() => setExpanded((current) => { const next = new Set(current); if (next.has(line._key)) next.delete(line._key); else next.add(line._key); return next; })} onBomActualChange={props.onBomActualChange} />
+              <BomBlock line={line} lineNumber={rowIndex + 1} expanded={expanded.has(line._key)} readOnly={props.readOnly} colSpan={columnCount} dynamicColumns={dynamicColumns} showStockConversion={showStockConversion} showAvailability={showAvailability} widths={widths} stickyStyle={stickyStyle} onToggle={() => setExpanded((current) => { const next = new Set(current); if (next.has(line._key)) next.delete(line._key); else next.add(line._key); return next; })} onBomActualChange={props.onBomActualChange} />
 
               {text(line.item_code) && hasAuxiliaryRow && expanded.has(line._key) ? (
                 <TableRow className={`${commercialRowTone} border-b-2 border-border`} data-section="sales-v2-commercial-row">
@@ -837,6 +1024,61 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
                     <div className="mt-1 whitespace-nowrap text-sm font-bold tabular-nums text-primary">{money(payable)} ₫</div>
                   </TableCell>
                   <TableCell style={{ width: widths.actions }} className="bg-background/70 px-1 py-1" />
+                </TableRow>
+              ) : null}
+
+              {expanded.has(line._key) && (explanation.length > 0 || gaps.length > 0 || warnings.length > 0) ? (
+                <TableRow className={`${commercialRowTone} border-b-2 border-border hover:bg-transparent`} data-section="sales-v2-explain-row">
+                  <TableCell colSpan={columnCount} className="px-3 py-2 text-left align-top">
+                    {gaps.length ? (
+                      <div className="mb-2 rounded-md border border-destructive/30 bg-destructive/5 px-2.5 py-1.5">
+                        <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-destructive">
+                          <AlertTriangle className="size-3" /> Còn thiếu để chốt được dòng này
+                        </div>
+                        <ul className="mt-1 space-y-0.5">
+                          {gaps.map((gap) => (
+                            <li key={gap.key} className="flex flex-wrap items-baseline gap-x-1.5 text-[11px]">
+                              <span className="font-medium text-foreground">{gap.what}</span>
+                              {/* Ô CHỜ ĐIỀN khác hẳn lỗi phần mềm: 33 mã ray/trục đang cố ý
+                                  trống hệ số quy đổi. Gọi nhầm tên là người bán đi báo lỗi
+                                  kỹ thuật, còn ô thì mãi không ai điền. */}
+                              {gap.intentional ? <Badge variant="outline" className="h-4 px-1 text-[9px]">chờ chủ xưởng chốt</Badge> : null}
+                              <span className="text-[10px] text-muted-foreground">— sửa ở: {gap.where}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                    {warnings.length ? (
+                      <ul className="mb-2 space-y-0.5">
+                        {warnings.map((warning) => (
+                          <li key={warning.key} className="flex flex-wrap items-baseline gap-x-1.5 text-[10px] text-muted-foreground">
+                            <AlertTriangle className="size-2.5 shrink-0" />
+                            <span className="font-medium text-foreground">{warning.what}</span>
+                            <span>— {warning.where}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    {explanation.length ? (
+                      <div>
+                        <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Vì sao ra con số này</div>
+                        <dl className="mt-1 grid gap-x-4 gap-y-0.5 md:grid-cols-2 xl:grid-cols-3">
+                          {explanation.map((row) => (
+                            <div key={row.key} className="flex min-w-0 items-baseline gap-1.5 text-[11px]">
+                              <dt className="shrink-0 text-muted-foreground">{row.label}:</dt>
+                              <dd
+                                className={`min-w-0 flex-1 truncate font-medium ${row.tone === "warn" ? "text-destructive" : "text-foreground"}`}
+                                title={row.value}
+                              >
+                                {row.value}
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
+                      </div>
+                    ) : null}
+                  </TableCell>
                 </TableRow>
               ) : null}
 

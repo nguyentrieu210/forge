@@ -43,7 +43,9 @@ import {
   isDirectOrdinaryQuantityLine,
   isFullSetSalesItem,
   lineBillableArea,
+  lineBlockingGaps,
   lineCommercialNeedsApproval,
+  lineReadinessBlock,
   money,
   newLine,
   normalized,
@@ -63,6 +65,7 @@ import {
   type Json,
   type SalesItemContext,
   type SalesLine,
+  type UomGap,
 } from "./model.js";
 
 type SalesCaps = {
@@ -74,6 +77,11 @@ type SalesCaps = {
   cancel?: boolean;
   amend?: boolean;
 };
+
+/** Trần `in` của nền tảng là 50 giá trị; giữ biên an toàn cho hai bộ lọc cùng chạy. */
+const ITEM_HINT_LIMIT = 40;
+/** Trần một trang list của nền tảng. Chạm trần = không kết luận được về giá — xem chỗ dùng. */
+const PRICE_HINT_PAGE = 100;
 
 const CUSTOMER_CONTEXT_FIELDS = [
   "customer_group",
@@ -166,14 +174,42 @@ function checked(value: unknown): boolean {
   return value === true || value === 1 || value === "1" || text(value).toLowerCase() === "true";
 }
 
+/** Thân JSON của lỗi HTTP, nếu adapter còn giữ. Hợp đồng làn A §A.10 làm giàu chính thân này. */
+function errorPayload(error: unknown): Json | undefined {
+  const candidate = (error as { response?: { data?: unknown } } | undefined)?.response?.data;
+  return candidate && typeof candidate === "object" && !Array.isArray(candidate) ? candidate as Json : undefined;
+}
+
 function salesOrderErrorMessage(error: unknown): string {
   const message = text(mapError(error).message);
   const key = normalized(message);
+  /**
+   * Địa chỉ sửa do SERVER đưa thắng mọi câu đoán ở dưới.
+   *
+   * Đường 422 "ĐVT … chưa được khai" nay kèm `uom_gap.fix_where` trỏ đúng tới mã hàng cụ thể.
+   * Dùng nó thay cho một câu chung chung là bớt cho người bán một vòng đi tìm.
+   */
+  const uomGap = errorPayload(error)?.uom_gap as UomGap | undefined;
+  if (uomGap && typeof uomGap === "object" && text(uomGap.fix_where)) {
+    return `${text(uomGap.message) || message} Khai ở ${text(uomGap.fix_where)}, rồi bấm Tính lại.`;
+  }
   if (!message || key.includes("failed to fetch") || key.includes("networkerror") || key.includes("network request failed")) {
     return "Không kết nối được máy chủ local 8799. Hãy bật backend rồi bấm Thử lại.";
   }
   if (key.includes("item price") && key.includes("does not exist")) {
     return "Không tìm thấy đơn giá đúng Bảng giá, Mặt hàng, ĐVT và biến thể. Hãy kiểm tra Item Price rồi tính lại.";
+  }
+  // Nhóm ray/trục bán Mét nhưng tồn Cây/Kg. Mã nào chưa khai hệ số thì server TỪ CHỐI — đúng
+  // luật "thà báo lỗi còn hơn tính ra một con số sai trong im lặng". Việc của câu này là nói
+  // luôn khai ở đâu, thay vì để người bán ngồi đoán.
+  if (key.includes("chua duoc khai tren mat hang") || (key.includes("dvt") && key.includes("chua duoc khai"))) {
+    return `${message} Khai ở Danh mục → Hàng hoá/Vật tư → Quy đổi đơn vị, rồi bấm Tính lại.`;
+  }
+  if (key.includes("chua co he so quy doi")) {
+    return `${message} Khai ở Danh mục → Hàng hoá/Vật tư → Quy đổi đơn vị.`;
+  }
+  if (key.includes("co nhieu don gia dang hoat dong")) {
+    return `${message} Ngừng dùng bớt một dòng ở Danh mục → Đơn giá (Item Price).`;
   }
   if (key.includes("unauthorized") || key.includes("session") && key.includes("expired")) {
     return "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại rồi thử lại.";
@@ -323,22 +359,68 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
       const candidates = [...merged.values()]
         .sort((left, right) => itemSearchScore(right, raw) - itemSearchScore(left, raw) || left.value.localeCompare(right.value, "vi"))
         .slice(0, 200);
-      const labels = new Map<string, string>();
-      if (services.callPost && candidates.length) {
-        try {
-          const resolved = await services.callPost<Array<{ name?: string; label?: string }>>(
+      /**
+       * Ba lượt đọc CHẠY SONG SONG cho cùng một tập ứng viên — không lượt nào nằm trên đường
+       * tới hạn của lượt kia, nên dropdown không chậm thêm so với trước.
+       *
+       * Vì sao chỉ `ITEM_HINT_LIMIT` mã: nền tảng chặn `in` ở 50 giá trị
+       * (`document-kernel/src/document-list.ts` MAX_IN_VALUES). Xin nhiều hơn là bị từ chối cả
+       * lượt, và người bán mất luôn gợi ý — tệ hơn là gợi ý ít hơn một chút.
+       */
+      const hintCodes = candidates.slice(0, ITEM_HINT_LIMIT).map((option) => option.value);
+      const hintPriceList = text(headerRef.current.selling_price_list);
+      const [labelResult, itemResult, priceResult] = await Promise.allSettled([
+        services.callPost && candidates.length
+          ? services.callPost<Array<{ name?: string; label?: string }>>(
             "metaforge.api.resolve_display_values",
             { items: JSON.stringify(candidates.map((option) => ({ doctype: "Item", name: option.value }))) },
-          );
-          for (const item of resolved) {
-            const name = text(item.name);
-            const label = text(item.label);
-            if (name && label && label !== name) labels.set(name, label);
-          }
-        } catch {
-          // Search_link vẫn dùng được theo mã nếu batch title tạm lỗi.
+          )
+          : Promise.resolve([]),
+        hintCodes.length
+          ? adapter.getList("Item", {
+            fields: ["name", "item_group", "default_sales_uom", "stock_uom"],
+            filters: [["name", "in", hintCodes]] as Filters,
+            pageLength: ITEM_HINT_LIMIT,
+          })
+          : Promise.resolve([] as Doc[]),
+        hintCodes.length && hintPriceList
+          ? adapter.getList("Item Price", {
+            fields: ["name", "item_code", "uom", "rate"],
+            filters: [["price_list", "=", hintPriceList], ["item_code", "in", hintCodes]] as Filters,
+            pageLength: PRICE_HINT_PAGE,
+          })
+          : Promise.resolve([] as Doc[]),
+      ]);
+
+      const labels = new Map<string, string>();
+      // Search_link vẫn dùng được theo mã nếu batch title tạm lỗi.
+      if (labelResult.status === "fulfilled") {
+        for (const item of labelResult.value) {
+          const name = text(item.name);
+          const label = text(item.label);
+          if (name && label && label !== name) labels.set(name, label);
         }
       }
+      const itemFacts = new Map<string, { group: string; salesUom: string }>();
+      if (itemResult.status === "fulfilled") {
+        for (const row of itemResult.value) {
+          const name = text(row.name);
+          if (name) itemFacts.set(name, { group: text(row.item_group), salesUom: text(row.default_sales_uom) || text(row.stock_uom) });
+        }
+      }
+      /**
+       * `null` = KHÔNG BIẾT, và khác hẳn "tập rỗng".
+       *
+       * Trang list bị chặn ở 100 dòng. Chạm trần nghĩa là có thể còn dòng giá chưa lấy về, nên
+       * dán nhãn "chưa có giá" lúc đó là nói sai một cách rất khó phát hiện. Không biết thì im.
+       */
+      const pricedCodes = itemResult.status === "fulfilled"
+        && priceResult.status === "fulfilled"
+        && hintPriceList
+        && priceResult.value.length < PRICE_HINT_PAGE
+        ? new Set(priceResult.value.map((row) => text(row.item_code)).filter(Boolean))
+        : null;
+
       const displayOptions = candidates
         // Trong danh sách: mã trước + tên sau để tìm đúng hàng. Sau khi chọn, resolveDisplay
         // bên dưới vẫn trả đúng mã vì Tên hàng đã có cột riêng ngay bên cạnh.
@@ -348,7 +430,14 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
           const itemName = label && label !== option.value
             ? label
             : description && description !== option.value ? description : "";
-          return { value: option.value, label: option.value, ...(itemName ? { description: itemName } : {}) };
+          const facts = itemFacts.get(option.value);
+          const hints = [
+            itemName,
+            facts?.group ?? "",
+            facts?.salesUom ? `ĐVT ${facts.salesUom}` : "",
+            pricedCodes && !pricedCodes.has(option.value) ? "chưa có giá" : "",
+          ].filter(Boolean).join(" · ");
+          return { value: option.value, label: option.value, ...(hints ? { description: hints } : {}) };
         })
         .sort((left, right) => itemSearchScore(right, raw) - itemSearchScore(left, raw) || left.value.localeCompare(right.value, "vi"))
         .slice(0, 100);
@@ -357,7 +446,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
     resolveDisplay: async (doctype, name) => doctype === "Item"
       ? { label: name }
       : services.resolveDisplay?.(doctype, name) ?? { label: name },
-  }), [services]);
+  }), [adapter, services]);
   const readOnlyAdministrativeServices = useMemo<FieldServices>(() => ({
     ...services,
     quickCreate: undefined,
@@ -581,7 +670,20 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
           warehouse: row.warehouse,
           price_list: headerRef.current.selling_price_list,
           currency: headerRef.current.currency || "VND",
+          // Không truyền `qty` thì server không dựng `shortage` — mất luôn cảnh báo bán vượt tồn.
           qty: row.qty,
+          // Bật khâu màu theo PHẠM VI (Bề mặt → Màu). Đây là đường đánh thức pipeline
+          // `finish_color_context` vốn đã viết xong mà chưa nơi nào gọi tới.
+          include_color_scope: true,
+          /**
+           * Mã nhôm CHỈ truyền khi dòng thật sự mang nó.
+           *
+           * `Quy cách cửa` khoá theo mã nhôm (`AL70`, `AL552N`), còn `Sales Order Item` không có
+           * trường nào giữ mã đó — soát toàn bộ field của DocType này là 0. Suy mã nhôm từ mã
+           * hàng bằng chuỗi con chính là cái bẫy `TP-CUA` nằm trong `TP-CUADL1LY` mà đợt đổi mã
+           * 19/08 đã ghi lại, nên thà để server trả `door_spec: null`.
+           */
+          ...(text(row.slat_profile) ? { slat_profile: text(row.slat_profile) } : {}),
         }),
         adapter.callPost<Json>("alumdoor.ui.preview_child_row", {
           child_doctype: childMeta.name,
@@ -597,7 +699,23 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
       const serverPatch = uiPreview.patch && typeof uiPreview.patch === "object" && !Array.isArray(uiPreview.patch) ? uiPreview.patch as Json : {};
       const overrides = uiPreview.field_overrides && typeof uiPreview.field_overrides === "object" && !Array.isArray(uiPreview.field_overrides)
         ? uiPreview.field_overrides as Record<string, FieldOverride> : {};
-      const allowedColors = Array.isArray(colors.allowed_colors) ? colors.allowed_colors.map(text).filter(Boolean) : [];
+      /**
+       * Màu theo PHẠM VI — `color_scope` THẮNG danh sách phẳng.
+       *
+       * `alumdoor.catalog.allowed_colors` trả một danh sách phẳng; `context.color_scope` đi đúng
+       * pipeline `Item → Item Group lineage → Surface Finish → Item Color` và mang theo cả
+       * `colors_by_finish` lẫn `requires_color`. Pipeline đó đã viết xong từ đợt hội tụ 16/08 mà
+       * chưa nơi nào gọi tới — đây là chỗ đánh thức nó.
+       *
+       * Vẫn giữ lời gọi phẳng làm đường lui: hai request chạy song song nên không tốn thêm thời
+       * gian chờ, và payload chưa có `color_scope` thì ô màu vẫn dùng được như trước.
+       */
+      const flatColors = Array.isArray(colors.allowed_colors) ? colors.allowed_colors.map(text).filter(Boolean) : [];
+      const scope = context.color_scope;
+      const scopedColors = Array.isArray(scope?.allowed_colors) ? scope!.allowed_colors!.map(text).filter(Boolean) : [];
+      // `color_scope: null` + `color_scope_error` = KHÔNG dựng được phạm vi. Lúc đó danh sách
+      // phẳng vẫn hơn là một ô rỗng không lời giải thích; lý do đi vào dải "còn thiếu" của dòng.
+      const allowedColors = scope && scopedColors.length ? scopedColors : flatColors;
       const next: Partial<SalesLine> = {
         ...patch,
         ...serverPatch,
@@ -854,6 +972,10 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
       if (line._loading) return `Dòng ${index + 1} đang tính lại, hãy hoàn tất trước khi lưu.`;
       if (text(line._error)) return `Dòng ${index + 1}: ${text(line._error)}`;
       if (text(line._pricingError)) return `Dòng ${index + 1}: ${text(line._pricingError)}`;
+      // Cổng chặn của danh mục do server tuyên bố. Thiếu khai báo thì từ chối lưu và chỉ đúng
+      // chỗ sửa, thay vì để đơn đi tiếp với một con số không giải thích được.
+      const readinessBlock = lineReadinessBlock(line);
+      if (readinessBlock) return `Dòng ${index + 1}: ${readinessBlock.what} — sửa ở: ${readinessBlock.where}`;
       if (numberValue(line.rate) === undefined) return `Dòng ${index + 1}: thiếu Đơn giá.`;
       for (const [fieldname, rule] of Object.entries(line._overrides ?? {}) as Array<[string, FieldOverride]>) {
         if (!(rule.reqd === true || rule.reqd === 1) || rule.hidden === true || rule.hidden === 1) continue;
@@ -964,6 +1086,8 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
   const totalArea = lines.reduce((sum, line) => sum + (lineBillableArea(line) ?? 0), 0);
   const unresolvedLines = activeLines.filter((line) => line._loading || line._error || line._pricingError).length;
   const bomBlocked = activeLines.filter((line) => line._bomPreview?.actual_complete === false).length;
+  // Thiếu khai báo danh mục phải đếm được ở thanh tổng, không chỉ nằm trong dòng đã mở.
+  const catalogGapLines = activeLines.filter((line) => lineBlockingGaps(line).length > 0).length;
   const approvalLines = activeLines.filter(lineCommercialNeedsApproval).length;
   const approvalNeeded = checked(header.discount_requires_approval) || approvalLines > 0;
   const busy = saving || submitting;
@@ -1074,6 +1198,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
 
               <div className="flex flex-wrap items-center gap-2 border-t px-3 py-2 text-[11px]">
                 {recalculating ? <span className="inline-flex items-center gap-1.5"><Loader2 className="size-3.5 animate-spin" /> Đang tính lại</span> : unresolvedLines || bomBlocked ? <span className="inline-flex items-center gap-1.5"><AlertTriangle className="size-3.5" />{unresolvedLines ? `${unresolvedLines} dòng chưa tính xong` : ""}{unresolvedLines && bomBlocked ? " · " : ""}{bomBlocked ? `${bomBlocked} dòng BOM còn thiếu vật tư thực tế` : ""}</span> : <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="size-3.5" /> Dữ liệu preview đã sẵn sàng</span>}
+                {catalogGapLines ? <Badge variant="outline" className="border-destructive/40 text-destructive">{catalogGapLines} dòng thiếu khai báo danh mục — mở dòng để xem sửa ở đâu</Badge> : null}
                 {approvalNeeded ? <Badge variant="outline">{approvalLines || 1} dòng / thay đổi cần duyệt</Badge> : null}
                 <span className="ml-auto text-muted-foreground">Bảng giá: <strong className="font-medium text-foreground">{text(header.selling_price_list) || "Chưa chọn"}</strong></span>
               </div>
