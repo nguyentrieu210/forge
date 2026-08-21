@@ -52,6 +52,7 @@ import {
   money,
   newFifoInputLine,
   newReceiptLine,
+  nonNegativeNumber,
   nowLocalDatetime,
   numberValue,
   positiveNumber,
@@ -263,7 +264,8 @@ export function AlumdoorPurchaseReceiptCreate(props: AlumdoorPurchaseReceiptCrea
     const { item, profile } = await loadIntel(itemCode);
     const mode = text(item.inventory_mode) || "Hàng thường";
     const purchaseUom = text(item.default_purchase_uom) || text(item.stock_uom);
-    const tolerance = positiveNumber(profile?.weight_tolerance_pct);
+    /* 0% là ngưỡng khai THẬT, không phải "chưa khai" — xem `nonNegativeNumber` trong model.ts. */
+    const tolerance = nonNegativeNumber(profile?.weight_tolerance_pct);
     const next: ReceiptLine = {
       ...source,
       _itemName: text(item.item_name) || itemCode,
@@ -687,7 +689,8 @@ export function AlumdoorPurchaseReceiptCreate(props: AlumdoorPurchaseReceiptCrea
         : null;
       const kgPerM = positiveNumber(spec?.theoretical_kg_per_m);
       const standardLength = positiveNumber(spec?.standard_length_m);
-      const tolerance = positiveNumber(intel.profile?.weight_tolerance_pct);
+      /* 0% là ngưỡng khai THẬT, không phải "chưa khai" — xem `nonNegativeNumber` trong model.ts. */
+      const tolerance = nonNegativeNumber(intel.profile?.weight_tolerance_pct);
       setFifoRows((current) => current.map((line) => {
         if (line.name !== key) return line;
         const next: FifoInputLine = { ...line, _itemName: text(intel.item.item_name) || itemCode };

@@ -43,6 +43,23 @@ export function positiveNumber(value: unknown): number | undefined {
   return parsed !== undefined && parsed > 0 ? parsed : undefined;
 }
 
+/**
+ * Số KHÔNG ÂM — ở đây "0" là một con số THẬT, khác hẳn `positiveNumber` (0 hoá "chưa khai").
+ *
+ * Dùng cho các NGƯỠNG phần trăm mà 0 vừa hợp lệ vừa có nghĩa: `Measurement Profile.
+ * weight_tolerance_pct = 0` nghĩa là "lệch cân bao nhiêu cũng phải giải trình". Server GIỮ
+ * NGUYÊN số 0 đó, vì `COALESCE(CAST(... AS REAL),13)` chỉ thay NULL chứ không thay 0
+ * (`server/apps/tenant-worker/src/index-core-base.ts:852`).
+ *
+ * Lọc bằng `positiveNumber` thì 0 rơi về `undefined` rồi hoá thành mặc định 13: màn nới ngưỡng
+ * gấp mười ba lần so với sổ, dòng lệch cân đáng phải chọn `Nguyên nhân chênh lệch` lại lọt qua
+ * êm ru. Đúng kiểu luật ngủ im lặng — không có gì báo, chỉ sai.
+ */
+export function nonNegativeNumber(value: unknown): number | undefined {
+  const parsed = numberValue(value);
+  return parsed !== undefined && parsed >= 0 ? parsed : undefined;
+}
+
 export function checked(value: unknown): boolean {
   if (value === true || value === 1 || value === "1") return true;
   return ["true", "yes", "co"].includes(normalized(value));

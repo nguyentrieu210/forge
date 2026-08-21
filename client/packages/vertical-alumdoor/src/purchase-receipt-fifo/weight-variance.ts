@@ -21,7 +21,7 @@
  *     khai thì màn nói "server sẽ quyết", và ưu tiên `tolerance_pct` + `tolerance_source`
  *     mà chính preview FIFO trả về.
  */
-import { numberValue, positiveNumber } from "./model.js";
+import { nonNegativeNumber, numberValue, positiveNumber } from "./model.js";
 
 /** `COALESCE(CAST(... AS REAL), 13)` — index-core-base.ts:852. */
 export const PLATFORM_DEFAULT_WEIGHT_TOLERANCE_PCT = 13;
@@ -62,7 +62,12 @@ function round(value: number, digits = 2): number {
 }
 
 export function readWeightVariance(input: WeightVarianceInput): WeightVarianceReading {
-  const declaredTolerance = positiveNumber(input.tolerancePct);
+  /*
+   * KHÔNG dùng `positiveNumber` ở đây: ngưỡng 0% là lời khai HỢP LỆ ("lệch bao nhiêu cũng phải
+   * giải trình"), mà server giữ nguyên vì `COALESCE(...,13)` chỉ thay NULL chứ không thay 0.
+   * Lọc 0 đi thì màn tự nới ngưỡng lên 13% trong khi sổ vẫn chấm theo 0%.
+   */
+  const declaredTolerance = nonNegativeNumber(input.tolerancePct);
   const toleranceKnown = Boolean(input.toleranceKnown) && declaredTolerance !== undefined;
   const tolerancePct = toleranceKnown ? declaredTolerance! : PLATFORM_DEFAULT_WEIGHT_TOLERANCE_PCT;
   const toleranceSource: WeightVarianceReading["toleranceSource"] = toleranceKnown
