@@ -305,7 +305,7 @@ check("buildLinkFilters: static + eval-context + op + malformed→undefined", ()
     { is_group: 0, disabled: 0 },
     "field phụ thuộc là chuỗi rỗng không được biến thành filter company=''",
   );
-  assert.equal(
+  assert.deepEqual(
     buildLinkFilters(fld(JSON.stringify([["Warehouse", "company", "=", "eval:doc.company"]])), { company: null }),
     { is_group: 0, disabled: 0 },
     "field phụ thuộc null không được làm Link rỗng vĩnh viễn",
