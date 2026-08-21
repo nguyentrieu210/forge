@@ -118,6 +118,38 @@ function statusMetrics(doctype: string, data: JsonObject): O2CStatusMetrics {
   return {};
 }
 
+/**
+ * Đóng khoá dòng ổn định cho từng dòng đơn bán — thứ MỌI chứng từ hạ nguồn khoá theo.
+ *
+ * Nhân hệ thống có đúc `items-N` cho BẢNG DÒNG CON, nhưng mảng `items` của chính chứng
+ * từ cha chỉ giữ đúng những gì client gửi — và không client Alumdoor nào gửi `row_id`.
+ * Hệ quả: đơn bán lập từ màn hình lưu xuống với dòng KHÔNG có `row_id`, rồi mọi lần ghi
+ * sổ Phiếu xuất và mọi lần lập Hoá đơn từ đơn đó chết ở `sales-order-downstream.ts:214`
+ * với "row 1 has no stable row_id". Chín phiếu xuất trong tenant dev nằm ở Nháp đúng vì
+ * lý do này — và lỗi báo tên ĐƠN BÁN trong lúc người dùng đang bấm ghi sổ PHIẾU XUẤT,
+ * nên nhìn như lỗi kho.
+ *
+ * Đúc ngay lúc lưu làm mảng cha khớp với bảng dòng con và khớp với `name` mà đường đọc
+ * vốn đã trả về — nên sửa rồi lưu lại vẫn ra đúng khoá cũ. Dòng mới chèn vào giữa không
+ * bao giờ cướp khoá của một dòng đang có: khoá đã dùng được gom trước rồi mới đúc tiếp.
+ */
+export function withStableRowIds<T extends JsonObject>(items: readonly T[]): T[] {
+  const taken = new Set<string>();
+  for (const item of items) {
+    const declared = typeof item.row_id === "string" ? item.row_id.trim() : "";
+    if (declared) taken.add(declared);
+  }
+  let next = 1;
+  return items.map((item) => {
+    const declared = typeof item.row_id === "string" ? item.row_id.trim() : "";
+    if (declared) return declared === item.row_id ? item : { ...item, row_id: declared };
+    while (taken.has(`items-${next}`)) next += 1;
+    const minted = `items-${next}`;
+    taken.add(minted);
+    return { ...item, row_id: minted };
+  });
+}
+
 export class SalesOrderController extends BaseController<SalesOrderData> {
   readonly doctype = "Sales Order";
 
@@ -126,16 +158,26 @@ export class SalesOrderController extends BaseController<SalesOrderData> {
     if (!input.customer) throw errors.validation("Customer is required");
     if (!input.company) throw errors.validation("Company is required");
     if (!input.currency) throw errors.validation("Currency is required");
-    // Alumdoor's approved commercial policy: every Sales Order is priced from
-    // master data. Keep the shared CloudERP controller backward-compatible for
-    // other installed apps whose contracts still allow manually priced orders.
-    const locksOrderPricing = input.company === "ALUMDOOR";
+    // Chính sách thương mại đã duyệt: mọi Đơn bán phải được định giá từ danh mục.
+    //
+    // Trước đây chốt này chỉ bật khi `input.company === "ALUMDOOR"` — tên công ty DEMO
+    // gieo sẵn trong master_records, không phải công ty thật đang giao dịch. Đo trên D1
+    // ngày 21/08/2026: 61 Đơn bán dùng công ty thật, 16/61 KHÔNG có bảng giá — chính sách
+    // chưa từng có hiệu lực trên một đơn hàng thật nào. Thực nghiệm xác nhận: gửi chiết
+    // khấu 40% với công ty thật → tạo 201, chốt sổ 200, không ai duyệt.
+    //
+    // Chốt chủ dự án 21/08/2026: bật LUÔN, không điều kiện theo tên công ty. Đây là
+    // `SalesOrderController` DÙNG CHUNG — cùng lớp này được `createO2CControllerRegistry()`
+    // đăng ký cho luồng social-commerce (control-plane-worker, social-ingress-worker), có
+    // thể phục vụ khách hàng khác ngoài Alumdoor. Bật không điều kiện áp chính sách này lên
+    // CẢ những đơn social-commerce đó — rủi ro đã nêu và được chấp nhận, không phải bỏ sót.
+    const locksOrderPricing = true;
     if (locksOrderPricing && !input.selling_price_list) throw errors.validation("Bảng giá áp dụng là bắt buộc");
     const orderDiscountPercentage = input.additional_discount_percentage ?? 0;
     const orderDiscountMicros = toScaledInt(orderDiscountPercentage, 6, "additional_discount_percentage");
     const currency = await resolveCurrencyContext(context, input.company, input.currency, input.transaction_date);
     const currencyScale = currency.transactionScale;
-    const itemSnapshots = await applyUomConversion(context as unknown as ControllerContext<JsonObject>, input.items, { transactionKind: "sales" });
+    const itemSnapshots = await applyUomConversion(context as unknown as ControllerContext<JsonObject>, withStableRowIds(input.items), { transactionKind: "sales" });
     const pricedItems = await applySellingPricing(context, itemSnapshots, input.selling_price_list, input.currency, input.transaction_date, input.customer, input.customer_group);
     const discountPolicy = locksOrderPricing
       ? await applyAlumdoorDiscountPolicy(context, pricedItems)

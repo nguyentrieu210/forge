@@ -10,6 +10,7 @@ import {
   alumdoorOrderTotals,
   defaultAlumdoorDiscountPercent,
   withAlumdoorDefaultDiscountSnapshot,
+  withStableRowIds,
 } from "./controllers.js";
 import { resolveCommercialLine } from "./commercial-line-resolver.js";
 import { calculateSalesTotals } from "./totals.js";
@@ -45,9 +46,12 @@ export class CommercialSalesOrderController extends SalesOrderController {
     const responsiblePerson = await responsibleEmployeeForActor(context);
     let requiresApproval = priceListDecision.requiresApproval;
 
+    // Cùng một luật đúc khoá dòng với đường bán chung — xem `withStableRowIds`. Đường
+    // thương mại dựng lại `items` của riêng nó, nên nếu không đúc ở đây thì đơn Alumdoor
+    // vẫn lưu xuống thiếu `row_id` và vẫn không xuất kho được.
     const converted = await applyUomConversion(
       context as unknown as ControllerContext<JsonObject>,
-      input.items,
+      withStableRowIds(input.items),
       { transactionKind: "sales" },
     );
     const quotation = await quotationForFreeze(context, input.against_quotation);

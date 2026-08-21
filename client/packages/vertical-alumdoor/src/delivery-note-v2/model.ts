@@ -368,9 +368,21 @@ export function lineSaleUom(line: DeliveryLine): string {
 }
 
 /**
- * Các trục số lượng CỦA DÒNG. Nhóm `RT_` (mua Kg · tồn CÂY · bán Mét) sẽ ra 3 trục và cả 3
- * phải hiện cạnh nhau. Trục tồn khi người dùng vừa sửa SL thì đánh dấu `estimated` chứ không
- * xoá trắng, và khi thiếu hệ số quy đổi thì nói ra lý do thay vì để trống.
+ * Các trục số lượng CỦA DÒNG. Nhóm `RT_` bán theo Mét nhưng tồn theo ĐVT tồn của Item, và
+ * còn có trục cân thực tế — cả ba phải hiện cạnh nhau.
+ *
+ * KHÔNG ghim ĐVT tồn của `RT_` trong đầu, luôn đọc `stock_uom` của dòng: ngày 21/08/2026
+ * `RT_TR114_2.1` đổi `stock_uom` từ Kg sang Cây ngay giữa một đợt kiểm thử, trong khi hàng
+ * đã nhập trước đó vẫn nằm trong sổ theo Kg. Bản chú thích trước ở đây khẳng định một ĐVT
+ * cụ thể và đã sai chỉ sau vài giờ.
+ *
+ * CẠM BẪY kèm theo, xem báo cáo `bao-cao/ban-xuat.md`: hệ số quy đổi của mã đó là 4,7 với
+ * ghi chú "1 Mét = 4,7 **Kg**", nhưng ĐVT tồn giờ là **Cây** — nên máy chủ trừ 47 CÂY cho
+ * 10 Mét (sự thật vật lý ≈ 1,7 cây). Hệ số và ĐVT tồn lệch nhau thì màn này vẫn hiện đúng
+ * cái nó được cho; chỗ sửa là bảng quy đổi trên Item, không phải ở đây.
+ *
+ * Trục tồn khi người dùng vừa sửa SL thì đánh dấu `estimated` chứ không xoá trắng, và khi
+ * thiếu hệ số quy đổi thì nói ra lý do thay vì để trống.
  */
 export function lineQuantityAxes(line: DeliveryLine): QuantityAxis[] {
   const saleUom = lineSaleUom(line);
@@ -385,15 +397,25 @@ export function lineQuantityAxes(line: DeliveryLine): QuantityAxis[] {
   }];
 
   if (stockUom && normalized(stockUom) !== normalized(saleUom)) {
-    const serverStockQty = numberValue(line.stock_qty);
-    const estimated = serverStockQty === undefined && qty !== undefined && factor !== undefined;
+    /**
+     * `line.stock_qty` là ẢNH CHỤP của máy chủ từ lần lưu/dựng phiếu trước. Sửa SL trên màn
+     * KHÔNG đụng tới nó, nên tin nó sau khi người dùng gõ là dán số cũ lên số mới: dòng trục
+     * hạ từ 10 Mét xuống 4 Mét vẫn hiện "SL xuất kho 47 Kg" (đúng phải là 18,8 Kg) mà không
+     * một dấu hiệu nào cho biết đó là số cũ — thủ kho lấy hàng theo con số trên màn.
+     *
+     * Nên khi dòng đã `_edited`, dựng lại từ SL đang thấy và đánh dấu `estimated`; máy chủ
+     * vẫn là nơi chốt số cuối (`applyUomConversion` tính lại từ `qty × hệ số`, không đọc ô
+     * `stock_qty` client gửi lên), màn chỉ có nghĩa vụ không nói dối trong lúc chờ.
+     */
+    const snapshotStockQty = line._edited ? undefined : numberValue(line.stock_qty);
+    const derivable = snapshotStockQty === undefined && qty !== undefined && factor !== undefined;
     axes.push({
       kind: "stock",
       label: "SL xuất kho",
       uom: stockUom,
-      value: serverStockQty ?? (estimated ? qty! * factor! : undefined),
-      estimated,
-      blockedReason: serverStockQty === undefined && !estimated
+      value: snapshotStockQty ?? (derivable ? qty! * factor! : undefined),
+      estimated: derivable,
+      blockedReason: snapshotStockQty === undefined && !derivable
         ? text(line._context?.uom_gap?.message)
           || text(line._context?.stock_snapshot?.selected_qty_blocked_reason)
           || `Chưa có hệ số quy đổi ${saleUom || "ĐVT bán"} → ${stockUom}; máy chủ chốt số khi lưu.`
