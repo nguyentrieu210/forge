@@ -215,3 +215,54 @@ bán một cách) hay là dòng giá của cách còn lại chưa nhập?
 
 Nếu là chủ ý thì nên đổi hẳn về `STANDARD` để bảng giá bớt một trục; nếu là thiếu thì phải nhập nốt
 trước khi có người bán nhầm.
+
+### Q4 🟥 16 mã bán được KHÔNG có bất kỳ đơn giá nào — đã điền giá TẠM, chờ giá thật
+
+Đo trên D1 cục bộ 21/08/2026: 16/227 mã `is_sales_item=1` không có lấy một dòng `Item Price` (kể
+cả `STANDARD`) — bán hàng bị chặn cứng "chưa khai đơn giá" ở đúng 16 mã này. Chủ xưởng chốt: điền
+giá tạm **100.000đ** để không chặn bán hàng, nhưng đây là số BỊA, không phải giá thật.
+
+**Giá tạm KHÔNG mang `price_variant: "STANDARD"`** — nếu mang, nó lẫn vào như giá thật và người
+bán chốt đơn ở giá bịa mà không biết, đúng điều luật "thà từ chối và báo lỗi còn hơn tính ra một
+con số sai trong im lặng" (`docs/ALUMDOOR-DANH-MUC-HOI-TU-20260819.md`) cấm. Biến thể dùng là
+**`TAM_CHUA_CHOT`** — đọc trên màn bán hàng (`price_explain.item_price`, hay liệt kê cách bán khi
+có từ hai dòng giá trở lên) sẽ thấy ngay một mã lạ, không phải `STANDARD` quen mắt.
+
+Script chạy thử: `node nhap/dien-gia-tam.mjs` (mặc định chỉ đọc D1, không ghi). Ghi thật:
+`node nhap/dien-gia-tam.mjs --that` (tắt runtime trước — script tự chặn nếu cổng 8799/5173 còn
+nghe). Cả hai đọc trực tiếp D1 để dò danh sách, không hardcode, nên vẫn đúng nếu danh mục đổi.
+
+| # | Mã hàng | ĐVT bán | Nhóm hàng | Tên bản ghi `Item Price` (5 đoạn) | Ghi chú |
+|---|---|---|---|---|---|
+| 1 | `PKC_CNHUA` | Cái | Phụ kiện chung | `Alumdoor 2026:PKC_CNHUA:Cái:TAM_CHUA_CHOT:MOI-DIEN-TICH` | |
+| 2 | `PKC_BULON12.12` | Con | Phụ kiện chung | `Alumdoor 2026:PKC_BULON12.12:Con:TAM_CHUA_CHOT:MOI-DIEN-TICH` | |
+| 3 | `PKC_CONTAN12` | Con | Phụ kiện chung | `Alumdoor 2026:PKC_CONTAN12:Con:TAM_CHUA_CHOT:MOI-DIEN-TICH` | |
+| 4 | `PKC_BACDAN` | Bộ | Phụ kiện chung | `Alumdoor 2026:PKC_BACDAN:Bộ:TAM_CHUA_CHOT:MOI-DIEN-TICH` | |
+| 5 | `PKC_CHNHUA` | Cái | Phụ kiện chung | `Alumdoor 2026:PKC_CHNHUA:Cái:TAM_CHUA_CHOT:MOI-DIEN-TICH` | |
+| 6 | `PKC_TIINOX` | Mét | Phụ kiện chung | `Alumdoor 2026:PKC_TIINOX:Mét:TAM_CHUA_CHOT:MOI-DIEN-TICH` | |
+| 7 | `RT_TRUC_114_1.8LY` | Mét | Ray và trục | `Alumdoor 2026:RT_TRUC_114_1.8LY:Mét:TAM_CHUA_CHOT:MOI-DIEN-TICH` | mã `Item.disabled=true` |
+| 8 | `RT_TRUC_114_2.1LY` | Mét | Ray và trục | `Alumdoor 2026:RT_TRUC_114_2.1LY:Mét:TAM_CHUA_CHOT:MOI-DIEN-TICH` | mã `Item.disabled=true` |
+| 9 | `RT_TRUC34` | Mét | Ray và trục | `Alumdoor 2026:RT_TRUC34:Mét:TAM_CHUA_CHOT:MOI-DIEN-TICH` | |
+| 10 | `RT_TRUC140` | Mét | Ray và trục | `Alumdoor 2026:RT_TRUC140:Mét:TAM_CHUA_CHOT:MOI-DIEN-TICH` | mã `Item.disabled=true` |
+| 11 | `RT_TRUC168` | Mét | Ray và trục | `Alumdoor 2026:RT_TRUC168:Mét:TAM_CHUA_CHOT:MOI-DIEN-TICH` | mã `Item.disabled=true` |
+| 12 | `RT_RAY_U100_1.4LY_RON_TD` | Mét | Ray và trục | `Alumdoor 2026:RT_RAY_U100_1.4LY_RON_TD:Mét:TAM_CHUA_CHOT:MOI-DIEN-TICH` | |
+| 13 | `PKS_CROMATE_3` | Cái | Phụ kiện cần sơn tĩnh điện | `Alumdoor 2026:PKS_CROMATE_3:Cái:TAM_CHUA_CHOT:MOI-DIEN-TICH` | |
+| 14 | `PKS_TAY_NHOM` | Cái | Phụ kiện cần sơn tĩnh điện | `Alumdoor 2026:PKS_TAY_NHOM:Cái:TAM_CHUA_CHOT:MOI-DIEN-TICH` | |
+| 15 | `PKDUC_BO_2VIS_501_552` | Con | Phụ kiện CN Đức | `Alumdoor 2026:PKDUC_BO_2VIS_501_552:Con:TAM_CHUA_CHOT:MOI-DIEN-TICH` | |
+| 16 | `CKDL_CUAKEODL` | m2 | Cửa kéo Đài Loan | `Alumdoor 2026:CKDL_CUAKEODL:m2:TAM_CHUA_CHOT:MOI-DIEN-TICH` | |
+
+ĐVT lấy theo đúng luật `Item Price.uom` dùng để tự điền (`fetch_from: item_code.default_sales_uom`
+— xem `server/briefs/alumdoor-v2.json`): `default_sales_uom`, hụt thì lùi về `stock_uom`. Không có
+mã nào trong 16 mã trên phải lùi — cả 16 đều có `default_sales_uom` khai sẵn.
+
+Bốn mã `RT_TRUC_114_1.8LY` / `RT_TRUC_114_2.1LY` / `RT_TRUC140` / `RT_TRUC168` đang mang
+`Item.disabled=true`. Vẫn điền giá tạm cho chúng theo đúng quyết định "cả 16 mã" của chủ xưởng —
+không tự loại trừ, vì `disabled` trên `Item` và "có giá hay không" trên `Item Price` là hai trục
+độc lập, và bật lại một mã đã tắt mà vẫn thiếu giá thì lại rơi vào đúng cái chặn ban đầu.
+
+**Việc kế toán/chủ xưởng cần làm:** với từng dòng trên, mở `Item Price` tương ứng, sửa `rate`
+thành giá thật, đổi `price_variant` về `STANDARD` (hoặc biến thể đúng nếu mã đó bán nhiều cách),
+rồi XOÁ dòng `TAM_CHUA_CHOT` nếu đã đổi tên biến thể (đổi `price_variant` tại chỗ đồng nghĩa đổi
+TÊN bản ghi — vì tên là một khoá trong `naming` 5 đoạn — nên thực chất là tạo dòng mới đúng tên rồi
+xoá dòng `TAM_CHUA_CHOT` cũ, không phải sửa tại chỗ). Còn dòng nào còn mang `TAM_CHUA_CHOT` nghĩa
+là giá thật CHƯA được điền.
