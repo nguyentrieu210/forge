@@ -1,7 +1,6 @@
 type Json = Record<string, unknown>;
 export type DocumentPreviewCall = ((path: string, init?: RequestInit) => Promise<Response>) & { via?: string };
 
-const ALUMDOOR_SELLING_PRICE_LIST = "ALUMDOOR-SELLING";
 const STANDARD_PRICE_VARIANT = "STANDARD";
 
 const answer = (value: Json, status = 200) => new Response(JSON.stringify(value), {
@@ -410,6 +409,43 @@ async function purchasePreview(call: DocumentPreviewCall, doc: Json): Promise<Js
   };
 }
 
+/**
+ * Bảng giá bán lấy từ DỮ LIỆU, không từ một chuỗi ghim trong code.
+ *
+ * Trước 21/08/2026 chỗ này ghim `"ALUMDOOR-SELLING"` rồi ép lên header mọi đơn bán. Khi chủ
+ * xưởng đổi tên bảng giá sang `Alumdoor 2026` (`nhap/doi-ten-bang-gia.mjs`, dựng lại 268 dòng
+ * giá), tên ghim trỏ vào một bảng giá KHÔNG CÒN TỒN TẠI — và vì nó nằm sau cùng trong spread
+ * nên đè luôn cả bảng giá người dùng tự chọn. Hệ quả: mọi dòng bán báo "chưa khai đơn giá"
+ * trong khi 288 đơn giá vẫn nằm nguyên trong D1.
+ *
+ * Ba luật ở đây, theo đúng thứ tự:
+ *  1. Người dùng đã chọn thì GIỮ. Preview không có quyền đè lựa chọn của người lập đơn.
+ *  2. Chưa chọn thì suy từ danh mục: bảng giá còn dùng, ưu tiên đúng nhóm giá của khách.
+ *  3. Vẫn không chắc thì TRẢ RỖNG. Brief `Price List` ghi thẳng: để trống `selling_price_list`
+ *     nghĩa là giá gõ tay — đó là mặc định và là cách xưởng đang làm. Đoán một bảng giá là ghi
+ *     đè đơn giá bằng một bảng người lập đơn không chọn.
+ */
+async function resolveSellingPriceList(call: DocumentPreviewCall, doc: Json, customerGroup: string): Promise<string> {
+  const chosen = text(doc.selling_price_list);
+  if (chosen) return chosen;
+  let rows: Json[];
+  try {
+    rows = await listDocs(call, "Price List", ["name", "price_list_name", "customer_group", "disabled"], [], 50);
+  } catch {
+    // Không đọc được danh mục bảng giá thì để giá gõ tay, đừng kéo sập cả màn xem trước.
+    return "";
+  }
+  const active = rows.filter((row) => !disabled(row.disabled));
+  const nameOf = (row: Json) => text(row.name) || text(row.price_list_name);
+  if (active.length === 1) return nameOf(active[0]!);
+  const group = text(customerGroup) || text(doc.customer_group);
+  if (group) {
+    const matched = active.filter((row) => text(row.customer_group).localeCompare(group, "vi", { sensitivity: "base" }) === 0);
+    if (matched.length === 1) return nameOf(matched[0]!);
+  }
+  return "";
+}
+
 /** Read-only UX preview. Save/submit vẫn normalize lại ở canonical controller. */
 export async function previewDocument(call: DocumentPreviewCall, args: Json): Promise<Response> {
   try {
@@ -421,10 +457,11 @@ export async function previewDocument(call: DocumentPreviewCall, args: Json): Pr
     }
     if (doctype !== "Sales Order") return answer({ patch: {}, clear: [], source: "alumdoor.ui.preview_document" });
     const defaults = await customerDefaults(call, doc, changedField);
-    const effectiveDoc = { ...doc, ...defaults.patch, selling_price_list: ALUMDOOR_SELLING_PRICE_LIST };
+    const priceList = await resolveSellingPriceList(call, doc, text(defaults.patch.customer_group));
+    const effectiveDoc = { ...doc, ...defaults.patch, ...(priceList ? { selling_price_list: priceList } : {}) };
     const patch: Json = {
       ...defaults.patch,
-      selling_price_list: ALUMDOOR_SELLING_PRICE_LIST,
+      ...(priceList && priceList !== text(doc.selling_price_list) ? { selling_price_list: priceList } : {}),
       ...totals(effectiveDoc),
     };
     if (!text(doc.payment_method)) patch.payment_method = "Ghi công nợ";

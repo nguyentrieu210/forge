@@ -9,7 +9,14 @@ import {
   SEALED_PRICE_SOURCE,
 } from "./lib/alumdoor-sealed-price-authority.mjs";
 
-export const ALUMDOOR_PRICE_LIST = "ALUMDOOR-SELLING";
+/**
+ * Tên bảng giá do CHỦ XƯỞNG chốt 21/08/2026: "Alumdoor 2026" (trước đó là "ALUMDOOR-SELLING").
+ *
+ * Đây là một khoá trong `naming` của Item Price (`{price_list}:{item_code}:{uom}:{price_variant}:{area_tier}`),
+ * nên đổi chuỗi này là đổi TÊN mọi dòng giá sinh ra. Để lệch với dữ liệu đang chạy thì lần nhập
+ * sau đẻ ra một bảng giá thứ hai và chẻ đôi giá của xưởng.
+ */
+export const ALUMDOOR_PRICE_LIST = "Alumdoor 2026";
 export const STANDARD_VARIANT = "STANDARD";
 export const VARIANTS = Object.freeze({
   MOTOR_NO_LAC: "ALUMDOOR_MOTOR_NO_LAC",

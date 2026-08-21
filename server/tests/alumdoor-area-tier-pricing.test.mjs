@@ -154,7 +154,7 @@ const ITEM_PRICE_NAMING = JSON.parse(readSource("briefs/alumdoor-v2.json"))
   .doctypes.find((entry) => entry.name === "Item Price").naming;
 
 const priceDocument = (overrides = {}) => ({
-  price_list: "ALUMDOOR-SELLING", item_code: "PK-CONLAN", uom: "Cái",
+  price_list: ALUMDOOR_PRICE_LIST, item_code: "PK-CONLAN", uom: "Cái",
   price_variant: "STANDARD", rate: 15000, currency: "VND", ...overrides,
 });
 
@@ -188,7 +188,7 @@ test("dòng giá KHÔNG bậc vẫn TẠO ĐƯỢC — nhờ sentinel, không nh
     now: "2026-08-19T00:00:00.000Z",
   });
   assert.equal(plan.kind, "literal");
-  assert.equal(plan.name, "ALUMDOOR-SELLING:PK-CONLAN:Cái:STANDARD:MOI-DIEN-TICH");
+  assert.equal(plan.name, `${ALUMDOOR_PRICE_LIST}:PK-CONLAN:Cái:STANDARD:MOI-DIEN-TICH`);
 });
 
 test("dòng giá có bậc lấy đúng mã bậc làm đoạn cuối của tên", () => {
@@ -198,7 +198,7 @@ test("dòng giá có bậc lấy đúng mã bậc làm đoạn cuối của tên
     document: priceDocument({ item_code: "TP-CUADL1LY XN-VK", uom: "m2", area_tier: "BAC-4-5" }),
     now: "2026-08-19T00:00:00.000Z",
   });
-  assert.equal(plan.name, "ALUMDOOR-SELLING:TP-CUADL1LY XN-VK:m2:STANDARD:BAC-4-5");
+  assert.equal(plan.name, `${ALUMDOOR_PRICE_LIST}:TP-CUADL1LY XN-VK:m2:STANDARD:BAC-4-5`);
 });
 
 test("một hằng số sentinel, ba nơi giữ bản sao — phải bằng nhau", () => {
@@ -222,11 +222,11 @@ test("một hằng số sentinel, ba nơi giữ bản sao — phải bằng nhau
 test("tên trong payload giá mang bậc — mặc định là sentinel, có bậc thì là mã bậc", () => {
   assert.equal(
     itemPriceName(ALUMDOOR_PRICE_LIST, "PK-CONLAN", "Cái"),
-    "ALUMDOOR-SELLING:PK-CONLAN:Cái:STANDARD:MOI-DIEN-TICH",
+    `${ALUMDOOR_PRICE_LIST}:PK-CONLAN:Cái:STANDARD:MOI-DIEN-TICH`,
   );
   assert.equal(
     itemPriceName(ALUMDOOR_PRICE_LIST, "TP-CUADL1LY XN-VK", "m2", "STANDARD", "BAC-4-5"),
-    "ALUMDOOR-SELLING:TP-CUADL1LY XN-VK:m2:STANDARD:BAC-4-5",
+    `${ALUMDOOR_PRICE_LIST}:TP-CUADL1LY XN-VK:m2:STANDARD:BAC-4-5`,
   );
   // Tên payload phải trùng tên nền tảng tự sinh, nếu không thì importer TẠO MỚI thay vì cập nhật.
   const plan = resolveAutoname({
@@ -724,7 +724,14 @@ const PREIMAGE = JSON.parse(readFileSync(resolve(SERVER_ROOT, "..", "work", "pri
 const PREIMAGE_PRICES = PREIMAGE.records.item_prices;
 
 test("bản chụp D1 vẫn là 558/558 dòng giá tên BỐN đoạn — con số mà mọi kết luận dưới đây dựa vào", () => {
-  assert.equal(PREIMAGE.managed_price_list, ALUMDOOR_PRICE_LIST);
+  /**
+   * Bản chụp ĐÓNG BĂNG ở trạng thái 19/08, nên nó phải giữ tên bảng giá của CHÍNH NGÀY ĐÓ.
+   *
+   * Trước đây dòng này so bản chụp với hằng số đang chạy. Khi chủ xưởng đổi tên bảng giá sang
+   * "Alumdoor 2026" (21/08), phép so đó biến một thay đổi hợp lệ thành test đỏ — vì nó lẫn hai
+   * câu hỏi khác nhau: "bản chụp quản bảng giá nào" và "hôm nay ta quản bảng giá nào".
+   */
+  assert.equal(PREIMAGE.managed_price_list, "ALUMDOOR-SELLING");
   assert.equal(PREIMAGE_PRICES.length, 558);
   assert.equal(PREIMAGE_PRICES.filter((row) => row.name.split(":").length === 4).length, 558);
   assert.equal(PREIMAGE_PRICES.filter((row) => row.doc?.area_tier).length, 0);
