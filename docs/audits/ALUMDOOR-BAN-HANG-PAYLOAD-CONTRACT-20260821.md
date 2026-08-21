@@ -379,3 +379,16 @@ Mã dùng chung với A.9. Mảng rỗng = không có cảnh báo (khác với v
 5. `stock_snapshot.stock_qty` và `stock_snapshot.weight_qty` là **hai trục khác nhau**. Với nhóm
    `RT_`: tiền theo Kg, tồn theo Cây. Hiện song song, đừng gộp.
 6. `price_explain.resolution === "base_uom_fallback"` là trạng thái đáng nghi — hiện rõ, đừng nuốt.
+
+---
+
+## Sửa đổi 21/08/2026 — bên tiêu thụ của `stock_snapshot` / `shortage`
+
+Chủ dự án chốt **màn bán hàng không kiểm tồn kho**. Màn bán hàng vì vậy **không truyền
+`warehouse` và `qty`** nữa, nên hai khối này không được dựng cho bề mặt bán hàng — và cổng chặn
+`STOCK_SHORT` không bao giờ vào `readiness.blocking` từ đường đó.
+
+Hợp đồng KHÔNG đổi: hai khối vẫn là phần chính thức của `item_context`, vẫn có test. Chúng chỉ
+đổi bên tiêu thụ — sang khâu **xuất kho**, nơi có kho thật để trừ. Đây không phải luật ngủ im
+lặng: nó tắt vì thiếu tham số đầu vào một cách có chủ đích và có ghi lại, không phải vì không ai
+biết nó tồn tại.

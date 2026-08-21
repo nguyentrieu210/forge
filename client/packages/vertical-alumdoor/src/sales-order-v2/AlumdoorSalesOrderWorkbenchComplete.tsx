@@ -667,11 +667,18 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
         adapter.callPost<SalesItemContext>("alumdoor.sales.item_context", {
           item_code: itemCode,
           uom: row.uom,
-          warehouse: row.warehouse,
           price_list: headerRef.current.selling_price_list,
           currency: headerRef.current.currency || "VND",
-          // Không truyền `qty` thì server không dựng `shortage` — mất luôn cảnh báo bán vượt tồn.
-          qty: row.qty,
+          /**
+           * KHÔNG hỏi tồn kho ở màn bán hàng — quyết định của chủ dự án 21/08/2026.
+           *
+           * `warehouse` và `qty` là hai tham số DUY NHẤT bật khâu đọc tồn của
+           * `alumdoor.sales.item_context`: thiếu `warehouse` thì không có `stock_snapshot`,
+           * thiếu `qty` thì không dựng `shortage` (nên cũng không có cổng chặn `STOCK_SHORT`).
+           * Bỏ ở đây là tắt cả đường, không phải giấu cột — server khỏi tốn lượt đọc kho.
+           *
+           * Năng lực đó KHÔNG bị xoá: nó thuộc về khâu xuất kho, nơi mới có kho thật để trừ.
+           */
           // Bật khâu màu theo PHẠM VI (Bề mặt → Màu). Đây là đường đánh thức pipeline
           // `finish_color_context` vốn đã viết xong mà chưa nơi nào gọi tới.
           include_color_scope: true,

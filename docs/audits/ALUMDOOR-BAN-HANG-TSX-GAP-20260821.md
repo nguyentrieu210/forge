@@ -148,3 +148,38 @@ trống là hứa suông với người bán.
 Mở nó là sửa metadata trong `server/briefs/**`, ngoài quyền làn B. Việc cần làm, theo thứ tự:
 đưa `warehouse` lên `surface: quick` ở dòng bán **hoặc** thêm một ô kho mặc định ở đầu đơn rồi
 chiếu xuống dòng.
+
+---
+
+## 6. Quyết định 21/08/2026 — màn bán hàng KHÔNG kiểm tồn kho
+
+Chủ dự án chốt: **bán hàng không kiểm tồn**. G13 vì vậy **đóng bằng quyết định, không phải bằng
+cài đặt** — không đổi metadata `Sales Order Item.warehouse`, không thêm ô kho vào đầu đơn.
+
+Đã gỡ khỏi màn bán hàng:
+
+| Gỡ | Ở đâu |
+|---|---|
+| Tham số `warehouse` và `qty` gửi lên `alumdoor.sales.item_context` | `AlumdoorSalesOrderWorkbenchComplete.tsx` |
+| Cột **Tồn khả dụng** (header, ô dữ liệu, ô trong khối BOM, bề rộng, `ColumnId`) | `AlumdoorSalesOrderLineTableComplete.tsx` |
+| Dòng giải trình `Thiếu hàng` / `Chưa so được tồn` | `model.ts` |
+| Hàm `lineAvailableQty`, `lineAvailableStockQty`, `lineShortage` | `model.ts` |
+
+Tắt **tại nguồn chứ không giấu cột**: `warehouse` và `qty` là hai tham số duy nhất bật khâu đọc
+tồn của `item_context`. Thiếu `warehouse` thì không có `stock_snapshot`; thiếu `qty` thì không
+dựng `shortage`, nên cổng chặn `STOCK_SHORT` cũng không bao giờ vào được `readiness.blocking`.
+Server khỏi tốn lượt đọc kho cho mỗi dòng.
+
+**Giữ lại, vì không phải kiểm tồn:**
+
+- Cột **"Quy ra tồn"** — `qty × conversion_factor`, số SẼ vào thẻ kho. Đây là quy đổi đơn vị, câu
+  hỏi "12 mét ray này là mấy cây", không phải câu hỏi "kho còn mấy cây".
+- `uom_gap` / thiếu hệ số quy đổi kèm `fix_where`, và luật tha cho hàng cân thực tế.
+- Chuỗi `availability_status` dưới tên hàng: nó là `[tồn, giá].join(" · ")` ở server, nên khi
+  không truyền `warehouse` nó **tự rút về phần giá** — không cần sửa gì, và vẫn trả lời được câu
+  "mã này có giá chưa".
+
+**Phía server giữ nguyên, không xoá.** `stock_snapshot` · `shortage` · lô/Batch của làn A đứng
+im cùng test của chúng. Chỗ dùng thật của chúng là khâu **xuất kho** — nơi mới có kho thật để
+trừ; `client/packages/vertical-alumdoor/src/delivery-note-v2/model.ts` đã khai lại đúng hai kiểu
+`StockSnapshot` và `ShortageInfo`.

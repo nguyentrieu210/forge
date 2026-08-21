@@ -50,8 +50,6 @@ import {
   isFullSetSalesItem,
   lineAdjustmentAmount,
   lineAvailabilityStatus,
-  lineAvailableQty,
-  lineAvailableStockQty,
   lineBlockingGaps,
   lineCatalogWarnings,
   lineCommercialNeedsApproval,
@@ -68,9 +66,7 @@ import {
   linePriceExplanation,
   linePricedQuantity,
   lineSalesUom,
-  lineShortage,
   lineStockQty,
-  lineStockSnapshot,
   lineStockUom,
   lineUomGap,
   money,
@@ -112,7 +108,6 @@ type ColumnId =
   | "quantity"
   | "uom"
   | "stock_conversion"
-  | "available"
   | "priced_qty"
   | "rate"
   | "gross_amount"
@@ -220,7 +215,6 @@ const DEFAULT_WIDTHS: Record<ColumnId, number> = {
   quantity: 70,
   uom: 84,
   stock_conversion: 108,
-  available: 108,
   priced_qty: 86,
   rate: 112,
   gross_amount: 118,
@@ -252,7 +246,6 @@ const MIN_WIDTHS: Partial<Record<ColumnId, number>> = {
   quantity: 62,
   uom: 78,
   stock_conversion: 92,
-  available: 92,
   priced_qty: 76,
   rate: 94,
   gross_amount: 100,
@@ -408,7 +401,6 @@ function BomBlock(props: {
   colSpan: number;
   dynamicColumns: DynamicFieldName[];
   showStockConversion: boolean;
-  showAvailability: boolean;
   widths: Record<ColumnId, number>;
   stickyStyle: (id: ColumnId) => CSSProperties;
   onToggle: () => void;
@@ -494,9 +486,6 @@ function BomBlock(props: {
           <TableCell style={{ width: props.widths.stock_conversion }} className={`${tone} px-1.5 py-1.5 text-center tabular-nums text-muted-foreground`}>
             {component.stock_qty == null ? "—" : `${quantity(component.stock_qty)} ${text(component.stock_uom)}`.trim()}
           </TableCell>
-        ) : null}
-        {props.showAvailability ? (
-          <TableCell style={{ width: props.widths.available }} className={`${tone} px-1.5 py-1.5 text-center text-muted-foreground`}>—</TableCell>
         ) : null}
         <TableCell style={{ width: props.widths.priced_qty }} className={`${tone} px-1.5 py-1.5 text-center font-semibold tabular-nums text-primary`}>{measuredQuantity === undefined ? "—" : quantity(measuredQuantity)}</TableCell>
         <TableCell style={{ width: props.widths.rate }} className={`${tone} px-1.5 py-1.5 text-center text-muted-foreground`}>—</TableCell>
@@ -634,31 +623,13 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
     () => activeLines.some((line) => lineNeedsUomConversion(line) || lineStockQty(line) !== undefined),
     [activeLines],
   );
-  /**
-   * Tồn khả dụng CHỈ có khi dòng mang kho xuất.
-   *
-   * `Sales Order Item.warehouse` đang là field internal/hidden và đầu đơn không có ô kho nào,
-   * nên trên thực tế `available_*` gần như luôn rỗng. Cột này vì vậy chỉ bật khi server thật sự
-   * trả về SỐ — dựng một cột luôn trống là hứa suông với người bán.
-   */
-  const showAvailability = useMemo(
-    () => activeLines.some((line) => {
-      const snapshot = lineStockSnapshot(line);
-      return lineAvailableQty(line) !== undefined
-        || lineAvailableStockQty(line) !== undefined
-        || numberValue(snapshot?.stock_qty) !== undefined
-        || numberValue(snapshot?.weight_qty) !== undefined;
-    }),
-    [activeLines],
-  );
   const columnOrder = useMemo<ColumnId[]>(() => [
     "select", "index", "item_code", "item_name", "color",
     ...dynamicColumns,
     "quantity", "uom",
     ...(showStockConversion ? (["stock_conversion"] as ColumnId[]) : []),
-    ...(showAvailability ? (["available"] as ColumnId[]) : []),
     "priced_qty", "rate", "gross_amount", "actions",
-  ], [dynamicColumns, showAvailability, showStockConversion]);
+  ], [dynamicColumns, showStockConversion]);
   const columnCount = columnOrder.length;
   const totalWidth = columnOrder.reduce((sum, id) => sum + widths[id], 0);
   const allSelected = props.lines.length > 0 && props.selectedKeys.size === props.lines.length;
@@ -845,51 +816,6 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
     );
   };
 
-  /**
-   * Tồn khả dụng — HAI TRỤC SONG SONG, cố ý không gộp.
-   *
-   * Nhóm ray/trục: tiền theo Kg, tồn theo Cây. Cộng hay quy đổi hai con số này vào nhau là
-   * đúng cái sai mà cả danh mục lẫn hợp đồng payload đều dặn tránh. `severity: "unknown"` là
-   * "không so được" — vẽ cảnh báo, KHÔNG vẽ màu đủ hàng.
-   */
-  const renderAvailabilityCell = (line: SalesLine, rowTone: string) => {
-    const snapshot = lineStockSnapshot(line);
-    const stockUom = text(snapshot?.stock_uom) || lineStockUom(line);
-    const onHandStock = numberValue(snapshot?.stock_qty) ?? lineAvailableStockQty(line);
-    const onHandWeight = numberValue(snapshot?.weight_qty);
-    const weightUom = text(snapshot?.weight_uom);
-    const onHandSales = numberValue(snapshot?.selected_qty) ?? lineAvailableQty(line);
-    const shortage = lineShortage(line);
-    const severity = text(shortage?.severity);
-    const tone = severity === "over" ? "text-destructive" : severity === "unknown" ? "text-amber-600" : "";
-    const title = [text(shortage?.message), text(snapshot?.selected_qty_blocked_reason), lineAvailabilityStatus(line)]
-      .filter(Boolean).join(" · ");
-    return (
-      <TableCell
-        key="available"
-        style={{ width: widths.available, minWidth: widths.available, maxWidth: widths.available }}
-        className={`${rowTone} overflow-hidden px-1.5 py-1.5 text-center align-middle`}
-      >
-        {!text(line.item_code) ? <span className="text-muted-foreground">—</span> : (
-          <div className={`flex flex-col items-center justify-center leading-tight ${tone}`} title={title || undefined}>
-            <span className="font-medium tabular-nums">
-              {onHandStock === undefined ? "—" : `${quantity(onHandStock)} ${stockUom}`.trim()}
-            </span>
-            {onHandWeight !== undefined
-              ? <span className="text-[9px] tabular-nums text-muted-foreground">{quantity(onHandWeight)} {weightUom || "Kg"}</span>
-              : null}
-            {onHandSales !== undefined && lineNeedsUomConversion(line)
-              ? <span className="text-[9px] tabular-nums text-muted-foreground">{quantity(onHandSales)} {lineSalesUom(line)}</span>
-              : null}
-            {severity === "over" || severity === "unknown"
-              ? <span className="inline-flex items-center gap-0.5 text-[9px] font-medium"><AlertTriangle className="size-2.5" />{severity === "over" ? "thiếu hàng" : "không so được"}</span>
-              : null}
-          </div>
-        )}
-      </TableCell>
-    );
-  };
-
   return <section className="overflow-hidden rounded-lg border-2 border-border bg-card" data-section="sales-v2-lines-complete">
     <div className="overflow-x-auto">
       <Table
@@ -909,7 +835,6 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
             {head("quantity", "SL")}
             {head("uom", "ĐVT")}
             {showStockConversion ? head("stock_conversion", "Quy ra tồn") : null}
-            {showAvailability ? head("available", "Tồn khả dụng") : null}
             {head("priced_qty", "Khối lượng")}
             {head("rate", "Đơn giá", "VNĐ")}
             {head("gross_amount", "Thành tiền", "VNĐ")}
@@ -986,14 +911,13 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
                 }} onCommit={() => props.onCommit(line._key, quantityField, line[quantityField])} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} required={fieldRequired(line, quantityField) || isAreaDoor(line)} readOnly={props.readOnly || fieldReadonly(line, quantityField)} compact hideLabel className="mx-auto [&_.mf-control]:!min-h-8 [&_input]:!h-8 [&_input]:!text-center" /></GridField></TableCell>
                 <TableCell style={{ width: widths.uom }} className={`${parentRowTone} overflow-hidden px-1 py-1.5 text-center align-middle`}>{allowedUoms.length > 1 ? <GridField rowKey={line._key} columnId="uom" disabled={props.readOnly}><AlumdoorSalesOrderField id={`sales-v2-complete-uom-${line._key}`} field={uomField} value={line.uom} onChange={(value) => props.onCommit(line._key, "uom", text(value) || undefined)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} readOnly={props.readOnly} compact hideLabel className="[&_.mf-control]:!min-h-8 [&_.mf-control]:!w-full [&_input]:!text-center [&_button]:!h-8 [&_button]:!w-full [&_button]:!justify-center [&_button]:!px-1" /></GridField> : <span className="inline-flex h-8 items-center justify-center">{text(line.uom) || text(line._context?.selected_uom) || "—"}</span>}</TableCell>
                 {showStockConversion ? renderStockConversionCell(line, parentRowTone) : null}
-                {showAvailability ? renderAvailabilityCell(line, parentRowTone) : null}
                 <TableCell style={{ width: widths.priced_qty }} className={`${parentRowTone} px-1.5 py-1.5 text-center align-middle tabular-nums`}><div className="font-semibold text-primary">{pricedQty === undefined ? "—" : quantity(pricedQty)}</div></TableCell>
                 <TableCell style={{ width: widths.rate }} className={`${parentRowTone} px-1.5 py-1.5 text-center align-middle`}><div className="flex h-8 items-center justify-center font-medium tabular-nums" title="Đơn giá tự động theo bảng giá">{numberValue(line.rate) === undefined ? "—" : money(line.rate)}</div></TableCell>
                 <TableCell style={{ width: widths.gross_amount }} className={`${parentRowTone} px-1.5 py-1.5 text-center align-middle tabular-nums`}><strong>{grossAmount === undefined ? "—" : `${money(grossAmount)} ₫`}</strong></TableCell>
                 <TableCell style={{ width: widths.actions }} className={`${parentRowTone} px-1 py-1.5 text-center align-middle`}><div className="flex items-center justify-center"><Button type="button" variant="ghost" size="icon-sm" disabled={props.readOnly || !text(line.item_code)} onClick={() => props.onDuplicate(line._key)} title="Nhân bản" aria-label={`Nhân bản dòng ${rowIndex + 1}`}><Copy className="size-3.5" /></Button><Button type="button" variant="ghost" size="icon-sm" disabled={props.readOnly || props.lines.length <= 1} onClick={() => props.onDelete(line._key)} title="Xóa" aria-label={`Xóa dòng ${rowIndex + 1}`}><Trash2 className="size-3.5" /></Button></div></TableCell>
               </TableRow>
 
-              <BomBlock line={line} lineNumber={rowIndex + 1} expanded={expanded.has(line._key)} readOnly={props.readOnly} colSpan={columnCount} dynamicColumns={dynamicColumns} showStockConversion={showStockConversion} showAvailability={showAvailability} widths={widths} stickyStyle={stickyStyle} onToggle={() => setExpanded((current) => { const next = new Set(current); if (next.has(line._key)) next.delete(line._key); else next.add(line._key); return next; })} onBomActualChange={props.onBomActualChange} />
+              <BomBlock line={line} lineNumber={rowIndex + 1} expanded={expanded.has(line._key)} readOnly={props.readOnly} colSpan={columnCount} dynamicColumns={dynamicColumns} showStockConversion={showStockConversion} widths={widths} stickyStyle={stickyStyle} onToggle={() => setExpanded((current) => { const next = new Set(current); if (next.has(line._key)) next.delete(line._key); else next.add(line._key); return next; })} onBomActualChange={props.onBomActualChange} />
 
               {text(line.item_code) && hasAuxiliaryRow && expanded.has(line._key) ? (
                 <TableRow className={`${commercialRowTone} border-b-2 border-border`} data-section="sales-v2-commercial-row">

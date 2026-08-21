@@ -770,14 +770,6 @@ export function lineMissingUomConversion(line: SalesLine): boolean {
   return lineNeedsUomConversion(line) && lineConversionFactor(line) === undefined;
 }
 
-export function lineAvailableStockQty(line: SalesLine): number | undefined {
-  return numberValue(line.available_stock_qty) ?? numberValue(line._context?.available_stock_qty);
-}
-
-export function lineAvailableQty(line: SalesLine): number | undefined {
-  return numberValue(line.available_qty) ?? numberValue(line._context?.available_qty);
-}
-
 export function lineAvailabilityStatus(line: SalesLine): string {
   return text(line.availability_status) || text(line._context?.availability_status);
 }
@@ -789,11 +781,6 @@ export function lineDeliveredQty(line: SalesLine): number | undefined {
 export function lineStockSnapshot(line: SalesLine): StockSnapshot | undefined {
   const snapshot = line._context?.stock_snapshot;
   return snapshot && typeof snapshot === "object" ? snapshot : undefined;
-}
-
-export function lineShortage(line: SalesLine): ShortageInfo | undefined {
-  const shortage = line._context?.shortage;
-  return shortage && typeof shortage === "object" ? shortage : undefined;
 }
 
 export function lineUomGap(line: SalesLine): UomGap | undefined {
@@ -938,14 +925,6 @@ export function linePriceExplanation(line: SalesLine): PriceExplanationRow[] {
   if (divisor !== undefined) {
     const source = text(spec?.leaf_divisor_source);
     push("leaf_divisor", "Bản lá / ước số chia", `${quantity(divisor)} m${source ? ` · nguồn ${source}` : ""}`);
-  }
-
-  const shortage = lineShortage(line);
-  const severity = text(shortage?.severity);
-  if (severity === "over" || severity === "unknown") {
-    push("shortage", severity === "over" ? "Thiếu hàng" : "Chưa so được tồn",
-      text(shortage?.message) || (severity === "over" ? "Số bán vượt tồn khả dụng" : "Không so được tồn với số bán"),
-      "warn");
   }
 
   const scopeByRule = line._commercial?.pricing_scope_by_rule;
