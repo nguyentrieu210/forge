@@ -21,6 +21,7 @@ import {
   SocialCommerce,
   DailyDetailedLedger,
   AlumdoorOperationsCenter,
+  AlumdoorDebtWorkbench,
   AlumdoorAttendanceScanner,
   AlumdoorAttendanceOperations,
   AlumdoorMasterDataScreen,
@@ -133,7 +134,7 @@ function isRenderableExperience(item: AppManifest["nav"][number], manifest: AppM
   if (separator < 1 || separator === item.key.length - 1) return false;
   const kind = item.key.slice(0, separator);
   const argument = item.key.slice(separator + 1);
-  if (kind === "approval" || kind === "calendar" || kind === "social-commerce" || kind === "alumdoor-attendance") return true;
+  if (kind === "approval" || kind === "calendar" || kind === "social-commerce" || kind === "alumdoor-attendance" || kind === "alumdoor-debt") return true;
   if (kind === "action") return (manifest.actions ?? []).some((action) => action.name === argument);
   if (kind === "screen") return (manifest.screens ?? []).some((screen) => screen.name === argument);
   return false;
@@ -705,6 +706,13 @@ function ExperienceScreen({ manifest, boot, logout, nav }: ScreenProps) {
     return (
       <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={experienceKey} breadcrumbs={[{ label: "Sổ chi tiết hằng ngày" }]}>
         <DailyDetailedLedger />
+      </Shell>
+    );
+  }
+  if (kind === "alumdoor-debt") {
+    return (
+      <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={experienceKey} breadcrumbs={[{ label: "Báo cáo công nợ" }]}>
+        <AlumdoorDebtWorkbench onNavigate={navigate} />
       </Shell>
     );
   }

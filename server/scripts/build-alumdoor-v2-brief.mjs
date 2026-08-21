@@ -117,6 +117,20 @@ brief.doctypes.push({
     "Kế toán tổng hợp": "r", "Kế toán trưởng": "r", "Giám đốc": "r",
   },
 });
+// Màn "Báo cáo công nợ" ôm CẢ phải thu lẫn phải trả, nên không gác được bằng `Sales Invoice`
+// (người mua hàng/thủ kho sẽ bị chặn khỏi nửa phải trả). Dựng DocType gác cổng riêng theo đúng
+// tiền lệ `Daily Ledger Access` ngay trên.
+brief.doctypes.push({
+  name: "Debt Report Access",
+  label: "Quyền báo cáo công nợ",
+  menu: false,
+  fields: [{ fieldname: "note", fieldtype: "Small Text", label: "Ghi chú", read_only: true }],
+  permissions: {
+    "Kế toán": "r", "Chủ xưởng": "r", "Kinh doanh": "r",
+    "General Accountant": "r", "Chief Accountant": "r",
+    "Kế toán tổng hợp": "r", "Kế toán trưởng": "r", "Giám đốc": "r",
+  },
+});
 brief.experiences = [...(brief.experiences ?? []), {
   key: "daily-ledger:workbench",
   label: "Sổ chi tiết hằng ngày",
@@ -131,6 +145,13 @@ brief.experiences = [...(brief.experiences ?? []), {
   roles: ["Chủ xưởng", "Kinh doanh", "Thủ kho", "Kế toán", "Sản xuất", "General Accountant", "Chief Accountant", "Kế toán tổng hợp", "Kế toán trưởng"],
   icon: "panels-top-left",
   group: "Bán hàng",
+}, {
+  key: "alumdoor-debt:workbench",
+  label: "Báo cáo công nợ",
+  permission: "Debt Report Access",
+  roles: ["Kế toán", "Chủ xưởng", "Kinh doanh", "General Accountant", "Chief Accountant", "Kế toán tổng hợp", "Kế toán trưởng", "Giám đốc"],
+  icon: "wallet",
+  group: "Công nợ",
 }];
 
 const warrantyClaim = doctype("Warranty Claim");

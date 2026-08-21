@@ -351,7 +351,7 @@ export const CLIENT_CONTEXT_DIMENSIONS = new Set([
  * the menu entry would install cleanly and then show "chưa được triển khai" on click.
  * Adding a prefix here is the LAST step of shipping one, never the first.
  */
-export const SUPPORTED_EXPERIENCE_KINDS = new Set(["approval", "calendar", "social-commerce", "daily-ledger", "alumdoor-operations", "alumdoor-attendance", "action", "screen"]);
+export const SUPPORTED_EXPERIENCE_KINDS = new Set(["approval", "calendar", "social-commerce", "daily-ledger", "alumdoor-operations", "alumdoor-attendance", "alumdoor-debt", "action", "screen"]);
 
 export interface AppManifest {
   id: string;

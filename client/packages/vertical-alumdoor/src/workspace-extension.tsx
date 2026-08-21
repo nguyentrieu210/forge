@@ -5,6 +5,8 @@ import type { DoctypeWorkspaceExtension } from "@metaforge/views";
 
 const AlumdoorSalesOrderCreate = lazy(() => import("./AlumdoorSalesOrderCreate.js").then((module) => ({ default: module.AlumdoorSalesOrderCreate })));
 const AlumdoorPurchaseOrderCreate = lazy(() => import("./AlumdoorPurchaseOrderCreate.js").then((module) => ({ default: module.AlumdoorPurchaseOrderCreate })));
+const AlumdoorDeliveryNoteCreate = lazy(() => import("./AlumdoorDeliveryNoteCreate.js").then((module) => ({ default: module.AlumdoorDeliveryNoteCreate })));
+const AlumdoorPurchaseReceiptCreate = lazy(() => import("./AlumdoorPurchaseReceiptCreate.js").then((module) => ({ default: module.AlumdoorPurchaseReceiptCreate })));
 const AlumdoorProductionRequestDetail = lazy(() => import("./AlumdoorProductionRequestDetail.js").then((module) => ({ default: module.AlumdoorProductionRequestDetail })));
 const AlumdoorWorkOrderDetail = lazy(() => import("./AlumdoorWorkOrderDetail.js").then((module) => ({ default: module.AlumdoorWorkOrderDetail })));
 const AlumdoorManufacturingStockEntryCreate = lazy(() => import("./AlumdoorManufacturingStockEntryCreate.js").then((module) => ({ default: module.AlumdoorManufacturingStockEntryCreate })));
@@ -96,6 +98,41 @@ export const alumdoorWorkspaceExtension: DoctypeWorkspaceExtension = {
       };
     }
 
+    if (isNew && doctype === "Purchase Receipt") {
+      return {
+        createSurface: "full",
+        createDataSurface: "alumdoor-purchase-receipt-create",
+        suppressBulk: true,
+        create: (
+          <Suspense fallback={<div className="grid h-full place-items-center text-sm text-muted-foreground">Đang mở màn nhập hàng FIFO…</div>}>
+            <AlumdoorPurchaseReceiptCreate
+              closeRequest={closeRequest}
+              onCreated={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
+              onCancel={() => onNavigate(listPath)}
+            />
+          </Suspense>
+        ),
+      };
+    }
+
+    if (decoded && doctype === "Purchase Receipt") {
+      return {
+        hasDetail: true,
+        suppressBulk: true,
+        detail: (
+          <Suspense fallback={<div className="grid h-full place-items-center text-sm text-muted-foreground">Đang mở phiếu nhập hàng…</div>}>
+            <AlumdoorPurchaseReceiptCreate
+              key={`${doctype}/${decoded}`}
+              name={decoded}
+              onCreated={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
+              onSaved={() => {}}
+              onCancel={() => onNavigate(listPath)}
+            />
+          </Suspense>
+        ),
+      };
+    }
+
     if (isNew && doctype === "Sales Order") {
       return {
         createSurface: "full",
@@ -122,6 +159,46 @@ export const alumdoorWorkspaceExtension: DoctypeWorkspaceExtension = {
         detail: (
           <Suspense fallback={<div className="grid h-full place-items-center text-sm text-muted-foreground">Đang mở đơn hàng AlumDoor…</div>}>
             <AlumdoorSalesOrderCreate
+              key={`${doctype}/${decoded}`}
+              name={decoded}
+              onCreated={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
+              onSaved={() => {}}
+              onPreviewCreated={(currentName) => onNavigate(printBase === "/print"
+                ? buildPrintPath(doctype, currentName)
+                : `${printBase}/${encodeURIComponent(doctype)}/${encodeURIComponent(currentName)}`)}
+              onCancel={() => onNavigate(listPath)}
+            />
+          </Suspense>
+        ),
+      };
+    }
+
+    if (isNew && doctype === "Delivery Note") {
+      return {
+        createSurface: "full",
+        createDataSurface: "alumdoor-delivery-note-create",
+        suppressBulk: true,
+        create: (
+          <Suspense fallback={<div className="grid h-full place-items-center text-sm text-muted-foreground">Đang mở màn xuất kho AlumDoor…</div>}>
+            <AlumdoorDeliveryNoteCreate
+              closeRequest={closeRequest}
+              onCreated={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
+              onPreviewCreated={(newName) => onNavigate(printBase === "/print"
+                ? buildPrintPath(doctype, newName)
+                : `${printBase}/${encodeURIComponent(doctype)}/${encodeURIComponent(newName)}`)}
+              onCancel={() => onNavigate(listPath)}
+            />
+          </Suspense>
+        ),
+      };
+    }
+
+    if (decoded && doctype === "Delivery Note") {
+      return {
+        hasDetail: true,
+        detail: (
+          <Suspense fallback={<div className="grid h-full place-items-center text-sm text-muted-foreground">Đang mở phiếu xuất kho AlumDoor…</div>}>
+            <AlumdoorDeliveryNoteCreate
               key={`${doctype}/${decoded}`}
               name={decoded}
               onCreated={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}

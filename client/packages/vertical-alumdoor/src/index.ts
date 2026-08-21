@@ -11,3 +11,10 @@ import { alumdoorWorkspaceExtension } from "./workspace-extension.js";
 registerVerticalWorkspace("alumdoor", alumdoorWorkspaceExtension);
 
 export { alumdoorWorkspaceExtension };
+
+/**
+ * Báo cáo công nợ KHÔNG gắn vào một DocType nào nên không đi qua `alumdoorWorkspaceExtension`;
+ * nó là một experience do runtime tự mở. `package.json` chỉ mở đúng subpath `"."`, nên muốn
+ * `client/apps/runtime` nạp được thì phải lộ ra ở đây.
+ */
+export { AlumdoorDebtWorkbench } from "./AlumdoorDebtWorkbench.js";
