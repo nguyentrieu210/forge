@@ -64,7 +64,11 @@ import {
   linePolicyDiscountPercentage,
   linePolicyDiscountRule,
   linePriceExplanation,
+  linePriceVariant,
+  linePriceVariantOptions,
+  linePriceVariantRequired,
   linePricedQuantity,
+  priceVariantOptionLabel,
   lineSalesUom,
   lineStockQty,
   lineStockUom,
@@ -104,6 +108,7 @@ type ColumnId =
   | "item_code"
   | "item_name"
   | "color"
+  | "price_variant"
   | DynamicFieldName
   | "quantity"
   | "uom"
@@ -196,6 +201,7 @@ const DEFAULT_WIDTHS: Record<ColumnId, number> = {
   item_code: 150,
   item_name: 180,
   color: 102,
+  price_variant: 140,
   width_pb_ray_m: 92,
   width_pb_nhua_m: 98,
   width_m: 88,
@@ -227,6 +233,7 @@ const MIN_WIDTHS: Partial<Record<ColumnId, number>> = {
   item_code: 120,
   item_name: 135,
   color: 82,
+  price_variant: 110,
   width_pb_ray_m: 76,
   width_pb_nhua_m: 80,
   width_m: 72,
@@ -254,7 +261,8 @@ const MIN_WIDTHS: Partial<Record<ColumnId, number>> = {
 
 // Tăng version khi thay cấu trúc cột để localStorage cũ không làm lệch vùng tiền.
 // v8: thêm "Quy ra tồn" + "Tồn khả dụng" (ĐVT bán ≠ ĐVT tồn của nhóm ray/trục).
-const COLUMN_WIDTH_STORAGE_KEY = "alumdoor:sales-order:grid-widths:v8";
+// v9: thêm "Cách bán" (biến thể giá) — cột chỉ hiện khi có dòng thật sự có nhiều cách bán.
+const COLUMN_WIDTH_STORAGE_KEY = "alumdoor:sales-order:grid-widths:v9";
 const FROZEN_COLUMNS: ColumnId[] = ["select", "index", "item_code", "item_name"];
 
 function loadStoredWidths(): Record<ColumnId, number> {
@@ -400,6 +408,7 @@ function BomBlock(props: {
   readOnly: boolean;
   colSpan: number;
   dynamicColumns: DynamicFieldName[];
+  showPriceVariant: boolean;
   showStockConversion: boolean;
   widths: Record<ColumnId, number>;
   stickyStyle: (id: ColumnId) => CSSProperties;
@@ -474,6 +483,9 @@ function BomBlock(props: {
         <TableCell style={{ width: props.widths.item_code, ...props.stickyStyle("item_code") }} className={`${frozen} truncate px-1.5 py-1.5 text-center font-mono text-[10px]`} title={itemCode}>{itemCode || "—"}</TableCell>
         <TableCell style={{ width: props.widths.item_name, ...props.stickyStyle("item_name") }} className={`${frozen} px-1.5 py-1.5 text-center`}><div className="truncate font-medium" title={itemName}>{itemName || "—"}</div>{detail ? <div className="truncate text-[9px] text-muted-foreground" title={detail}>{detail}</div> : null}</TableCell>
         <TableCell style={{ width: props.widths.color }} className={`${tone} px-1.5 py-1.5 text-center`}>{text(component.color) || "—"}</TableCell>
+        {/* Cấu phần BOM không tự bán nên không có cách bán riêng — vẫn phải chiếm một ô, nếu
+            không thì mọi cột sau nó lệch một nhịp so với dòng cha. */}
+        {props.showPriceVariant ? <TableCell style={{ width: props.widths.price_variant }} className={`${tone} px-1.5 py-1.5 text-center text-muted-foreground`}>—</TableCell> : null}
         {props.dynamicColumns.map((fieldname) => {
           // API bán hàng đã chiếu quy cách từ dòng cha sang từng phần con rồi
           // tính lại theo Item con; bảng chỉ hiển thị snapshot đó.
@@ -623,13 +635,25 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
     () => activeLines.some((line) => lineNeedsUomConversion(line) || lineStockQty(line) !== undefined),
     [activeLines],
   );
+  /**
+   * Cột "Cách bán" đi theo cùng luật với cột thông số động: CÓ DỮ LIỆU MỚI XUẤT HIỆN.
+   *
+   * 202/224 cặp (mã + ĐVT) chỉ có một cách bán — với chúng không có gì để chọn, và một cột luôn
+   * hiện với đúng một lựa chọn là một cột chiếm chỗ mà không trả lời câu hỏi nào. Cột chỉ bật
+   * khi trong đơn có ít nhất một dòng thật sự phải quyết.
+   */
+  const showPriceVariant = useMemo(
+    () => activeLines.some((line) => linePriceVariantOptions(line).length > 1),
+    [activeLines],
+  );
   const columnOrder = useMemo<ColumnId[]>(() => [
     "select", "index", "item_code", "item_name", "color",
+    ...(showPriceVariant ? (["price_variant"] as ColumnId[]) : []),
     ...dynamicColumns,
     "quantity", "uom",
     ...(showStockConversion ? (["stock_conversion"] as ColumnId[]) : []),
     "priced_qty", "rate", "gross_amount", "actions",
-  ], [dynamicColumns, showStockConversion]);
+  ], [dynamicColumns, showPriceVariant, showStockConversion]);
   const columnCount = columnOrder.length;
   const totalWidth = columnOrder.reduce((sum, id) => sum + widths[id], 0);
   const allSelected = props.lines.length > 0 && props.selectedKeys.size === props.lines.length;
@@ -760,6 +784,71 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
   };
 
   /**
+   * "Cách bán" — chọn DÒNG GIÁ nào, không phải giảm bao nhiêu.
+   *
+   * Ô này chỉ hiện lựa chọn mà mặt hàng THẬT SỰ có, kèm đúng đơn giá của từng cách. Đơn giá đi
+   * kèm là phần quan trọng nhất: không có nó thì người bán phải tự dịch `TANG_RAY` và `CHI_LA`
+   * sang tiếng Việt trong đầu rồi đoán cái nào đắt hơn — hai mã đó lệch 75.000 đ/m², tức 675.000 đ
+   * trên một bộ 9 m².
+   *
+   * Chưa chọn thì nói thẳng "chưa chọn cách bán" và KHÔNG ra tiền. Đây là chỗ duy nhất trong
+   * dòng mà im lặng sẽ ra một con số sai chứ không phải ra số 0.
+   */
+  const renderPriceVariantCell = (line: SalesLine, rowTone: string) => {
+    const options = linePriceVariantOptions(line);
+    const chosen = linePriceVariant(line);
+    const required = linePriceVariantRequired(line);
+    const field = selectField(
+      childFieldByName.get("price_variant"),
+      "price_variant",
+      "Cách bán",
+      options.map((option) => text(option.price_variant)).filter(Boolean),
+    );
+    const hint = options.map(priceVariantOptionLabel).join(" · ");
+    return (
+      <TableCell
+        key="price_variant"
+        style={{ width: widths.price_variant, minWidth: widths.price_variant, maxWidth: widths.price_variant }}
+        className={`${rowTone} overflow-hidden px-1.5 py-1.5 text-center align-middle`}
+      >
+        {options.length <= 1 ? (
+          /* Một cách bán (hoặc chưa đọc được danh sách) ⇒ không có gì để quyết. Vẫn in ra mã
+             đang dùng để dòng tự giải thích được, nhưng không dựng ô chọn giả. */
+          <div className="flex h-8 items-center justify-center truncate text-muted-foreground" title={hint || chosen}>{chosen || "—"}</div>
+        ) : (
+          <div className="flex flex-col items-stretch gap-0.5">
+            <GridField rowKey={line._key} columnId="price_variant" disabled={props.readOnly}>
+              <AlumdoorSalesOrderField
+                id={`sales-v2-complete-price-variant-${line._key}`}
+                field={field}
+                value={chosen}
+                onChange={(value) => props.onCommit(line._key, "price_variant", text(value) || undefined)}
+                registry={props.registry}
+                services={props.services}
+                parentDoctype="Sales Order Item"
+                docValues={line}
+                roles={props.roles}
+                required
+                readOnly={props.readOnly}
+                compact
+                hideLabel
+                className="w-full max-w-full [&_.mf-control]:!min-h-8 [&_.mf-control]:!w-full [&_input]:!text-center [&_button]:!h-8 [&_button]:!w-full [&_button]:!justify-center [&_button]:!px-1"
+              />
+            </GridField>
+            {required ? (
+              <span className="truncate text-[9px] font-medium text-destructive" title={hint}>chưa chọn cách bán</span>
+            ) : (
+              <span className="truncate text-[9px] text-muted-foreground" title={hint}>{
+                priceVariantOptionLabel(options.find((option) => text(option.price_variant) === chosen) ?? options[0]!)
+              }</span>
+            )}
+          </div>
+        )}
+      </TableCell>
+    );
+  };
+
+  /**
    * "Quy ra tồn" — số SẼ vào thẻ kho. Server tính (`qty × conversion_factor`); ở đây chỉ in ra.
    *
    * Thiếu hệ số quy đổi thì nói THIẾU, không nhân bừa với 1. Hệ số Mét→Cây của nhóm ray/trục
@@ -831,6 +920,7 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
             {head("item_code", "Mã hàng")}
             {head("item_name", "Tên hàng")}
             {head("color", "Màu")}
+            {showPriceVariant ? head("price_variant", "Cách bán") : null}
             {dynamicColumns.map((fieldname) => head(fieldname, dynamicHeaderLabel(fieldname), DYNAMIC_HEADER_UNITS[fieldname]))}
             {head("quantity", "SL")}
             {head("uom", "ĐVT")}
@@ -899,6 +989,7 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
                   {availabilityStatus ? <div className="mt-0.5 line-clamp-2 text-[9px] leading-3 text-muted-foreground" title={availabilityStatus}>{availabilityStatus}</div> : null}
                 </TableCell>
                 <TableCell style={{ width: widths.color }} className={`${parentRowTone} px-1.5 py-1.5 text-center align-middle`}>{allowedColors.length ? <GridField rowKey={line._key} columnId="color" disabled={props.readOnly}><AlumdoorSalesOrderField id={`sales-v2-complete-color-${line._key}`} field={colorField} value={line.color} onChange={(value) => props.onCommit(line._key, "color", text(value) || undefined)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} readOnly={props.readOnly} compact hideLabel className="[&_.mf-control]:!min-h-8 [&_input]:!text-center [&_button]:!h-8 [&_button]:!justify-center" /></GridField> : <div className="flex h-8 items-center justify-center truncate text-center text-muted-foreground">{text(line.color)}</div>}</TableCell>
+                {showPriceVariant ? renderPriceVariantCell(line, parentRowTone) : null}
                 {dynamicColumns.map((fieldname) => renderDynamicCell(line, fieldname, parentRowTone))}
                 <TableCell style={{ width: widths.quantity }} className={`${parentRowTone} px-1.5 py-1.5 text-center align-middle`}><GridField rowKey={line._key} columnId="quantity" disabled={props.readOnly || fieldReadonly(line, quantityField)}><AlumdoorSalesOrderField id={`sales-v2-complete-qty-${line._key}`} field={quantityDocField} value={line[quantityField]} onChange={(value) => {
                   const nextQuantity = value == null || value === "" ? undefined : Number(value);
@@ -917,7 +1008,7 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
                 <TableCell style={{ width: widths.actions }} className={`${parentRowTone} px-1 py-1.5 text-center align-middle`}><div className="flex items-center justify-center"><Button type="button" variant="ghost" size="icon-sm" disabled={props.readOnly || !text(line.item_code)} onClick={() => props.onDuplicate(line._key)} title="Nhân bản" aria-label={`Nhân bản dòng ${rowIndex + 1}`}><Copy className="size-3.5" /></Button><Button type="button" variant="ghost" size="icon-sm" disabled={props.readOnly || props.lines.length <= 1} onClick={() => props.onDelete(line._key)} title="Xóa" aria-label={`Xóa dòng ${rowIndex + 1}`}><Trash2 className="size-3.5" /></Button></div></TableCell>
               </TableRow>
 
-              <BomBlock line={line} lineNumber={rowIndex + 1} expanded={expanded.has(line._key)} readOnly={props.readOnly} colSpan={columnCount} dynamicColumns={dynamicColumns} showStockConversion={showStockConversion} widths={widths} stickyStyle={stickyStyle} onToggle={() => setExpanded((current) => { const next = new Set(current); if (next.has(line._key)) next.delete(line._key); else next.add(line._key); return next; })} onBomActualChange={props.onBomActualChange} />
+              <BomBlock line={line} lineNumber={rowIndex + 1} expanded={expanded.has(line._key)} readOnly={props.readOnly} colSpan={columnCount} dynamicColumns={dynamicColumns} showPriceVariant={showPriceVariant} showStockConversion={showStockConversion} widths={widths} stickyStyle={stickyStyle} onToggle={() => setExpanded((current) => { const next = new Set(current); if (next.has(line._key)) next.delete(line._key); else next.add(line._key); return next; })} onBomActualChange={props.onBomActualChange} />
 
               {text(line.item_code) && hasAuxiliaryRow && expanded.has(line._key) ? (
                 <TableRow className={`${commercialRowTone} border-b-2 border-border`} data-section="sales-v2-commercial-row">

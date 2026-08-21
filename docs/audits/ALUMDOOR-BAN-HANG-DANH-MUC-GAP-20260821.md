@@ -144,3 +144,53 @@ giả trên toàn bộ nhóm nhôm.
 
 Xem `docs/audits/ALUMDOOR-BAN-HANG-PAYLOAD-CONTRACT-20260821.md` — tên trường, kiểu, ý nghĩa, ví dụ
 JSON. Mọi trường **optional và thêm mới**; không trường cũ nào đổi nghĩa hay biến mất.
+
+---
+
+## 6. CÂU HỎI CÒN TREO CHO CHỦ XƯỞNG (21/08/2026 — đợt cách bán)
+
+Ba câu dưới đây **cố ý không tự trả lời**. Chúng là quyết định nghiệp vụ, và đoán hộ ở tầng code
+là đúng loại "luật ngủ im lặng" mà cả tập tài liệu này đang chống.
+
+### Q1 🟥 Ánh xạ `price_variant` ↔ `sales_mode` — CÂU HỎI SỐ MỘT
+
+Dòng bán hiện có **hai** ô nói về "cách", và chúng KHÔNG phải một thứ:
+
+| Ô | Giá trị | Quyết định điều gì |
+|---|---|---|
+| `sales_mode` | `Trọn bộ` / `Tách món` | PHẠM VI CẤU PHẦN được giao và cơ sở rộng tính tiền (`SALES-BOM-SOURCE-MAP §5`) |
+| `price_variant` | `TRON_BO` · `TACH_MON` · `TANG_RAY` · `CHI_LA` · `KEO_TAY` · `MOTOR_NGOAI` · `STANDARD` | LẤY DÒNG GIÁ NÀO trong bảng giá |
+
+Nhìn thì `TRON_BO`/`TACH_MON` trông y hệt `Trọn bộ`/`Tách món`. Nhưng bốn mã còn lại
+(`TANG_RAY`, `CHI_LA`, `KEO_TAY`, `MOTOR_NGOAI`) **không ánh xạ vào hai giá trị đó**, và chưa ai
+chốt chúng có phải là một trục thứ ba hay không. Cụ thể phải hỏi:
+
+1. `TANG_RAY` / `CHI_LA` (15 mã `CDUC_*`) có phải cách nói khác của `Trọn bộ` / `Tách món` không?
+   Nếu có, đặt `sales_mode` là hệ quả suy ra từ `price_variant` hay ngược lại?
+2. `KEO_TAY` / `MOTOR_NGOAI` là **cấu hình sản phẩm** (có/không mô tơ) hay là **cách bán**? Nếu là
+   cấu hình thì chúng đang nằm nhầm trục và sẽ nhân đôi khi ai đó thêm bậc diện tích cho chúng.
+3. Một dòng ghi `sales_mode = "Trọn bộ"` mà `price_variant = "CHI_LA"` là hợp lệ hay là mâu thuẫn
+   phải chặn?
+
+**Trong lúc chờ:** hai ô độc lập, không ô nào suy ra ô nào, và không có phép kiểm chéo nào. Đây là
+lựa chọn an toàn — gộp sai là mất một bộ cấu phần khi giao (6 họ mã có đủ cả hai biến thể BOM), còn
+để rời thì chỉ tốn một lần soát tay.
+
+### Q2 🟧 Bảy mã thang bậc diện tích chỉ có `TRON_BO`
+
+`LA_DLK_1LY_TRONBO` · `LA_DLK_1_2LY_TRONBO` · `LA_DLK_8D_TRONBO` · `CDL_DLM_1LY` · `CDL_DLM_8D` ·
+`CDL_DLM_7D` · `CDL_DLM_6D` — mỗi mã 8 bậc, đều `TRON_BO`, không có dòng `TACH_MON` nào. Trong khi
+`LA_DLK_1LY` (không hậu tố) lại chỉ có `TACH_MON`, một bậc phẳng.
+
+Hỏi: bán tách món những mã `*_TRONBO` đó thì lấy giá ở đâu — hay đúng là chúng chỉ bán trọn bộ, và
+cách giao đã nằm sẵn trong MÃ HÀNG (đúng cái `Sales Package` quay lại qua cửa sau mà commit 46cff213
+đã khai tử)?
+
+### Q3 🟧 29 mã có đúng một cách bán nhưng KHÔNG phải `STANDARD`
+
+Ví dụ `CUC_UC_KT_6D` chỉ có `KEO_TAY`, `TON_DLM_1LY_K124` chỉ có `TACH_MON`. Màn bán hàng **tự
+điền** cho chúng (không hỏi), nên chúng bán được. Nhưng hỏi để dọn dữ liệu: đó là chủ ý (mã này chỉ
+bán một cách) hay là dòng giá của cách còn lại chưa nhập?
+
+Nếu là chủ ý thì nên đổi hẳn về `STANDARD` để bảng giá bớt một trục; nếu là thiếu thì phải nhập nốt
+trước khi có người bán nhầm.

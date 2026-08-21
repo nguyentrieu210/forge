@@ -6033,6 +6033,17 @@
           "serverEnforced": true
         },
         {
+          "label": "Cách bán (biến thể giá)",
+          "//": "Cách bán quyết định LẤY DÒNG GIÁ NÀO, không phải giảm bao nhiêu phần trăm. Một mã hàng khai được nhiều đơn giá cho cùng (bảng giá, ĐVT), phân biệt duy nhất bằng ô này: đo trên bảng giá Alumdoor 2026 ngày 21/08/2026, 22/224 cặp (mã + ĐVT) có từ hai dòng đang bật — ví dụ CDUC_AL70_1LOP m2 có TANG_RAY 1.221.000 và CHI_LA 1.146.000, lệch 75.000 đ/m². Server tra giá theo đúng giá trị ở đây (clouderp-pricing lọc theo price_variant); để trống là rơi về STANDARD, nên mã không có dòng STANDARD sẽ bị TỪ CHỐI thay vì lặng lẽ ra một con số khác. Ô này KHÔNG phải sales_mode: ánh xạ giữa hai thứ chưa ai chốt.",
+          "fieldname": "price_variant",
+          "fieldtype": "Data",
+          "description": "Mã cách bán của dòng giá — TRON_BO, TACH_MON, TANG_RAY, CHI_LA, KEO_TAY, MOTOR_NGOAI… Danh sách chọn lấy từ đúng những đơn giá mà mặt hàng này đang có, kèm số tiền của từng cách; chỉ có một cách thì màn bán hàng tự điền.",
+          "surface": "internal",
+          "hidden": true,
+          "editMode": "hidden",
+          "serverEnforced": true
+        },
+        {
           "label": "Có bản bướm",
           "fieldname": "has_butterfly_bracket",
           "fieldtype": "Check",
@@ -6718,6 +6729,17 @@
           "options": "Trọn bộ\nTách món",
           "default": "Trọn bộ",
           "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'",
+          "surface": "internal",
+          "hidden": true,
+          "editMode": "hidden",
+          "serverEnforced": true
+        },
+        {
+          "label": "Cách bán (biến thể giá)",
+          "//": "Cách bán quyết định LẤY DÒNG GIÁ NÀO, không phải giảm bao nhiêu phần trăm. Một mã hàng khai được nhiều đơn giá cho cùng (bảng giá, ĐVT), phân biệt duy nhất bằng ô này: đo trên bảng giá Alumdoor 2026 ngày 21/08/2026, 22/224 cặp (mã + ĐVT) có từ hai dòng đang bật — ví dụ CDUC_AL70_1LOP m2 có TANG_RAY 1.221.000 và CHI_LA 1.146.000, lệch 75.000 đ/m². Server tra giá theo đúng giá trị ở đây (clouderp-pricing lọc theo price_variant); để trống là rơi về STANDARD, nên mã không có dòng STANDARD sẽ bị TỪ CHỐI thay vì lặng lẽ ra một con số khác. Ô này KHÔNG phải sales_mode: ánh xạ giữa hai thứ chưa ai chốt.",
+          "fieldname": "price_variant",
+          "fieldtype": "Data",
+          "description": "Mã cách bán của dòng giá — TRON_BO, TACH_MON, TANG_RAY, CHI_LA, KEO_TAY, MOTOR_NGOAI… Danh sách chọn lấy từ đúng những đơn giá mà mặt hàng này đang có, kèm số tiền của từng cách; chỉ có một cách thì màn bán hàng tự điền.",
           "surface": "internal",
           "hidden": true,
           "editMode": "hidden",
@@ -8204,6 +8226,15 @@
           "fieldtype": "Select",
           "options": "Trọn bộ\nTách món",
           "default": "Trọn bộ",
+          "surface": "internal",
+          "hidden": true,
+          "editMode": "hidden",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "price_variant",
+          "label": "Cách bán (biến thể giá)",
+          "fieldtype": "Data",
           "surface": "internal",
           "hidden": true,
           "editMode": "hidden",

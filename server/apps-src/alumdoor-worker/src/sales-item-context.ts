@@ -99,12 +99,126 @@ async function listResources(
   return ((await response.json()) as { data?: Json[] }).data ?? [];
 }
 
+/**
+ * ─────────────────────────────────────────────────────────────────────────────
+ * CÁCH BÁN (biến thể giá) — vì sao nó phải có mặt ở đây
+ * ─────────────────────────────────────────────────────────────────────────────
+ *
+ * Bảng giá thật của chủ xưởng (`Alumdoor 2026`, 288 dòng đo trên D1 ngày 21/08/2026) khai
+ * MỘT MÃ HÀNG THÀNH NHIỀU DÒNG GIÁ, chỉ khác `price_variant`:
+ *
+ *   STANDARD 173 · TRON_BO 56 · TANG_RAY 15 · CHI_LA 15 · TACH_MON 13 · KEO_TAY 9 · MOTOR_NGOAI 7
+ *
+ * 22/224 cặp (mã + ĐVT) có từ hai dòng đang bật trở lên. Ví dụ `CDUC_AL70_1LOP · m2`:
+ * `TANG_RAY` 1.221.000 và `CHI_LA` 1.146.000 — lệch 75.000 đ/m², tức một bộ 9 m² lệch
+ * 675.000 đ. Không có gì để chọn giữa hai con số đó ngoài Ý ĐỊNH của người bán.
+ *
+ * Đường LƯU đã biết chuyện này (`clouderp-pricing` lọc theo biến thể, mặc định `STANDARD`).
+ * Đường XEM TRƯỚC thì không: nó chỉ lọc theo (bảng giá, mã, ĐVT) nên gặp hai dòng là ném
+ * "Có nhiều đơn giá đang hoạt động" — một câu không nói được người bán phải làm gì.
+ *
+ * Ba luật của khối này:
+ *
+ * 1. **Một biến thể thì TỰ ĐIỀN, không hỏi.** 202/224 cặp rơi vào đây; hỏi han là làm phiền.
+ * 2. **Nhiều biến thể mà chưa chọn thì KHÔNG ra tiền** — trả danh sách lựa chọn KÈM ĐƠN GIÁ
+ *    để người bán chọn đúng, thay vì bắt họ dịch `TANG_RAY` sang tiếng Việt trong đầu.
+ * 3. **Có `STANDARD` thì `STANDARD` thắng khi chưa chọn** — đúng bằng mặc định của đường lưu
+ *    (`normalizePriceVariant(undefined) === "STANDARD"`). Xem trước và lưu phải ra CÙNG một
+ *    con số; lệch nhau ở chỗ này là mầm của mọi lần "xem một đằng, lưu một nẻo".
+ */
+const STANDARD_PRICE_VARIANT = "STANDARD";
+
+/** Biến thể của một dòng giá. Ô trống = `STANDARD`, đúng như `clouderp-pricing`. */
+function priceVariantOf(row: Json): string {
+  return normalizedText(row.price_variant).toUpperCase() || STANDARD_PRICE_VARIANT;
+}
+
+/** Chuẩn hóa biến thể do người gọi truyền vào. Chuỗi rỗng = "chưa chọn", KHÁC `STANDARD`. */
+function requestedVariantOf(value: unknown): string {
+  return normalizedText(value).toUpperCase();
+}
+
+/**
+ * Một cách bán mà mã hàng này thật sự có giá, kèm đúng con số của nó.
+ *
+ * `rate` là `null` khi cách bán đó khai theo BẬC DIỆN TÍCH: lúc chọn cách bán chưa có kích
+ * thước dòng nên chưa có một con số duy nhất — `rate_min`/`rate_max` cho biết khoảng.
+ */
+interface PriceVariantOption extends Json {
+  price_variant: string;
+  item_price: string;
+  uom: string;
+  rate: number | null;
+  rate_min: number | null;
+  rate_max: number | null;
+  currency: string | null;
+  area_tier: string | null;
+  tier_count: number;
+}
+
 interface ItemPriceLookup {
   price: Json | null;
   name: string;
   sourceUom: string;
   /** Đường nào đã dẫn tới bản ghi giá này — chính là phần "vì sao ra con số đó". */
-  resolution: "exact_uom" | "legacy_name" | "field_lookup" | "base_uom_fallback" | "disabled" | "not_found";
+  resolution:
+    | "exact_uom" | "legacy_name" | "field_lookup" | "base_uom_fallback"
+    | "disabled" | "not_found" | "variant_required" | "area_tier_ladder";
+  /** Biến thể đang dùng cho con số trả về. `null` = chưa chọn được. */
+  variant: string | null;
+  /** Vì sao lại là biến thể đó. `null` khi chưa chọn được. */
+  variantSource: "requested" | "only_option" | "standard_default" | null;
+  /**
+   * VẮNG MẶT (`undefined`) = không liệt kê được (không có endpoint tra theo trường, hoặc
+   * đã trúng bản ghi bằng TÊN nên chưa cần quét). Mảng RỖNG = quét được mà không có dòng nào.
+   * Hai nghĩa khác nhau; client phải phân biệt để không vẽ "chưa khai giá" lên một mã chỉ vì
+   * người bán thiếu quyền đọc danh sách.
+   */
+  variantOptions?: PriceVariantOption[];
+}
+
+/** Gom các dòng giá đang bật của MỘT ĐVT thành một lựa chọn cho mỗi cách bán. */
+function buildVariantOptions(activeRows: Json[]): PriceVariantOption[] {
+  const byVariant = new Map<string, Json[]>();
+  for (const row of activeRows) {
+    const variant = priceVariantOf(row);
+    const bucket = byVariant.get(variant);
+    if (bucket) bucket.push(row);
+    else byVariant.set(variant, [row]);
+  }
+  const options: PriceVariantOption[] = [];
+  for (const [variant, rows] of byVariant) {
+    const rates = rows
+      .map((row) => Number(row.rate))
+      .filter((value) => Number.isFinite(value));
+    const single = rows.length === 1 ? rows[0]! : null;
+    options.push({
+      price_variant: variant,
+      item_price: normalizedText(single?.name) || "",
+      uom: normalizedText(rows[0]!.uom),
+      rate: single && rates.length === 1 ? rates[0]! : null,
+      rate_min: rates.length ? Math.min(...rates) : null,
+      rate_max: rates.length ? Math.max(...rates) : null,
+      currency: normalizedText(rows[0]!.currency) || null,
+      area_tier: single ? normalizedText(single.area_tier) || null : null,
+      tier_count: rows.length,
+    });
+  }
+  return options.sort((left, right) => left.price_variant.localeCompare(right.price_variant));
+}
+
+/**
+ * Nhiều dòng cùng một cách bán chỉ được phép khi chúng là một THANG BẬC DIỆN TÍCH.
+ *
+ * Bảy mã `LA_DLK_*` / `CDL_DLM_*` có tám dòng `TRON_BO` khác nhau đúng ở `area_tier`. Đó là
+ * dữ liệu ĐÚNG — con số cuối lấy theo diện tích của dòng bán, và đường lưu đã biết lọc bậc.
+ * Còn hai dòng trùng khoá mà KHÔNG có bậc phân biệt thì là lỗi khai báo, phải nói thẳng.
+ */
+function isAreaTierLadder(rows: Json[]): boolean {
+  if (rows.length < 2) return false;
+  const tiers = rows.map((row) => normalizedText(row.area_tier));
+  if (tiers.some((tier) => !tier)) return false;
+  return new Set(tiers).size === tiers.length;
 }
 
 /**
@@ -114,6 +228,10 @@ interface ItemPriceLookup {
  * có thể dùng thêm ĐVT. Luôn thử tên authoritative trước. So khớp nghiệp vụ được chuẩn hóa NFC
  * để dữ liệu import có dấu tổ hợp không bị nhìn giống nhau trên UI nhưng khác byte trong code.
  * Probe exact có ĐVT và callback list chỉ là fallback, không được phép chặn legacy hợp lệ.
+ *
+ * Hai probe theo TÊN chỉ trúng dòng `STANDARD` (tên bốn đoạn không mang biến thể), nên chúng
+ * chỉ được phép thắng khi người bán CHƯA chọn cách bán khác. Yêu cầu `CHI_LA` mà lại trả về
+ * dòng `STANDARD` tìm thấy bằng tên là ra một con số không ai đặt hàng.
  */
 async function resolveItemPriceRecord(
   call: SalesPlatformCall,
@@ -121,12 +239,18 @@ async function resolveItemPriceRecord(
   itemCode: string,
   selectedUom: string,
   baseUom: string,
+  requestedVariant: string,
 ): Promise<ItemPriceLookup> {
   const exactName = `${priceList}:${itemCode}:${selectedUom}`;
   const legacyName = `${priceList}:${itemCode}`;
+  const nameProbesUsable = !requestedVariant || requestedVariant === STANDARD_PRICE_VARIANT;
 
   const legacy = await readResource(call, "Item Price", legacyName);
-  const compatibleLegacy = legacy && sameText(legacy.uom, selectedUom) ? legacy : null;
+  const compatibleLegacy = legacy
+    && sameText(legacy.uom, selectedUom)
+    && priceVariantOf(legacy) === STANDARD_PRICE_VARIANT
+    ? legacy
+    : null;
 
   let exact: Json | null = null;
   let exactReadError: Error | null = null;
@@ -135,20 +259,33 @@ async function resolveItemPriceRecord(
   } catch (error) {
     exactReadError = error instanceof Error ? error : new Error(String(error));
   }
-  if (exact && !truthy(exact.disabled)) {
-    return { price: exact, name: exactName, sourceUom: selectedUom, resolution: "exact_uom" };
+  const compatibleExact = exact && priceVariantOf(exact) === STANDARD_PRICE_VARIANT ? exact : null;
+  const standardByName = nameProbesUsable
+    ? {
+      variant: STANDARD_PRICE_VARIANT,
+      variantSource: (requestedVariant ? "requested" : "standard_default") as "requested" | "standard_default",
+    }
+    : null;
+  if (standardByName && compatibleExact && !truthy(compatibleExact.disabled)) {
+    return {
+      price: compatibleExact, name: exactName, sourceUom: selectedUom, resolution: "exact_uom",
+      ...standardByName,
+    };
   }
   // Exact UOM là override. Nếu endpoint tên Unicode chưa route được, legacy hợp lệ vẫn là
   // fallback tương thích; lỗi probe không được làm mất giá đang dùng của dữ liệu cũ.
-  if (compatibleLegacy && !truthy(compatibleLegacy.disabled)) {
-    return { price: compatibleLegacy, name: legacyName, sourceUom: selectedUom, resolution: "legacy_name" };
+  if (standardByName && compatibleLegacy && !truthy(compatibleLegacy.disabled)) {
+    return {
+      price: compatibleLegacy, name: legacyName, sourceUom: selectedUom, resolution: "legacy_name",
+      ...standardByName,
+    };
   }
   let rows: Json[];
   try {
     rows = await listResources(
       call,
       "Item Price",
-      ["name", "price_list", "item_code", "uom", "price_variant", "rate", "currency", "disabled"],
+      ["name", "price_list", "item_code", "uom", "price_variant", "area_tier", "rate", "currency", "disabled"],
       [
         ["Item Price", "price_list", "=", priceList],
         ["Item Price", "item_code", "=", itemCode],
@@ -163,16 +300,66 @@ async function resolveItemPriceRecord(
     && sameText(row.item_code, itemCode)
     && sameText(row.uom, selectedUom));
   const active = scoped.filter((row) => !truthy(row.disabled));
-  if (active.length > 1) {
-    throw new Error(`Có nhiều đơn giá đang hoạt động cho ${itemCode} · ${selectedUom} trong bảng giá ${priceList}.`);
+  const options = buildVariantOptions(active);
+
+  /**
+   * Chọn cách bán. `STANDARD` thắng khi chưa chọn — đúng bằng mặc định của đường lưu, nên xem
+   * trước và lưu không bao giờ ra hai con số. Chỉ khi KHÔNG có dòng `STANDARD` nào mà lại có
+   * từ hai cách bán trở lên thì mới phải hỏi.
+   */
+  const available = new Set(options.map((option) => option.price_variant));
+  const chosenVariant = requestedVariant
+    ? requestedVariant
+    : available.has(STANDARD_PRICE_VARIANT)
+      ? STANDARD_PRICE_VARIANT
+      : options.length === 1
+        ? options[0]!.price_variant
+        : null;
+  const variantSource: ItemPriceLookup["variantSource"] = requestedVariant
+    ? "requested"
+    : chosenVariant === null
+      ? null
+      : options.length === 1 ? "only_option" : "standard_default";
+
+  if (chosenVariant === null && options.length > 1) {
+    return {
+      price: null,
+      name: exactName,
+      sourceUom: selectedUom,
+      resolution: "variant_required",
+      variant: null,
+      variantSource: null,
+      variantOptions: options,
+    };
   }
-  if (active.length === 1) {
-    const selected = active[0]!;
+
+  const inVariant = chosenVariant === null
+    ? []
+    : active.filter((row) => priceVariantOf(row) === chosenVariant);
+  if (inVariant.length > 1) {
+    if (isAreaTierLadder(inVariant)) {
+      return {
+        price: null,
+        name: exactName,
+        sourceUom: selectedUom,
+        resolution: "area_tier_ladder",
+        variant: chosenVariant,
+        variantSource,
+        variantOptions: options,
+      };
+    }
+    throw new Error(`Có nhiều đơn giá đang hoạt động cho ${itemCode} · ${selectedUom} · ${chosenVariant} trong bảng giá ${priceList}.`);
+  }
+  if (inVariant.length === 1) {
+    const selected = inVariant[0]!;
     return {
       price: selected,
       name: normalizedText(selected.name) || exactName,
       sourceUom: selectedUom,
       resolution: "field_lookup",
+      variant: chosenVariant,
+      variantSource,
+      variantOptions: options,
     };
   }
 
@@ -182,21 +369,73 @@ async function resolveItemPriceRecord(
       && sameText(row.item_code, itemCode)
       && sameText(row.uom, baseUom));
     const activeBase = baseMatches.filter((row) => !truthy(row.disabled));
-    if (activeBase.length > 1) {
-      throw new Error(`Có nhiều đơn giá đang hoạt động cho ${itemCode} · ${baseUom} trong bảng giá ${priceList}.`);
+    const baseOptions = buildVariantOptions(activeBase);
+    const baseAvailable = new Set(baseOptions.map((option) => option.price_variant));
+    const baseVariant = requestedVariant
+      ? requestedVariant
+      : baseAvailable.has(STANDARD_PRICE_VARIANT)
+        ? STANDARD_PRICE_VARIANT
+        : baseOptions.length === 1
+          ? baseOptions[0]!.price_variant
+          : null;
+    if (baseVariant === null && baseOptions.length > 1) {
+      return {
+        price: null,
+        name: `${priceList}:${itemCode}:${baseUom}`,
+        sourceUom: baseUom,
+        resolution: "variant_required",
+        variant: null,
+        variantSource: null,
+        variantOptions: baseOptions,
+      };
     }
-    if (activeBase.length === 1) {
-      const selected = activeBase[0]!;
+    const inBaseVariant = baseVariant === null
+      ? []
+      : activeBase.filter((row) => priceVariantOf(row) === baseVariant);
+    if (inBaseVariant.length > 1) {
+      if (isAreaTierLadder(inBaseVariant)) {
+        return {
+          price: null,
+          name: `${priceList}:${itemCode}:${baseUom}`,
+          sourceUom: baseUom,
+          resolution: "area_tier_ladder",
+          variant: baseVariant,
+          variantSource: requestedVariant ? "requested" : "standard_default",
+          variantOptions: baseOptions,
+        };
+      }
+      throw new Error(`Có nhiều đơn giá đang hoạt động cho ${itemCode} · ${baseUom} · ${baseVariant} trong bảng giá ${priceList}.`);
+    }
+    if (inBaseVariant.length === 1) {
+      const selected = inBaseVariant[0]!;
       return {
         price: selected,
         name: normalizedText(selected.name) || `${priceList}:${itemCode}:${baseUom}`,
         sourceUom: baseUom,
         resolution: "base_uom_fallback",
+        variant: baseVariant,
+        variantSource: requestedVariant
+          ? "requested"
+          : baseOptions.length === 1 ? "only_option" : "standard_default",
+        variantOptions: baseOptions,
       };
     }
   }
 
-  const disabled = exact ?? compatibleLegacy ?? scoped[0] ?? null;
+  /**
+   * Đường lùi cuối chỉ được nhận bản ghi ĐANG NGỪNG DÙNG, và phải CÙNG CÁCH BÁN.
+   *
+   * Nó tồn tại để báo lỗi tử tế ("Giá … đã ngừng áp dụng") thay vì "chưa khai giá". Bản cũ lấy
+   * `scoped[0]` — dòng đầu tiên khớp (bảng giá, mã, ĐVT) bất kể biến thể và bất kể còn bật —
+   * điều mà trước khi có biến thể thì vô hại: tới được đây nghĩa là KHÔNG còn dòng nào đang bật.
+   * Có biến thể rồi thì cảnh đó xảy ra thật, và hậu quả đo được bằng tiền: hỏi giá `KEO_TAY`
+   * cho `CDUC_AL70_1LOP` (mã này chỉ có `TANG_RAY`/`CHI_LA`) trả về 1.221.000 của `TANG_RAY` —
+   * một con số người bán không hề đặt hàng, ra trong im lặng.
+   */
+  const variantScopedDisabled = scoped.find((row) =>
+    truthy(row.disabled)
+    && (chosenVariant === null || priceVariantOf(row) === chosenVariant));
+  const disabled = (nameProbesUsable ? compatibleExact ?? compatibleLegacy : null) ?? variantScopedDisabled ?? null;
   if (!disabled && exactReadError) throw exactReadError;
   return {
     price: disabled,
@@ -205,6 +444,9 @@ async function resolveItemPriceRecord(
       : exactName,
     sourceUom: selectedUom,
     resolution: disabled ? "disabled" : "not_found",
+    variant: disabled ? priceVariantOf(disabled) : chosenVariant,
+    variantSource: disabled ? null : variantSource,
+    variantOptions: options,
   };
 }
 
@@ -764,8 +1006,19 @@ export async function salesItemContext(call: SalesPlatformCall, args: Json): Pro
   let priceStoredRate: number | null = null;
   let priceAreaTier: string | null = null;
   let priceVariant: string | null = null;
+  let priceVariantSource: ItemPriceLookup["variantSource"] = null;
+  let priceVariantOptions: PriceVariantOption[] | undefined;
+  let priceVariantRequired = false;
+  let priceTieredByArea = false;
   let priceConvertedFrom: string | null = null;
   let priceConversionApplied: number | null = null;
+  /**
+   * Cách bán do người bán chọn trên dòng. Chưa chọn ⇒ chuỗi rỗng ⇒ đường tra tự quyết theo luật
+   * ở `resolveItemPriceRecord` (STANDARD nếu có, biến thể duy nhất nếu chỉ có một, còn lại thì
+   * HỎI). Giá trị sai cú pháp không được làm hỏng cả lời gọi — nó chỉ là một lựa chọn không tồn
+   * tại, và đường "không thấy giá cho cách bán này" đã nói đúng chuyện đó.
+   */
+  const requestedVariant = requestedVariantOf(args.price_variant);
   if (priceList) {
     const expectedName = `${priceList}:${itemCode}:${selectedUom}`;
     try {
@@ -775,19 +1028,40 @@ export async function salesItemContext(call: SalesPlatformCall, args: Json): Pro
         itemCode,
         selectedUom,
         defaultSalesUom,
+        requestedVariant,
       );
       const price = lookup.price;
       itemPrice = lookup.name;
       priceResolution = lookup.resolution;
+      priceVariant = lookup.variant;
+      priceVariantSource = lookup.variantSource;
+      priceVariantOptions = lookup.variantOptions;
+      priceVariantRequired = lookup.resolution === "variant_required";
+      priceTieredByArea = lookup.resolution === "area_tier_ladder";
       if (price) {
         pricePriceUom = normalizedText(price.uom) || null;
         priceAreaTier = normalizedText(price.area_tier) || null;
-        priceVariant = normalizedText(price.price_variant) || null;
+        priceVariant = priceVariantOf(price);
         const stored = Number(price.rate);
         priceStoredRate = Number.isFinite(stored) ? stored : null;
       }
       if (lookup.sourceUom && lookup.sourceUom !== selectedUom) priceConvertedFrom = lookup.sourceUom;
-      if (price && !truthy(price.disabled)) {
+      if (priceVariantRequired) {
+        /**
+         * KHÔNG ra tiền, và KHÔNG gọi đây là lỗi. Dòng chưa chọn cách bán thì thiếu một dữ kiện
+         * người bán phải cung cấp, y như thiếu chiều rộng — chỗ sửa nằm ngay trên dòng, không
+         * phải trong Danh mục. `price_error` để trống nên không có mã `PRICE_ERROR` chỉ sai chỗ.
+         */
+        priceMissing = true;
+      } else if (priceTieredByArea) {
+        /**
+         * Thang bậc diện tích KHÔNG phải lỗi và KHÔNG phải chốt chặn: đường lưu lọc bậc bằng
+         * diện tích một bộ của dòng, còn lời gọi này không nhận kích thước nên nó không có
+         * quyền chốt một con số. Nói ra khoảng giá là đủ để người bán không tưởng mã này chưa
+         * khai giá — `metaforge.api.preview_sales_commercial_line` mới là chỗ ra số cuối.
+         */
+        priceMissing = true;
+      } else if (price && !truthy(price.disabled)) {
         const priceCurrency = normalizedText(price.currency);
         const parsed = Number(price.rate);
         currency = priceCurrency || documentCurrency;
@@ -864,7 +1138,14 @@ export async function salesItemContext(call: SalesPlatformCall, args: Json): Pro
   }
 
   const priceStatus = priceList
-    ? (priceError ?? (priceMissing ? `Chưa khai giá ${selectedUom}` : `Giá ${selectedUom}: ${cleanNumber(rate ?? 0)} ${currency}`))
+    ? (priceError
+      ?? (priceVariantRequired
+        ? "Chưa chọn cách bán"
+        : priceTieredByArea
+          ? `Giá ${selectedUom} theo bậc diện tích`
+          : priceMissing
+            ? `Chưa khai giá ${selectedUom}`
+            : `Giá ${selectedUom}: ${cleanNumber(rate ?? 0)} ${currency}`))
     : "Giá nhập tay";
 
   // ── Tồn theo LÔ + trục cân, chạy song song với trục cây/bộ ở trên ───────────────────────────
@@ -962,6 +1243,26 @@ export async function salesItemContext(call: SalesPlatformCall, args: Json): Pro
       code: "PRICE_ERROR",
       label: priceError,
       where: `Danh mục → Đơn giá theo bảng giá → ${itemPrice ?? priceList}`,
+    });
+  } else if (priceList && priceVariantRequired) {
+    /**
+     * CHẶN, và chỉ đường về ĐÚNG Ô TRÊN DÒNG — không phải về Danh mục.
+     *
+     * Đây là khác biệt quan trọng với `PRICE_MISSING`: danh mục không thiếu gì cả, nó khai đủ
+     * hai (hoặc hơn) đơn giá cho hai cách bán. Thứ còn thiếu là một quyết định của người bán.
+     * Đẩy họ đi sửa Danh mục là đẩy đi sai chỗ, và tệ hơn: người sốt ruột sẽ ngừng dùng một
+     * trong hai dòng giá thật để "cho hết lỗi".
+     */
+    blocking.push({
+      code: "PRICE_VARIANT_REQUIRED",
+      label: `Chưa chọn cách bán cho ${itemCode} — ${(priceVariantOptions ?? []).length} cách bán có đơn giá khác nhau`,
+      where: "Dòng bán → ô Cách bán",
+    });
+  } else if (priceList && priceTieredByArea) {
+    warnings.push({
+      code: "PRICE_TIERED_BY_AREA",
+      label: `Đơn giá ${selectedUom} theo bậc diện tích — con số cuối lấy theo kích thước của dòng`,
+      where: "Danh mục → Bậc diện tích",
     });
   } else if (priceList && priceMissing) {
     blocking.push({
@@ -1065,6 +1366,14 @@ export async function salesItemContext(call: SalesPlatformCall, args: Json): Pro
       currency,
       area_tier: priceAreaTier,
       price_variant: priceVariant,
+
+      // ── Cách bán (biến thể giá) · THÊM MỚI 2026-08-21 · optional ────────────────────────
+      // `price_variant_options` VẮNG MẶT = không liệt kê được (đã trúng bằng tên, hoặc callback
+      // không có endpoint tra theo trường). Mảng RỖNG = quét được mà mã này chưa khai giá nào.
+      price_variant_source: priceVariantSource,
+      price_variant_required: priceVariantRequired,
+      price_tiered_by_area: priceTieredByArea,
+      ...(priceVariantOptions === undefined ? {} : { price_variant_options: priceVariantOptions }),
       note: priceExplainNote({
         priceList,
         itemPrice,
@@ -1076,6 +1385,8 @@ export async function salesItemContext(call: SalesPlatformCall, args: Json): Pro
         rate,
         currency,
         priceError,
+        priceVariant,
+        variantOptions: priceVariantOptions,
       }),
     },
     readiness: {
@@ -1098,20 +1409,51 @@ function priceExplainNote(input: {
   rate: number | null;
   currency: string;
   priceError: string | null;
+  priceVariant?: string | null;
+  variantOptions?: PriceVariantOption[] | undefined;
 }): string {
   if (!input.priceList) return "Chứng từ không dùng bảng giá — đơn giá nhập tay.";
   if (input.resolution === "error") return input.priceError ?? "Không tra được đơn giá.";
+  if (input.resolution === "variant_required") {
+    // Câu này là thứ người bán đọc để BIẾT PHẢI LÀM GÌ, nên nó phải mang đủ con số để chọn.
+    const listed = (input.variantOptions ?? [])
+      .map((option) => `${option.price_variant} ${describeOptionRate(option)}`)
+      .join(" · ");
+    return `Mã này có ${input.variantOptions?.length ?? 0} cách bán với đơn giá khác nhau — `
+      + `chọn cách bán trên dòng thì mới ra tiền: ${listed}.`;
+  }
+  if (input.resolution === "area_tier_ladder") {
+    const option = (input.variantOptions ?? []).find((entry) => entry.price_variant === input.priceVariant);
+    const span = option ? describeOptionRate(option) : "(chưa đọc được khoảng giá)";
+    return `Cách bán ${input.priceVariant ?? "(chưa chọn)"} khai giá theo BẬC DIỆN TÍCH `
+      + `(${option?.tier_count ?? 0} bậc, ${span}) — con số cuối lấy theo diện tích một bộ của dòng.`;
+  }
   if (input.resolution === "not_found") {
-    return `Chưa khai đơn giá ${input.selectedUom} cho mặt hàng này trong bảng giá ${input.priceList}.`;
+    const scope = input.priceVariant ? ` cho cách bán ${input.priceVariant}` : "";
+    return `Chưa khai đơn giá ${input.selectedUom}${scope} cho mặt hàng này trong bảng giá ${input.priceList}.`;
   }
   if (input.resolution === "disabled") {
     return `Đơn giá ${input.itemPrice ?? input.selectedUom} đã ngừng áp dụng.`;
   }
   const tier = input.areaTier ? `, bậc ${input.areaTier}` : "";
+  // Cách bán chỉ được nêu khi nó KHÁC mặc định — nói "cách bán STANDARD" với người bán là nhiễu.
+  const variant = input.priceVariant && input.priceVariant !== STANDARD_PRICE_VARIANT
+    ? `, cách bán ${input.priceVariant}`
+    : "";
   const amount = input.rate === null ? "(chưa ra số)" : `${cleanNumber(input.rate)} ${input.currency}`;
   if (input.resolution === "base_uom_fallback" && input.convertedFrom) {
     return `Không có dòng giá cho ${input.selectedUom}; lấy giá ĐVT ${input.convertedFrom} từ `
-      + `${input.itemPrice} rồi quy đổi ⇒ ${amount}/${input.selectedUom}${tier}.`;
+      + `${input.itemPrice} rồi quy đổi ⇒ ${amount}/${input.selectedUom}${tier}${variant}.`;
   }
-  return `Giá lấy từ ${input.itemPrice} (${input.priceUom || input.selectedUom})${tier} ⇒ ${amount}/${input.selectedUom}.`;
+  return `Giá lấy từ ${input.itemPrice} (${input.priceUom || input.selectedUom})${tier}${variant} ⇒ ${amount}/${input.selectedUom}.`;
+}
+
+/** Khoảng giá của một cách bán, viết cho người bán đọc chứ không phải cho log. */
+function describeOptionRate(option: PriceVariantOption): string {
+  const unit = option.uom ? `/${option.uom}` : "";
+  const currency = option.currency ? ` ${option.currency}` : "";
+  if (option.rate !== null) return `${cleanNumber(option.rate)}${currency}${unit}`;
+  if (option.rate_min === null || option.rate_max === null) return "(chưa có đơn giá)";
+  if (option.rate_min === option.rate_max) return `${cleanNumber(option.rate_min)}${currency}${unit}`;
+  return `${cleanNumber(option.rate_min)}–${cleanNumber(option.rate_max)}${currency}${unit}`;
 }

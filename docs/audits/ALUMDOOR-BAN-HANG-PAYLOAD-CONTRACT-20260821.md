@@ -33,6 +33,7 @@
 | **`qty`** | number | **MỚI** | SL đang gõ trên dòng, theo `uom`. Có thì server trả `shortage`; không có thì bỏ qua |
 | **`include_color_scope`** | boolean | **MỚI** | mặc định **`true`**. Đặt `false` để bỏ hẳn khâu màu (tiết kiệm ~30 lượt đọc) |
 | **`slat_profile`** | string | **MỚI** | mã nhôm (`AL70`, `AL552N`…) để tra `Quy cách cửa`. Không truyền ⇒ `spec_context.door_spec` là `null` — xem A.6 |
+| **`price_variant`** | string | **MỚI 21/08** | CÁCH BÁN của dòng (`TRON_BO`, `CHI_LA`, `TANG_RAY`…). Không phân biệt hoa thường. Trống ⇒ server tự quyết theo A.8.1 |
 
 ### A.1 Trường CŨ — giữ nguyên 100%
 
@@ -224,6 +225,19 @@ một lời gọi.
   "currency": "VND",
   "area_tier": "MOI-DIEN-TICH",
   "price_variant": "STANDARD",
+
+  // ── MỚI 21/08 · cách bán ─────────────────────────────────────────────────────────────────
+  "price_variant_source": "standard_default",  // "requested" | "only_option" | "standard_default" | null
+  "price_variant_required": false,             // true ⇒ CHƯA ra tiền, và đó KHÔNG phải lỗi danh mục
+  "price_tiered_by_area": false,               // true ⇒ giá theo bậc; con số cuối theo kích thước dòng
+  "price_variant_options": [                   // VẮNG MẶT ≠ mảng rỗng — xem A.8.1
+    { "price_variant": "CHI_LA",   "item_price": "…:CHI_LA:MOI-DIEN-TICH",
+      "uom": "m2", "rate": 1146000, "rate_min": 1146000, "rate_max": 1146000,
+      "currency": "VND", "area_tier": "MOI-DIEN-TICH", "tier_count": 1 },
+    { "price_variant": "TANG_RAY", "item_price": "…:TANG_RAY:MOI-DIEN-TICH",
+      "uom": "m2", "rate": 1221000, "rate_min": 1221000, "rate_max": 1221000,
+      "currency": "VND", "area_tier": "MOI-DIEN-TICH", "tier_count": 1 }
+  ],
   "note": "Giá lấy từ Item Price BẢNG GIÁ ĐẠI LÝ:CUA-AL70:m2 (m2), bậc MOI-DIEN-TICH."
 }
 ```
@@ -239,9 +253,39 @@ một lời gọi.
 | `disabled` | bản ghi giá tồn tại nhưng đã ngừng áp dụng |
 | `not_found` | chưa khai giá cho ĐVT này |
 | `error` | tra giá lỗi — chi tiết ở `price_error` (trường cũ) |
+| `variant_required` | **MỚI** — mã có nhiều CÁCH BÁN, dòng chưa chọn ⇒ chưa ra tiền |
+| `area_tier_ladder` | **MỚI** — một cách bán, nhiều bậc diện tích ⇒ con số cuối do §B ra |
 
 `base_uom_fallback` là trạng thái **phải hiện rõ**: đó là lúc con số trên màn khác con số người
 khai giá đã gõ.
+
+#### A.8.1 Cách bán (biến thể giá) — luật đọc
+
+Đo trên `Alumdoor 2026` ngày 21/08/2026 (288 dòng `Item Price`, 224 cặp mã + ĐVT):
+
+| Hình dạng | Số cặp | Server làm gì | Client làm gì |
+|---|---|---|---|
+| một dòng `STANDARD` | 173 | dùng luôn | không hiện ô chọn |
+| một dòng KHÁC `STANDARD` | 29 | dùng luôn, `price_variant_source: "only_option"` | **PHẢI tự điền `price_variant` lên dòng** — đường LƯU mặc định `STANDARD`, để trống là đơn bị từ chối ở bước cuối |
+| nhiều cách bán, có `STANDARD` | 0 hiện tại | lấy `STANDARD` (bằng đúng mặc định đường lưu) | hiện ô chọn, không chặn |
+| nhiều cách bán, KHÔNG có `STANDARD` | 15 | `price_variant_required: true`, `rate: null`, chốt chặn `PRICE_VARIANT_REQUIRED` | hiện ô chọn kèm ĐƠN GIÁ từng cách, chặn tới khi chọn |
+| một cách bán, nhiều bậc diện tích | 7 | `price_tiered_by_area: true`, `rate: null`, **cảnh báo** `PRICE_TIERED_BY_AREA` | hiện khoảng giá; số cuối lấy từ §B |
+
+Ba luật:
+
+1. **`price_variant_options` VẮNG MẶT ≠ mảng RỖNG.** Vắng mặt = không liệt kê được (trúng bằng
+   tên, hoặc callback không có endpoint tra theo trường) ⇒ **giữ nguyên ô đang có**. Mảng rỗng =
+   quét được mà mã này chưa khai đơn giá nào ⇒ mới được nói "chưa khai giá".
+2. **Đơn giá đi kèm từng lựa chọn là bắt buộc.** Không có nó thì người bán phải tự dịch
+   `TANG_RAY`/`CHI_LA` sang tiếng Việt rồi đoán cái nào đắt hơn — hai mã đó lệch 75.000 đ/m²,
+   tức 675.000 đ trên một bộ 9 m².
+3. **`PRICE_VARIANT_REQUIRED` chỉ về DÒNG BÁN, không về Danh mục.** Danh mục không thiếu gì; thứ
+   còn thiếu là một quyết định. Chỉ nhầm chỗ ở đây là có người đi ngừng dùng một dòng giá thật
+   để "cho hết lỗi".
+
+`price_variant` cũng là **tham số vào** (A.0) và là **field thật trên dòng** (`Quotation Item`,
+`Sales Order Item`, `Sales Invoice Item`) — client phải gửi nó lên trong cả `item_context`,
+`preview_sales_commercial_line` lẫn lúc lưu, nếu không thì xem trước một đằng lưu một nẻo.
 
 ### A.9 `readiness` — sẵn sàng của MÃ HÀNG, biết trước khi hứa với khách 🟥 P0
 
@@ -263,10 +307,13 @@ khai giá đã gõ.
 - `warnings` không chặn nhưng phải hiện.
 
 Mã `blocking[].code` ổn định: `UOM_FACTOR_MISSING` · `UOM_UNDECLARED` · `PRICE_MISSING` ·
-`PRICE_ERROR` · `STOCK_SHORT` · `COLOR_SCOPE_EMPTY`.
+`PRICE_ERROR` · `PRICE_VARIANT_REQUIRED` · `STOCK_SHORT` · `COLOR_SCOPE_EMPTY`.
 Mã `warnings[].code`: mọi mã còn lại của `coverage_gaps` (A.6) cộng `STOCK_UNREADABLE` ·
-`PRICE_CONVERTED_FROM_BASE_UOM` · `COLOR_SCOPE_UNREADABLE` · `STOCK_UNKNOWN_VS_REQUESTED` ·
-`CATALOG_CONTEXT_UNREADABLE`.
+`PRICE_CONVERTED_FROM_BASE_UOM` · `PRICE_TIERED_BY_AREA` · `COLOR_SCOPE_UNREADABLE` ·
+`STOCK_UNKNOWN_VS_REQUESTED` · `CATALOG_CONTEXT_UNREADABLE`.
+
+`PRICE_VARIANT_REQUIRED` là mã duy nhất trong danh sách chặn có `where` trỏ vào **dòng bán**
+(`"Dòng bán → ô Cách bán"`) chứ không vào Danh mục — xem A.8.1 luật 3.
 
 Mặt hàng không tồn tại / đã ngừng dùng / không được phép bán vẫn đi đường **422** cũ với đúng
 `message` cũ — không đổi thành một mã `readiness`.

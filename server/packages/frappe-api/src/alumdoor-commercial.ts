@@ -138,6 +138,22 @@ export async function previewSalesCommercialLine(args: FrappeArgs, context: Frap
     documentCurrency: currency,
     postingDate,
     ...(typeof line.uom === "string" && line.uom.trim() ? { uom: line.uom.trim() } : {}),
+    /**
+     * CÁCH BÁN của dòng phải đi cùng lượt tra giá ở ĐÂY nữa.
+     *
+     * `commercial-sales-order-controller.ts:125` (lúc lưu) và `clouderp-selling/controllers.ts`
+     * (hoá đơn bán lẻ) đều truyền `priceVariant`; đường XEM TRƯỚC này thì không — nên mọi dòng
+     * đi qua đây đều tra biến thể `STANDARD` bất kể người bán chọn gì. Hỏng chỉ lộ ra khi mặt
+     * hàng KHÔNG còn dòng `STANDARD`: đo trên `Alumdoor 2026` ngày 21/08/2026, 15 mã cửa Đức
+     * chỉ còn `TANG_RAY`/`CHI_LA` ⇒ xem trước ném "Item Price … does not exist for variant
+     * STANDARD" trong khi lưu đơn lại ra giá đúng. Xem một đằng, lưu một nẻo.
+     *
+     * Cú pháp sai thì để `normalizePriceVariant` ở tầng giá từ chối — không tự sửa hộ, không
+     * lặng lẽ rơi về STANDARD.
+     */
+    ...(typeof line.price_variant === "string" && line.price_variant.trim()
+      ? { priceVariant: line.price_variant.trim() }
+      : {}),
     pricedQty: qty,
     partyType: "Customer",
     ...(args.text("customer") ? { party: args.text("customer")! } : {}),

@@ -113,8 +113,39 @@ export interface PriceExplain extends Json {
   area_tier_basis_sqm?: number | null;
   area_tier_bounds?: { min_area_sqm?: number | null; max_area_sqm?: number | null } | null;
   price_variant?: string;
+  /* Cách bán · hợp đồng làn A 2026-08-21 — optional, vắng mặt thì UI ẩn hẳn ô chọn. */
+  price_variant_source?: "requested" | "only_option" | "standard_default" | null;
+  /** `true` = có nhiều cách bán mà dòng chưa chọn ⇒ CHƯA ra tiền, và đó không phải lỗi danh mục. */
+  price_variant_required?: boolean;
+  /** `true` = cách bán này khai giá theo bậc diện tích; con số cuối theo kích thước dòng. */
+  price_tiered_by_area?: boolean;
+  /**
+   * VẮNG MẶT = server không liệt kê được (trúng bằng tên, hoặc không có quyền/endpoint tra
+   * theo trường). Mảng RỖNG = quét được mà mã này chưa khai đơn giá nào. Hai nghĩa khác nhau:
+   * cái đầu phải giữ nguyên ô đang có, cái sau mới được nói "chưa khai giá".
+   */
+  price_variant_options?: PriceVariantOption[];
   posting_date?: string;
   note?: string;
+}
+
+/**
+ * Một CÁCH BÁN mà mã hàng này thật sự có đơn giá.
+ *
+ * Đơn giá đi kèm là phần quan trọng nhất: nó là thứ giúp người bán chọn đúng mà không cần ai
+ * dịch `TANG_RAY` sang tiếng Việt. `rate` là `null` khi cách bán đó khai theo bậc diện tích —
+ * lúc chọn chưa có kích thước nên chưa có một con số duy nhất, chỉ có khoảng `rate_min`–`rate_max`.
+ */
+export interface PriceVariantOption extends Json {
+  price_variant?: string;
+  item_price?: string;
+  uom?: string;
+  rate?: number | null;
+  rate_min?: number | null;
+  rate_max?: number | null;
+  currency?: string | null;
+  area_tier?: string | null;
+  tier_count?: number;
 }
 
 export interface ItemReadiness extends Json {
@@ -303,6 +334,14 @@ export interface BomPreview extends Json {
 
 export interface SalesLine extends Json {
   _key: string;
+  /**
+   * CÁCH BÁN của dòng — chọn dòng giá nào, không phải giảm bao nhiêu.
+   *
+   * Đây là Ý ĐỊNH của người bán, nên nó phải nằm trên dòng và phải đi cùng cả lượt xem trước
+   * lẫn lượt lưu. Trước 21/08/2026 dòng bán không có ô này: đường lưu mặc định `STANDARD`, nên
+   * 22 cặp (mã + ĐVT) chỉ khai biến thể khác STANDARD đều bị từ chối lúc lưu.
+   */
+  price_variant?: string;
   _itemName?: string;
   _context?: SalesItemContext;
   _allowedColors?: string[];
@@ -800,6 +839,45 @@ export function linePriceExplain(line: SalesLine): PriceExplain | undefined {
   return fromContext && typeof fromContext === "object" ? fromContext : undefined;
 }
 
+// ── CÁCH BÁN (biến thể giá) ───────────────────────────────────────────────────────────────────
+// Ba hàm dưới đây đọc THẲNG ảnh chụp của `alumdoor.sales.item_context`, không đọc bản giải trình
+// gộp (`linePriceExplain`): bản gộp ưu tiên `_commercial`, mà đường thương mại chỉ trả về biến
+// thể ĐÃ dùng chứ không liệt kê được các lựa chọn còn lại. Lấy nhầm nguồn là ô chọn biến mất
+// ngay sau khi dòng ra giá lần đầu.
+
+/** Các cách bán mà mã hàng đang có giá. Rỗng ⇒ không có gì để chọn ⇒ ẩn hẳn ô. */
+export function linePriceVariantOptions(line: SalesLine): PriceVariantOption[] {
+  const options = line._context?.price_explain?.price_variant_options;
+  return Array.isArray(options) ? options.filter((option) => text(option?.price_variant)) : [];
+}
+
+/** `true` = có nhiều cách bán mà dòng chưa chọn ⇒ chưa ra tiền. Không phải lỗi danh mục. */
+export function linePriceVariantRequired(line: SalesLine): boolean {
+  return line._context?.price_explain?.price_variant_required === true;
+}
+
+/** Cách bán ĐANG dùng: ưu tiên giá trị trên dòng, rồi tới thứ server đã chốt. */
+export function linePriceVariant(line: SalesLine): string {
+  return text(line.price_variant)
+    || text(line._context?.price_explain?.price_variant)
+    || text(line._commercial?.price_explain?.price_variant)
+    || text(line._commercial?.price_variant);
+}
+
+/** Nhãn cho một cách bán: mã kỹ thuật kèm đúng con số của nó — số mới là thứ giúp chọn đúng. */
+export function priceVariantOptionLabel(option: PriceVariantOption): string {
+  const code = text(option.price_variant);
+  const unit = text(option.uom) ? `/${text(option.uom)}` : "";
+  const rate = numberValue(option.rate);
+  if (rate !== undefined) return `${code} · ${money(rate)} ₫${unit}`;
+  const min = numberValue(option.rate_min);
+  const max = numberValue(option.rate_max);
+  if (min === undefined || max === undefined) return code;
+  const tiers = Number(option.tier_count) > 1 ? ` (${option.tier_count} bậc)` : "";
+  if (min === max) return `${code} · ${money(min)} ₫${unit}${tiers}`;
+  return `${code} · ${money(min)}–${money(max)} ₫${unit}${tiers}`;
+}
+
 /**
  * Diện tích tối thiểu có đang NÂNG tiền của dòng này không.
  *
@@ -866,6 +944,24 @@ export function linePriceExplanation(line: SalesLine): PriceExplanationRow[] {
 
   push("item_price", "Dòng giá",
     text(explain?.item_price) || text(line._commercial?.item_price) || text(line._context?.item_price));
+
+  /**
+   * Cách bán chỉ được nêu khi nó THẬT SỰ là một lựa chọn.
+   *
+   * Mã chỉ có một cách bán thì nói "cách bán STANDARD" là nhiễu — người bán không có gì để
+   * quyết. Nhưng mã có từ hai cách trở lên thì đây là dòng giải trình quan trọng nhất: nó là
+   * thứ duy nhất phân biệt 1.221.000 với 1.146.000 trên cùng một mã, cùng một m².
+   */
+  const variantOptions = linePriceVariantOptions(line);
+  if (variantOptions.length > 1) {
+    const chosen = linePriceVariant(line);
+    const option = variantOptions.find((entry) => text(entry.price_variant) === chosen);
+    push("price_variant", "Cách bán",
+      chosen
+        ? (option ? priceVariantOptionLabel(option) : chosen)
+        : `Chưa chọn — ${variantOptions.map(priceVariantOptionLabel).join(" · ")}`,
+      chosen ? undefined : "warn");
+  }
 
   /**
    * `base_uom_fallback` = KHÔNG có giá cho ĐVT của dòng; engine lấy giá ĐVT gốc rồi nhân chéo.

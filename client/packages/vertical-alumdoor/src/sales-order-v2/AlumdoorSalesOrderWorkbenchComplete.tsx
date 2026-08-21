@@ -691,6 +691,15 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
            * 19/08 đã ghi lại, nên thà để server trả `door_spec: null`.
            */
           ...(text(row.slat_profile) ? { slat_profile: text(row.slat_profile) } : {}),
+          /**
+           * CÁCH BÁN của dòng đi cùng lượt tra giá.
+           *
+           * Không truyền thì server phải tự quyết, và nó chỉ quyết được khi mã có dòng
+           * `STANDARD` hoặc chỉ có đúng một cách bán. 22/224 cặp (mã + ĐVT) của bảng giá
+           * `Alumdoor 2026` không rơi vào hai trường hợp đó — với chúng, server trả về danh
+           * sách lựa chọn kèm đơn giá thay vì một con số, và ô "Cách bán" trên dòng hiện ra.
+           */
+          ...(text(row.price_variant) ? { price_variant: text(row.price_variant) } : {}),
         }),
         adapter.callPost<Json>("alumdoor.ui.preview_child_row", {
           child_doctype: childMeta.name,
@@ -737,6 +746,25 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
         _bomError: "",
       };
       for (const field of Array.isArray(uiPreview.clear) ? uiPreview.clear.map(text) : []) if (childFieldSet.has(field)) next[field] = undefined;
+      /**
+       * TỰ ĐIỀN cách bán khi mã chỉ có MỘT — và đây KHÔNG phải tiện nghi, nó là điều kiện để
+       * LƯU ĐƯỢC.
+       *
+       * `alumdoor.sales.item_context` tự chọn khi chỉ có một lựa chọn nên XEM TRƯỚC ra giá
+       * đúng dù dòng để trống. Nhưng đường LƯU (`commercial-sales-order-controller.ts:125`)
+       * mặc định `STANDARD` khi ô trống. Mã có đúng một cách bán mà cách đó không phải
+       * `STANDARD` sẽ xem trước ra tiền rồi lưu lại bị từ chối "Item Price … does not exist
+       * for variant STANDARD" — đúng kiểu hỏng chỉ lộ ra ở bước cuối.
+       *
+       * Nhiều cách bán thì KHÔNG đoán: server đã trả `price_variant_required` và danh sách kèm
+       * đơn giá, ô "Cách bán" trên dòng hiện ra để người bán quyết.
+       */
+      const variantCodes = Array.isArray(context.price_explain?.price_variant_options)
+        ? context.price_explain!.price_variant_options!.map((option) => text(option?.price_variant)).filter(Boolean)
+        : [];
+      if (variantCodes.length === 1 && !text(row.price_variant) && !text(next.price_variant)) {
+        next.price_variant = variantCodes[0];
+      }
       if (!text(row.uom) && !text(next.uom) && text(context.selected_uom)) next.uom = text(context.selected_uom);
       if (!text(row.color) && !text(next.color) && text(context.default_color)) next.color = text(context.default_color);
       const customerGroup = text(headerRef.current.customer_group);
@@ -891,6 +919,9 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
         uom: undefined,
         color: undefined,
         ray_type: undefined,
+        // Cách bán thuộc về MẶT HÀNG CŨ. Giữ lại là mang `CHI_LA` sang một mã chỉ có `TRON_BO`
+        // rồi báo "chưa khai đơn giá" cho một lựa chọn mà chính người bán không hề chọn.
+        price_variant: undefined,
         rate: undefined,
         amount: undefined,
         discount_percentage: undefined,

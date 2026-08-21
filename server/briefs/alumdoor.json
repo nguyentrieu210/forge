@@ -3213,6 +3213,13 @@
           "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
         },
         {
+          "//": "Cách bán quyết định LẤY DÒNG GIÁ NÀO, không phải giảm bao nhiêu phần trăm. Một mã hàng khai được nhiều đơn giá cho cùng (bảng giá, ĐVT), phân biệt duy nhất bằng ô này: đo trên bảng giá Alumdoor 2026 ngày 21/08/2026, 22/224 cặp (mã + ĐVT) có từ hai dòng đang bật — ví dụ CDUC_AL70_1LOP m2 có TANG_RAY 1.221.000 và CHI_LA 1.146.000, lệch 75.000 đ/m². Server tra giá theo đúng giá trị ở đây (clouderp-pricing lọc theo price_variant); để trống là rơi về STANDARD, nên mã không có dòng STANDARD sẽ bị TỪ CHỐI thay vì lặng lẽ ra một con số khác. Ô này KHÔNG phải sales_mode: ánh xạ giữa hai thứ chưa ai chốt.",
+          "fieldname": "price_variant",
+          "fieldtype": "Data",
+          "label": "Cách bán (biến thể giá)",
+          "description": "Mã cách bán của dòng giá — TRON_BO, TACH_MON, TANG_RAY, CHI_LA, KEO_TAY, MOTOR_NGOAI… Danh sách chọn lấy từ đúng những đơn giá mà mặt hàng này đang có, kèm số tiền của từng cách; chỉ có một cách thì màn bán hàng tự điền."
+        },
+        {
           "fieldname": "has_butterfly_bracket",
           "fieldtype": "Check",
           "label": "Có bản bướm",
@@ -3539,6 +3546,13 @@
           "label": "Cách bán",
           "default": "Trọn bộ",
           "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'"
+        },
+        {
+          "//": "Cách bán quyết định LẤY DÒNG GIÁ NÀO, không phải giảm bao nhiêu phần trăm. Một mã hàng khai được nhiều đơn giá cho cùng (bảng giá, ĐVT), phân biệt duy nhất bằng ô này: đo trên bảng giá Alumdoor 2026 ngày 21/08/2026, 22/224 cặp (mã + ĐVT) có từ hai dòng đang bật — ví dụ CDUC_AL70_1LOP m2 có TANG_RAY 1.221.000 và CHI_LA 1.146.000, lệch 75.000 đ/m². Server tra giá theo đúng giá trị ở đây (clouderp-pricing lọc theo price_variant); để trống là rơi về STANDARD, nên mã không có dòng STANDARD sẽ bị TỪ CHỐI thay vì lặng lẽ ra một con số khác. Ô này KHÔNG phải sales_mode: ánh xạ giữa hai thứ chưa ai chốt.",
+          "fieldname": "price_variant",
+          "fieldtype": "Data",
+          "label": "Cách bán (biến thể giá)",
+          "description": "Mã cách bán của dòng giá — TRON_BO, TACH_MON, TANG_RAY, CHI_LA, KEO_TAY, MOTOR_NGOAI… Danh sách chọn lấy từ đúng những đơn giá mà mặt hàng này đang có, kèm số tiền của từng cách; chỉ có một cách thì màn bán hàng tự điền."
         },
         {
           "fieldname": "has_butterfly_bracket",
@@ -4231,6 +4245,7 @@
         "height_m:Float Cao (m)",
         "set_count:Int=(1) Số bộ",
         "sales_mode:Select(Trọn bộ,Tách món)=(Trọn bộ) Cách bán",
+        "price_variant:Data Cách bán (biến thể giá)",
         "has_butterfly_bracket:Check Có bản bướm",
         "mesh_height_m:Float Cao lưới (m)",
         "formula_policy:Link(Cutting Policy)~- Công thức đã áp",
