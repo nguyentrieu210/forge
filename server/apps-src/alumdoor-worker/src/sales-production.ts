@@ -213,7 +213,10 @@ export async function createSalesProduction(
         guardedCall,
         "Work Order",
         ["name", "production_request", "production_request_line_key", "docstatus"],
-        [["production_request", "=", "__PREFLIGHT__"], ["production_request_line_key", "=", "__PREFLIGHT__"]],
+        // Chỉ lọc theo `production_request` — giống hệt truy vấn thật trong `existingWorkOrder`.
+        // `production_request_line_key` là ô `Data` không lọc được (chiếu thì được), lọc theo nó
+        // luôn trả `Filter field is not allowed`, khiến chính bước tiền kiểm này chặn cả luồng.
+        [["production_request", "=", "__PREFLIGHT__"]],
         1,
       );
     }

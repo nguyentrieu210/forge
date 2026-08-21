@@ -524,17 +524,24 @@ export function calculateLeafPlan(policy: RawPolicy, line: Json): LeafPlan {
   const effective = height - deduction;
   if (!(effective > 0)) throw new Error(`Chiều cao sau khi trừ phải lớn hơn 0: ${height} − ${deduction}.`);
   /**
-   * `||` chứ KHÔNG phải `??`. Chính sách nào lấy ước số từ bản lá của từng mã thì để trống ô
-   * hằng số — mà "để trống" trong kho này là chuỗi `"0"`, không phải null. `??` chỉ rơi xuống
-   * khi null/undefined nên nó giữ nguyên `"0"`, rồi `finitePositive` ném "Ước số chia lá phải
-   * lớn hơn 0" và KHÔNG BAO GIỜ đọc tới bản lá của mã. Đo trên dữ liệu Alumdoor 21/08/2026:
-   * chính sách "Cửa CN Đức" khai `leaf_divisor_source = "Bản lá của bộ quy cách"` cùng với
-   * `leaf_divisor_const = "0"` — tức toàn bộ 15 mã cửa Đức không tính nổi số lá.
+   * Chính sách nào lấy ước số từ bản lá của từng mã thì để trống ô hằng số — mà "để trống"
+   * trong kho này là CHUỖI `"0"`, không phải null và cũng không phải số 0.
    *
-   * `||` coi `"0"`, `""`, `0` đều là chưa khai, và đó đúng là ý nghĩa của chúng ở đây: ước số
-   * chia bằng 0 vốn vô nghĩa nên không có giá trị hợp lệ nào bị `||` nuốt mất.
+   * Vì vậy cả `??` lẫn `||` đều KHÔNG rơi xuống được: `??` chỉ bắt null/undefined, còn `||`
+   * thì trong JavaScript chuỗi `"0"` là TRUTHY (chỉ `""` và số `0` mới falsy). Cả hai đều giữ
+   * nguyên `"0"` rồi `finitePositive` ném "Ước số chia lá phải lớn hơn 0", không bao giờ đọc
+   * tới bản lá của mã. Đo trên dữ liệu Alumdoor 21/08/2026: chính sách "Cửa CN Đức" khai
+   * `leaf_divisor_source = "Bản lá của bộ quy cách"` cùng `leaf_divisor_const = "0"` (chuỗi),
+   * nên toàn bộ mã cửa Đức không tính nổi số lá.
+   *
+   * Nên phải so theo GIÁ TRỊ SỐ: chỉ coi hằng số của chính sách là đã khai khi nó > 0. Ước số
+   * chia bằng 0 vốn vô nghĩa, nên không có giá trị hợp lệ nào bị bỏ sót.
    */
-  const divisor = finitePositive(policy.leaf_divisor_const || line.leaf_divisor_m, "Ước số chia lá");
+  const policyDivisor = Number(policy.leaf_divisor_const);
+  const divisor = finitePositive(
+    Number.isFinite(policyDivisor) && policyDivisor > 0 ? policyDivisor : line.leaf_divisor_m,
+    "Ước số chia lá",
+  );
   const rounding = text(policy.leaf_rounding ?? line.leaf_rounding) as LeafRounding;
   if (!["Ngưỡng trừ-một-lá", "Nấc 0-0.3-0.7-1", "Làm tròn xuống"].includes(rounding)) {
     throw new Error(`${text(policy.policy_name ?? policy.name)}: chưa khai Cách làm tròn số lá.`);
@@ -750,6 +757,33 @@ function sameBomItem(left: unknown, right: unknown): boolean {
   return Boolean(leftKey) && leftKey === bomItemKey(right);
 }
 
+/**
+ * Bù lại các ô vòng đời của định mức mà DANH SÁCH không trả về được.
+ *
+ * `bom_status`, `revision`, `effective_from`, `effective_to` do
+ * `VersionedBillOfMaterialsController` ghi thẳng vào payload nhưng KHÔNG được khai trong
+ * DocType "Bill of Materials" (ở đó chỉ có `is_active`). Phép chiếu của danh sách dựng
+ * riêng từ metadata DocType (`metadataToListDefinition`), nên hỏi tới bất kỳ ô nào trong số
+ * đó là cả truy vấn chết với `Field is not allowed: …` — HTTP 417, kéo sập luôn
+ * preview_production lẫn create_production.
+ *
+ * Bỏ hẳn chúng đi cũng KHÔNG được: `activeOn` cần khoảng hiệu lực còn `compareBomCandidates`
+ * xếp hạng theo `revision`. Thiếu hai thứ đó thì hệ vẫn chạy nhưng CHỌN SAI bản định mức —
+ * hỏng âm thầm, tệ hơn là báo lỗi.
+ *
+ * Nên: liệt kê bằng các ô có khai, thu hẹp còn đúng những mặt hàng đang cần, rồi mới đọc
+ * nguyên văn từng định mức đó. Số lượt đọc vì thế chặn theo số mặt hàng trên đơn, không
+ * theo tổng số định mức trong hệ.
+ */
+async function hydrateBoms(call: ProductionPlatformCall, rows: BomDoc[], itemCodes: string[]): Promise<BomDoc[]> {
+  const wanted = rows.filter((row) => itemCodes.some((code) => sameBomItem(row.item, code)));
+  return Promise.all(wanted.map(async (row) => {
+    const name = text(row.name);
+    if (!name) return row;
+    return { ...row, ...await readDoc<BomDoc>(call, "Bill of Materials", name).catch(() => ({} as BomDoc)) };
+  }));
+}
+
 function bomItemSpecificity(candidate: unknown, itemCode: string): number {
   const candidateCode = text(candidate);
   if (!candidateCode) return -1;
@@ -863,7 +897,19 @@ export function buildSalesProductionLines(input: BuildInputs, options: { allow_m
       height,
     );
     const liveCutWidth = geometry?.cut_width_m ?? finitePositive(formula.cut_width_m, "Rộng cắt lá");
-    const leaf = calculateLeafPlan(chosen.raw, row);
+    /**
+     * Phải bổ sung `leaf_divisor_m` từ Item, y như đường `production_line_context` vẫn làm.
+     *
+     * Chính sách nào khai `leaf_divisor_source = "Bản lá của bộ quy cách"` thì để trống ô
+     * hằng số, và `calculateLeafPlan` sẽ rơi xuống `line.leaf_divisor_m`. Nhưng DÒNG ĐƠN HÀNG
+     * không mang ô đó — nó nằm trên Item. Truyền thẳng `row` vào nên ước số luôn rỗng và mọi
+     * mã cửa Đức chết ở "Ước số chia lá phải lớn hơn 0", tức không dựng nổi Yêu cầu sản xuất
+     * từ đơn dù dữ liệu hoàn toàn đầy đủ.
+     */
+    const leaf = calculateLeafPlan(chosen.raw, {
+      ...row,
+      leaf_divisor_m: row.leaf_divisor_m ?? item.leaf_divisor_m,
+    });
     const department = productionDepartment(doorType);
     const billablePerSet = roundTo(finitePositive(formula.billable_area_sqm, "Diện tích tính tiền") / sets);
     const standard = findStandard(input.standards, doorType, department, on, { area_sqm: billablePerSet, sets: 1 });
@@ -966,7 +1012,12 @@ async function loadBuildInputs(call: ProductionPlatformCall, args: Json): Promis
       "butterfly_cut_deduction_m", "dealer_split_sales_basis", "dealer_full_sales_basis", "retail_sales_basis",
       "manual_pull_sales_basis", "purchase_formula", "purchase_height_basis", "purchase_width_basis",
       "priority", "disabled", "note", "ray_type", "leaf_formula", "leaf_height_deduction_m",
-      "leaf_divisor_source", "leaf_divisor_const", "leaf_rounding", "leaf_round_threshold", "leaf_variants",
+      // KHÔNG hỏi `leaf_variants` ở đây: đó là bảng con (fieldtype Table), danh sách không
+      // chiếu được bảng con nên cả truy vấn chết bằng `Field is not allowed: leaf_variants`
+      // (HTTP 417) — kéo sập luôn cả preview_production lẫn create_production.
+      // Không cần thiết thật: ngay bên dưới mỗi Cutting Policy đều được đọc lại nguyên văn
+      // bằng `readDoc` rồi trộn đè, nên `leaf_variants` vẫn có đủ.
+      "leaf_divisor_source", "leaf_divisor_const", "leaf_rounding", "leaf_round_threshold",
     ]),
     listDocs<ProductionStandard>(call, "Production Standard", [
       "name", "department", "door_type", "operation", "minutes_per_set", "minutes_per_unit", "capacity_basis", "batch_capacity",
@@ -974,10 +1025,13 @@ async function loadBuildInputs(call: ProductionPlatformCall, args: Json): Promis
       "effective_from", "effective_to", "disabled",
     ]).catch(() => []),
     listDocs<BomDoc>(call, "Bill of Materials", [
-      "name", "item", "color", "docstatus", "is_active", "bom_status",
-      "effective_from", "effective_to", "revision", "generated_by_configurator",
+      // CHỈ hỏi những ô CÓ KHAI trong DocType "Bill of Materials". Xem `hydrateBoms`
+      // bên dưới để biết vì sao `bom_status`/`revision`/`effective_from`/`effective_to`
+      // không thể hỏi ở đây.
+      "name", "item", "color", "docstatus", "is_active", "generated_by_configurator",
     ]),
   ]);
+  const fullBoms = await hydrateBoms(call, boms, codes);
   const fullPolicies = await Promise.all(policies.map(async (policy) => {
     const name = text(policy.name);
     return name ? { ...policy, ...await readDoc<RawPolicy>(call, "Cutting Policy", name) } : policy;
@@ -993,7 +1047,7 @@ async function loadBuildInputs(call: ProductionPlatformCall, args: Json): Promis
     policies: fullPolicies,
     geometry_profiles: geometryProfiles,
     standards,
-    boms,
+    boms: fullBoms,
     source_warehouse: sourceWarehouse,
     target_warehouse: targetWarehouse,
   };
@@ -1204,11 +1258,13 @@ export async function previewDraftSalesBomRequirements(call: ProductionPlatformC
       });
     }
     const staticBoms = await listDocs<BomDoc>(call, "Bill of Materials", [
-      "name", "item", "color", "docstatus", "is_active", "bom_status",
-      "effective_from", "effective_to", "revision", "generated_by_configurator",
+      // CHỈ hỏi những ô CÓ KHAI trong DocType "Bill of Materials". Xem `hydrateBoms`
+      // bên dưới để biết vì sao `bom_status`/`revision`/`effective_from`/`effective_to`
+      // không thể hỏi ở đây.
+      "name", "item", "color", "docstatus", "is_active", "generated_by_configurator",
     ]).catch(() => []);
     const on = dateOnly(args.delivery_date) || new Date().toISOString().slice(0, 10);
-    const staticBom = selectPreviewBom(staticBoms, itemCode, text(args.color), on);
+    const staticBom = selectPreviewBom(await hydrateBoms(call, staticBoms, [itemCode]), itemCode, text(args.color), on);
     if (staticBom) {
       const staticBomDoc: Json = await readDoc<Json>(call, "Bill of Materials", staticBom).catch((): Json => ({}));
       const staticItems = Array.isArray(staticBomDoc.items)
@@ -1318,15 +1374,31 @@ async function findExistingRequest(call: ProductionPlatformCall, order: string):
   return text(rows.find((row) => row.name)?.name);
 }
 
+/**
+ * Chốt chặn TRÙNG lệnh sản xuất: một dòng yêu cầu sản xuất chỉ được sinh ra một Work Order.
+ *
+ * `production_request_line_key` LỌC KHÔNG ĐƯỢC. Danh sách chỉ cho lọc theo `name`,
+ * `docstatus`, `status`, trường cha của cây, mọi trường `Link`, và trường có cờ
+ * `in_list_view`/`in_standard_filter` (xem ghi chú đầu `catalog-readiness.ts`). Ô này là
+ * `Data` chỉ đọc, không mang hai cờ đó, nên bộ lọc cũ luôn bị trả về
+ * `Filter field is not allowed: production_request_line_key` — HTTP 417, LẦN NÀO CŨNG THẾ.
+ *
+ * Nguy hiểm nằm ở chỗ `.catch(() => [])` nuốt luôn lỗi đó và biến nó thành "chưa có lệnh
+ * nào", nên chạy lại `create_production` là đẻ thêm một Work Order trùng cho cùng một dòng,
+ * âm thầm, không log. Chốt chặn trùng coi như chưa từng hoạt động.
+ *
+ * Cách làm đúng: lọc phía máy chủ bằng `production_request` (là Link, lọc được), rồi so
+ * `production_request_line_key` trong bộ nhớ — ô này CHIẾU được, chỉ là không lọc được.
+ */
 async function existingWorkOrder(call: ProductionPlatformCall, request: string, lineKey: string): Promise<string> {
-  const rows = await listDocs<{ name?: string }>(
+  const rows = await listDocs<{ name?: string; production_request_line_key?: unknown }>(
     call,
     "Work Order",
     ["name", "production_request", "production_request_line_key", "docstatus"],
-    [["production_request", "=", request], ["production_request_line_key", "=", lineKey]],
-    3,
+    [["production_request", "=", request]],
+    500,
   ).catch(() => []);
-  return text(rows[0]?.name);
+  return text(rows.find((row) => text(row.production_request_line_key) === lineKey)?.name);
 }
 
 export async function createSalesProduction(call: ProductionPlatformCall, args: Json): Promise<Response> {

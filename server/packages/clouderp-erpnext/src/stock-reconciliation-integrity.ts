@@ -74,8 +74,23 @@ async function assertRowWithinScope(
   }
 }
 
+/**
+ * Nguyên nhân chênh lệch chỉ BẮT BUỘC khi ghi sổ, đúng theo BRD §4.2
+ * ("bắt buộc khi variance ≠ 0 → phải chọn nguyên nhân trước khi ghi sổ").
+ *
+ * Trước đây phép kiểm chạy ở mọi lần normalize, kể cả lúc TẠO nháp, nên người đếm
+ * không thể lưu nổi phiếu: chênh lệch do máy chủ tính ra từ số sổ, muốn biết dòng nào
+ * lệch thì phải lưu được phiếu đã, mà muốn lưu thì lại phải khai trước nguyên nhân của
+ * chênh lệch chưa hề nhìn thấy. Cộng với danh mục "Nguyên nhân chênh lệch" đang rỗng,
+ * phiếu kiểm kê trở thành không thể lập.
+ *
+ * Nếu người dùng ĐÃ chọn nguyên nhân thì vẫn kiểm tính hợp lệ ngay từ bản nháp
+ * (đúng chiều Thừa/Thiếu, "Khác" phải có diễn giải) — không bỏ qua kiểm tra.
+ */
 async function assertReconciliationReasons(context: ReconciliationContext, data: ReconciliationData): Promise<void> {
+  const posting = context.command.action === "submit";
   for (const row of data.items) {
+    if (!posting && !text(row.variance_reason)) continue;
     await assertVarianceReason(
       context as unknown as ControllerContext<JsonObject>,
       row.variance_reason,

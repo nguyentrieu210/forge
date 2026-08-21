@@ -320,12 +320,27 @@ export async function validateItemMaster(call: PlatformCall, subject: ValidatorS
   }
 
   const profileName = String(doc.measurement_profile ?? "").trim();
-  if (mode !== "Hàng thường") {
-    if (!profileName) return refuse(`${code}: kiểu ${mode} phải có Bộ quy cách.`);
-    const profile = await readMaster(call, "Measurement Profile", profileName);
-    if (!profile) return refuse(`${code}: Bộ quy cách ${profileName} không tồn tại hoặc đã ngừng dùng.`);
-    if (String(profile.inventory_mode ?? "") !== mode) {
-      return refuse(`${code}: Bộ quy cách ${profileName} không thuộc kiểu ${mode}.`);
+  /**
+   * BỘ QUY CÁCH ĐƯỢC ĐỌC TRƯỚC, KHÔNG ĐỢI `inventory_mode` CHO PHÉP.
+   *
+   * `inventory_mode` là ô suy ra TỪ CHÍNH bộ quy cách này. Gõ sai tên bộ (hoặc trỏ vào một bộ
+   * đã xoá) thì ô suy ra không tính được và rỗng, rồi `mode` rơi về "Hàng thường", rồi cả khối
+   * kiểm dưới đây bị BỎ QUA — mặt hàng lưu thành công với một bộ quy cách không tồn tại và
+   * không kiểu tồn nào. Đo ngày 21/08/2026 trên cổng 8810: `measurement_profile:"BO_KHONG_CO"`
+   * trả 201.
+   *
+   * Đó là hình mẫu "luật ngủ im lặng" tệ nhất: người canh cửa hỏi ý kiến chính kẻ nó phải
+   * canh. Nên tên bộ được kiểm ĐỘC LẬP, và kiểu tồn thật lấy từ bộ khi ô suy ra chưa kịp có.
+   */
+  const profile = profileName ? await readMaster(call, "Measurement Profile", profileName) : null;
+  if (profileName && !profile) {
+    return refuse(`${code}: Bộ quy cách ${profileName} không tồn tại hoặc đã ngừng dùng.`);
+  }
+  const modeThat = String(doc.inventory_mode ?? "").trim() || String(profile?.inventory_mode ?? "").trim() || "Hàng thường";
+  if (modeThat !== "Hàng thường") {
+    if (!profileName) return refuse(`${code}: kiểu ${modeThat} phải có Bộ quy cách.`);
+    if (String(profile?.inventory_mode ?? "") !== modeThat) {
+      return refuse(`${code}: Bộ quy cách ${profileName} không thuộc kiểu ${modeThat}.`);
     }
     /**
      * Bộ quy cách ĐỀ XUẤT đơn vị tồn, không áp đặt — đúng như nhãn của chính trường đó
@@ -345,7 +360,107 @@ export async function validateItemMaster(call: PlatformCall, subject: ValidatorS
      */
   }
 
+  /**
+   * ĐƠN VỊ TÍNH VÀ QUY CÁCH VẬT LIỆU PHẢI CÓ THẬT.
+   *
+   * Kernel chỉ kiểm đích của trường `Link` khi CHỐT SỔ (`generic-controller.ts`:
+   * `if (context.command.action === "submit") await validateReference(...)`), mà toàn bộ danh
+   * mục là doctype không chốt sổ — nên mọi liên kết của `Item` đi thẳng vào CSDL không ai hỏi.
+   * Đo ngày 21/08/2026: `stock_uom: "DVT_KHONG_CO"` trả 201 và mặt hàng nằm đó, tồn kho tính
+   * theo một đơn vị không tồn tại; `material_specification` treo thì Kg/m lý thuyết và chiều
+   * dài cây chuẩn không bao giờ tra ra, dự toán mua im lặng thiếu số.
+   */
+  for (const [fieldname, nhan] of [
+    ["stock_uom", "Đơn vị tồn kho"], ["default_purchase_uom", "ĐVT mua mặc định"],
+    ["default_sales_uom", "ĐVT bán mặc định"], ["weight_uom", "ĐVT khối lượng"],
+  ] as const) {
+    const uom = String(doc[fieldname] ?? "").trim();
+    if (!uom) continue;
+    if (!await readMaster(call, "UOM", uom)) {
+      return refuse(`${code}: ${nhan} "${uom}" không tồn tại hoặc đã ngừng dùng.`);
+    }
+  }
+  const specName = String(doc.material_specification ?? "").trim();
+  if (specName && !await readMaster(call, "Material Specification", specName)) {
+    return refuse(`${code}: Quy cách vật liệu ${specName} không tồn tại hoặc đã ngừng dùng.`);
+  }
+
   const conversions = Array.isArray(doc.uom_conversions) ? doc.uom_conversions : [];
+  /**
+   * BẢNG QUY ĐỔI ĐƠN VỊ — ba kiểu hỏng lưu được nhưng không bao giờ nổ ra ở đây.
+   *
+   * Đo ngày 21/08/2026 trên cổng 8810, cả ba đều trả 201:
+   *   · hệ số ÂM (-3): `applyUomConversion` nhân thẳng, ra số lượng tồn âm;
+   *   · HAI dòng cùng một ĐVT khác hệ số: `factorFromMaster` lấy dòng ĐẦU và im lặng bỏ dòng
+   *     sau, nên hai người đọc cùng một mặt hàng ra hai con số khác nhau tuỳ thứ tự dòng;
+   *   · dòng quy đổi trỏ vào CHÍNH đơn vị tồn với hệ số ≠ 1 ("1 Cái = 7 Cái"): mâu thuẫn tự
+   *     thân, và `resolveFactorMicros` trả 1 trước khi kịp nhìn tới nó nên không ai thấy.
+   *
+   * HỆ SỐ TRỐNG hoặc 0 VẪN ĐƯỢC LƯU — đó là chốt 2026-08-20 (xem chú thích dưới) và là trạng
+   * thái ĐÚNG của 33 mã ray/trục chưa đọc được chiều dài cây chuẩn. Chỗ chặn của nó nằm ở lúc
+   * lập chứng từ, không phải lúc khai danh mục.
+   */
+  /**
+   * ĐỔI ĐƠN VỊ TỒN THÌ BẢNG QUY ĐỔI CŨ HẾT HIỆU LỰC — PHẢI KHAI LẠI.
+   *
+   * Hệ số quy đổi luôn được đọc là "1 <ĐVT> = hệ số × <ĐVT TỒN>". Đổi ĐVT tồn mà giữ nguyên con
+   * số là đổi NGHĨA của nó trong im lặng — không lỗi, không cảnh báo, chỉ có sổ kho sai.
+   *
+   * Đo được ngày 21/08/2026: `RT_TR114_2.1` đổi tồn Kg → Cây lúc 01:37 trong khi dòng
+   * `Mét = 4,7` (ghi chú của chính nó: "1 Mét = 4,7 **Kg**") ở nguyên. Đơn `DH-2026-0085` bán
+   * 10 Mét bị trừ **47 Cây** thay vì ≈1,7 cây — sai 28 lần. 23/33 mã ray-trục dính cùng một
+   * đường. Vá dữ liệu một lượt không ngăn được lượt sau; chốt chặn phải nằm ở đây.
+   *
+   * Cách khai lại: hoặc gõ hệ số mới theo ĐVT tồn mới, hoặc để 0 (ô trống hợp lệ — xem chốt
+   * 2026-08-20 bên dưới) rồi điền khi xưởng đo xong. Cả hai đều là một hành động CÓ Ý THỨC.
+   */
+  const stockUomCu = String(current?.stock_uom ?? "").trim();
+  if (stockUomCu && stockUom && normalizedUom(stockUomCu) !== normalizedUom(stockUom)) {
+    const cuTheoUom = new Map<string, unknown>();
+    for (const row of (Array.isArray(current?.uom_conversions) ? current.uom_conversions : [])) {
+      if (!row || typeof row !== "object" || Array.isArray(row)) continue;
+      const u = normalizedUom((row as Record<string, unknown>).uom);
+      if (u) cuTheoUom.set(u, (row as Record<string, unknown>).conversion_factor);
+    }
+    for (const row of conversions) {
+      if (!row || typeof row !== "object" || Array.isArray(row)) continue;
+      const rowUom = String((row as Record<string, unknown>).uom ?? "").trim();
+      const heSo = (row as Record<string, unknown>).conversion_factor;
+      if (!positive(heSo)) continue;
+      if (!cuTheoUom.has(normalizedUom(rowUom))) continue;
+      if (Number(cuTheoUom.get(normalizedUom(rowUom))) !== Number(heSo)) continue;
+      return refuse(
+        `${code}: đang đổi Đơn vị tồn "${stockUomCu}" → "${stockUom}", nhưng hệ số quy đổi của "${rowUom}"`
+        + ` vẫn là ${heSo} — con số đó được tính theo "${stockUomCu}" nên bây giờ mang nghĩa khác.`
+        + ` Hãy khai lại hệ số theo "${stockUom}", hoặc để trống (0) rồi điền sau khi đo.`,
+      );
+    }
+  }
+
+  const daGapUom = new Set<string>();
+  for (let index = 0; index < conversions.length; index += 1) {
+    const row = conversions[index];
+    if (!row || typeof row !== "object" || Array.isArray(row)) {
+      return refuse(`${code}: dòng quy đổi ${index + 1} không hợp lệ.`);
+    }
+    const rowUom = String((row as Record<string, unknown>).uom ?? "").trim();
+    if (!rowUom) return refuse(`${code}: dòng quy đổi ${index + 1} chưa chọn Đơn vị tính.`);
+    const khoa = normalizedUom(rowUom);
+    if (daGapUom.has(khoa)) {
+      return refuse(`${code}: bảng quy đổi có hai dòng cùng đơn vị "${rowUom}"; giữ đúng một dòng cho mỗi đơn vị.`);
+    }
+    daGapUom.add(khoa);
+    if (stockUom && khoa === normalizedUom(stockUom)) {
+      return refuse(`${code}: không khai dòng quy đổi cho chính đơn vị tồn "${stockUom}" — hệ số của nó luôn là 1.`);
+    }
+    const heSo = (row as Record<string, unknown>).conversion_factor;
+    if (heSo !== undefined && heSo !== null && String(heSo).trim() !== "" && Number(heSo) < 0) {
+      return refuse(`${code}: hệ số quy đổi của "${rowUom}" không được âm.`);
+    }
+    if (!await readMaster(call, "UOM", rowUom)) {
+      return refuse(`${code}: đơn vị "${rowUom}" trong bảng quy đổi không tồn tại hoặc đã ngừng dùng.`);
+    }
+  }
   for (const fieldname of ["default_purchase_uom", "default_sales_uom"]) {
     if (fieldname === "default_purchase_uom" && !checked(doc.is_purchase_item)) continue;
     if (fieldname === "default_sales_uom" && !checked(doc.is_sales_item)) continue;
@@ -872,9 +987,22 @@ export async function validateTransactionLines(
     if (side === "purchase" && mode === "Nhôm cây/lá" && selected !== "kg") {
       return refuse(`${line}: nhôm cây/lá phải nhập theo Kg; số cây và chiều dài chỉ là quy cách đối chiếu.`);
     }
-    const dynamicSquareMetreToSet = measurementProfile === "Thành phẩm theo m2"
-      && SALES_AREA_UOMS.has(selected)
+    /**
+     * m2 ↔ Bộ của hàng "Thành phẩm theo m2" là hệ số ĐỘNG, suy từ rộng × cao của từng dòng,
+     * nên đúng theo thiết kế là KHÔNG có hệ số tĩnh nào trên Item.
+     *
+     * Phải xét riêng cho từng đơn vị, chứ không dùng chung một cờ tính theo đơn vị ĐANG CHỌN.
+     * Trước đây cờ này tính từ `uom` của dòng rồi lại đem miễn trừ cho phép kiểm `defaultUom`:
+     * bán đúng theo đơn vị kho ("Bộ", hệ số 1, hoàn toàn hợp lệ) thì cờ tắt, và dòng bị chặn vì
+     * một đơn vị MẶC ĐỊNH mà nó không hề dùng — "ĐVT mặc định m2 chưa có hệ số quy đổi trên Item".
+     * Hậu quả: mọi mặt hàng cửa (đều để `default_sales_uom = m2`) không lập nổi đơn bán,
+     * kéo theo không tạo được Yêu cầu sản xuất lẫn Lệnh sản xuất từ đơn.
+     */
+    const dynamicAreaToSet = (candidate: string): boolean =>
+      measurementProfile === "Thành phẩm theo m2"
+      && SALES_AREA_UOMS.has(normalizedUom(candidate))
       && SALES_SET_UOMS.has(normalizedUom(stockUom));
+    const dynamicSquareMetreToSet = dynamicAreaToSet(uom);
     const factors = new Map<string, number>();
     if (stockUom) factors.set(stockUom, 1);
     for (const conversion of item.uom_conversions ?? []) {
@@ -882,7 +1010,7 @@ export async function validateTransactionLines(
       const factor = Number(conversion?.conversion_factor);
       if (name && Number.isFinite(factor) && factor > 0) factors.set(name, factor);
     }
-    if (defaultUom && !factors.has(defaultUom) && !(dynamicSquareMetreToSet && defaultUom === uom)) {
+    if (defaultUom && !factors.has(defaultUom) && !dynamicAreaToSet(defaultUom)) {
       return refuse(`${line}: ĐVT mặc định ${defaultUom} chưa có hệ số quy đổi trên Item.`);
     }
     if (uom && !factors.has(uom) && !dynamicSquareMetreToSet) {

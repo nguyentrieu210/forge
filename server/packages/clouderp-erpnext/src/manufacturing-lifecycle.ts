@@ -37,6 +37,7 @@ interface VersionedBomItem extends BomItem {
 export interface VersionedBomData extends BillOfMaterialsData {
   revision?: number;
   bom_status?: BomLifecycleStatus;
+  is_active?: boolean | number;
   effective_from?: string;
   effective_to?: string;
   output_uom?: string;
@@ -156,6 +157,15 @@ export class VersionedBillOfMaterialsController extends BillOfMaterialsControlle
       ...normalized,
       revision,
       bom_status: status,
+      // Giữ `is_active` (ô CÓ khai trong DocType) đồng bộ với vòng đời `bom_status`
+      // (ô KHÔNG khai, nên danh sách không chiếu được: hỏi tới là `Field is not allowed:
+      // bom_status`, HTTP 417, sập cả preview_production lẫn create_production).
+      // Nhờ vậy phía đọc danh sách vẫn lọc đúng bằng `is_active` mà không cần `bom_status`.
+      //
+      // "Ngừng dùng" thì luôn tắt; ngoài ra vẫn TÔN TRỌNG ý người dùng, để ai đó bỏ tick
+      // `is_active` nhằm tạm khoá một định mức thì lựa chọn đó không bị ghi đè.
+      // Bản nháp vẫn để bật, vì draft/submitted đã phân biệt bằng `docstatus` rồi.
+      is_active: status === "Retired" ? false : checked(input.is_active ?? normalized.is_active ?? true),
       effective_from: effectiveFrom,
       ...(effectiveTo ? { effective_to: effectiveTo } : {}),
       output_uom: outputUom,
@@ -482,10 +492,32 @@ function assertManufacturingItem(master: JsonObject | null, itemCode: string, ou
   }
 }
 
+/**
+ * Ghi sổ CHÍNH LÀ hành động đưa bản định mức từ Draft sang Active — không phải một
+ * điều kiện mà người dùng phải tự thoả mãn trước.
+ *
+ * Vì sao phải nâng trạng thái ở đây thay vì chỉ dựa vào `fallback`: `transition()`
+ * phát lại ĐÚNG tài liệu đã lưu (`router.ts` — `document: current.data`), mà bản lưu
+ * lúc tạo luôn mang `bom_status: "Draft"`. Nên tới lượt submit thì `value` KHÔNG BAO
+ * GIỜ rỗng, `fallback` không bao giờ có tác dụng, và điều kiện `status !== "Active"`
+ * luôn đúng. Thêm nữa `bom_status` không phải ô của DocType "Bill of Materials"
+ * (chỉ có `is_active`), nên không client nào đặt được nó thành "Active".
+ *
+ * Hệ quả trước khi sửa: MỌI định mức đều kẹt ở Draft, không bao giờ ghi sổ được,
+ * kéo theo không bao giờ tạo được Lệnh sản xuất ("Bill of Materials ... must be
+ * submitted"). Toàn bộ phân hệ sản xuất đứng.
+ */
 function resolveBomStatus(action: string, value: unknown): BomLifecycleStatus {
   const fallback: BomLifecycleStatus = action === "submit" ? "Active" : "Draft";
   const status = (text(value) || fallback) as BomLifecycleStatus;
   if (!BOM_STATUSES.has(status)) throw errors.validation(`Unsupported BOM status ${status}`);
+  if (action === "submit") {
+    // Bản đã ngừng dùng vẫn bị từ chối — đây là kiểm tra thật, không nới lỏng.
+    if (status === "Retired") {
+      throw errors.validation("Bản định mức đã ngừng dùng (Retired) thì không ghi sổ lại được");
+    }
+    return "Active";
+  }
   return status;
 }
 
