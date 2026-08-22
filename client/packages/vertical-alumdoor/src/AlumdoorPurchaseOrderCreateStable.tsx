@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Loader2, RefreshCw, Save, Send } from "lucide-react";
+import { CheckCircle2, Eye, Loader2, PackagePlus, RefreshCw, Save, Send } from "lucide-react";
 import { applyContextPolicy, formatMoney, mapError, serializeCreateDocument, type Doc, type DocField, type DocTypeMeta } from "@metaforge/core";
 import type { FieldServices } from "@metaforge/controls";
 import { Button, toast } from "@metaforge/ui";
@@ -41,6 +41,8 @@ export interface AlumdoorPurchaseOrderCreateProps {
   closeRequest?: number;
   onCreated: (name: string) => void;
   onSaved?: (name: string) => void;
+  /** Mở bản in mẫu ALUMDOOR của đơn mua. */
+  onPreviewCreated?: (name: string) => void;
   onCancel: () => void;
 }
 
@@ -218,6 +220,33 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
   const [canWrite, setCanWrite] = useState(false);
   const [submitAllowed, setSubmitAllowed] = useState(false);
   const [workingName, setWorkingName] = useState(() => text(props.name));
+  const [taoPhieuNhap, setTaoPhieuNhap] = useState(false);
+
+  /**
+   * "Đơn mua → Phiếu nhập" — HDSD §1 mục "Hàng về".
+   *
+   * Trước 23/08/2026 thanh nút của đơn đã ghi sổ chỉ có Đóng và Tính lại, nên thủ kho phải tự
+   * sang màn khác rồi gõ lại số đơn. `alumdoor.purchase.receipt_from_order` vốn đã có sẵn và tự
+   * lấy PHẦN CÒN LẠI chưa nhận, chỉ là chưa ai nối vào nút.
+   */
+  const moPhieuNhap = async () => {
+    if (!workingName || taoPhieuNhap) return;
+    setTaoPhieuNhap(true);
+    try {
+      const ketQua = await adapter.callPost<{ purchase_receipt?: string }>(
+        "alumdoor.purchase.receipt_from_order",
+        { purchase_order: workingName },
+      );
+      const phieu = text(ketQua?.purchase_receipt);
+      if (!phieu) throw new Error("Server không trả về số phiếu nhập.");
+      toast.success(`Đã tạo phiếu nhập nháp ${phieu} cho phần còn lại của ${workingName}.`);
+      window.location.assign(`/app/${encodeURIComponent("Purchase Receipt")}/${encodeURIComponent(phieu)}`);
+    } catch (error) {
+      toast.error(adapter.mapError(error).message);
+    } finally {
+      setTaoPhieuNhap(false);
+    }
+  };
   const [dirty, setDirty] = useState(false);
   const [previewPending, setPreviewPending] = useState(0);
   const [previewError, setPreviewErrorState] = useState("");
@@ -1080,6 +1109,10 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
             <strong className="tabular-nums">Tạm tính: {money(grandTotal)} ₫</strong>
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
+            {docstatus === 1 && workingName ? <Button type="button" variant="outline" size="sm" disabled={taoPhieuNhap} onClick={() => void moPhieuNhap()}>
+              {taoPhieuNhap ? <Loader2 className="size-3.5 animate-spin" /> : <PackagePlus className="size-3.5" />} Đơn mua → Phiếu nhập
+            </Button> : null}
+            {isExisting && props.onPreviewCreated ? <Button type="button" variant="outline" size="sm" onClick={() => props.onPreviewCreated?.(workingName)}><Eye className="size-3.5" /> In / xem</Button> : null}
             <Button type="button" variant="ghost" size="sm" onClick={requestClose}>{isExisting ? "Đóng" : "Hủy"}</Button>
             <Button type="button" variant="outline" size="sm" disabled={interactionBusy || previewPending > 0 || formReadOnly || !activeRows.length} onClick={() => void refreshAll(true)}>
               {refreshing ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />} Tính lại

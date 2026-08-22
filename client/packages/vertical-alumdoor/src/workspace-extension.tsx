@@ -43,6 +43,9 @@ const ALUMDOOR_PRINT_FORMAT: Record<string, string> = {
   // giao khách in ra mẫu rỗng tiếng Anh. Chỉ đích danh thì hết.
   "Sales Invoice": "Hoá đơn ALUMDOOR",
   "Quotation": "Báo giá ALUMDOOR",
+  // Đơn mua có HAI mẫu ALUMDOOR ("Đơn mua hàng" is_default=0, "Đơn nhập hàng" is_default=1);
+  // chỉ đích danh để nút In không phụ thuộc vào thứ tự tên.
+  "Purchase Order": "Đơn mua hàng ALUMDOOR",
   "Purchase Receipt": "Phiếu nhập kho ALUMDOOR",
   "Production Request": "Phiếu yêu cầu sản xuất ALUMDOOR",
   "Cut Order": "Phiếu cắt nhôm ALUMDOOR",
@@ -129,6 +132,7 @@ export const alumdoorWorkspaceExtension: DoctypeWorkspaceExtension = {
               name={decoded}
               onCreated={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
               onSaved={() => {}}
+              onPreviewCreated={(currentName) => onNavigate(alumdoorPrintPath(printBase, doctype, currentName))}
               onCancel={() => onNavigate(listPath)}
             />
           </Suspense>
