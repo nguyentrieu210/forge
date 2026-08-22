@@ -103,7 +103,7 @@ const moveFieldsAfter = (dt, names, anchor) => {
  * `unchanged` khi manifest byte-identical, nên giữ nguyên số cũ là mọi sửa đổi metadata nằm im
  * trong file mà không bao giờ vào tenant.
  */
-brief.version = "2.27.0";
+brief.version = "2.28.0";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 for (const role of ["General Accountant", "Chief Accountant", "Director", "Kế toán tổng hợp", "Kế toán trưởng", "Giám đốc"]) {
   if (!brief.roles.includes(role)) brief.roles.push(role);
@@ -3303,6 +3303,104 @@ brief.fixtures.push(
     data: { uom_name: "Chuyến", must_be_whole_number: true },
   },
 );
+/*
+ * ── Hoá đơn bán giữ được VAT của đơn hàng (23/08/2026) ──
+ *
+ * Đơn khai VAT bằng MỘT tỷ lệ ở đầu đơn, còn bộ máy tính tiền và ghi sổ chỉ hiểu bảng `taxes`.
+ * Không có bảng đó thì hoá đơn lập từ đơn ra `grand_total` bằng đúng tiền hàng: đo được
+ * DH-2026-0001 VAT 8% = 188.800 đ mà hoá đơn của chính nó chỉ ghi 2.360.000 đ, tức công nợ phải
+ * thu hụt đúng phần thuế và không màn nào báo.
+ */
+brief.doctypes.push({
+  "//": "Dòng thuế của hoá đơn. Đơn hàng khai VAT bằng MỘT tỷ lệ ở đầu đơn (`vat_rate`), nhưng bộ máy tính tiền và ghi sổ của nền tảng chỉ hiểu bảng `taxes` — nên lúc lập hoá đơn từ đơn, tỷ lệ đó được dịch thành một dòng ở đây. Không có bảng này thì `calculateSalesTotals` nhận mảng rỗng, `grand_total` bằng đúng tiền hàng, và VAT biến mất khỏi sổ: đo ngày 23/08/2026, DH-2026-0001 có VAT 8% = 188.800 đ mà HD-2026-0010 lập từ chính đơn đó chỉ ghi 2.360.000 đ. Công nợ phải thu hụt đúng phần thuế.",
+  "name": "Sales Invoice Tax",
+  "child": true,
+  "label": "Dòng thuế hoá đơn",
+  "group": "Công nợ",
+  "naming": "autoincrement",
+  "title": "account",
+  "list": [
+    "account",
+    "rate",
+    "tax_amount"
+  ],
+  "fields": [
+    {
+      "label": "Tài khoản thuế",
+      "fieldname": "account",
+      "fieldtype": "Link",
+      "options": "Account",
+      "required": true,
+      "surface": "quick"
+    },
+    {
+      "label": "Cách tính",
+      "fieldname": "charge_type",
+      "fieldtype": "Select",
+      "options": "On Net Total",
+      "default": "On Net Total",
+      "required": true,
+      "surface": "quick"
+    },
+    {
+      "label": "Thuế suất %",
+      "fieldname": "rate",
+      "fieldtype": "Percent",
+      "required": true,
+      "surface": "quick"
+    },
+    {
+      "label": "Tiền thuế",
+      "fieldname": "tax_amount",
+      "fieldtype": "Currency",
+      "read_only": true,
+      "serverEnforced": true,
+      "surface": "quick"
+    }
+  ],
+  "permissions": {
+    "Chủ xưởng": "rwc",
+    "Kế toán": "rwc",
+    "Kinh doanh": "r"
+  },
+  "form": {
+    "fields": [
+      "account",
+      "charge_type",
+      "rate",
+      "tax_amount"
+    ]
+  },
+  "quickEntry": {
+    "fields": [
+      "account",
+      "charge_type",
+      "rate",
+      "tax_amount"
+    ]
+  }
+});
+{
+  const hoaDon = brief.doctypes.find((entry) => entry.name === "Sales Invoice");
+  const ten = (field) => (typeof field === "string" ? field.split(":")[0].trim() : field.fieldname);
+  if (!hoaDon.fields.some((field) => ten(field) === "taxes")) {
+    hoaDon.fields.splice(hoaDon.fields.findIndex((field) => ten(field) === "items") + 1, 0, "taxes:Table(Sales Invoice Tax) Thuế");
+  }
+  if (!hoaDon.fields.some((field) => ten(field) === "total_amount")) {
+    hoaDon.fields.splice(hoaDon.fields.findIndex((field) => ten(field) === "grand_total"), 0, "total_amount:Currency~ Tổng cộng tiền hàng");
+  }
+  if (!hoaDon.list.includes("total_amount")) hoaDon.list.splice(hoaDon.list.indexOf("grand_total"), 0, "total_amount");
+}
+brief.fixtures.push({
+  "//": "TT200 tài khoản 3331 — thuế GTGT đầu ra phải nộp. Thiếu tài khoản này thì VAT trên hoá đơn không có chỗ ghi có, nên bảng `taxes` dựng ra cũng không hạch toán được.",
+  "type": "Account",
+  "name": "Thuế GTGT phải nộp",
+  "data": {
+    "account_type": "Liability"
+  }
+});
+note("Hoá đơn bán: +bảng thuế + tài khoản VAT đầu ra");
+
 note("Master từng chỉ sống ở D1: +10 fixture (2 bộ đo, 5 nhóm hàng, 2 kho, 1 ĐVT)");
 
 note(`UI ?? child-grid presentation metadata: ${childPresentation.migrated} child DocType`);

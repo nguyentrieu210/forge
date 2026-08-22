@@ -11,6 +11,8 @@ interface SalesOrderDoc extends Json {
   currency?: string;
   transaction_date?: string;
   delivery_date?: string;
+  /** VAT khai bằng MỘT tỷ lệ ở đầu đơn; hoá đơn dịch nó thành một dòng trong bảng `taxes`. */
+  vat_rate?: number | string;
   install_address?: string;
   items?: Json[];
 }

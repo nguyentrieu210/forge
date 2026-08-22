@@ -64,8 +64,9 @@ test("presentation helper migrates every Alumdoor child DocType without changing
   const brief = sourceBrief();
   const before = new Map(brief.doctypes.filter((dt) => dt.child === true).map((dt) => [dt.name, dt.fields.map((field) => typeof field === "string" ? field.split(":")[0].trim() : field.fieldname)]));
   const result = applyAlumdoorChildPresentation(brief);
-  // 39 ở manifest 2.11.1; mọi child mới phải tự động đi qua cùng một chính sách trình bày.
-  assert.equal(result.migrated, 39);
+  // 40 từ 23/08/2026: thêm `Sales Invoice Tax` để hoá đơn giữ được VAT của đơn hàng.
+  // Mọi child mới phải tự động đi qua cùng một chính sách trình bày.
+  assert.equal(result.migrated, 40);
   for (const dt of brief.doctypes.filter((value) => value.child === true)) {
     assert.deepEqual(dt.fields.map((field) => field.fieldname), before.get(dt.name), `${dt.name} field order changed`);
     assert.ok(dt.fields.every((field) => ["quick", "expanded", "internal"].includes(field.surface)), `${dt.name} has missing surface`);
@@ -182,8 +183,9 @@ test("all child doctypes own presentation while conditional required fields stay
   applyAlumdoorChildPresentation(brief);
   const pkg = compileWithUiPolicies(brief);
   const children = pkg.doctypes.filter((doctype) => doctype.is_child === true);
-  // Khóa theo manifest 2.11.1 để child mới không lọt khỏi hợp đồng UI mà không có kiểm thử.
-  assert.equal(children.length, 39);
+  // Khoá số lượng để child mới không lọt khỏi hợp đồng UI mà không có kiểm thử.
+  // 40 từ 23/08/2026: thêm `Sales Invoice Tax` để hoá đơn giữ được VAT của đơn hàng.
+  assert.equal(children.length, 40);
   const missing = children
     .filter((doctype) => !doctype.viewPolicy?.form?.enabled || !doctype.viewPolicy?.quickEntry?.enabled)
     .map((doctype) => doctype.name);

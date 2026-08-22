@@ -1,7 +1,7 @@
 {
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "2.27.0",
+  "version": "2.28.0",
   "metaContractVersion": 1,
   "platform_requires": "1.0.0",
   "requires": [
@@ -10915,6 +10915,160 @@
       "revision": 1
     },
     {
+      "name": "Sales Invoice Tax",
+      "kind": "child_table",
+      "label": "Dòng thuế hoá đơn",
+      "module": "Alumdoor",
+      "is_child": true,
+      "is_tree": false,
+      "is_single": false,
+      "is_submittable": false,
+      "track_changes": true,
+      "allow_rename": false,
+      "autoname": "autoincrement",
+      "title_field": "account",
+      "fields": [
+        {
+          "label": "Tài khoản thuế",
+          "fieldname": "account",
+          "fieldtype": "Link",
+          "options": "Account",
+          "required": true,
+          "surface": "quick",
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "valueSource": "user",
+          "editMode": "editable",
+          "serverEnforced": false,
+          "idx": 1
+        },
+        {
+          "label": "Cách tính",
+          "fieldname": "charge_type",
+          "fieldtype": "Select",
+          "options": "On Net Total",
+          "default": "On Net Total",
+          "required": true,
+          "surface": "quick",
+          "valueSource": "default",
+          "editMode": "editable",
+          "serverEnforced": false,
+          "idx": 2
+        },
+        {
+          "label": "Thuế suất %",
+          "fieldname": "rate",
+          "fieldtype": "Percent",
+          "required": true,
+          "surface": "quick",
+          "in_list_view": true,
+          "in_standard_filter": false,
+          "valueSource": "user",
+          "editMode": "editable",
+          "serverEnforced": false,
+          "idx": 3
+        },
+        {
+          "label": "Tiền thuế",
+          "fieldname": "tax_amount",
+          "fieldtype": "Currency",
+          "read_only": true,
+          "serverEnforced": true,
+          "surface": "quick",
+          "in_list_view": true,
+          "in_standard_filter": false,
+          "valueSource": "formula",
+          "editMode": "readonly",
+          "idx": 4
+        }
+      ],
+      "viewPolicy": {
+        "list": {
+          "enabled": false,
+          "columns": [
+            "account",
+            "rate",
+            "tax_amount"
+          ]
+        },
+        "form": {
+          "enabled": true,
+          "fields": [
+            "account",
+            "charge_type",
+            "rate",
+            "tax_amount"
+          ]
+        },
+        "quickEntry": {
+          "enabled": true,
+          "fields": [
+            "account",
+            "charge_type",
+            "rate",
+            "tax_amount"
+          ]
+        },
+        "kanban": {
+          "enabled": false
+        },
+        "calendar": {
+          "enabled": false
+        },
+        "gantt": {
+          "enabled": false
+        },
+        "chart": {
+          "enabled": false
+        },
+        "mobile": {}
+      },
+      "permissions": [
+        {
+          "role": "Chủ xưởng",
+          "read": true,
+          "write": true,
+          "create": true,
+          "print": true,
+          "email": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "Kế toán",
+          "read": true,
+          "write": true,
+          "create": true,
+          "print": true,
+          "email": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "Kinh doanh",
+          "read": true,
+          "print": true,
+          "email": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "System Manager",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "cancel": true,
+          "amend": true,
+          "print": true,
+          "email": true,
+          "report": true,
+          "export": true
+        }
+      ],
+      "revision": 1
+    },
+    {
       "name": "Sales Invoice",
       "kind": "transaction",
       "label": "Hoá đơn bán hàng",
@@ -11070,6 +11224,30 @@
           "idx": 11
         },
         {
+          "fieldname": "taxes",
+          "label": "Thuế",
+          "fieldtype": "Table",
+          "options": "Sales Invoice Tax",
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": false,
+          "idx": 12
+        },
+        {
+          "fieldname": "total_amount",
+          "label": "Tổng cộng tiền hàng",
+          "fieldtype": "Currency",
+          "read_only": true,
+          "in_list_view": true,
+          "in_standard_filter": false,
+          "valueSource": "formula",
+          "editMode": "readonly",
+          "surface": "expanded",
+          "serverEnforced": true,
+          "idx": 13
+        },
+        {
           "fieldname": "grand_total",
           "label": "Tổng tiền",
           "fieldtype": "Currency",
@@ -11080,7 +11258,7 @@
           "editMode": "readonly",
           "surface": "expanded",
           "serverEnforced": true,
-          "idx": 12
+          "idx": 14
         },
         {
           "fieldname": "outstanding_amount",
@@ -11093,7 +11271,7 @@
           "editMode": "readonly",
           "surface": "expanded",
           "serverEnforced": true,
-          "idx": 13
+          "idx": 15
         }
       ],
       "viewPolicy": {
@@ -11102,6 +11280,7 @@
           "columns": [
             "customer",
             "posting_at",
+            "total_amount",
             "grand_total",
             "outstanding_amount"
           ]
@@ -11117,6 +11296,8 @@
             "default_income_account",
             "round_off_account",
             "items",
+            "taxes",
+            "total_amount",
             "grand_total",
             "outstanding_amount"
           ]
@@ -29659,6 +29840,13 @@
     {
       "record_type": "Account",
       "name": "Hàng nhận chưa có hoá đơn",
+      "data": {
+        "account_type": "Liability"
+      }
+    },
+    {
+      "record_type": "Account",
+      "name": "Thuế GTGT phải nộp",
       "data": {
         "account_type": "Liability"
       }

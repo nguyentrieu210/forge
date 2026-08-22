@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "2.27.0",
+  "version": "2.28.0",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -1879,6 +1879,14 @@
     {
       "type": "Account",
       "name": "Hàng nhận chưa có hoá đơn",
+      "data": {
+        "account_type": "Liability"
+      }
+    },
+    {
+      "//": "TT200 tài khoản 3331 — thuế GTGT đầu ra phải nộp. Thiếu tài khoản này thì VAT trên hoá đơn không có chỗ ghi có, nên bảng `taxes` dựng ra cũng không hạch toán được.",
+      "type": "Account",
+      "name": "Thuế GTGT phải nộp",
       "data": {
         "account_type": "Liability"
       }
@@ -10018,6 +10026,75 @@
       }
     },
     {
+      "//": "Dòng thuế của hoá đơn. Đơn hàng khai VAT bằng MỘT tỷ lệ ở đầu đơn (`vat_rate`), nhưng bộ máy tính tiền và ghi sổ của nền tảng chỉ hiểu bảng `taxes` — nên lúc lập hoá đơn từ đơn, tỷ lệ đó được dịch thành một dòng ở đây. Không có bảng này thì `calculateSalesTotals` nhận mảng rỗng, `grand_total` bằng đúng tiền hàng, và VAT biến mất khỏi sổ: đo ngày 23/08/2026, DH-2026-0001 có VAT 8% = 188.800 đ mà HD-2026-0010 lập từ chính đơn đó chỉ ghi 2.360.000 đ. Công nợ phải thu hụt đúng phần thuế.",
+      "name": "Sales Invoice Tax",
+      "child": true,
+      "label": "Dòng thuế hoá đơn",
+      "group": "Công nợ",
+      "naming": "autoincrement",
+      "title": "account",
+      "list": [
+        "account",
+        "rate",
+        "tax_amount"
+      ],
+      "fields": [
+        {
+          "label": "Tài khoản thuế",
+          "fieldname": "account",
+          "fieldtype": "Link",
+          "options": "Account",
+          "required": true,
+          "surface": "quick"
+        },
+        {
+          "label": "Cách tính",
+          "fieldname": "charge_type",
+          "fieldtype": "Select",
+          "options": "On Net Total",
+          "default": "On Net Total",
+          "required": true,
+          "surface": "quick"
+        },
+        {
+          "label": "Thuế suất %",
+          "fieldname": "rate",
+          "fieldtype": "Percent",
+          "required": true,
+          "surface": "quick"
+        },
+        {
+          "label": "Tiền thuế",
+          "fieldname": "tax_amount",
+          "fieldtype": "Currency",
+          "read_only": true,
+          "serverEnforced": true,
+          "surface": "quick"
+        }
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kế toán": "rwc",
+        "Kinh doanh": "r"
+      },
+      "form": {
+        "fields": [
+          "account",
+          "charge_type",
+          "rate",
+          "tax_amount"
+        ]
+      },
+      "quickEntry": {
+        "fields": [
+          "account",
+          "charge_type",
+          "rate",
+          "tax_amount"
+        ]
+      }
+    },
+    {
       "//": "Hoá đơn bán hàng — nơi CÔNG NỢ phát sinh. debit_to là tài khoản phải thu.",
       "name": "Sales Invoice",
       "label": "Hoá đơn bán hàng",
@@ -10029,6 +10106,7 @@
       "list": [
         "customer",
         "posting_at",
+        "total_amount",
         "grand_total",
         "outstanding_amount"
       ],
@@ -10052,6 +10130,8 @@
         "default_income_account:Link(Account)!=(Doanh thu bán hàng) Tài khoản doanh thu",
         "round_off_account:Link(Account)=(Chênh lệch làm tròn) Tài khoản làm tròn",
         "items:Table(Sales Invoice Item)! Dòng hàng",
+        "taxes:Table(Sales Invoice Tax) Thuế",
+        "total_amount:Currency~ Tổng cộng tiền hàng",
         "grand_total:Currency~ Tổng tiền",
         "outstanding_amount:Currency~ Còn nợ"
       ],

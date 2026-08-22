@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 // PHẢI đi cùng `brief.version` trong build-alumdoor-v2-brief.mjs (thực tế do sidecar
 // alumdoor-v2.integrations.json chốt). Đây là bản chép thứ hai có chủ đích: nó tồn tại để
 // audit BÁO ĐỘNG khi ai đó đổi metadata mà quên chạy lại kiểm kê. Bump brief thì bump cả đây.
-const EXPECTED_METADATA_VERSION = "2.27.0";
+const EXPECTED_METADATA_VERSION = "2.28.0";
 const ITEM_NATURES = new Set(["Hàng tồn kho", "Dịch vụ", "Tài sản"]);
 const MATERIAL_STAGES = new Set(["Nguyên vật liệu", "Vật tư tiêu hao", "Bán thành phẩm", "Thành phẩm", "Hàng hoá"]);
 const SUPPLY_TYPES = new Set(["Mua ngoài", "Tự sản xuất", "Mua hoặc sản xuất"]);

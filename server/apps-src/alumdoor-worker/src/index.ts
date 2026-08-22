@@ -1798,6 +1798,8 @@ interface SalesOrderDoc {
   company?: string;
   currency?: string;
   install_address?: string;
+  /** VAT khai bằng MỘT tỷ lệ ở đầu đơn; hoá đơn dịch nó thành một dòng trong bảng `taxes`. */
+  vat_rate?: number | string;
   items?: Array<Record<string, unknown>>;
 }
 
@@ -2104,6 +2106,14 @@ async function previewInvoice(call: PlatformCall, args: Record<string, unknown>)
  * bấm ghi sổ sau khi soát hạn thanh toán và tài khoản phải thu. Nhân vẫn chặn lần cuối nếu
  * số lượng vượt phần còn lại của đơn.
  */
+/**
+ * Tài khoản ghi có phần VAT đầu ra của hoá đơn bán — TT200 tài khoản 3331.
+ *
+ * Khai ở đây chứ không đọc từ cấu hình vì hiện chart chỉ có đúng một tài khoản thuế đầu ra;
+ * ngày nào có nhiều thuế suất trên nhiều tài khoản thì chuyển sang danh mục rồi tra.
+ */
+const TAI_KHOAN_VAT_DAU_RA = "Thuế GTGT phải nộp";
+
 async function invoiceFromSalesOrder(call: PlatformCall, args: Record<string, unknown>): Promise<Response> {
   const order = String(args.sales_order ?? "");
   if (!order) return refuse("Cần chọn đơn hàng.");
@@ -2113,6 +2123,21 @@ async function invoiceFromSalesOrder(call: PlatformCall, args: Record<string, un
   catch (error) { return refuse(error instanceof Error ? error.message : "không đọc được đơn hàng"); }
   if (!items.length) return refuse(`Đơn hàng ${order} đã xuất hoá đơn đủ.`);
   const billingLines = items.map(({ delivered_qty: _delivered, ...line }) => line);
+  /**
+   * VAT phải theo hoá đơn, không được rơi lại ở đơn hàng.
+   *
+   * Đơn khai VAT bằng MỘT tỷ lệ ở đầu đơn (`vat_rate`); bộ máy tính tiền và ghi sổ của nền tảng
+   * chỉ hiểu bảng `taxes`. Trước 23/08/2026 chỗ này không dịch qua, nên hoá đơn lập từ đơn có
+   * `grand_total` bằng đúng tiền hàng: DH-2026-0001 VAT 8% = 188.800 đ, mà HD-2026-0010 lập từ
+   * chính nó chỉ ghi 2.360.000 đ. Công nợ phải thu hụt đúng phần thuế, và không màn nào báo.
+   *
+   * Gốc tính là NET TOTAL của hoá đơn — tức phần CÒN LẠI chưa xuất hoá đơn, không phải tổng đơn.
+   * Xuất hoá đơn làm nhiều lần thì mỗi lần chịu thuế trên đúng phần của lần đó.
+   */
+  const vatRate = Number(sales.vat_rate ?? 0);
+  const taxes = Number.isFinite(vatRate) && vatRate > 0
+    ? [{ row_id: "VAT", account: TAI_KHOAN_VAT_DAU_RA, charge_type: "On Net Total", rate: vatRate }]
+    : [];
   const created = await call("resource/Sales%20Invoice", {
     method: "POST",
     body: JSON.stringify({
@@ -2124,6 +2149,7 @@ async function invoiceFromSalesOrder(call: PlatformCall, args: Record<string, un
       posting_at: new Date().toISOString(),
       ...(args.due_date ? { due_date: String(args.due_date) } : {}),
       items: billingLines,
+      ...(taxes.length ? { taxes } : {}),
     }),
   });
   if (!created.ok) return refuse(`Không tạo được hoá đơn: ${(await created.text()).slice(0, 200)}`);
