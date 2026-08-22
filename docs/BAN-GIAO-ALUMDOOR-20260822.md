@@ -74,6 +74,46 @@ một BOM và số bộ thì tự đổ ra đủ dòng vật tư, thợ không g
 
 ---
 
+## Sửa theo hai bản test UI ngày 23/08
+
+Bản test dòng BÁN nêu 4 lỗi chặn, bản test MUA nêu 4. Đã sửa 5, mỗi cái đều đo lại trên tenant
+chứ không suy đoán.
+
+| Lỗi | Gốc thật | Bằng chứng sau khi sửa |
+|---|---|---|
+| Báo giá không lập nổi cho cửa | Ô "Mã giá" trống bị hoá thành `STANDARD` **trước** khi xuống tầng tra giá, mà bảng giá cửa đã bỏ hết dòng STANDARD | `CDL_DLM_1LY` 9 m² → `TRON_BO` @540.000 = 4.860.000, **đúng bằng đơn hàng** |
+| Hoá đơn đánh rơi VAT | `Sales Invoice` không có bảng `taxes`, không có tài khoản thuế đầu ra | phải thu 2.548.800 khớp đơn; sổ cái ghi đủ ba vế và **cân** |
+| "Cần duyệt" chỉ là trang trí | Chốt chặn CÓ thật, nhưng vai được duyệt là `Sales Manager`/`System Manager` — **không tồn tại** ở Alumdoor | nay Chủ xưởng · Giám đốc · Director duyệt được; `Kinh doanh` thì không |
+| Không đặt mua được nhôm cây | Ba gốc chồng nhau (xem dưới) | đúng ca của bản test: 200 cây × 7,2 m → **34.729.920 đ** |
+| Nhập số vào tự xoá | Dòng nhôm chưa đủ dữ kiện thì xem trước **xoá luôn ô Kg** | gõ Kg giữ nguyên qua mọi bước |
+
+Ba gốc của lỗi đặt mua nhôm cây, thiếu vá cái nào cũng chưa chạy được:
+
+1. **Xem trước và lúc lưu suy hệ số quy đổi khác nhau.** Màn gửi lên đúng con số mà server vừa
+   bảo là sai. Số cây trên một kg đổi theo chiều dài từng chuyến, nên hệ số là thuộc tính của
+   **dòng**, không phải của mặt hàng — sửa bảng quy đổi trong danh mục không cứu được.
+2. **Doctype `Item` không khai `has_batch_no`, `has_catch_weight`, `weight_uom`.** Ẩn khỏi form
+   thì đúng, nhưng gỡ khỏi doctype thì bản ghi đọc về bị lược mất — mà **mười chỗ** trong mã
+   nguồn đọc chúng để quyết định theo lô, cân thực tế và cung–cầu nhôm.
+3. **Câu lỗi ghi "theo Item"** kể cả khi số đó vừa suy từ chính dòng, nên người ta đi sửa danh
+   mục — chỗ không có lỗi.
+
+Thêm: đơn bán có nút **Xuất kho** và **Huỷ duyệt để sửa** (ghi sổ rồi vẫn sửa được chừng nào
+hàng chưa rời kho; có phiếu xuất kho thì khoá chặt). Đơn mua có nút **Đơn mua → Phiếu nhập** và
+**In**. Màn lập **phiếu kho bằng tay** — trước đó `Stock Entry` chỉ mở được từ lệnh sản xuất, mà
+lệnh sản xuất đang bằng 0.
+
+### Còn lại của hai bản test
+
+| Lỗi | Vì sao chưa sửa |
+|---|---|
+| Giữ chỗ tồn chưa nối (bán §2.4) | Chủ xưởng đã chốt mốc **phát lệnh sản xuất**; chưa nối dây |
+| `received_percentage` đọc hai đường ra hai số (mua §2.2) | Tính lúc đọc chứng từ nhưng **không ghi lại**, nên danh sách và báo cáo thấy 0. Sửa đúng chỗ nằm trong kernel dùng chung |
+| KPI gắn nhãn "cây" cứng (mua §2.4) | Mã mua theo Kg luôn ra 0 |
+| Thiếu 5/8 chứng từ và 4/6 báo cáo mua hàng (mua §4) | Là việc dựng mới, không phải sửa lỗi |
+
+---
+
 ## 1. Chạy lên như thế nào
 
 ```bat
