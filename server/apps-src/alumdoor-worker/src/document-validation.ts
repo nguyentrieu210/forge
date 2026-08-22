@@ -1054,7 +1054,16 @@ export async function validateTransactionLines(
     const declaredFactor = row.conversion_factor === undefined || row.conversion_factor === null || row.conversion_factor === ""
       ? expectedFactor : Number(row.conversion_factor);
     if (!Number.isFinite(declaredFactor) || declaredFactor <= 0 || !nearlyEqual(declaredFactor, expectedFactor)) {
-      return refuse(`${line}: hệ số quy đổi phải là ${expectedFactor} theo Item, không nhập tuỳ ý trên chứng từ.`);
+      /*
+       * Nói đúng SỐ ĐÓ TỪ ĐÂU RA. Câu cũ luôn ghi "theo Item" kể cả khi số kỳ vọng vừa được
+       * suy từ chính dòng (nhánh `lotFactorFromLine` ngay trên), nên người dùng đi sửa danh mục
+       * — chỗ không có lỗi — thay vì nhìn vào số cây/số kg của dòng. Đo 23/08/2026: đúng cái
+       * câu này làm một đợt test đi lạc.
+       */
+      const nguon = lotFactorFromLine
+        ? `= ${Number(row.qty_bar)} cây ÷ ${Number(row.qty)} ${uom || "đơn vị mua"} của chính dòng này`
+        : "theo bảng quy đổi của Item";
+      return refuse(`${line}: hệ số quy đổi phải là ${expectedFactor} ${nguon}, không nhập tuỳ ý trên chứng từ.`);
     }
     const stockQuantity = Number(row.stock_qty);
     if (row.stock_qty !== undefined && row.stock_qty !== null && row.stock_qty !== ""

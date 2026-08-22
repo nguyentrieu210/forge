@@ -61,12 +61,26 @@ test("Alumdoor Item declares reusable inventory measurement profiles", () => {
   assert.ok(v2Field("Material Specification", "scrap_threshold_m"));
   assert.ok(v2Field("Cutting Policy", "kerf_mm"));
   assert.equal(v2Field("Item", "section_inventory")?.label, "Đơn vị và theo dõi");
+  /**
+   * Ba ô kỹ thuật của nhôm cây: KHAI nhưng ẨN, không phải gỡ hẳn.
+   *
+   * Ẩn khỏi form là đúng — chủ xưởng không cần thấy chúng. Nhưng gỡ khỏi doctype thì bản ghi
+   * đọc về bị lược mất, mà MƯỜI chỗ trong mã nguồn đọc `item.has_batch_no` /
+   * `item.has_catch_weight` để quyết định theo lô, cân thực tế và cung–cầu nhôm. Gỡ hẳn là tắt
+   * cả mười chỗ đó một cách lặng lẽ: đo 23/08/2026, mọi đơn mua nhôm cây chết với "phải bật
+   * has_batch_no; phải bật has_catch_weight; weight_uom phải là Kg" trong khi D1 có đủ dữ liệu.
+   */
+  for (const kyThuat of ["has_batch_no", "has_catch_weight", "weight_uom"]) {
+    const field = v2Field("Item", kyThuat);
+    assert.ok(field, `${kyThuat} phải còn khai trên doctype — mã nguồn đọc nó`);
+    assert.equal(field.hidden, true, `${kyThuat} phải ẩn khỏi form vật tư`);
+  }
   for (const removed of [
     "tab_item_accounts", "section_accounts", "reorder_levels", "default_warehouse",
     "inventory_account", "cogs_account", "income_account", "expense_account",
     "standard_rate", "valuation_method", "brand", "manufacturer", "manufacturer_part_no",
-    "default_color", "allowed_colors", "barcodes", "tab_item_identity", "tab_item_tracking", "section_tracking", "has_batch_no",
-    "has_serial_no", "allow_negative_stock", "shelf_life_in_days", "has_catch_weight", "weight_uom",
+    "default_color", "allowed_colors", "barcodes", "tab_item_identity", "tab_item_tracking", "section_tracking",
+    "has_serial_no", "allow_negative_stock", "shelf_life_in_days",
   ]) {
     assert.equal(v2Field("Item", removed), undefined, `${removed} không còn hiện trên form vật tư`);
   }

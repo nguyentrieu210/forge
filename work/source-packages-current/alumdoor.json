@@ -1,7 +1,7 @@
 {
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "2.28.0",
+  "version": "2.29.0",
   "metaContractVersion": 1,
   "platform_requires": "1.0.0",
   "requires": [
@@ -4137,6 +4137,42 @@
           "idx": 30
         },
         {
+          "label": "Quản lý theo lô",
+          "fieldname": "has_batch_no",
+          "fieldtype": "Check",
+          "hidden": true,
+          "//": "Nhôm cây bắt buộc có ba ô này — `aluminumItemContract` từ chối mã thiếu chúng. Trước 23/08/2026 chúng KHÔNG được khai trên doctype nên bản ghi đọc về bị lược mất, và mọi đơn mua nhôm cây chết với \"phải bật has_batch_no; phải bật has_catch_weight; weight_uom phải là Kg\" — dù D1 có đủ dữ liệu. Luồng chính của phân hệ mua đứng hẳn vì ba ô không khai.",
+          "valueSource": "user",
+          "editMode": "hidden",
+          "surface": "internal",
+          "serverEnforced": true,
+          "idx": 31
+        },
+        {
+          "label": "Cân thực tế",
+          "fieldname": "has_catch_weight",
+          "fieldtype": "Check",
+          "hidden": true,
+          "//": "Mua theo Kg cân thực, tồn theo cây đếm thực — hai con số độc lập, không suy ra nhau.",
+          "valueSource": "user",
+          "editMode": "hidden",
+          "surface": "internal",
+          "serverEnforced": true,
+          "idx": 32
+        },
+        {
+          "label": "ĐVT khối lượng",
+          "fieldname": "weight_uom",
+          "fieldtype": "Link",
+          "options": "UOM",
+          "hidden": true,
+          "valueSource": "user",
+          "editMode": "hidden",
+          "surface": "internal",
+          "serverEnforced": true,
+          "idx": 33
+        },
+        {
           "label": "Trường SL tồn mua",
           "fieldname": "purchase_stock_qty_field",
           "fieldtype": "Data",
@@ -4146,7 +4182,7 @@
           "editMode": "hidden",
           "surface": "internal",
           "serverEnforced": true,
-          "idx": 31
+          "idx": 34
         },
         {
           "label": "Trường SL phân bổ mua",
@@ -4158,7 +4194,7 @@
           "editMode": "hidden",
           "surface": "internal",
           "serverEnforced": true,
-          "idx": 32
+          "idx": 35
         },
         {
           "label": "ĐVT phân bổ mua",
@@ -4171,7 +4207,7 @@
           "editMode": "hidden",
           "surface": "internal",
           "serverEnforced": true,
-          "idx": 33
+          "idx": 36
         }
       ],
       "viewPolicy": {

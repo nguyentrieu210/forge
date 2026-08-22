@@ -624,6 +624,20 @@ async function previewPurchase(call: PlatformCall, args: Json, row: Json, fields
     const match = item.uom_conversions.find((entry) => text((entry as Json)?.uom) === transactionUom) as Json | undefined;
     factor = positive(match?.conversion_factor);
   }
+  /*
+   * Nhôm cây mua theo Kg: hệ số đến từ CHÍNH DÒNG, không từ bảng quy đổi của mặt hàng.
+   *
+   * Số cây trên một kg đổi theo chiều dài từng chuyến — phiếu Tiến Đạt 22/7 có ba dòng cùng mã
+   * A282 dài 8,50 · 7,20 · 6,60 m, ba hệ số khác nhau. `document-validation.ts` đã suy đúng như
+   * vậy khi lưu (`lotFactorFromLine`), nhưng xem trước lại trả hệ số của Item, nên màn gửi lên
+   * một con số mà chính server vừa bảo là sai. Đo 23/08/2026: bảng quy đổi của `NHOM_AL71` đang
+   * để tạm 1 Kg = 1 Cây, nên mọi đơn mua nhôm cây bị từ chối — luồng chính của phân hệ đứng hẳn.
+   *
+   * Hai bên phải suy CÙNG MỘT CÁCH, nếu không thì sửa bảng quy đổi cũng không cứu được.
+   */
+  const soCay = positive(row.qty_bar);
+  const soKg = positive(row.qty);
+  if (aluminum && soCay && soKg && transactionUom !== stockUom) factor = soCay / soKg;
   if (factor) setIfField(patch, fields, "conversion_factor", factor);
 
   if (fields.has("rate") && (changed === "item_code" || row.rate == null || row.rate === "")) {
@@ -646,8 +660,19 @@ async function previewPurchase(call: PlatformCall, args: Json, row: Json, fields
       patch.theoretical_kg = kg;
       if (fields.has("qty")) patch.qty = kg;
     } else {
+      /*
+       * Dòng chưa đủ dữ kiện thì THÔI không tính, chứ KHÔNG xoá ô người ta đang gõ.
+       *
+       * Bản cũ xoá luôn `qty`. Mà dòng nhôm nhập theo thứ tự tự nhiên — chọn mã, gõ số Kg, rồi
+       * mới tới chiều dài — nên đúng lúc gõ xong số Kg thì dòng vẫn "chưa đủ" và con số vừa gõ
+       * biến mất, không một lời giải thích. Đúng triệu chứng chủ xưởng báo ngày 23/08: "nhập số
+       * vào nó tự xoá".
+       *
+       * Bỏ trống không mất an toàn: khi đủ dữ kiện thì nhánh trên ghi đè `qty` bằng số theo
+       * barem, còn lúc lưu thì `document-validation` vẫn buộc Kg khớp số cây × dài × barem
+       * trong dung sai. Giữ lại số đang gõ chỉ là không phá việc của người dùng giữa chừng.
+       */
       clear.add("theoretical_kg");
-      clearIfField(clear, fields, "qty");
     }
   }
   if (!aluminum) {

@@ -103,7 +103,7 @@ const moveFieldsAfter = (dt, names, anchor) => {
  * `unchanged` khi manifest byte-identical, nên giữ nguyên số cũ là mọi sửa đổi metadata nằm im
  * trong file mà không bao giờ vào tenant.
  */
-brief.version = "2.28.0";
+brief.version = "2.29.0";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 for (const role of ["General Accountant", "Chief Accountant", "Director", "Kế toán tổng hợp", "Kế toán trưởng", "Giám đốc"]) {
   if (!brief.roles.includes(role)) brief.roles.push(role);
@@ -3399,6 +3399,47 @@ brief.fixtures.push({
     "account_type": "Liability"
   }
 });
+/*
+ * ── Ba ô kỹ thuật của nhôm cây trên Item: KHAI nhưng ẨN (23/08/2026) ──
+ *
+ * Chủ xưởng không cần thấy chúng, nên `hidden`. Nhưng gỡ hẳn khỏi doctype thì bản ghi đọc về bị
+ * lược mất, mà MƯỜI chỗ trong mã nguồn đọc `item.has_batch_no` / `item.has_catch_weight` để
+ * quyết định theo lô, cân thực tế và cung–cầu nhôm. Gỡ hẳn là tắt cả mười chỗ đó lặng lẽ: mọi
+ * đơn mua nhôm cây chết với "phải bật has_batch_no…" trong khi D1 có đủ dữ liệu.
+ */
+{
+  const vatTu = brief.doctypes.find((entry) => entry.name === "Item");
+  const ten = (field) => (typeof field === "string" ? field.split(":")[0].trim() : field.fieldname);
+  const moc = vatTu.fields.findIndex((field) => ten(field) === "purchase_stock_qty_field");
+  const them = [
+  {
+    "fieldname": "has_batch_no",
+    "fieldtype": "Check",
+    "label": "Quản lý theo lô",
+    "hidden": true,
+    "//": "Nhôm cây bắt buộc có ba ô này — `aluminumItemContract` từ chối mã thiếu chúng. Trước 23/08/2026 chúng KHÔNG được khai trên doctype nên bản ghi đọc về bị lược mất, và mọi đơn mua nhôm cây chết với \"phải bật has_batch_no; phải bật has_catch_weight; weight_uom phải là Kg\" — dù D1 có đủ dữ liệu. Luồng chính của phân hệ mua đứng hẳn vì ba ô không khai."
+  },
+  {
+    "fieldname": "has_catch_weight",
+    "fieldtype": "Check",
+    "label": "Cân thực tế",
+    "hidden": true,
+    "//": "Mua theo Kg cân thực, tồn theo cây đếm thực — hai con số độc lập, không suy ra nhau."
+  },
+  {
+    "fieldname": "weight_uom",
+    "fieldtype": "Link",
+    "options": "UOM",
+    "label": "ĐVT khối lượng",
+    "hidden": true
+  }
+];
+  for (const [offset, field] of them.entries()) {
+    if (!vatTu.fields.some((entry) => ten(entry) === field.fieldname)) vatTu.fields.splice(moc + offset, 0, field);
+  }
+}
+note("Item: +3 ô kỹ thuật nhôm cây (ẩn) — has_batch_no, has_catch_weight, weight_uom");
+
 note("Hoá đơn bán: +bảng thuế + tài khoản VAT đầu ra");
 
 note("Master từng chỉ sống ở D1: +10 fixture (2 bộ đo, 5 nhóm hàng, 2 kho, 1 ĐVT)");
