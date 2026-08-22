@@ -312,8 +312,13 @@ export function AlumdoorPurchaseOrderItemsGrid(props: AlumdoorPurchaseOrderItems
     link_filters: JSON.stringify({ is_purchase_item: 1, disabled: 0 }),
   } as DocField), [props.childMeta]);
 
-  const head = (className: string, label: ReactNode) => (
-    <TableHead className={`bg-primary px-1.5 text-center font-semibold leading-tight text-primary-foreground whitespace-normal ${className}`}>
+  /**
+   * `key` là tham số vì hàm này được gọi CẢ trong `.map()`. Thiếu nó thì React kêu "Each child in
+   * a list should have a unique key prop" trên console mỗi lần vẽ lại — đo 23/08/2026. Cảnh báo
+   * lặp liên tục làm console thành nhiễu, và lỗi thật sau đó chìm trong đó.
+   */
+  const head = (className: string, label: ReactNode, key?: string) => (
+    <TableHead key={key} className={`bg-primary px-1.5 text-center font-semibold leading-tight text-primary-foreground whitespace-normal ${className}`}>
       <div className="flex min-h-10 items-center justify-center py-1">{label}</div>
     </TableHead>
   );
@@ -406,6 +411,7 @@ export function AlumdoorPurchaseOrderItemsGrid(props: AlumdoorPurchaseOrderItems
                 fieldname === "length_m"
                   ? <span>{dynamicHeaderLabel(fieldname)}<br/><span className="text-[9px] font-medium opacity-90">(m)</span></span>
                   : dynamicHeaderLabel(fieldname),
+                fieldname,
               ))}
               {head("w-20", "ĐVT")}
               {head("w-28", <span>Đơn giá<br/><span className="text-[9px] font-medium opacity-90">(VNĐ)</span></span>)}

@@ -103,7 +103,7 @@ const moveFieldsAfter = (dt, names, anchor) => {
  * `unchanged` khi manifest byte-identical, nên giữ nguyên số cũ là mọi sửa đổi metadata nằm im
  * trong file mà không bao giờ vào tenant.
  */
-brief.version = "2.31.0";
+brief.version = "2.32.0";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 for (const role of ["General Accountant", "Chief Accountant", "Director", "Kế toán tổng hợp", "Kế toán trưởng", "Giám đốc"]) {
   if (!brief.roles.includes(role)) brief.roles.push(role);
@@ -3509,7 +3509,16 @@ note("Báo giá: valid_till thành bắt buộc");
         "value": 1
       }
     ],
-    "//": "Đơn mua nháp chưa phải là cam kết với nhà cung cấp."
+    "//": "Đơn mua nháp chưa phải là cam kết với nhà cung cấp. Không có cột mã đơn thì 7 dòng giống hệt nhau (cùng NCC, cùng ngày, cùng tiền) — không biết dòng nào là đơn nào để đi giục.",
+    "columns": [
+      "name:Data Mã đơn",
+      "supplier:Link(Supplier) Nhà cung cấp",
+      "transaction_date:Date Ngày đặt",
+      "schedule_date:Date Hẹn giao",
+      "grand_total:Currency Giá trị đơn",
+      "received_percentage:Percent Đã nhận (%)",
+      "billed_percentage:Percent Đã có HĐ (%)"
+    ]
   },
   "Nhập kho theo nhà cung cấp": {
     "base_filters": [

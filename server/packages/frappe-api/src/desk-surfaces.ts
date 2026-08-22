@@ -254,6 +254,37 @@ export async function runQueryReport(args: FrappeArgs, context: FrappeRouterCont
       limit: appReport.limit,
       offset: 0,
     }) as JsonObject;
+    /*
+     * Đơn mua: phần trăm đã nhận phải TÍNH LẠI cho báo cáo, y như đường danh sách.
+     *
+     * Giá trị lưu trong tài liệu là "0.00" từ lúc tạo đơn và không ai ghi đè — chỉ đường mở MỘT
+     * chứng từ mới tính lại. Nên báo cáo "Đơn mua chưa nhận đủ" liệt kê cả những đơn đã về đủ,
+     * và thủ kho đi giục nhà cung cấp những đơn không cần giục. Đường báo cáo đi lối riêng, nên
+     * vá ở đường danh sách thôi là chưa đủ.
+     */
+    if (appReport.doctype === "Purchase Order" && Array.isArray(answer.result)) {
+      const rows = answer.result.filter((row): row is JsonObject => Boolean(row) && typeof row === "object" && !Array.isArray(row));
+      const tienDo = await context.documents.getPurchaseOrderProgress(
+        context.tenantId,
+        rows.map((row) => String(row.name ?? "")).filter(Boolean),
+      );
+      for (const row of rows) {
+        const so = tienDo.get(String(row.name ?? ""));
+        if (!so) continue;
+        if ("received_percentage" in row) row.received_percentage = so.received.toFixed(2);
+        if ("billed_percentage" in row) row.billed_percentage = so.billed.toFixed(2);
+      }
+      /*
+       * Báo cáo tên là "chưa nhận đủ" thì phải chỉ còn đơn CHƯA nhận đủ.
+       *
+       * Không lọc được ở SQL: phần trăm vừa tính lại sau khi truy vấn xong, còn giá trị nằm
+       * trong tài liệu là "0.00" cũ. Lọc ở đây, sau khi đã có số thật. Tên báo cáo mà liệt kê cả
+       * đơn đã về đủ thì thủ kho đi giục nhầm — đúng thứ bản test 23/08 báo.
+       */
+      if (appReport.name === "Đơn mua chưa nhận đủ") {
+        answer.result = rows.filter((row) => Number(row.received_percentage ?? 0) < 100);
+      }
+    }
     return { ...answer, columns: frappeReportColumns(answer.columns) };
   }
 

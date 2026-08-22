@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "2.31.0",
+  "version": "2.32.0",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -15952,10 +15952,11 @@
       ]
     },
     {
-      "//": "Đơn mua nháp chưa phải là cam kết với nhà cung cấp.",
+      "//": "Đơn mua nháp chưa phải là cam kết với nhà cung cấp. Không có cột mã đơn thì 7 dòng giống hệt nhau (cùng NCC, cùng ngày, cùng tiền) — không biết dòng nào là đơn nào để đi giục.",
       "name": "Đơn mua chưa nhận đủ",
       "doctype": "Purchase Order",
       "columns": [
+        "name:Data Mã đơn",
         "supplier:Link(Supplier) Nhà cung cấp",
         "transaction_date:Date Ngày đặt",
         "schedule_date:Date Hẹn giao",

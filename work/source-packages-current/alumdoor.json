@@ -1,7 +1,7 @@
 {
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "2.31.0",
+  "version": "2.32.0",
   "metaContractVersion": 1,
   "platform_requires": "1.0.0",
   "requires": [
@@ -35157,6 +35157,11 @@
       "label": "Đơn mua chưa nhận đủ",
       "doctype": "Purchase Order",
       "columns": [
+        {
+          "field": "name",
+          "label": "Mã đơn",
+          "type": "Data"
+        },
         {
           "field": "supplier",
           "label": "Nhà cung cấp",
