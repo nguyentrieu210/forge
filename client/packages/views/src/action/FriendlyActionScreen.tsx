@@ -28,8 +28,33 @@ interface DashboardSummary {
   received_bars: number;
   remaining_bars: number;
   unapplied_bars: number;
+  /** Server vẫn trả các tổng theo Kg; nhà cung cấp bán theo Kg thì mấy ô "cây" ở trên đều bằng 0. */
+  ordered_barem_weight_kg?: number;
+  received_barem_weight_kg?: number;
+  remaining_barem_weight_kg?: number;
+  actual_received_weight_kg?: number;
   purchase_value: number;
   receipt_count: number;
+}
+
+/**
+ * Hiện số theo ĐƠN VỊ CÓ NGHĨA, đừng gắn cứng "cây".
+ *
+ * Nhà cung cấp bán theo Kg thì không có "cây" nào: `RT_RAYHOP` có `stock_uom = Kg` và chỉ khai
+ * quy đổi Mét ↔ Kg. Bốn ô KPI gắn nhãn "cây" cố định nên cả ba con số chính đều ra 0 trong khi
+ * bảng chi tiết bên dưới vẫn ghi "Kg thực 700,00" và trạng thái "Đã giao đủ" — bảng xanh mà số
+ * bằng không, đúng kiểu hỏng mà không có gì báo.
+ *
+ * Có cây thì đếm cây; không có cây mà có cân thì hiện Kg; không có gì thì mới về "0 cây".
+ */
+function theoDonVi(
+  fmt: { number: (value: number) => string },
+  soCay: number | undefined,
+  soKg: number | undefined,
+): string {
+  if (soCay) return `${fmt.number(soCay)} cây`;
+  if (soKg) return `${fmt.number(soKg)} kg`;
+  return `${fmt.number(soCay ?? 0)} cây`;
 }
 
 interface DashboardMaterial extends ResultRecord {
@@ -511,9 +536,9 @@ function OverviewTab({ dashboard, loading, error, onOpen }: {
         <Stat label="Đơn mua" value={fmt.number(summary.purchase_order_count)} hint={`${fmt.number(summary.open_purchase_order_count)} đơn chưa xong`} />
         <Stat label="Đơn quá hạn" value={fmt.number(summary.overdue_purchase_order_count)} emphasis={summary.overdue_purchase_order_count > 0} />
         <Stat label="Quy cách" value={fmt.number(summary.material_count)} hint={`${fmt.number(summary.completed_material_count)} đã đủ/đối soát`} />
-        <Stat label="Đã đặt" value={`${fmt.number(summary.ordered_bars)} cây`} />
-        <Stat label="Đã nhận" value={`${fmt.number(summary.received_bars)} cây`} />
-        <Stat label="Còn phải giao" value={`${fmt.number(summary.remaining_bars)} cây`} emphasis />
+        <Stat label="Đã đặt" value={theoDonVi(fmt, summary.ordered_bars, summary.ordered_barem_weight_kg)} />
+        <Stat label="Đã nhận" value={theoDonVi(fmt, summary.received_bars, summary.actual_received_weight_kg)} />
+        <Stat label="Còn phải giao" value={theoDonVi(fmt, summary.remaining_bars, summary.remaining_barem_weight_kg)} emphasis />
         <Stat label="Đã nhận chưa phân bổ" value={`${fmt.number(summary.unapplied_bars)} cây`} hint="Hàng dư hợp lệ đang chờ nghĩa vụ" />
         <Stat label="Phiếu nhập" value={fmt.number(summary.receipt_count)} />
         <Stat label="Giá trị PO" value={currency(summary.purchase_value)} />
