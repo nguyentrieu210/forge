@@ -1,0 +1,15 @@
+{
+  "format": "alumdoor-layer-converge/v1",
+  "layer": "L0",
+  "plan": {
+    "retireUndeclared": [
+      "Warehouse"
+    ],
+    "alignFields": {
+      "Warehouse": [
+        "warehouse_name",
+        "parent_warehouse"
+      ]
+    }
+  }
+}

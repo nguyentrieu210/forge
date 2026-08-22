@@ -107,6 +107,46 @@ test("Sales area rules use per-set area then multiply set_count once", async () 
   assert.equal(component.stock_qty, 480);
 });
 
+test("Sales preview creates a missing BOM row only when its variant and area rule match", async () => {
+  const giftRule = {
+    ...shaftRule,
+    name: "BR-GIFT-RAIL",
+    rule_code: "BR-GIFT-RAIL",
+    rule_name: "Ray tặng trên 8 m²",
+    result_kind: "COUNT",
+    result_uom: "Bộ",
+    formula_json: JSON.stringify({ base: { kind: "CONSTANT", value: 1 } }),
+    applicability: [{
+      scope_type: "DOOR_TYPE", door_type: "Cửa Đức", component_item: "RAY-GIFT",
+      price_variant: "TANG_RAY", min_area_sqm: 8, min_area_operator: "GT", priority: 100,
+    }],
+  };
+  const call = platform({
+    rules: [giftRule],
+    items: { "RAY-GIFT": { item_code: "RAY-GIFT", stock_uom: "Bộ", uom_conversions: [] } },
+  });
+  const matched = await enrichSalesBomPreviewWithRules(call, {
+    item_code: "DOOR-DUC", door_type: "Cửa Đức", price_variant: "TANG_RAY",
+    width_m: 4.001, height_m: 2, set_count: 1,
+  }, { components: [] });
+  assert.equal(matched.components.length, 1);
+  assert.equal(matched.components[0].item_code, "RAY-GIFT");
+  assert.equal(matched.components[0].auto_generated_by_bom_rule, true);
+  assert.equal(matched.components[0].consumption_qty, 1);
+
+  const exactlyEight = await enrichSalesBomPreviewWithRules(call, {
+    item_code: "DOOR-DUC", door_type: "Cửa Đức", price_variant: "TANG_RAY",
+    width_m: 4, height_m: 2, set_count: 1,
+  }, { components: [] });
+  assert.deepEqual(exactlyEight.components, [], "GT giữ biên nghiêm ngặt: đúng 8 m² chưa tặng ray");
+
+  const notMatched = await enrichSalesBomPreviewWithRules(call, {
+    item_code: "DOOR-DUC", door_type: "Cửa Đức", price_variant: "CHI_LA",
+    width_m: 5, height_m: 2, set_count: 1,
+  }, { components: [] });
+  assert.deepEqual(notMatched.components, []);
+});
+
 test("Sales preview never guesses when two BOM Rules tie", async () => {
   const second = { ...shaftRule, name: "BR-OTHER", rule_code: "BR-OTHER" };
   const call = platform({

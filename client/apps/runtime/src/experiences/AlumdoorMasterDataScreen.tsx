@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { ChevronRight, PackageSearch } from "lucide-react";
-import { Button, type StatusTone } from "@metaforge/ui";
+import { Button, StatusBadge, type StatusTone } from "@metaforge/ui";
 
 /* Hallmark · macrostructure: Workbench · genre: modern-minimal
  * pre-emit critique: P4 H5 E4 S4 R5 V4
@@ -63,6 +63,9 @@ interface AlumdoorMasterDataScreenProps {
    * "rỗng", "đủ" và "chưa ai đọc" trông giống hệt nhau chính là lỗi đang phải sửa.
    */
   readiness?: AlumdoorMasterReadiness;
+  readinessStatus?: "idle" | "loading" | "success" | "error";
+  readinessError?: string;
+  onRetryReadiness?: () => void;
 }
 
 /**
@@ -158,8 +161,12 @@ const normalize = (value: string) => value
  * 30/30 DocType đủ điều kiện lên menu (không `child`, không `menu:false`) hiện đã có mặt.
  *
  * Chiều ngược lại CỐ Ý không kiểm: mục đã khai ở đây mà brief tắt `menu` thì vẫn giữ nguyên
- * dòng khai (nghỉ hưu, không xoá) để bật lại là về đúng nhóm cũ. `Supplier Item` đang ở đúng
- * trạng thái đó.
+ * dòng khai (nghỉ hưu, không xoá) để bật lại là về đúng nhóm cũ.
+ *
+ * `Supplier Item` từng ở đúng trạng thái đó (`menu: false` mâu thuẫn với quyết định "giữ trên
+ * menu" của `HOI-TU-20260819.md` §3 — xem audit F1, `ALUMDOOR-DANH-MUC-MAN-HINH-GAP-20260821.md`).
+ * Đã sửa `menu: true` trong brief (21/08) — dòng khai bên dưới vẫn giữ nguyên chỗ, không phải vì
+ * còn nghỉ hưu mà vì đây chính là nơi nó thuộc về từ đầu.
  */
 const MASTER_GROUPS: MasterGroupDefinition[] = [
   {
@@ -245,12 +252,13 @@ const MASTER_GROUPS: MasterGroupDefinition[] = [
         key: "Supplier Item",
         label: "Mã hàng theo nhà cung cấp",
         /**
-         * MỤC NÀY HIỆN KHÔNG HIỆN RA — và đó là một mâu thuẫn dữ liệu chưa ai gỡ:
-         *  · `server/briefs/alumdoor-v2.json` khai `menu: false` ⇒ không vào `props.nav`;
+         * TỪNG KHÔNG HIỆN RA — mâu thuẫn dữ liệu đã gỡ 21/08 (audit F1):
+         *  · `server/briefs/alumdoor-v2.json` từng khai `menu: false` ⇒ không vào `props.nav`;
          *  · `docs/ALUMDOOR-DANH-MUC-HOI-TU-20260819.md` §3 chốt "GIỮ trên menu dù 0 bản ghi,
          *    gỡ nó là mất đường đối chiếu mã theo NCC".
-         * Hai câu này ngược nhau. Không tự chọn bên nào ở client: sửa `menu` là việc của brief.
-         * Dòng khai giữ nguyên để ngày brief bật lại thì mục về đúng nhóm, đúng cổng chặn.
+         * Đã sửa brief theo đúng quyết định đã chốt (`menu: true`). Còn treo riêng (audit F2,
+         * P2, độc lập): `Supplier Item.last_purchase_rate` — tín hiệu `critical` bên dưới — vẫn
+         * chỉ `read_only` (đã hết `hidden`, nhưng chưa mở nhập tay; sửa qua import).
          */
         gate: { step: "mua vật tư", why: "Mã và giá nhập theo từng nhà cung cấp — chưa có thì không đối chiếu được đơn mua" },
         critical: { source: "Supplier Item", field: "last_purchase_rate", label: "giá nhập gần nhất" },
@@ -408,9 +416,12 @@ const DISPLAY_ORDER = [
 /**
  * Bề ngang theo SỐ MỤC thật, không theo thói quen chia đôi màn hình.
  *
- * Nhóm một mục mà chiếm bằng nhóm sáu mục thì mắt phải quét những ô gần như trống. `Mua hàng`
- * chỉ hiện một mục vì `Supplier Item` khai `menu: false` trong brief nên không vào `props.nav`
- * — dòng khai của nó vẫn còn ở trên, xem chú thích tại mục đó.
+ * Nhóm một mục mà chiếm bằng nhóm sáu mục thì mắt phải quét những ô gần như trống. `purchasing`
+ * (Mua hàng) được canh 3 cột từ hồi chỉ hiện MỘT mục (`Supplier Item` khi đó khai `menu: false`
+ * trong brief). Sau khi sửa F1 (21/08) brief đã bật lại `menu: true`, nhóm này lên 2 mục —
+ * con số cột dưới đây CHƯA được canh lại theo đúng nguyên tắc ở trên, vì brief mới chưa được
+ * biên dịch vào D1 dev cục bộ lúc sửa (`forge-app.mjs` chưa chạy) nên chưa xem trực tiếp được.
+ * Xem lại bề ngang `purchasing` bằng mắt sau khi brief lên hiệu lực.
  */
 const GROUP_LAYOUT: Record<string, string> = {
   materials: "lg:col-span-7 xl:col-span-8",
@@ -585,6 +596,29 @@ function StepMarker({ step }: { step: number }) {
   );
 }
 
+function EntryMeta({ entry }: { entry: ResolvedMasterEntry }) {
+  const { status, definition } = entry;
+  return (
+    <span className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+      {status.label ? <StatusBadge tone={status.tone}>{status.label}</StatusBadge> : null}
+      {status.unmeasuredField ? <span>Chưa đo {status.unmeasuredField}</span> : null}
+      {definition.gate ? (
+        <span title={definition.gate.why}>{`Cổng chuỗi · ${definition.gate.step}`}</span>
+      ) : null}
+    </span>
+  );
+}
+
+function GroupAlarm({ group }: { group: ResolvedMasterGroup }) {
+  if (group.blockedCount > 0) {
+    return <StatusBadge tone="destructive">{group.blockedCount} mục chặn</StatusBadge>;
+  }
+  if (group.partialCount > 0) {
+    return <StatusBadge tone="warning">{group.partialCount} mục còn thiếu</StatusBadge>;
+  }
+  return null;
+}
+
 function MasterLink({ entry, onNavigate, prominent = false }: {
   entry: ResolvedMasterEntry;
   onNavigate: (route: string) => void;
@@ -599,6 +633,7 @@ function MasterLink({ entry, onNavigate, prominent = false }: {
     >
       <span className="flex min-w-0 flex-col">
         <span className="min-w-0 whitespace-normal leading-5">{entry.displayLabel}</span>
+        <EntryMeta entry={entry} />
       </span>
       <ChevronRight
         className="mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary group-focus-visible:translate-x-0.5 group-focus-visible:text-primary"
@@ -620,6 +655,7 @@ function MasterGroupSection({ group, onNavigate }: {
         <div className="mb-2 flex flex-wrap items-baseline gap-x-2.5 gap-y-1 border-b pb-3">
           <StepMarker step={group.step} />
           <h2 className="text-base font-semibold tracking-tight">{group.title}</h2>
+          <GroupAlarm group={group} />
         </div>
         <nav aria-label={group.title} className="grid min-w-0 gap-x-3 sm:grid-cols-2">
           {group.items.map((entry) => (
@@ -635,6 +671,7 @@ function MasterGroupSection({ group, onNavigate }: {
       <div className="mb-1 flex flex-wrap items-baseline gap-x-2.5 gap-y-1 px-2.5">
         <StepMarker step={group.step} />
         <h2 className="text-sm font-semibold tracking-tight">{group.title}</h2>
+        <GroupAlarm group={group} />
       </div>
       <nav aria-label={group.title} className="min-w-0">
         {group.items.map((entry) => (
@@ -711,7 +748,63 @@ export function summarizeChain(groups: ResolvedMasterGroup[], readiness?: Alumdo
   };
 }
 
-export function AlumdoorMasterDataScreen({ items, onNavigate, readiness }: AlumdoorMasterDataScreenProps) {
+function ChainNotice({
+  groups, readiness, readinessStatus = readiness ? "success" : "idle", readinessError, onRetry,
+}: {
+  groups: ResolvedMasterGroup[];
+  readiness?: AlumdoorMasterReadiness;
+  readinessStatus?: "idle" | "loading" | "success" | "error";
+  readinessError?: string;
+  onRetry?: () => void;
+}) {
+  const summary = summarizeChain(groups, readiness);
+  const measured = summary.visible - summary.unknown;
+  const details: string[] = [];
+  if (summary.blocked > 0) details.push(`${summary.blocked} mục đang chặn chuỗi`);
+  if (summary.partial > 0) details.push(`${summary.partial} mục còn thiếu dữ liệu then chốt`);
+  if (summary.idle > 0) details.push(`${summary.idle} danh mục rỗng chưa đặt vai trò`);
+
+  let conclusion: string;
+  if (readinessStatus === "loading") {
+    conclusion = "Đang đo tình trạng dữ liệu danh mục…";
+  } else if (readinessStatus === "error") {
+    conclusion = "Không tải được tình trạng dữ liệu. Các đường vào danh mục vẫn dùng được, nhưng chưa thể kết luận chuỗi đã thông.";
+  } else if (!summary.measured) {
+    conclusion = "Chưa có số liệu tình trạng dữ liệu; các nhãn cổng dưới đây chỉ cho biết danh mục nuôi bước nào.";
+  } else if (summary.blocked > 0 || summary.partial > 0) {
+    conclusion = `Chuỗi vận hành đang đứt ở ${summary.brokenSteps.join(" · ")}.`;
+  } else if (summary.unknown > 0 || summary.unmeasured > 0) {
+    const missing = summary.unknown > 0
+      ? `${measured}/${summary.visible} danh mục, còn ${summary.unknown} danh mục chưa ai đếm`
+      : `${measured}/${summary.visible} danh mục`;
+    const fields = summary.unmeasured > 0
+      ? `; còn ${summary.unmeasured} mục chưa ai đo trường then chốt`
+      : "";
+    conclusion = `Đã đo ${missing}${fields}; chưa kết luận được chuỗi đã thông.`;
+  } else {
+    conclusion = `Không còn mục nào chặn. Các bước ${summary.coveredSteps.join(" · ")} đã đủ dữ liệu nền.`;
+  }
+
+  return (
+    <div className="mb-5 rounded-lg border bg-muted/25 px-4 py-3 text-sm leading-6" role={readinessStatus === "error" ? "alert" : "status"}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p>{conclusion}</p>
+        {readinessStatus === "error" && onRetry ? (
+          <Button type="button" variant="outline" size="sm" onClick={onRetry}>Thử lại</Button>
+        ) : null}
+      </div>
+      {readinessStatus === "error" && readinessError ? <p className="text-muted-foreground">Chi tiết: {readinessError}</p> : null}
+      {readinessStatus === "success" && details.length ? <p className="text-muted-foreground">{details.join(" · ")}.</p> : null}
+      {readinessStatus !== "loading" && summary.uncoveredSteps.length ? (
+        <p className="text-muted-foreground">Màn này không đo {summary.uncoveredSteps.join(" · ")}.</p>
+      ) : null}
+    </div>
+  );
+}
+
+export function AlumdoorMasterDataScreen({
+  items, onNavigate, readiness, readinessStatus, readinessError, onRetryReadiness,
+}: AlumdoorMasterDataScreenProps) {
   const groups = useMemo(() => resolveMasterGroups(items, readiness), [items, readiness]);
 
   if (groups.length === 0) {
@@ -726,6 +819,13 @@ export function AlumdoorMasterDataScreen({ items, onNavigate, readiness }: Alumd
 
   return (
     <section className="w-full min-w-0 overflow-x-clip">
+      <ChainNotice
+        groups={groups}
+        readiness={readiness}
+        readinessStatus={readinessStatus}
+        readinessError={readinessError}
+        onRetry={onRetryReadiness}
+      />
       <div className="grid min-w-0 grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-12 xl:gap-x-8 xl:gap-y-6">
         {groups.map((group) => (
           <MasterGroupSection key={group.id} group={group} onNavigate={onNavigate} />

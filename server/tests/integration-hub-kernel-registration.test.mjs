@@ -12,7 +12,7 @@ test("Integration Subscription controller is available through the Integration H
 });
 
 test("tenant AggregateCoordinator composes Integration Hub before generic metadata fallback", () => {
-  const source = readFileSync(new URL("../apps/tenant-worker/src/aggregate-do.ts", import.meta.url), "utf8");
+  const source = readFileSync(new URL("../apps/tenant-worker/src/aggregate-services.ts", import.meta.url), "utf8");
   assert.match(source, /import \{ registerIntegrationHubControllers \} from "\.\.\/\.\.\/\.\.\/packages\/integration-hub\/src\/registry\.js";/);
   assert.match(source, /const registry = registerIntegrationHubControllers\([\s\S]*registerErpNextCoreControllers\([\s\S]*\)\.setFallback\(new GenericMetadataController\(metadata\)\);/);
 });

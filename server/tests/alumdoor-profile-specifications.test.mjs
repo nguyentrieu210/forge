@@ -1,31 +1,38 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { resolve } from "node:path";
-import {
-  PROFILE_WEIGHT_ITEMS,
-  buildProfileSpecificationSql,
-  loadProfileSpecifications,
-} from "../scripts/build-alumdoor-profile-specifications.mjs";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const repoRoot = resolve(import.meta.dirname, "../..");
+const repoRoot = resolve(fileURLToPath(new URL("../..", import.meta.url)));
+const script = fileURLToPath(new URL("../scripts/build-alumdoor-profile-specifications.mjs", import.meta.url));
 
-test("all sixteen profile aluminium items have an authoritative kg/m mapping", async () => {
-  const rows = await loadProfileSpecifications(repoRoot);
-  assert.equal(rows.length, 16);
-  assert.equal(new Set(rows.map((row) => row.itemCode)).size, 16);
-  assert.deepEqual(rows.find((row) => row.itemCode === "AL71"), {
-    itemCode: "AL71",
-    supplierCode: "TD-AL71N",
-    kgPerM: 0.389,
-  });
-  assert.equal(PROFILE_WEIGHT_ITEMS["TD-AL70-15mm"], "AL70 1.5MM");
+function build() {
+  const output = mkdtempSync(join(tmpdir(), "alumdoor-profile-spec-"));
+  const sqlPath = join(output, "profile-spec.sql");
+  const auditPath = join(output, "profile-spec.audit.json");
+  execFileSync(process.execPath, [script, "demo", sqlPath, auditPath], { cwd: repoRoot, stdio: "pipe" });
+  return {
+    sql: readFileSync(sqlPath, "utf8"),
+    audit: JSON.parse(readFileSync(auditPath, "utf8")),
+  };
+}
+
+test("legacy profile-spec command delegates to the seventeen-row canonical material catalog", () => {
+  const { audit } = build();
+  assert.equal(audit.canonical_specs, 17);
+  assert.equal(audit.authority, "server/scripts/lib/alumdoor-material-specification-catalog.mjs");
+  assert.equal(new Set(audit.item_links.map((row) => row.item_code)).size, 17);
+  assert.equal(audit.retired_legacy_profile_map, true);
 });
 
-test("profile specification migration is bounded and idempotent", async () => {
-  const sql = await buildProfileSpecificationSql(repoRoot);
-  assert.equal((sql.match(/INSERT INTO documents/g) ?? []).length, 16);
-  assert.equal((sql.match(/UPDATE documents/g) ?? []).length, 16);
+test("profile specification migration is bounded and idempotent", () => {
+  const { sql } = build();
+  assert.equal((sql.match(/INSERT INTO documents/g) ?? []).length, 17);
+  assert.equal((sql.match(/UPDATE documents/g) ?? []).length, 17);
   assert.match(sql, /ON CONFLICT\(tenant_id,doc_key\) DO UPDATE/);
-  assert.match(sql, /documents\.payload_json<>json_patch/);
+  assert.match(sql, /documents\.payload_json<>excluded\.payload_json/);
   assert.doesNotMatch(sql, /DELETE|stock_ledger_entries|general_ledger_entries/i);
 });

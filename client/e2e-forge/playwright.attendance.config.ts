@@ -13,7 +13,7 @@ const port = process.env.FORGE_ATTENDANCE_QA_PORT ?? "4198";
 
 export default defineConfig({
   testDir: "./ui-tests",
-  testMatch: "alumdoor-attendance-kiosk.spec.ts",
+  testMatch: ["alumdoor-attendance-kiosk.spec.ts", "alumdoor-hr-lite.spec.ts"],
   outputDir: "./test-results/attendance-qr",
   timeout: 60_000,
   expect: { timeout: 10_000 },

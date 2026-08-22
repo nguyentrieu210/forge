@@ -18,7 +18,13 @@ export { areaTierBasisSqm, assertItemPriceTierIsUnambiguous } from "../../cloude
 export { derivePurchaseQuantityAxis } from "../../clouderp-core/src/uom.js";
 export {
   alumdoorCommercialBenefits,
+  // Ngưỡng/toán tử tặng ray và chốt chặn dưới ngưỡng. Đường xem trước dùng cùng engine lúc lưu.
+  alumdoorGiftRailAreaOperator,
+  alumdoorGiftRailEligible,
+  alumdoorGiftRailThresholdSqm,
+  assertAlumdoorGiftRailAllowed,
   defaultAlumdoorDiscountPercent,
+  hasAlumdoorDiscountEffect,
   resolveCommercialLine,
   withAlumdoorDefaultDiscountSnapshot,
 } from "../../clouderp-selling/src/index.js";

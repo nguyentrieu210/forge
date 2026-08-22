@@ -74,7 +74,7 @@ test("typed legacy Item Price requires an explicit matching sales UOM", async ()
   ]);
   await assert.rejects(
     resolveServerPrice(context(masters), base(undefined)),
-    /document row must provide a matching selling UOM/,
+    /document row must provide a matching transaction UOM/,
   );
 });
 

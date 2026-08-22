@@ -9,6 +9,7 @@ import {
 } from "../scripts/lib/alumdoor-material-specification-catalog.mjs";
 import { ALUMDOOR_ITEM_GROUP_CATALOG } from "../scripts/lib/alumdoor-item-group-catalog.mjs";
 import { buildMaterialSpecificationSeed } from "../scripts/seed-alumdoor-material-specifications-local.mjs";
+import { alumdoorBriefVersion } from "./helpers.mjs";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -75,7 +76,7 @@ test("V2 schema exposes linear material specs while legacy base remains untouche
   assert.equal(baseSpec.fields.some((x) => (typeof x === "string" ? x.split(":")[0].trim() : x.fieldname) === "spec_type"), false);
 
   const brief = JSON.parse(readFileSync(resolve(repoRoot, "server/briefs/alumdoor-v2.json"), "utf8"));
-  assert.equal(brief.version, "2.4.0");
+  assert.equal(brief.version, alumdoorBriefVersion());
   const dt = brief.doctypes.find((x) => x.name === "Material Specification");
   const type = dt.fields.find((x) => (typeof x === "string" ? x.split(":")[0].trim() : x.fieldname) === "spec_type");
   assert.match(String(type), /Vật tư tuyến tính/);

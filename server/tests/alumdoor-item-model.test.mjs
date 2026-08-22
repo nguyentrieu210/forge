@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import { compileBrief } from "../scripts/lib/compile-brief.mjs";
 import { readBriefSource } from "../scripts/lib/read-brief-source.mjs";
 import alumdoorWorker, { allocateBarsFifo } from "../dist/apps-src/alumdoor-worker/src/index.js";
+import { alumdoorBriefVersion } from "./helpers.mjs";
 
 const brief = JSON.parse(await readFile(new URL("../briefs/alumdoor.json", import.meta.url), "utf8"));
 const app = compileBrief(brief);
@@ -70,9 +71,9 @@ test("Alumdoor Item declares reusable inventory measurement profiles", () => {
     assert.equal(v2Field("Item", removed), undefined, `${removed} không còn hiện trên form vật tư`);
   }
   assert.equal(v2Field("Item", "section_identity")?.label, "Chi tiết vật tư");
-  assert.equal(v2Field("Item", "item_nature")?.hidden, true);
+  assert.equal(v2Field("Item", "item_nature")?.list_only, true);
   assert.equal(v2Field("Item", "is_stock_item")?.hidden, true);
-  assert.equal(v2Field("Item", "inventory_mode")?.hidden, true);
+  assert.equal(v2Field("Item", "inventory_mode")?.list_only, true);
   const v2ItemFields = v2Doctype("Item")?.fields ?? [];
   for (const moved of ["door_type", "purchase_kg_per_m2", "leaf_divisor_m"]) {
     assert.ok(v2ItemFields.findIndex((entry) => entry.fieldname === moved) > v2ItemFields.findIndex((entry) => entry.fieldname === "section_identity"), `${moved} nằm trong phần Chi tiết vật tư`);
@@ -139,7 +140,7 @@ test("Alumdoor Item declares reusable inventory measurement profiles", () => {
       length: aluminium?.data?.require_length,
       pieces: aluminium?.data?.require_piece_qty,
     },
-    { mode: "Nhôm cây/lá", uom: "Kg", length: true, pieces: true },
+    { mode: "Nhôm cây/lá", uom: "Cây", length: true, pieces: true },
   );
   assert.equal(aluminium?.data?.require_color, true);
   assert.equal(
@@ -210,6 +211,7 @@ test("purchase rows expose aluminium dimensions only for aluminium items", () =>
     { doctype: "Work Order", actions: ["create", "save", "submit"] },
     { doctype: "Aluminium Lot", actions: ["create", "save"] },
     { doctype: "Production Request", actions: ["create", "save"] },
+    { doctype: "Stock Return", actions: ["create", "save", "submit"] },
   ]);
   for (const [child, colorField] of [
     ["Quotation Item", "color"],
@@ -241,11 +243,11 @@ test("purchase rows expose aluminium dimensions only for aluminium items", () =>
   assert.equal(field("Delivery Note", "install_address")?.fetch_from, "against_sales_order.install_address");
   assert.ok(field("Sales Order", "install_address"));
   assert.match(field("Delivery Note Item", "width_m")?.depends_on ?? "", /Thành phẩm theo m2/);
-  assert.equal(brief.actions.find((entry) => entry.name === "don-ban-thanh-phieu-xuat")?.menu, false);
+  assert.equal(Boolean(brief.actions.find((entry) => entry.name === "don-ban-thanh-phieu-xuat")?.menu), false);
 });
 
 test("V2 purchase receipt exposes dimensions and area weight without mixing kg/m", () => {
-  assert.equal(v2Brief.version, "2.10.0");
+  assert.equal(v2Brief.version, alumdoorBriefVersion());
   const shaftProfile = v2Brief.fixtures.find(
     (entry) => entry.type === "Measurement Profile" && entry.name === "Ống/trục",
   )?.data;
@@ -258,7 +260,9 @@ test("V2 purchase receipt exposes dimensions and area weight without mixing kg/m
       pieces: shaftProfile?.require_piece_qty,
       bundles: shaftProfile?.track_bundle_qty,
     },
-    { mode: "Nhôm cây/lá", uom: "Kg", color: false, length: true, pieces: true, bundles: true },
+    // Tồn theo CÂY chứ không phải Kg: ray và trục MUA theo Kg, TỒN theo cây, BÁN theo mét.
+    // Đếm tồn bằng Kg thì thợ ra kho không biết còn mấy cây, mà cân lại từng cây là không làm.
+    { mode: "Nhôm cây/lá", uom: "Cây", color: false, length: true, pieces: true, bundles: true },
   );
   const receiptItem = v2Doctype("Purchase Receipt Item");
   for (const fieldname of [
@@ -399,6 +403,8 @@ test("Item master rejects category containers and mismatched measurement profile
     PLATFORM: masterPlatform({
       "Item Group:Nan/lá cửa": { is_group: 0 },
       "Measurement Profile:Nhôm cây/lá": { inventory_mode: "Nhôm cây/lá", stock_uom: "Kg" },
+      "UOM:Kg": { disabled: 0 },
+      "UOM:Cây": { disabled: 0 },
     }),
   };
   const valid = await alumdoorWorker.fetch(request(base), validEnv, {});
@@ -487,11 +493,14 @@ test("Item color policy is inherited from Item Color group scopes", async () => 
       "Item Group:Thành phẩm": { is_group: 0 },
       "Item Group:Tất cả mặt hàng": { is_group: 1 },
       "Measurement Profile:Thành phẩm theo m2": { inventory_mode: "Thành phẩm theo m2", stock_uom: "Bộ", require_color: 1 },
+      "UOM:Bộ": { disabled: 0 },
+      "UOM:m2": { disabled: 0 },
+      "UOM:Kg": { disabled: 0 },
       "Item:CUA-01": { item_group: "Thành phẩm" },
       "Item Color:GS": { disabled: 0, surface_finish: "SON_TINH_DIEN", applies_to_groups: [{ item_group: "Thành phẩm" }] },
       "Surface Finish:SON_TINH_DIEN": { disabled: 0, requires_color: 1, applies_to_all_groups: 1 },
       "Item Color:CF": { disabled: 0, applies_to_groups: [{ item_group: "Nhóm khác" }] },
-      "Item Color:THÔ": { disabled: 0, usage_scope: "Mua hàng", applies_to_groups: [] },
+      "Item Color:THÔ": { disabled: 0, usage_scope: "Mua hàng", applies_to_groups: [{ item_group: "Thành phẩm" }] },
     }),
   };
 
@@ -511,8 +520,10 @@ test("Item color policy is inherited from Item Color group scopes", async () => 
     },
     body: JSON.stringify({ args: { item_code: "CUA-01", usage_scope: "purchase" } }),
   }), env, {});
-  assert.equal(context.status, 200, await context.text());
-  assert.deepEqual((await context.json()).allowed_colors, ["GS", "THÔ"]);
+  assert.equal(context.status, 200, await context.clone().text());
+  // THÔ has no Surface Finish link in this fixture, so the two-step finish→color policy
+  // excludes it instead of treating an unscoped color as a global wildcard.
+  assert.deepEqual((await context.json()).allowed_colors, ["GS"]);
 
   const salesContext = await alumdoorWorker.fetch(new Request("https://app.internal/api/method/alumdoor.catalog.allowed_colors", {
     method: "POST",
@@ -523,7 +534,7 @@ test("Item color policy is inherited from Item Color group scopes", async () => 
     },
     body: JSON.stringify({ args: { item_code: "CUA-01", usage_scope: "sales" } }),
   }), env, {});
-  assert.equal(salesContext.status, 200, await salesContext.text());
+  assert.equal(salesContext.status, 200, await salesContext.clone().text());
   assert.deepEqual((await salesContext.json()).allowed_colors, ["GS"]);
 
   const manufacturedOnly = await alumdoorWorker.fetch(
@@ -932,7 +943,7 @@ test("sales order to delivery preserves Item snapshots and exact remaining stock
  * đến từ hồ sơ khách. Xem docs/ALUMDOOR-LUAT-DO-VA-GIA.md.
  */
 test("nhóm giá đến từ hồ sơ khách, không phải người lập chứng từ tự chọn", () => {
-  const priceGroup = field("Customer", "price_group");
+  const priceGroup = v2Field("Customer", "price_group");
   assert.ok(priceGroup, "Customer phải có trường Nhóm giá");
   assert.equal(priceGroup.fieldtype, "Select");
   assert.deepEqual(priceGroup.options.split("\n"), ["Đại lý", "Lẻ"]);
@@ -941,13 +952,13 @@ test("nhóm giá đến từ hồ sơ khách, không phải người lập chứ
   assert.equal(priceGroup.default, undefined);
 
   for (const doctypeName of ["Quotation", "Sales Order"]) {
-    const group = field(doctypeName, "customer_group");
+    const group = v2Field(doctypeName, "customer_group");
     assert.equal(group?.fetch_from, "customer.price_group", `${doctypeName} phải lấy nhóm giá từ khách`);
     assert.equal(group?.read_only, true, `${doctypeName} không được cho sửa tay nhóm giá`);
   }
 });
 
-test("công thức cửa tách khỏi chính sách giá và phủ đủ năm loại cửa", () => {
+test("công thức cửa tách khỏi chính sách giá và phủ đủ sáu loại cửa", () => {
   const policy = doctype("Cutting Policy");
   assert.ok(policy, "phải có doctype Công thức cửa");
   for (const required of [
@@ -959,9 +970,9 @@ test("công thức cửa tách khỏi chính sách giá và phủ đủ năm lo�
 
   const rules = brief.fixtures.filter((entry) => entry.type === "Cutting Policy");
   const active = rules.filter((rule) => !rule.data.disabled);
-  assert.equal(active.length, 5, "mỗi loại cửa có đúng một luật hoạt động");
+  assert.equal(active.length, 6, "mỗi loại cửa có đúng một luật hoạt động");
   const byType = new Map(active.map((rule) => [rule.data.door_type, rule.data]));
-  assert.deepEqual([...byType.keys()].sort(), ["Cửa Đức", "Cửa Úc", "Cửa Lưới", "Cửa Đài Loan", "Cửa Siêu Trường"].sort());
+  assert.deepEqual([...byType.keys()].sort(), ["Cửa Đức", "Cửa Úc", "Cửa tấm liền Úc", "Cửa Lưới", "Cửa Đài Loan", "Cửa Siêu Trường"].sort());
   assert.deepEqual(
     {
       dealerBasis: byType.get("Cửa Đức").dealer_width_basis,

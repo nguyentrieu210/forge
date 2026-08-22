@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, Eye, Factory, Loader2, RefreshCw, Save, Send } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Eye, Factory, Loader2, RefreshCw, Save, Send, UserPlus } from "lucide-react";
 import {
   applyContextPolicy,
   mapError,
@@ -24,7 +24,12 @@ import {
 import { useMetaForge } from "@metaforge/views/provider";
 import { salesItemSearchTerms } from "../sales-item-search.js";
 import type { BomActualComponentRow } from "../AlumdoorBomActualEditor.js";
-import { AlumdoorSalesOrderField, fallbackField } from "./AlumdoorSalesOrderField.js";
+import {
+  AlumdoorSalesOrderField,
+  fallbackField,
+  supplierCustomerPrefill,
+  supplierNameFromOption,
+} from "./AlumdoorSalesOrderField.js";
 import { AlumdoorSalesOrderLineTableComplete } from "./AlumdoorSalesOrderLineTableComplete.js";
 import {
   applySalesOrderDocumentPreview,
@@ -42,9 +47,13 @@ import {
   isAreaDoor,
   isDirectOrdinaryQuantityLine,
   isFullSetSalesItem,
+  mayHaveBom,
+  lineAdjustmentSplit,
   lineBillableArea,
   lineBlockingGaps,
   lineCommercialNeedsApproval,
+  lineDuplicateDiscount,
+  lineGiftRailViolation,
   lineReadinessBlock,
   money,
   newLine,
@@ -94,14 +103,73 @@ const CUSTOMER_CONTEXT_FIELDS = [
   "selling_price_list",
 ] as const;
 
+type AdjustmentSplit = {
+  /** Tổng các khoản điều chỉnh LÀM TĂNG tiền — đây mới là "Phụ thu". */
+  surcharge: number;
+  /** Tổng các khoản điều chỉnh LÀM GIẢM tiền (trị tuyệt đối) — thuộc nhóm "Chiết khấu". */
+  reduction: number;
+  /** Nhãn các quy tắc giá đang kéo tiền xuống, để giải thích số "Chiết khấu" cho người bán. */
+  reductionRules: string[];
+};
+
+/**
+ * `adjustment_amount` của một dòng là TỔNG ĐẠI SỐ của mọi Pricing Rule loại ADJUSTMENT,
+ * nên nó có thể ÂM khi một luật giảm trừ lớn hơn các luật phụ thu. Trước đây khối tổng
+ * nối cứng dấu "+" trước con số này nên in ra "+-1.550.850 ₫" — vừa sai dấu vừa gộp một
+ * khoản giảm vào ô "Phụ thu". Ở đây tách lại theo dấu của TỪNG luật đã áp.
+ *
+ * `applied_adjustments[].amount_minor` là đơn vị minor của tiền tệ; thay vì đoán currency
+ * scale, quy đổi bằng đúng tỉ lệ tổng của chính dòng đó (`adjustment_amount / Σ amount_minor`),
+ * nên kết quả đúng với mọi scale.
+ */
+function splitLineAdjustments(lines: SalesLine[], headerSurcharge: number): AdjustmentSplit {
+  let surcharge = 0;
+  let reduction = 0;
+  let seen = false;
+  const reductionRules = new Set<string>();
+  // Phép tách theo dấu nay sống ở `lineAdjustmentSplit` (model.ts) để DÒNG HÀNG và KHỐI TỔNG
+  // dùng chung đúng một phép tính — hai chỗ tách khác nhau là hai con số "Chiết khấu" khác nhau.
+  for (const line of lines) {
+    const split = lineAdjustmentSplit(line);
+    if (!split.surcharge && !split.reduction) continue;
+    surcharge += split.surcharge;
+    reduction += split.reduction;
+    for (const label of split.reductionRules) reductionRules.add(label);
+    seen = true;
+  }
+  if (!seen && headerSurcharge) {
+    if (headerSurcharge >= 0) surcharge = headerSurcharge;
+    else reduction = -headerSurcharge;
+  }
+  return { surcharge, reduction, reductionRules: [...reductionRules] };
+}
+
+/**
+ * Cảnh báo trùng chiết khấu — nay khai ĐÚNG như chốt chặn của server
+ * (`commercial-line-resolver.ts:194`): |tổng ADJUSTMENT âm| ≈ `discount_amount`.
+ *
+ * Điều kiện cũ ("có `discount_percentage` > 0 và có một luật âm mà TÊN nghe như chiết khấu")
+ * sau bản vá P0 không bao giờ đúng nữa: dòng đi đường Pricing Rule trả về
+ * `discount_percentage: 0`. Badge trở thành code chết, và UI với server nói hai thứ tiếng khác
+ * nhau về cùng một lỗi tiền.
+ */
+function duplicateDiscountLines(lines: SalesLine[]): number {
+  return lines.filter(lineDuplicateDiscount).length;
+}
+
 function hydrateSavedLines(rows: Json[], previous: SalesLine[]): SalesLine[] {
   const hydrated = hydrateSalesLines(rows);
   return hydrated.map((line, index) => {
     const prior = previous.find((candidate) => text(candidate.name) && text(candidate.name) === text(line.name))
       ?? previous[index];
-    if (!prior || text(prior.item_code) !== text(line.item_code)) return line;
+    const persistedVariant = text(line.price_variant).toUpperCase();
+    const persistedGiftRailDecision = persistedVariant === "TANG_RAY" || persistedVariant === "CHI_LA";
+    if (!prior || text(prior.item_code) !== text(line.item_code)) {
+      return persistedGiftRailDecision ? { ...line, _giftRailTouched: true } : line;
+    }
     return {
       ...line,
+      _giftRailTouched: prior._giftRailTouched || persistedGiftRailDecision ? true : undefined,
       _itemName: prior._itemName,
       _context: prior._context,
       _allowedColors: prior._allowedColors,
@@ -456,6 +524,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
   const childFieldSet = useMemo(() => new Set(childFields), [childFields]);
   const leafVariants = useMemo(() => optionList(childMeta, "leaf_variant", ["Kéo tay", "Motor ngoài", "Motor trong"]), [childMeta]);
   const activeLines = useMemo(() => lines.filter((line) => text(line.item_code)), [lines]);
+  const pendingSupplierName = supplierNameFromOption(header.customer);
 
   const cleanLine = useCallback((line: SalesLine): Json => {
     const result: Json = {};
@@ -506,6 +575,8 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
     markDocumentChanged();
     const current = headerRef.current;
     const isCustomer = fieldname === "customer";
+    const supplierSelection = isCustomer ? supplierNameFromOption(value) : null;
+    const pendingSupplier = supplierNameFromOption(current.customer);
     const customerSeq = isCustomer ? ++customerHydrationSeq.current : 0;
     const next: Json = {
       ...current,
@@ -516,6 +587,46 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
     if (isCustomer) {
       for (const customerField of CUSTOMER_CONTEXT_FIELDS) next[customerField] = undefined;
       setCustomerHydrating(true);
+    }
+
+    // Một NCC có thể đồng thời là khách theo quyết định trực tiếp của chủ xưởng 22/08/2026.
+    // Giá trị `NCC · ...` chỉ là định danh TẠM trên UI, tuyệt đối không gửi xuống Customer Link.
+    // Nạp dữ kiện liên hệ để người bán đối chiếu, rồi chờ họ chọn Nhóm giá và bấm nút thêm vai
+    // trò Khách hàng. Không tự tạo master chỉ vì người dùng lướt/chọn nhầm một gợi ý.
+    if (supplierSelection) {
+      next.selling_price_list = current.selling_price_list;
+      setHeaderState(next);
+      setDirty(true);
+      setHeaderPreviewError("");
+      void adapter.getDoc("Supplier", supplierSelection)
+        .then(({ doc }) => {
+          if (customerSeq !== customerHydrationSeq.current) return;
+          if (supplierNameFromOption(headerRef.current.customer) !== supplierSelection) return;
+          const prefill = supplierCustomerPrefill(supplierSelection, doc as Json);
+          setHeaderState({
+            ...headerRef.current,
+            contact_person: prefill.contact_person,
+            phone: prefill.phone,
+            install_address: prefill.install_address_line1,
+          });
+        })
+        .catch((error) => {
+          if (customerSeq === customerHydrationSeq.current) setHeaderPreviewError(salesOrderErrorMessage(error));
+        })
+        .finally(() => {
+          if (customerSeq === customerHydrationSeq.current) setCustomerHydrating(false);
+        });
+      return;
+    }
+
+    // Khi đang chờ chuyển NCC thành Customer, Nhóm giá là quyết định bắt buộc của người bán.
+    // Chưa có Customer thật thì không gọi preview chứng từ: backend sẽ từ chối đúng vì tham
+    // chiếu `NCC · ...` không tồn tại, và lỗi giả đó sẽ che mất nút hoàn tất chuyển vai trò.
+    if (!isCustomer && pendingSupplier) {
+      setHeaderState(next);
+      setDirty(true);
+      setHeaderPreviewError("");
+      return;
     }
     if (!isCustomer && commercialHeaderSignature(current) !== commercialHeaderSignature(next)) markActiveLinesForReprice();
     setHeaderState(next);
@@ -540,7 +651,76 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
         finishDocumentPreview();
         if (isCustomer && customerSeq === customerHydrationSeq.current) setCustomerHydrating(false);
       });
-  }, [applyInteractiveDocumentPreview, beginDocumentPreview, finishDocumentPreview, markActiveLinesForReprice, markDocumentChanged, requestDocumentPreview, setHeaderPreviewError, setHeaderState]);
+  }, [adapter, applyInteractiveDocumentPreview, beginDocumentPreview, finishDocumentPreview, markActiveLinesForReprice, markDocumentChanged, requestDocumentPreview, setHeaderPreviewError, setHeaderState]);
+
+  /**
+   * Hoàn tất vai trò kép NCC → Customer một cách idempotent.
+   *
+   * Chỉ chạy sau một hành động bấm rõ ràng và khi đã chọn Nhóm giá. Tên Customer thật từ
+   * response được thay vào header trước mọi preview/lưu, nên chuỗi trình bày `NCC · ...` không
+   * thể lọt xuống Sales Order. Nếu hai phiên cùng tạo, lượt thua thử đọc lại Customer rồi dùng
+   * bản ghi đã có thay vì tạo vai trò trùng.
+   */
+  const activateSupplierAsCustomer = useCallback(async () => {
+    const supplierName = supplierNameFromOption(headerRef.current.customer);
+    if (!supplierName) return;
+    const priceGroup = text(headerRef.current.customer_group);
+    if (!(["Đại lý", "Lẻ"] as const).includes(priceGroup as "Đại lý" | "Lẻ")) {
+      toast.error("Chọn Nhóm giá Đại lý hoặc Lẻ trước khi thêm vai trò Khách hàng cho NCC.");
+      return;
+    }
+
+    setCustomerHydrating(true);
+    setHeaderPreviewError("");
+    try {
+      let customer: Json | null = null;
+      try {
+        customer = (await adapter.getDoc("Customer", supplierName)).doc as Json;
+      } catch {
+        const supplier = (await adapter.getDoc("Supplier", supplierName)).doc as Json;
+        const payload = {
+          ...supplierCustomerPrefill(supplierName, supplier),
+          price_group: priceGroup,
+        } as Partial<Doc>;
+        try {
+          customer = await adapter.createDoc("Customer", payload) as Json;
+        } catch (createError) {
+          try {
+            customer = (await adapter.getDoc("Customer", supplierName)).doc as Json;
+          } catch {
+            throw createError;
+          }
+        }
+      }
+
+      const customerName = text(customer?.name) || supplierName;
+      const next: Json = {
+        ...headerRef.current,
+        customer: customerName,
+        customer_group: text(customer?.price_group) || priceGroup,
+      };
+      setHeaderState(next);
+      markActiveLinesForReprice();
+      const revision = beginDocumentPreview();
+      try {
+        const result = await requestDocumentPreview(next, "customer");
+        if (canApplySalesOrderDocumentPreview(previewClock.current, revision)) {
+          setHeaderPreviewError("");
+          applyInteractiveDocumentPreview(result);
+        }
+      } finally {
+        finishDocumentPreview();
+      }
+      setDirty(true);
+      toast.success(`Đã thêm vai trò Khách hàng cho NCC ${supplierName}.`);
+    } catch (error) {
+      const message = salesOrderErrorMessage(error);
+      setHeaderPreviewError(message);
+      toast.error(message);
+    } finally {
+      setCustomerHydrating(false);
+    }
+  }, [adapter, applyInteractiveDocumentPreview, beginDocumentPreview, finishDocumentPreview, markActiveLinesForReprice, requestDocumentPreview, setHeaderPreviewError, setHeaderState]);
 
   const requestClose = useCallback(() => {
     if (dirty) setConfirmDiscard(true);
@@ -811,7 +991,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
         }
       }
 
-      const bomEligible = isFullSetSalesItem(candidate);
+      const bomEligible = mayHaveBom(candidate);
       if (bomEligible) {
         try {
           const bom = await adapter.callPost<BomPreview>("alumdoor.sales.preview_bom_requirements", {
@@ -857,9 +1037,9 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
   }, [childMeta, loading, previewLine, refreshDocumentPreview]);
 
   useEffect(() => {
-    if (loading || !childMeta || customerHydrating) return;
+    if (loading || !childMeta || customerHydrating || pendingSupplierName) return;
     const unresolved = lines.filter((line) => {
-      if (!isFullSetSalesItem(line) || line._loading || line._bomPreview || text(line._bomError)) return false;
+      if (!mayHaveBom(line) || line._loading || line._bomPreview || text(line._bomError)) return false;
       return true;
     });
     if (!unresolved.length) return;
@@ -868,10 +1048,10 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
         .finally(() => void refreshDocumentPreview("items"));
     }, 120);
     return () => window.clearTimeout(timer);
-  }, [childMeta, customerHydrating, header.customer_group, lines, loading, previewLine, refreshDocumentPreview]);
+  }, [childMeta, customerHydrating, header.customer_group, lines, loading, pendingSupplierName, previewLine, refreshDocumentPreview]);
 
   useEffect(() => {
-    if (loading || !childMeta || customerHydrating) return;
+    if (loading || !childMeta || customerHydrating || pendingSupplierName) return;
     const inconsistent = lines.filter((line) => {
       if (!text(line.item_code) || line._loading || !isDirectOrdinaryQuantityLine(line)) return false;
       const entered = positiveNumber(line.set_count);
@@ -884,17 +1064,17 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
         .finally(() => void refreshDocumentPreview("items"));
     }, 120);
     return () => window.clearTimeout(timer);
-  }, [childMeta, customerHydrating, lines, loading, previewLine, refreshDocumentPreview]);
+  }, [childMeta, customerHydrating, lines, loading, pendingSupplierName, previewLine, refreshDocumentPreview]);
 
   const commercialContext = commercialHeaderSignature(header);
   useEffect(() => {
-    if (loading || !childMeta || customerHydrating) return;
+    if (loading || !childMeta || customerHydrating || pendingSupplierName) return;
     if (!lastCommercialContext.current) { lastCommercialContext.current = commercialContext; return; }
     if (lastCommercialContext.current === commercialContext) return;
     lastCommercialContext.current = commercialContext;
     const active = linesRef.current.filter((line) => text(line.item_code));
     void Promise.all(active.map((line) => previewLine(line, "parent_context", {}, false))).finally(() => void refreshDocumentPreview("items"));
-  }, [childMeta, commercialContext, customerHydrating, loading, previewLine, refreshDocumentPreview]);
+  }, [childMeta, commercialContext, customerHydrating, loading, pendingSupplierName, previewLine, refreshDocumentPreview]);
 
   const commitLine = useCallback((key: string, fieldname: string, value: unknown) => {
     const current = linesRef.current.find((line) => line._key === key);
@@ -922,6 +1102,8 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
         // Cách bán thuộc về MẶT HÀNG CŨ. Giữ lại là mang `CHI_LA` sang một mã chỉ có `TRON_BO`
         // rồi báo "chưa khai đơn giá" cho một lựa chọn mà chính người bán không hề chọn.
         price_variant: undefined,
+        // Mặt hàng mới ⇒ quyết định tặng ray cũ hết hiệu lực, ô tick được quyền tự đặt lại.
+        _giftRailTouched: undefined,
         rate: undefined,
         amount: undefined,
         discount_percentage: undefined,
@@ -968,6 +1150,23 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
     replaceLines([...linesRef.current, ...Array.from({ length: 5 }, (_, index) => newLine(linesRef.current.length + index))], true);
   }, [markDocumentChanged, replaceLines]);
 
+  const addSuggestedItem = useCallback((sourceKey: string, itemCode: string) => {
+    const normalizedCode = text(itemCode);
+    if (!normalizedCode) return;
+    if (linesRef.current.some((line) => text(line.item_code) === normalizedCode)) {
+      toast.success(`${normalizedCode} đã có trong đơn.`);
+      return;
+    }
+    const current = linesRef.current;
+    const sourceIndex = current.findIndex((line) => line._key === sourceKey);
+    const suggested = { ...newLine(current.length), item_code: normalizedCode, _loading: true } as SalesLine;
+    const insertion = sourceIndex < 0 ? current.length : sourceIndex + 1;
+    const next = [...current.slice(0, insertion), suggested, ...current.slice(insertion)];
+    markDocumentChanged();
+    replaceLines(next, true);
+    void previewLine(suggested, "item_code", { item_code: normalizedCode });
+  }, [markDocumentChanged, previewLine, replaceLines]);
+
   const replaceLinesAndRefreshTotals = useCallback((next: SalesLine[]) => {
     markDocumentChanged();
     replaceLines(next, true);
@@ -998,12 +1197,13 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
     if (previewClock.current.pending > 0 || customerHydrating) return "Đơn đang tính lại dữ liệu từ server, hãy hoàn tất trước khi lưu.";
     if (text(headerErrorRef.current)) return `Cần xử lý lỗi tính lại trước khi lưu: ${text(headerErrorRef.current)}`;
     if (!text(headerRef.current.customer)) return "Cần chọn khách hàng.";
+    if (supplierNameFromOption(headerRef.current.customer)) return "NCC đã chọn chưa có vai trò Khách hàng. Chọn Nhóm giá rồi bấm ‘Thêm vai trò khách’.";
     if (!text(headerRef.current.transaction_date)) return "Cần ngày đặt hàng.";
     if (!text(headerRef.current.selling_price_list)) return "Cần Bảng giá áp dụng theo commercial contract hiện hành.";
     const depositAmount = numberValue(headerRef.current.deposit_amount) ?? 0;
     const grandTotal = numberValue(headerRef.current.grand_total) ?? 0;
     if (depositAmount < 0) return "Tiền cọc không được nhỏ hơn 0.";
-    if (depositAmount > grandTotal) return "Tiền cọc không được lớn hơn tiền phải trả của đơn.";
+    if (depositAmount > grandTotal) return "Tiền cọc không được lớn hơn tiền phải thu của đơn.";
     const currentLines = linesRef.current.filter((line) => text(line.item_code));
     if (!currentLines.length) return "Cần ít nhất một dòng hàng.";
     for (const [index, line] of currentLines.entries()) {
@@ -1128,9 +1328,31 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
   const catalogGapLines = activeLines.filter((line) => lineBlockingGaps(line).length > 0).length;
   const approvalLines = activeLines.filter(lineCommercialNeedsApproval).length;
   const approvalNeeded = checked(header.discount_requires_approval) || approvalLines > 0;
+  // Khối tổng phải nói đúng bản chất: "Chiết khấu" gom mọi khoản LÀM GIẢM (chiết khấu %
+  // của dòng + các quy tắc giá mang dấu âm), "Phụ thu" chỉ còn các khoản LÀM TĂNG.
+  // Đẳng thức tiền không đổi: Tiền hàng − Chiết khấu + Phụ thu = gốc tính VAT.
+  const adjustmentSplit = splitLineAdjustments(activeLines, numberValue(header.surcharge_amount) ?? 0);
+  const headerDiscountAmount = numberValue(header.discount_amount) ?? 0;
+  const discountTotal = headerDiscountAmount + adjustmentSplit.reduction;
+  const surchargeTotal = adjustmentSplit.surcharge;
+  const discountBreakdown = adjustmentSplit.reduction
+    ? `Chiết khấu dòng ${money(headerDiscountAmount)} ₫ + giảm trừ theo quy tắc giá ${money(adjustmentSplit.reduction)} ₫${
+      adjustmentSplit.reductionRules.length ? ` (${adjustmentSplit.reductionRules.join(" · ")})` : ""
+    }`
+    : `Chiết khấu theo % trên từng dòng hàng`;
+  const duplicateDiscountCount = duplicateDiscountLines(activeLines);
+  /* Tặng ray dưới ngưỡng: CHẶN lưu, không chỉ nhắc — đây là quà tặng ra tiền thật. */
+  const giftRailViolations = activeLines.map(lineGiftRailViolation).filter(Boolean);
+  const grandTotalAmount = numberValue(header.grand_total) ?? 0;
+  const depositAmount = numberValue(header.deposit_amount) ?? 0;
+  const depositExceedsTotal = depositAmount - grandTotalAmount > 0.0000001;
+  // Số server chiếu xuống là authority. Phép trừ chỉ là fallback trong nhịp đầu khi preview
+  // chưa trả về, không được ghi đè một `outstanding_amount` canonical đã có.
+  const outstandingAmount = numberValue(header.outstanding_amount)
+    ?? Math.max(0, grandTotalAmount - depositAmount);
   const busy = saving || submitting;
   const previewBlocked = isSalesOrderPersistenceBlocked(previewClock.current, headerError) || customerHydrating;
-  const persistenceBlocked = busy || previewBlocked || unresolvedLines > 0;
+  const persistenceBlocked = busy || previewBlocked || unresolvedLines > 0 || giftRailViolations.length > 0;
   const recalculating = customerHydrating || documentPreviewPending > 0 || unresolvedLines > 0;
 
   const headerControl = (fieldname: string, label: string, fieldtype: DocField["fieldtype"] = "Data", options?: string, readOnly = false, preview = false) => (
@@ -1170,7 +1392,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
               <div className="space-y-2">
                 <div className="grid gap-x-2 gap-y-2 md:grid-cols-2 xl:grid-cols-[minmax(280px,1.35fr)_minmax(165px,0.75fr)_minmax(210px,0.95fr)_minmax(175px,0.8fr)_minmax(175px,0.8fr)]">
                   {headerControl("customer", "Khách hàng", "Link", "Customer", false, true)}
-                  {metaField("customer_group") ? headerControl("customer_group", "Nhóm giá", metaField("customer_group")!.fieldtype, metaField("customer_group")!.options, false, true) : null}
+                  {metaField("customer_group") ? headerControl("customer_group", "Nhóm giá", metaField("customer_group")!.fieldtype, metaField("customer_group")!.options, !pendingSupplierName, true) : null}
                   {headerControl("selling_price_list", "Bảng giá", "Link", "Price List", false, true)}
                   {headerControl("transaction_date", "Ngày đơn", "Date", undefined, false, true)}
                   {headerControl("delivery_date", "Ngày giao", "Date", undefined, false, true)}
@@ -1185,7 +1407,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
                   {metaField("responsible_person") ? headerControl("responsible_person", "Người phụ trách", "Link", "Employee", true) : null}
                   {metaField("payment_method") ? headerControl("payment_method", "Thanh toán", "Select", paymentOptions.join("\n"), false, true) : null}
                   {text(header.payment_method) === "Chuyển khoản" && metaField("bank_account") ? headerControl("bank_account", "Tài khoản ngân hàng", "Link", text(metaField("bank_account")?.options) || "Tài khoản ngân hàng") : null}
-                  {metaField("deposit_amount") ? headerControl("deposit_amount", "Tiền cọc", "Currency", undefined, false, true) : null}
+                  {/* Ô Tiền cọc đã chuyển xuống khối TỔNG TIỀN, ngay trước "Còn phải thu". */}
                   {metaField("vat_rate") ? headerControl("vat_rate", "% VAT", "Percent", undefined, false, true) : null}
                 </div>
                 <div className="grid gap-x-2 gap-y-2 md:grid-cols-2 xl:grid-cols-[minmax(125px,0.58fr)_minmax(155px,0.72fr)_minmax(210px,1fr)_minmax(245px,1.15fr)_minmax(245px,1.15fr)]">
@@ -1196,6 +1418,25 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
                   {metaField("manual_note") ? <div>{headerControl("manual_note", "Ghi chú vận hành", "Small Text")}</div> : null}
                 </div>
               </div>
+              {pendingSupplierName ? (
+                <div className="mt-2 flex flex-col gap-2 rounded-md border border-amber-400/60 bg-amber-50 px-3 py-2 text-xs text-amber-950 dark:bg-amber-950/20 dark:text-amber-100 sm:flex-row sm:items-center sm:justify-between">
+                  <span>
+                    <Badge variant="outline" className="mr-2 border-amber-500/60">NCC</Badge>
+                    {pendingSupplierName} có thể đồng thời là khách. Chọn Nhóm giá, rồi thêm vai trò Khách hàng để giữ tham chiếu hợp lệ.
+                  </span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="shrink-0 border-amber-500/70 bg-background"
+                    disabled={customerHydrating || !["Đại lý", "Lẻ"].includes(text(header.customer_group))}
+                    onClick={() => void activateSupplierAsCustomer()}
+                  >
+                    {customerHydrating ? <Loader2 className="size-3.5 animate-spin" /> : <UserPlus className="size-3.5" />}
+                    Thêm vai trò khách
+                  </Button>
+                </div>
+              ) : null}
               {customerHydrating ? <div className="mt-2 flex items-center gap-1.5 text-[10px] text-muted-foreground"><Loader2 className="size-3 animate-spin" /> Đang nạp Nhóm giá, liên hệ, SĐT, địa chỉ và bảng giá của khách…</div> : null}
             </section>
 
@@ -1207,6 +1448,8 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
               services={salesServices}
               roles={roles}
               readOnly={formReadOnly || busy}
+              showStockConversionColumn={docstatus === 1}
+              showLeafCountColumn={docstatus === 1}
               selectedKeys={selectedLineKeys}
               leafVariants={leafVariants}
               onToggleSelection={(key, checkedValue) => setSelectedLineKeys((current) => { const next = new Set(current); if (checkedValue) next.add(key); else next.delete(key); return next; })}
@@ -1215,6 +1458,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
               onCommit={commitLine}
               onAdd={addLine}
               onAddFive={addFive}
+              onAddSuggestedItem={addSuggestedItem}
               onDuplicate={duplicateLine}
               onDelete={deleteLine}
               onDeleteSelected={deleteSelected}
@@ -1226,18 +1470,48 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
                 <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Dòng hàng</div><div className="mt-0.5 font-semibold tabular-nums">{activeLines.length}</div></div>
                 <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Diện tích cửa</div><div className="mt-0.5 font-semibold tabular-nums">{quantity(totalArea)} m²</div></div>
                 <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Tiền hàng</div><div className="mt-0.5 font-semibold tabular-nums">{money(header.total_amount)} ₫</div></div>
-                <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Chiết khấu</div><div className="mt-0.5 font-semibold tabular-nums">−{money(header.discount_amount)} ₫</div></div>
-                <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Phụ thu</div><div className="mt-0.5 font-semibold tabular-nums">+{money(header.surcharge_amount)} ₫</div></div>
+                <div className="bg-card px-3 py-2" title={discountBreakdown}><div className="text-[10px] text-muted-foreground">Chiết khấu</div><div className="mt-0.5 font-semibold tabular-nums text-destructive">−{money(discountTotal)} ₫</div></div>
+                <div className="bg-card px-3 py-2" title={surchargeTotal ? "Chỉ gồm các khoản làm TĂNG tiền phải trả" : "Đơn này không có khoản phụ thu nào"}><div className="text-[10px] text-muted-foreground">Phụ thu</div><div className="mt-0.5 font-semibold tabular-nums">+{money(surchargeTotal)} ₫</div></div>
                 <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">VAT ({quantity(header.vat_rate ?? 0)}%)</div><div className="mt-0.5 font-semibold tabular-nums">{money(header.vat_amount)} ₫</div></div>
-                <div className="bg-card px-3 py-2"><div className="text-[10px] font-semibold text-muted-foreground">Tiền phải trả</div><div className="mt-0.5 font-bold tabular-nums text-primary">{money(header.grand_total)} ₫</div></div>
-                <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Tiền cọc</div><div className="mt-0.5 font-semibold tabular-nums">−{money(header.deposit_amount)} ₫</div></div>
-                <div className="bg-card px-3 py-2"><div className="text-[10px] font-semibold text-muted-foreground">Còn phải thu</div><div className="mt-0.5 text-lg font-bold tabular-nums text-primary">{money(header.outstanding_amount ?? header.grand_total)} ₫</div></div>
+                <div className="bg-card px-3 py-2"><div className="text-[10px] font-semibold text-muted-foreground">Tiền phải thu</div><div className="mt-0.5 font-bold tabular-nums text-primary">{money(header.grand_total)} ₫</div></div>
+                <div className="bg-card px-3 py-2">
+                  <label htmlFor="sales-v2-complete-deposit-amount" className="block text-[10px] text-muted-foreground">Tiền cọc</label>
+                  <AlumdoorSalesOrderField
+                    id="sales-v2-complete-deposit-amount"
+                    field={headerField("deposit_amount", "Tiền cọc", "Currency")}
+                    label="Tiền cọc"
+                    hideLabel
+                    value={header.deposit_amount ?? 0}
+                    // Không cho số âm; số vượt Tiền phải thu vẫn nhập được nhưng bị chặn ở validate()
+                    // đúng như ràng buộc của máy chủ, kèm cảnh báo ngay dưới ô.
+                    onChange={(value) => setHeaderField("deposit_amount", Math.max(0, numberValue(value) ?? 0), false)}
+                    onCommit={() => void refreshDocumentPreview("deposit_amount")}
+                    registry={registry}
+                    services={services}
+                    parentDoctype="Sales Order"
+                    docValues={header}
+                    roles={roles}
+                    readOnly={formReadOnly || busy}
+                    compact
+                    className={`mt-0.5 [&_.mf-control]:!min-h-7 [&_input]:!h-7 [&_input]:!text-right [&_input]:tabular-nums [&_input]:!font-semibold ${depositExceedsTotal ? "[&_input]:!border-destructive" : ""}`}
+                  />
+                  {depositExceedsTotal ? <div className="mt-0.5 text-[10px] leading-tight text-destructive">Cọc lớn hơn Tiền phải thu</div> : null}
+                  {/* Doctype Sales Order chưa khai `deposit_amount`, nên số này mới chỉ tính được
+                      "Còn phải thu" trên màn hình chứ CHƯA lưu vào đơn. Nói thẳng thay vì để người
+                      bán tưởng đã lưu. Dòng cảnh báo tự biến mất khi brief có field và đã forge. */}
+                  {!metaField("deposit_amount") && depositAmount > 0
+                    ? <div className="mt-0.5 text-[10px] leading-tight text-destructive">Chưa lưu được vào đơn — Sales Order thiếu field deposit_amount</div>
+                    : null}
+                </div>
+                <div className="bg-card px-3 py-2"><div className="text-[10px] font-semibold text-muted-foreground">Còn phải thu</div><div className="mt-0.5 text-lg font-bold tabular-nums text-primary">{money(outstandingAmount)} ₫</div></div>
               </div>
 
               <div className="flex flex-wrap items-center gap-2 border-t px-3 py-2 text-[11px]">
                 {recalculating ? <span className="inline-flex items-center gap-1.5"><Loader2 className="size-3.5 animate-spin" /> Đang tính lại</span> : unresolvedLines || bomBlocked ? <span className="inline-flex items-center gap-1.5"><AlertTriangle className="size-3.5" />{unresolvedLines ? `${unresolvedLines} dòng chưa tính xong` : ""}{unresolvedLines && bomBlocked ? " · " : ""}{bomBlocked ? `${bomBlocked} dòng BOM còn thiếu vật tư thực tế` : ""}</span> : <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="size-3.5" /> Dữ liệu preview đã sẵn sàng</span>}
                 {catalogGapLines ? <Badge variant="outline" className="border-destructive/40 text-destructive">{catalogGapLines} dòng thiếu khai báo danh mục — mở dòng để xem sửa ở đâu</Badge> : null}
+                {giftRailViolations.length ? <Badge variant="outline" className="border-destructive/40 text-destructive" title={giftRailViolations.join(" · ")}>{giftRailViolations.length} dòng tặng ray dưới ngưỡng — không lưu được cho tới khi bỏ tick</Badge> : null}
                 {approvalNeeded ? <Badge variant="outline">{approvalLines || 1} dòng / thay đổi cần duyệt</Badge> : null}
+                {duplicateDiscountCount ? <Badge variant="outline" className="border-destructive/40 text-destructive" title="Dòng đang bị trừ theo Chiết khấu % VÀ bị trừ thêm bởi một quy tắc giá mang nghĩa chiết khấu. Kiểm tra lại Pricing Rule trước khi ghi sổ.">{duplicateDiscountCount} dòng có thể bị trừ chiết khấu 2 lần — kiểm tra quy tắc giá</Badge> : null}
                 <span className="ml-auto text-muted-foreground">Bảng giá: <strong className="font-medium text-foreground">{text(header.selling_price_list) || "Chưa chọn"}</strong></span>
               </div>
 
@@ -1249,7 +1523,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
 
       <div className="shrink-0 border-t bg-card px-3 py-1.5 shadow-[0_-4px_14px_rgba(0,0,0,0.035)]">
         <div className="flex w-full flex-wrap items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2"><span className="text-muted-foreground">{recalculating ? "Đang tính lại" : dirty ? "Có thay đổi chưa lưu" : docstatus === 1 ? "Đã ghi sổ" : "Nháp đã đồng bộ"}</span><strong className="tabular-nums">Còn phải thu: {money(header.outstanding_amount ?? header.grand_total)} ₫</strong></div>
+          <div className="flex items-center gap-2"><span className="text-muted-foreground">{recalculating ? "Đang tính lại" : dirty ? "Có thay đổi chưa lưu" : docstatus === 1 ? "Đã ghi sổ" : "Nháp đã đồng bộ"}</span><strong className="tabular-nums">Còn phải thu: {money(outstandingAmount)} ₫</strong></div>
           <div className="flex flex-wrap items-center gap-1.5">
             {docstatus === 1 && documentName && productionCaps.read ? <Button type="button" variant="outline" size="sm" onClick={openProduction}><Factory className="size-3.5" /> Sản xuất</Button> : null}
             {isExisting ? <Button type="button" variant="outline" size="sm" onClick={() => props.onPreviewCreated(documentName)}><Eye className="size-3.5" /> In / xem</Button> : null}

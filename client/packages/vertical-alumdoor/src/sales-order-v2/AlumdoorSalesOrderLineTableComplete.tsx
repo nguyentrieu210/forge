@@ -18,6 +18,7 @@ import {
   ChevronRight,
   Copy,
   Gift,
+  ImageIcon,
   Loader2,
   Plus,
   Trash2,
@@ -39,6 +40,7 @@ import {
   AlumdoorBomActualEditor,
   type BomActualComponentRow,
 } from "../AlumdoorBomActualEditor.js";
+import { AlumdoorMotorSuggestPanel } from "../AlumdoorMotorSuggestPanel.js";
 import { AlumdoorSalesOrderField, fallbackField, selectField } from "./AlumdoorSalesOrderField.js";
 import {
   fieldLabel,
@@ -48,8 +50,13 @@ import {
   isAreaDoor,
   isDirectOrdinaryQuantityLine,
   isFullSetSalesItem,
+  mayHaveBom,
   lineAdjustmentAmount,
+  lineAdjustmentSplit,
   lineAvailabilityStatus,
+  lineButterflyToggle,
+  lineDiscountTotal,
+  priceVariantOptionAmountLabel,
   lineBlockingGaps,
   lineCatalogWarnings,
   lineCommercialNeedsApproval,
@@ -57,6 +64,9 @@ import {
   lineDeliveredQty,
   lineDiscountAmount,
   lineDiscountNeedsApproval,
+  lineGiftRailArea,
+  lineGiftRailToggle,
+  lineItemImage,
   lineIsCatchWeight,
   lineMissingUomConversion,
   lineNeedsUomConversion,
@@ -68,7 +78,11 @@ import {
   linePriceVariantOptions,
   linePriceVariantRequired,
   linePricedQuantity,
+  priceVariantLabel,
   priceVariantOptionLabel,
+  priceVariantOptionLabels,
+  PRICE_VARIANT_GIFT_RAIL,
+  PRICE_VARIANT_LEAF_ONLY,
   lineSalesUom,
   lineStockQty,
   lineStockUom,
@@ -338,6 +352,9 @@ function dynamicDisplayValue(fieldname: DynamicFieldName, value: unknown): strin
   if (value == null || value === "") return "";
   if (fieldname === "has_butterfly_bracket") return Number(value) ? "Có" : "Không";
   if ([
+    // Hai cột phủ bì cũng là số đo mét — thiếu chúng ở đây thì in thô "2.97" thay vì "2,97",
+    // lạc lõng giữa các cột còn lại. Lộ ra khi dòng cấu kiện bắt đầu mang kích thước cắt.
+    "width_pb_ray_m", "width_pb_nhua_m",
     "width_m", "height_m", "mesh_height_m", "cut_width_m", "length_m", "qty_bar",
     "leaf_count", "single_layer_leaf_count", "double_layer_leaf_count", "estimated_weight_kg",
   ].includes(fieldname)) return quantity(value);
@@ -364,41 +381,114 @@ function surchargeRuleNames(line: SalesLine): string[] {
     .filter(Boolean))];
 }
 
-function doorProductDescription(line: SalesLine, customerGroup: string): string {
-  if (!isAreaDoor(line)) return "";
+interface ProductDescriptionGroup {
+  key: string;
+  label: string;
+  items: string[];
+}
+
+/**
+ * "Mô tả sản phẩm" — cùng lượng thông tin như trước, nhưng chia NHÓM thay vì dồn một chuỗi.
+ *
+ * Bản cũ nối tất cả bằng dấu chấm giữa ("ĐỨC AL501N · Màu ĐEN XINGFA · Rộng PB nhựa 3 × …"),
+ * nên người bán phải đọc hết cả câu mới tìm được con số mình cần, và câu đó lại bị `truncate`
+ * cắt cụt đúng chỗ quan trọng nhất. Ở đây mỗi nhóm có nhãn riêng, và phần khuyến mại — chỗ
+ * khách hỏi nhiều nhất — được tách hẳn ra một khối nổi (xem `promoChips` phía dưới) chứ không
+ * lẫn vào cùng một dòng với kích thước.
+ *
+ * KHÔNG có thông tin nào bị bỏ: mọi mảnh của bản cũ đều còn, chỉ đổi chỗ.
+ */
+function doorProductGroups(line: SalesLine, customerGroup: string): ProductDescriptionGroup[] {
+  if (!isAreaDoor(line)) return [];
   const widthField = salesWidthInputField(line, customerGroup);
   const width = numberValue(widthField ? line[widthField] : undefined)
     ?? numberValue(line.width_m);
   const height = numberValue(line.height_m);
-  const parts = [text(line._itemName) || text(line.item_code)];
-  if (text(line.color)) parts.push(`Màu ${text(line.color)}`);
-  if (width !== undefined && height !== undefined) {
-    parts.push(`${widthField === "width_pb_nhua_m" ? "Rộng PB nhựa" : "Rộng PB ray"} ${quantity(width)} × Cao PB ${quantity(height)} m`);
-  }
-  if (numberValue(line.mesh_height_m) !== undefined) parts.push(`Cao lưới ${quantity(line.mesh_height_m)} m`);
+  const groups: ProductDescriptionGroup[] = [];
+  const push = (key: string, label: string, items: Array<string | undefined>) => {
+    const kept = items.map((item) => text(item)).filter(Boolean);
+    if (kept.length) groups.push({ key, label, items: kept });
+  };
+
+  push("item", "Mặt hàng", [text(line._itemName) || text(line.item_code)]);
+  push("finish", "Màu", [text(line.color)]);
+
   const sets = numberValue(line.set_count);
   const area = numberValue(line.billable_area_sqm)
     ?? (width !== undefined && height !== undefined && sets !== undefined ? width * height * sets : undefined);
-  if (area !== undefined) parts.push(`${quantity(area)} m²`);
-  if (sets !== undefined) parts.push(`${quantity(sets)} bộ`);
-  if (numberValue(line.has_butterfly_bracket) === 1) parts.push("Có bản bướm");
-  if (text(line.leaf_variant)) parts.push(text(line.leaf_variant));
-  if (text(line.ray_type)) parts.push(`Ray ${text(line.ray_type)}`);
+  push("size", "Kích thước", [
+    width !== undefined && height !== undefined
+      ? `${widthField === "width_pb_nhua_m" ? "Rộng PB nhựa" : "Rộng PB ray"} ${quantity(width)} × Cao PB ${quantity(height)} m`
+      : undefined,
+    numberValue(line.mesh_height_m) !== undefined ? `Cao lưới ${quantity(line.mesh_height_m)} m` : undefined,
+    area !== undefined ? `${quantity(area)} m²` : undefined,
+    sets !== undefined ? `${quantity(sets)} bộ` : undefined,
+  ]);
+
+  push("config", "Cấu hình", [
+    /* "Có bắn bướm" KHÔNG in ở đây nữa: nó đã là một Ô TICK có nhãn ngay dưới khối này. In cả
+       hai chỗ là đúng cái lỗi "Tặng ray · Tặng ray" mà chủ xưởng chụp lại, chỉ khác tên. */
+    text(line.leaf_variant),
+    text(line.ray_type) ? `Ray ${text(line.ray_type)}` : undefined,
+  ]);
+
+  return groups;
+}
+
+/** Bản một dòng của mô tả — dùng cho `title` (tooltip) và cho việc quyết định tự mở dòng. */
+function doorProductDescription(line: SalesLine, customerGroup: string): string {
+  return doorProductGroups(line, customerGroup)
+    .map((group) => group.items.join(" · "))
+    .join(" · ");
+}
+
+/**
+ * Khuyến mại & chiết khấu của dòng, gom về một chỗ.
+ *
+ * Trước đây chiết khấu và quà tặng nằm lẫn trong chuỗi mô tả dài, còn tên chính sách lại nằm ở
+ * một cụm badge khác bên phải — hai nửa của cùng một câu chuyện ở hai đầu màn hình.
+ */
+function promoChips(line: SalesLine): string[] {
+  const chips: string[] = [];
   const discountPercentage = numberValue(line.discount_percentage ?? line._commercial?.discount_percentage)
     ?? linePolicyDiscountPercentage(line);
   if (discountPercentage > 0) {
     const policyDiscount = linePolicyDiscountPercentage(line);
     const policyLabel = linePolicyDiscountRule(line);
-    parts.push(policyLabel && Math.abs(discountPercentage - policyDiscount) < 0.000001
+    chips.push(policyLabel && Math.abs(discountPercentage - policyDiscount) < 0.000001
       ? policyLabel
       : `Chiết khấu ${quantity(discountPercentage)}%`);
   }
-  const gifts = Array.isArray(line._commercial?.benefit_items) ? line._commercial!.benefit_items! : [];
-  for (const gift of gifts) {
-    const label = text(gift.label) || text(gift.item_name) || text(gift.item_code) || "Tặng kèm";
-    parts.push(`${label}${numberValue(gift.qty) !== undefined ? ` ${quantity(gift.qty)} ${text(gift.uom)}`.trimEnd() : ""}`);
+  return chips;
+}
+
+/**
+ * Ảnh mặt hàng.
+ *
+ * Ảnh HỎNG hoặc THIẾU không được làm vỡ lưới: cả hai trường hợp đều rơi về đúng một ô vuông
+ * cùng kích thước với một biểu tượng mờ, nên chiều cao dòng không đổi dù server trả về gì.
+ */
+function ItemImage(props: { src: string; alt: string; size: number; className?: string }) {
+  const [failed, setFailed] = useState(false);
+  const style: CSSProperties = { width: props.size, height: props.size };
+  const frame = `shrink-0 overflow-hidden rounded border border-border/70 bg-muted/40 ${props.className ?? ""}`;
+  if (!props.src || failed) {
+    return (
+      <div style={style} className={`${frame} grid place-items-center`} title={props.src ? "Không tải được ảnh mặt hàng" : "Chưa có ảnh mặt hàng"} aria-hidden>
+        <ImageIcon className="size-3 text-muted-foreground/60" />
+      </div>
+    );
   }
-  return parts.filter(Boolean).join(" · ");
+  return (
+    <img
+      src={props.src}
+      alt={props.alt}
+      style={style}
+      loading="lazy"
+      onError={() => setFailed(true)}
+      className={`${frame} object-cover`}
+    />
+  );
 }
 
 function BomBlock(props: {
@@ -421,7 +511,7 @@ function BomBlock(props: {
   const pendingFields = Array.isArray(preview?.pending_fields) ? preview!.pending_fields!.map(text).filter(Boolean) : [];
   const previewReason = text(preview?.reason);
   const missingSalesUomCount = components.filter((component) => !text(component.uom)).length;
-  const bomEligible = isFullSetSalesItem(props.line);
+  const bomEligible = mayHaveBom(props.line);
   if (!bomEligible && !text(preview?.bom_no) && !components.length && !requirements.length && !props.line._bomError) return null;
   const status = props.line._bomError
     ? "BOM chưa resolve"
@@ -526,6 +616,20 @@ export interface AlumdoorSalesOrderLineTableCompleteProps {
   services: FieldServices;
   roles: string[];
   readOnly: boolean;
+  /**
+   * Hai cột chỉ dành cho màn XEM LẠI đơn, mặc định TẮT ở màn tạo đơn (yêu cầu chủ xưởng
+   * 21/08/2026: lúc tạo đơn không cần "Quy ra tồn" và "Tổng số lá").
+   *
+   * Cố ý làm công tắc chứ không xoá code: cùng một component dựng cả màn tạo lẫn màn xem đơn đã
+   * ghi sổ, mà "Quy ra tồn" là con số duy nhất trả lời "phiếu này rút bao nhiêu khỏi thẻ kho" —
+   * xoá sạch là màn xem mất luôn thông tin đó, không lấy lại được. Bên gọi (Workbench) bật
+   * `showStockConversionColumn={docstatus === 1}` khi cần.
+   *
+   * `leaf_count` (Tổng số lá) VẪN được tính và vẫn đi trong payload lưu — công tắc này chỉ ẩn
+   * CỘT, không đụng tới giá trị trên dòng.
+   */
+  showStockConversionColumn?: boolean;
+  showLeafCountColumn?: boolean;
   selectedKeys: Set<string>;
   leafVariants: string[];
   onToggleSelection: (key: string, checked: boolean) => void;
@@ -534,6 +638,7 @@ export interface AlumdoorSalesOrderLineTableCompleteProps {
   onCommit: (key: string, field: string, value: unknown) => void;
   onAdd: () => void;
   onAddFive: () => void;
+  onAddSuggestedItem: (sourceKey: string, itemCode: string) => void;
   onDuplicate: (key: string) => void;
   onDelete: (key: string) => void;
   onDeleteSelected: () => void;
@@ -544,6 +649,16 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
   const autoExpanded = useRef<Set<string>>(new Set());
   const [widths, setWidths] = useState<Record<ColumnId, number>>(loadStoredWidths);
+  /** Lời từ chối khi người bán cố tick "Tặng ray" cho một dòng chưa đủ diện tích. */
+  const [giftRailRefusal, setGiftRailRefusal] = useState<Record<string, string>>({});
+  /**
+   * Quyết định TỰ ĐỘNG gần nhất đã bắn cho từng dòng.
+   *
+   * Không có nó, mỗi lượt preview trả về (kèm một `props.lines` mới) lại thấy "cần tick" và lại
+   * bắn thêm một lượt commit — vòng lặp preview vô tận. Có nó thì mỗi quyết định chỉ bắn một lần
+   * cho tới khi điều kiện thật sự đổi.
+   */
+  const giftRailAutoApplied = useRef<Map<string, string>>(new Map());
   const pendingDynamicValues = useRef<Map<string, unknown>>(new Map());
   const dimensionCommitTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const dynamicEditKey = (lineKey: string, fieldname: DynamicFieldName) => `${lineKey}\u001f${fieldname}`;
@@ -572,11 +687,14 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
       .filter((line) => {
         const benefits = Array.isArray(line._commercial?.benefit_items) ? line._commercial!.benefit_items!.length : 0;
         return Boolean(doorProductDescription(line, props.customerGroup))
-          || isFullSetSalesItem(line)
+          || mayHaveBom(line)
           || Boolean(line._bomError || line._bomPreview?.bom_no || (line._bomPreview?.components?.length ?? 0) > 0)
           || lineDiscountAmount(line) !== 0
           || lineAdjustmentAmount(line) !== 0
           || benefits > 0
+          // Ô tick "Tặng ray" sống trong khối mô tả, nên dòng nào có ô tick đó phải tự mở —
+          // nếu không thì lựa chọn duy nhất làm lệch 75.000 đ/m² lại nằm sau một mũi tên.
+          || Boolean(lineGiftRailToggle(line))
           || lineCommercialNeedsApproval(line)
           // Thiếu dữ liệu phải lộ ra NGAY lúc chọn hàng, không đợi tới lúc bấm Lưu mới báo.
           || lineBlockingGaps(line).length > 0
@@ -592,6 +710,80 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
       return next;
     });
   }, [props.customerGroup, props.lines]);
+
+  /**
+   * TỰ ĐỘNG tick "Tặng ray" khi đủ diện tích — nhưng KHÔNG bao giờ đè lên tay người bán.
+   *
+   * Theo quyết định trực tiếp của chủ xưởng 22/08/2026: trên 8 m² thì tự tick và người bán vẫn
+   * có thể bỏ tick. Hai vế đó chỉ sống chung được nếu máy phân biệt được "người bán chưa từng
+   * chạm ô này" với "đã chạm":
+   *
+   *   - CHƯA CHẠM (`_giftRailTouched` vắng mặt) ⇒ máy đặt mặc định theo diện tích, và đặt lại
+   *     mỗi lần kích thước đổi. Đây là trạng thái của một dòng vừa nhập xong kích thước.
+   *   - ĐÃ CHẠM ⇒ máy im lặng VĨNH VIỄN trên dòng đó. Người bán bỏ tick ở 9 m² rồi sửa thành
+   *     12 m² thì ô vẫn để trống: quyết định là của người bán, không phải của diện tích.
+   *
+   * Cờ `_giftRailTouched` chỉ được bật ở đúng một chỗ — handler của ô tick (`setGiftRail`) — và
+   * bị xoá khi dòng đổi mặt hàng (mặt hàng mới là một quyết định mới).
+   */
+  useEffect(() => {
+    if (props.readOnly) return;
+    for (const line of props.lines) {
+      const toggle = lineGiftRailToggle(line);
+      if (!toggle) { giftRailAutoApplied.current.delete(line._key); continue; }
+      if (line._giftRailTouched) continue;
+      // Chưa nhập đủ kích thước ⇒ chưa biết diện tích ⇒ chưa quyết thay người bán.
+      if (toggle.area === undefined) continue;
+      const want = toggle.eligible ? PRICE_VARIANT_GIFT_RAIL : PRICE_VARIANT_LEAF_ONLY;
+      if (linePriceVariant(line).toUpperCase() === want) {
+        giftRailAutoApplied.current.set(line._key, want);
+        continue;
+      }
+      if (giftRailAutoApplied.current.get(line._key) === want) continue;
+      giftRailAutoApplied.current.set(line._key, want);
+      props.onPatch(line._key, { price_variant: want });
+      props.onCommit(line._key, "price_variant", want);
+    }
+  }, [props.lines, props.onCommit, props.onPatch, props.readOnly]);
+
+  /**
+   * Bật/tắt ô tick "Tặng ray".
+   *
+   * Dưới ngưỡng mà vẫn cố tick ⇒ CHẶN (không ghi gì xuống dòng) và NÓI RÕ vì sao — chốt chủ
+   * xưởng: "chặn cảnh báo". Ghi `price_variant` phải đi hai bước `onPatch` → `onCommit`, vì
+   * `commitLine` lấy giá trị MỚI NHẤT trên dòng chứ không lấy tham số truyền vào; chỉ gọi
+   * `onCommit` thì một dòng đã có `TANG_RAY` sẽ không bao giờ bỏ tick được.
+   */
+  const setGiftRail = useCallback((line: SalesLine, next: boolean) => {
+    const toggle = lineGiftRailToggle(line);
+    if (!toggle) return;
+    if (next && !toggle.eligible) {
+      setGiftRailRefusal((current) => ({
+        ...current,
+        [line._key]: toggle.area === undefined
+          ? `Chưa nhập đủ kích thước nên chưa biết dòng này có ${toggle.operator === "GTE" ? "đạt" : "vượt"} ${quantity(toggle.minArea)} m² hay không — chưa tick tặng ray được.`
+          : `Không tick được: cửa ${quantity(toggle.area)} m²/bộ chưa ${toggle.operator === "GTE" ? "đạt" : "vượt"} ${quantity(toggle.minArea)} m². Dòng vẫn giữ đơn giá chỉ lá.`,
+      }));
+      return;
+    }
+    setGiftRailRefusal((current) => {
+      if (!current[line._key]) return current;
+      const nextState = { ...current };
+      delete nextState[line._key];
+      return nextState;
+    });
+    const variant = next ? PRICE_VARIANT_GIFT_RAIL : PRICE_VARIANT_LEAF_ONLY;
+    props.onPatch(line._key, { price_variant: variant, _giftRailTouched: true });
+    props.onCommit(line._key, "price_variant", variant);
+  }, [props.onCommit, props.onPatch]);
+
+  /** Ô tick "Có bắn bướm" — cùng đường ghi hai bước như ô tick "Tặng ray". */
+  const setButterflyBracket = useCallback((line: SalesLine, next: boolean) => {
+    const value = next ? 1 : 0;
+    props.onPatch(line._key, { has_butterfly_bracket: value });
+    props.onCommit(line._key, "has_butterfly_bracket", value);
+  }, [props.onCommit, props.onPatch]);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     try { window.localStorage.setItem(COLUMN_WIDTH_STORAGE_KEY, JSON.stringify(widths)); } catch { /* optional preference */ }
@@ -611,15 +803,26 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
     // món (cửa Lưới/Đài Loan/Siêu Trường) nó lại là cơ sở tính tiền, nên nó xuất hiện trong
     // khối "Vì sao ra con số này" của dòng chi tiết thay vì chiếm một cột cho mọi đơn.
     if (fieldname === "cut_width_m") return false;
+    // "Có bắn bướm" rời khỏi cột: nó nay là Ô TICK nằm cạnh ô tick "Tặng ray" trong khối mô tả
+    // (chốt chủ xưởng 21/08/2026 — "bắn bướm là tick như … tick có ray ko ray của cửa đức").
+    // Một khái niệm chỉ được có ĐÚNG MỘT ô điều khiển, nếu không người bán không biết ô nào thật.
+    if (fieldname === "has_butterfly_bracket") return false;
+    // "Tổng số lá" tắt ở màn tạo đơn — số vẫn được tính và vẫn nằm trong payload lưu,
+    // và vẫn đọc được ở khối "Vì sao ra con số này".
+    if (fieldname === "leaf_count" && !props.showLeafCountColumn) return false;
     if (isAreaDoor(line)) {
       if (fieldname === "width_pb_ray_m" || fieldname === "width_pb_nhua_m") {
-        if (line._overrides?.[fieldname]) return fieldVisible(line, fieldname);
+        // Nhóm giá ở header đổi trước khi preview dòng mới trả về. Trong khoảng chờ đó,
+        // `_overrides` vẫn là ảnh chụp của nhóm cũ và có thể đang `hidden: 1` đúng ô vừa được
+        // chọn — làm cột rộng biến mất vài giây. Luật chọn PB ray/nhựa là thuần xác định và
+        // giống hệt server, nên dùng kết quả hiện tại làm trọng tài; preview kế tiếp chỉ bổ sung
+        // nhãn/required, không được làm mất ô nhập.
         return salesWidthInputField(line, props.customerGroup) === fieldname;
       }
       if (fieldname === "width_m" && salesWidthInputField(line, props.customerGroup)) return false;
     }
     return fieldVisible(line, fieldname);
-  }, [props.customerGroup]);
+  }, [props.customerGroup, props.showLeafCountColumn]);
   const dynamicColumns = useMemo(
     () => DYNAMIC_FIELD_ORDER.filter((fieldname) => activeLines.some((line) => visibleDynamicField(line, fieldname))),
     [activeLines, visibleDynamicField],
@@ -632,7 +835,18 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
    * cùng luật với cột thông số động: có dữ liệu mới xuất hiện.
    */
   const showStockConversion = useMemo(
-    () => activeLines.some((line) => lineNeedsUomConversion(line) || lineStockQty(line) !== undefined),
+    () => Boolean(props.showStockConversionColumn)
+      && activeLines.some((line) => lineNeedsUomConversion(line) || lineStockQty(line) !== undefined),
+    [activeLines, props.showStockConversionColumn],
+  );
+  /**
+   * Ảnh mặt hàng chỉ chiếm chỗ khi THẬT SỰ có ảnh.
+   *
+   * 21/08/2026 chưa có nguồn ảnh nào (xem `lineItemImage`), nên hôm nay khối này im lặng và lưới
+   * không đổi. Ngày brief bổ sung trường ảnh cho `Item` thì nó tự sáng lên, không phải sửa lưới.
+   */
+  const showItemImages = useMemo(
+    () => activeLines.some((line) => Boolean(lineItemImage(line))),
     [activeLines],
   );
   /**
@@ -798,13 +1012,18 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
     const options = linePriceVariantOptions(line);
     const chosen = linePriceVariant(line);
     const required = linePriceVariantRequired(line);
-    const field = selectField(
-      childFieldByName.get("price_variant"),
-      "price_variant",
-      "Mã giá",
-      options.map((option) => text(option.price_variant)).filter(Boolean),
-    );
+    // GIÁ TRỊ vẫn là mã thô (server tra giá theo đúng mã đó); chỉ NHÃN được Việt hoá.
+    const field = {
+      ...selectField(
+        childFieldByName.get("price_variant"),
+        "price_variant",
+        "Mã giá",
+        options.map((option) => text(option.price_variant)).filter(Boolean),
+      ),
+      optionLabels: priceVariantOptionLabels(options),
+    } as DocField;
     const hint = options.map(priceVariantOptionLabel).join(" · ");
+    const railToggle = lineGiftRailToggle(line);
     return (
       <TableCell
         key="price_variant"
@@ -812,9 +1031,21 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
         className={`${rowTone} overflow-hidden px-1.5 py-1.5 text-center align-middle`}
       >
         {options.length <= 1 ? (
-          /* Một cách bán (hoặc chưa đọc được danh sách) ⇒ không có gì để quyết. Vẫn in ra mã
-             đang dùng để dòng tự giải thích được, nhưng không dựng ô chọn giả. */
-          <div className="flex h-8 items-center justify-center truncate text-muted-foreground" title={hint || chosen}>{chosen || "—"}</div>
+          /* Một cách bán (hoặc chưa đọc được danh sách) ⇒ không có gì để quyết. Vẫn in ra cách
+             bán đang dùng để dòng tự giải thích được, nhưng không dựng ô chọn giả. */
+          <div className="flex h-8 items-center justify-center truncate text-muted-foreground" title={hint || chosen}>{priceVariantLabel(chosen) || "—"}</div>
+        ) : railToggle ? (
+          /* Đúng hai dòng giá TANG_RAY/CHI_LA ⇒ ô quyết định là Ô TICK ở khối mô tả bên dưới
+             (yêu cầu chủ xưởng 21/08/2026). Ở đây chỉ ĐỌC lại kết quả — hai chỗ cùng một ô chọn
+             thì người bán không biết chỗ nào mới là chỗ thật. */
+          <div className="flex flex-col items-center justify-center leading-tight" title={hint}>
+            {railToggle.undecided ? (
+              <span className="text-[10px] font-medium text-destructive">chưa chọn cách bán</span>
+            ) : (
+              <span className="truncate font-medium">{priceVariantLabel(chosen)}</span>
+            )}
+            <span className="text-[9px] text-muted-foreground">tick "Tặng ray" ở dòng mô tả</span>
+          </div>
         ) : (
           <div className="flex flex-col items-stretch gap-0.5">
             <GridField rowKey={line._key} columnId="price_variant" disabled={props.readOnly}>
@@ -950,14 +1181,28 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
             const policyDiscount = linePolicyDiscountPercentage(line);
             const enteredDiscount = numberValue(line.discount_percentage ?? line._commercial?.discount_percentage) ?? policyDiscount;
             const discountAmount = lineDiscountAmount(line);
-            const adjustmentAmount = lineAdjustmentAmount(line);
+            const adjustmentSplit = lineAdjustmentSplit(line);
+            const discountTotal = lineDiscountTotal(line);
             const sellingRate = numberValue(line._commercial?.selling_rate) ?? numberValue(line.rate);
             const grossAmount = numberValue(line._commercial?.gross_amount)
               ?? (pricedQty !== undefined && sellingRate !== undefined ? pricedQty * sellingRate : numberValue(line.amount));
             const payable = lineNetAmount(line);
             const ruleNames = appliedRuleNames(line);
             const surchargeNames = surchargeRuleNames(line);
+            const descriptionGroups = doorProductGroups(line, props.customerGroup);
             const productDescription = doorProductDescription(line, props.customerGroup);
+            const promoLabels = promoChips(line);
+            const railToggle = lineGiftRailToggle(line);
+            const butterflyToggle = lineButterflyToggle(line);
+            /* Quà "tặng ray" chỉ được kể MỘT LẦN. Server trả nó về trong `benefit_items`, còn ô
+               tick ngay cạnh đã mang đúng chữ "Tặng ray" — in cả hai ra đúng cái lỗi chủ xưởng
+               chụp lại. Giữ ô tick (vì nó còn BẤM được), và mượn số lượng của quà đặt cạnh nó. */
+            const giftRailBenefit = railToggle
+              ? benefits.find((benefit) => /GIFT[-_]?RAIL/i.test(text(benefit.source_rule)))
+              : undefined;
+            const shownBenefits = giftRailBenefit ? benefits.filter((benefit) => benefit !== giftRailBenefit) : benefits;
+            const itemImage = lineItemImage(line);
+            const itemImageAlt = `Ảnh mặt hàng ${text(line._itemName) || text(line.item_code) || ""}`.trim();
             const hasAuxiliaryRow = Boolean(text(line.item_code));
             const auxiliaryDescription = productDescription || text(line._itemName) || text(line.item_code);
             // Giải trình giá và danh sách thiếu đều đọc thẳng ảnh chụp server; không tính lại gì.
@@ -982,7 +1227,12 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
                   <GridField rowKey={line._key} columnId="item_code" disabled={props.readOnly}><AlumdoorSalesOrderField id={`sales-v2-complete-item-${line._key}`} field={itemField} value={line.item_code} onChange={(value) => props.onCommit(line._key, "item_code", text(value) || undefined)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} required readOnly={props.readOnly} compact hideLabel className="[&_.mf-control]:!min-h-8 [&_input]:!text-center [&_button]:!h-8 [&_button]:!justify-center" /></GridField>
                 </TableCell>
                 <TableCell style={{ width: widths.item_name, ...stickyStyle("item_name") }} className={`${frozenClass} px-1.5 py-1.5 text-center align-middle`}>
-                  <div className="truncate text-center font-medium leading-4" title={text(line._itemName) || text(line.item_code)}>{text(line._itemName) || text(line.item_code) || "—"}</div>
+                  {/* Ảnh chỉ chen vào khi đơn thật sự có ảnh — xem `showItemImages`. Nó nằm
+                      TRONG ô tên hàng chứ không mở thêm cột, để không đẩy lệch vùng tiền. */}
+                  <div className={showItemImages ? "flex min-w-0 items-center gap-1.5 text-left" : "min-w-0"}>
+                    {showItemImages ? <ItemImage src={itemImage} alt={itemImageAlt} size={22} /> : null}
+                    <div className={`min-w-0 flex-1 truncate font-medium leading-4 ${showItemImages ? "text-left" : "text-center"}`} title={text(line._itemName) || text(line.item_code)}>{text(line._itemName) || text(line.item_code) || "—"}</div>
+                  </div>
                   {/* "Còn N Mét · Giá Mét: 55.000 VND" — server đã dựng sẵn chuỗi này từ đợt đầu
                       nhưng bản Complete đánh rơi nó. Đây là câu duy nhất trả lời tại chỗ hai câu
                       hỏi trước khi hứa với khách: còn hàng không, và có giá chưa. */}
@@ -1012,30 +1262,134 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
 
               {text(line.item_code) && hasAuxiliaryRow && expanded.has(line._key) ? (
                 <TableRow className={`${commercialRowTone} border-b-2 border-border`} data-section="sales-v2-commercial-row">
-                  <TableCell colSpan={commercialLeadSpan} className="overflow-hidden px-2 py-1 text-left align-middle">
-                    <div className="flex min-w-0 flex-nowrap items-center justify-between gap-3 overflow-hidden whitespace-nowrap">
-                      {auxiliaryDescription ? <div className="min-w-0 flex-1 truncate px-3 text-center text-xs font-semibold text-primary" title={auxiliaryDescription}><span className="font-bold">Mô tả sản phẩm:</span> {auxiliaryDescription}</div> : <div className="min-w-0 flex-1" />}
-                      <div className="flex min-w-0 shrink items-center justify-end gap-1 overflow-hidden">
-                        {ruleNames.length ? <div className="flex min-w-0 items-center justify-end gap-1 overflow-hidden">{ruleNames.slice(0, 3).map((rule) => <Badge key={rule} variant="outline" className="max-w-[190px] shrink truncate text-[9px]" title={rule}>{rule}</Badge>)}{ruleNames.length > 3 ? <Badge variant="outline" className="shrink-0 text-[9px]">+{ruleNames.length - 3}</Badge> : null}</div> : null}
-                        {benefits.map((benefit, benefitIndex) => <span key={`${line._key}-benefit-${benefitIndex}`} className="inline-flex min-w-0 items-center gap-1 truncate text-[10px]" title={`${text(benefit.label) || "Tặng kèm"} · ${quantity(benefit.qty)} ${text(benefit.uom)}`}><Gift className="size-3 shrink-0" />{text(benefit.label) || "Tặng kèm"} · {quantity(benefit.qty)} {text(benefit.uom)}</span>)}
-                        {discountNeedsApproval ? <span className="inline-flex min-w-0 items-center gap-1 truncate text-[10px] text-destructive" title={`CK ${quantity(enteredDiscount)}% khác chuẩn ${quantity(policyDiscount)}% — cần duyệt`}><AlertTriangle className="size-3 shrink-0" />CK {quantity(enteredDiscount)}% khác chuẩn {quantity(policyDiscount)}% — cần duyệt</span> : null}
-                        {!discountNeedsApproval && needsApproval ? <span className="inline-flex min-w-0 items-center gap-1 truncate text-[10px]" title="Đơn giá khác chính sách — cần duyệt"><AlertTriangle className="size-3 shrink-0" />Đơn giá khác chính sách — cần duyệt</span> : null}
-                        {rowError ? <span className="inline-flex min-w-0 items-center gap-1 truncate text-[10px] text-destructive" title={rowError}><AlertTriangle className="size-3 shrink-0" />{rowError}</span> : null}
+                  <TableCell colSpan={commercialLeadSpan} className="overflow-hidden px-2 py-1.5 text-left align-top">
+                    {/* Mô tả sản phẩm — nhãn/giá trị theo nhóm, không còn một chuỗi dài bị cắt cụt.
+                        Khối khuyến mại tách riêng, có nền + viền, vì đó là chỗ khách hỏi nhiều nhất. */}
+                    <div className="flex min-w-0 items-start gap-2">
+                      {showItemImages ? <ItemImage src={itemImage} alt={itemImageAlt} size={44} className="mt-0.5" /> : null}
+                      <div className="min-w-0 flex-1">
+                        {descriptionGroups.length ? (
+                          <dl className="flex min-w-0 flex-wrap items-baseline gap-x-4 gap-y-0.5">
+                            {descriptionGroups.map((group) => (
+                              <div key={group.key} className="flex min-w-0 items-baseline gap-1">
+                                <dt className="shrink-0 text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">{group.label}</dt>
+                                <dd className="min-w-0 text-[11px] font-semibold text-primary" title={group.items.join(" · ")}>{group.items.join(" · ")}</dd>
+                              </div>
+                            ))}
+                          </dl>
+                        ) : (
+                          <div className="min-w-0 truncate text-[11px] font-semibold text-primary" title={auxiliaryDescription}>{auxiliaryDescription}</div>
+                        )}
+
+                        {ruleNames.length || promoLabels.length || benefits.length || railToggle || butterflyToggle ? (
+                          <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 rounded-md border border-primary/25 bg-primary/5 px-2 py-1">
+                            <span className="shrink-0 text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">Khuyến mại &amp; phụ thu</span>
+                            {promoLabels.map((label) => <Badge key={label} variant="secondary" className="max-w-[220px] truncate text-[9px]" title={label}>{label}</Badge>)}
+                            {ruleNames.slice(0, 3).map((rule) => <Badge key={rule} variant="outline" className="max-w-[220px] truncate text-[9px]" title={rule}>{rule}</Badge>)}
+                            {ruleNames.length > 3 ? <Badge variant="outline" className="text-[9px]">+{ruleNames.length - 3}</Badge> : null}
+                            {shownBenefits.map((benefit, benefitIndex) => <span key={`${line._key}-benefit-${benefitIndex}`} className="inline-flex min-w-0 items-center gap-1 text-[10px] font-medium" title={`${text(benefit.label) || "Tặng kèm"} · ${quantity(benefit.qty)} ${text(benefit.uom)}`}><Gift className="size-3 shrink-0" />{text(benefit.label) || "Tặng kèm"} · {quantity(benefit.qty)} {text(benefit.uom)}</span>)}
+                            {/* Ô TICK "Tặng ray" — chỉ có ở mặt hàng thật sự khai cả hai dòng giá
+                                TANG_RAY và CHI_LA. Trên ngưỡng thì máy tick sẵn; người bán vẫn bỏ
+                                tick được. Dưới ngưỡng mà cố tick thì CHẶN + nói rõ vì sao.
+                                Nhãn ô tick đã là chữ "Tặng ray", nên dòng chú thích bên cạnh CHỈ
+                                in con số — in cả tên nữa ra đúng lỗi "Tặng ray · Tặng ray". */}
+                            {railToggle ? (
+                              <span className="inline-flex items-center gap-1.5">
+                                <Checkbox
+                                  id={`sales-v2-complete-gift-rail-${line._key}`}
+                                  checked={railToggle.checked}
+                                  disabled={props.readOnly}
+                                  onCheckedChange={(value) => setGiftRail(line, value === true)}
+                                  aria-label={`Tặng ray cho dòng ${rowIndex + 1}`}
+                                />
+                                <label htmlFor={`sales-v2-complete-gift-rail-${line._key}`} className="cursor-pointer text-[10px] font-semibold" title={`Tick = ${priceVariantOptionLabel(railToggle.giftOption)} · Bỏ tick = ${priceVariantOptionLabel(railToggle.leafOption)} · Ngưỡng ${railToggle.operator === "GTE" ? "≥" : ">"} ${quantity(railToggle.minArea)} m²`}>
+                                  Tặng ray
+                                </label>
+                                <span className="text-[9px] text-muted-foreground">
+                                  {railToggle.undecided
+                                    ? "chưa chọn — chưa ra tiền"
+                                    : priceVariantOptionAmountLabel(railToggle.checked ? railToggle.giftOption : railToggle.leafOption)}
+                                </span>
+                                {giftRailBenefit ? <span className="inline-flex items-center gap-1 text-[9px] font-medium"><Gift className="size-3 shrink-0" />tặng {quantity(giftRailBenefit.qty)} {text(giftRailBenefit.uom)}</span> : null}
+                              </span>
+                            ) : null}
+                            {/* Ô TICK "Có bắn bướm" — giao diện y hệt ô tick Tặng ray (chốt chủ
+                                xưởng 21/08/2026). Chỉ hiện ở loại cửa mà chính sách cắt khai
+                                `butterfly_cut_deduction_m` (Lưới / Đài Loan / Siêu Trường); Đức và
+                                Úc không có số trừ đó nên server chiếu xuống `hidden` và ô biến mất.
+                                Tick gọi lại preview ⇒ Rộng cắt lá đổi ngay (0,03 → 0,035). */}
+                            {butterflyToggle ? (
+                              <span className="inline-flex items-center gap-1.5">
+                                <Checkbox
+                                  id={`sales-v2-complete-butterfly-${line._key}`}
+                                  checked={butterflyToggle.checked}
+                                  disabled={props.readOnly || fieldReadonly(line, "has_butterfly_bracket")}
+                                  onCheckedChange={(value) => setButterflyBracket(line, value === true)}
+                                  aria-label={`Có bắn bướm cho dòng ${rowIndex + 1}`}
+                                />
+                                <label htmlFor={`sales-v2-complete-butterfly-${line._key}`} className="cursor-pointer text-[10px] font-semibold" title="Bắn bướm dùng số trừ riêng của chính sách cắt, nên Rộng cắt lá đổi ngay khi tick.">
+                                  Có bắn bướm
+                                </label>
+                                {numberValue(line.cut_width_m) === undefined
+                                  ? null
+                                  : <span className="text-[9px] text-muted-foreground">Rộng cắt lá {quantity(line.cut_width_m)} m</span>}
+                              </span>
+                            ) : null}
+                          </div>
+                        ) : null}
+
+                        {/* Lời từ chối chỉ sống chừng nào lý do còn đúng: dòng vừa đủ diện tích
+                            thì nó biến mất ngay, không cần người bán bấm gì. */}
+                        {giftRailRefusal[line._key] && railToggle && !railToggle.eligible ? (
+                          <div className="mt-1 flex min-w-0 items-start gap-1 rounded-md border border-destructive/40 bg-destructive/5 px-2 py-1 text-[10px] text-destructive">
+                            <AlertTriangle className="mt-px size-3 shrink-0" />
+                            <span>{giftRailRefusal[line._key]}</span>
+                          </div>
+                        ) : null}
+
+                        <div className="mt-2">
+                          <AlumdoorMotorSuggestPanel
+                            areaSqm={lineGiftRailArea(line)}
+                            currentMotorItemCode={text(line.motor_model)}
+                            disabled={props.readOnly}
+                            onAccept={(_kind, suggestion) => props.onAddSuggestedItem(line._key, suggestion.item_code)}
+                          />
+                        </div>
+
+                        {discountNeedsApproval || (!discountNeedsApproval && needsApproval) || rowError ? (
+                          <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-0.5">
+                            {discountNeedsApproval ? <span className="inline-flex min-w-0 items-center gap-1 text-[10px] text-destructive" title={`CK ${quantity(enteredDiscount)}% khác chuẩn ${quantity(policyDiscount)}% — cần duyệt`}><AlertTriangle className="size-3 shrink-0" />CK {quantity(enteredDiscount)}% khác chuẩn {quantity(policyDiscount)}% — cần duyệt</span> : null}
+                            {!discountNeedsApproval && needsApproval ? <span className="inline-flex min-w-0 items-center gap-1 text-[10px]" title="Đơn giá khác chính sách — cần duyệt"><AlertTriangle className="size-3 shrink-0" />Đơn giá khác chính sách — cần duyệt</span> : null}
+                            {rowError ? <span className="inline-flex min-w-0 items-center gap-1 text-[10px] text-destructive" title={rowError}><AlertTriangle className="size-3 shrink-0" />{rowError}</span> : null}
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   </TableCell>
                   <TableCell style={{ width: widths.priced_qty }} className="overflow-hidden bg-background/70 px-1 py-1 text-center align-middle">
                     <div className="text-[9px] font-semibold uppercase text-muted-foreground">Chiết khấu</div>
                     <div className="mx-auto mt-0.5 w-[64px] max-w-full"><GridField rowKey={line._key} columnId="discount_percentage" disabled={props.readOnly || fieldReadonly(line, "discount_percentage")}><AlumdoorSalesOrderField id={`sales-v2-complete-discount-${line._key}`} field={discountField} value={line.discount_percentage ?? policyDiscount} onChange={(value) => props.onPatch(line._key, { discount_percentage: value == null || value === "" ? 0 : Number(value) })} onCommit={() => props.onCommit(line._key, "discount_percentage", line.discount_percentage ?? policyDiscount)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} readOnly={props.readOnly || fieldReadonly(line, "discount_percentage")} compact hideLabel className="w-full max-w-full [&_.mf-control]:!min-h-7 [&_.mf-control]:!w-full [&_input]:!h-7 [&_input]:!w-full [&_input]:!text-center [&_input]:text-[10px] [&_input]:tabular-nums" /></GridField></div>
-                    <div className="mt-0.5 whitespace-nowrap text-[10px] tabular-nums text-destructive">−{money(discountAmount)} ₫</div>
+                    {/* Sau bản vá P0, chiết khấu đại lý 15% KHÔNG còn nằm ở `discount_amount` mà
+                        nằm trong `adjustment_amount` mang dấu ÂM. Ô này phải gom cả hai đường,
+                        nếu không khách nhìn thấy "Chiết khấu 0 ₫" trong khi tiền đã giảm đúng.
+                        Tên khoản lấy từ `pricing_rule_snapshots[].rule_name` (đã Việt hoá). */}
+                    <div className="mt-0.5 whitespace-nowrap text-[10px] tabular-nums text-destructive" title={adjustmentSplit.reduction
+                      ? `Chiết khấu trên dòng ${money(discountAmount)} ₫ + giảm trừ theo quy tắc giá ${money(adjustmentSplit.reduction)} ₫${adjustmentSplit.reductionRules.length ? ` (${adjustmentSplit.reductionRules.join(" · ")})` : ""}`
+                      : "Chiết khấu theo % trên dòng"}>−{money(discountTotal)} ₫</div>
+                    {adjustmentSplit.reductionRules.length
+                      ? <div className="mt-0.5 truncate text-[9px] text-muted-foreground" title={adjustmentSplit.reductionRules.join(" · ")}>{adjustmentSplit.reductionRules.join(" · ")}</div>
+                      : null}
                   </TableCell>
                   <TableCell style={{ width: widths.rate }} className="overflow-hidden bg-background/70 px-1 py-1 text-center align-middle">
                     <div className="text-[9px] font-semibold uppercase text-muted-foreground">Phụ thu</div>
-                    <div className="mt-1 whitespace-nowrap text-[11px] font-medium tabular-nums">{adjustmentAmount >= 0 ? "+" : "−"}{money(Math.abs(adjustmentAmount))} ₫</div>
-                    <div className="mt-0.5 truncate text-[9px] text-muted-foreground" title={surchargeNames.join(" · ")}>{surchargeNames.length ? surchargeNames.join(" · ") : adjustmentAmount ? "Phụ thu khác" : "Không có phụ thu"}</div>
+                    {/* Chỉ phần LÀM TĂNG tiền. Trước đây ô này in thẳng `adjustment_amount`, nên
+                        một dòng có khoản giảm lớn hơn phụ thu in ra "−…" ngay dưới nhãn "Phụ thu"
+                        — cùng một khoản tiền vừa bị gọi là phụ thu vừa mang dấu trừ. */}
+                    <div className="mt-1 whitespace-nowrap text-[11px] font-medium tabular-nums">+{money(adjustmentSplit.surcharge)} ₫</div>
+                    <div className="mt-0.5 truncate text-[9px] text-muted-foreground" title={surchargeNames.join(" · ")}>{surchargeNames.length ? surchargeNames.join(" · ") : adjustmentSplit.surcharge ? "Phụ thu khác" : "Không có phụ thu"}</div>
                   </TableCell>
                   <TableCell style={{ width: widths.gross_amount }} className="overflow-hidden bg-primary/5 px-1 py-1 text-center align-middle">
-                    <div className="text-[9px] font-semibold uppercase text-muted-foreground">Tiền phải trả</div>
+                    <div className="text-[9px] font-semibold uppercase text-muted-foreground">Tiền phải thu</div>
                     <div className="mt-1 whitespace-nowrap text-sm font-bold tabular-nums text-primary">{money(payable)} ₫</div>
                   </TableCell>
                   <TableCell style={{ width: widths.actions }} className="bg-background/70 px-1 py-1" />

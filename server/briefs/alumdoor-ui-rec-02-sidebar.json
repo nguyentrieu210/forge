@@ -1,6 +1,6 @@
 {
   "id": "alumdoor",
-  "version": "2.2.5",
+  "version": "2.11.1",
   "nav": [
     {
       "key": "Quotation",
@@ -11,6 +11,14 @@
       "permission_doctype": "Quotation"
     },
     {
+      "key": "action:bao-gia-thanh-don",
+      "label": "Báo giá → Đơn hàng",
+      "kind": "experience",
+      "permission_doctype": "Sales Order",
+      "icon": "file-output",
+      "group": "Bán hàng"
+    },
+    {
       "key": "Sales Order",
       "label": "Đơn hàng",
       "kind": "doctype",
@@ -19,28 +27,28 @@
       "permission_doctype": "Sales Order"
     },
     {
+      "key": "action:don-ban-thanh-phieu-xuat",
+      "label": "Đơn hàng → Phiếu xuất",
+      "kind": "experience",
+      "permission_doctype": "Delivery Note",
+      "icon": "truck",
+      "group": "Bán hàng"
+    },
+    {
       "key": "Delivery Note",
-      "label": "Phiếu xuất kho",
+      "label": "Phiếu giao hàng",
       "kind": "doctype",
       "icon": "truck",
       "group": "Bán hàng",
       "permission_doctype": "Delivery Note"
     },
     {
-      "key": "action:giao-hang-theo-ngay",
-      "label": "Tạo phiếu giao theo ngày",
+      "key": "action:giao-nhieu-don-fifo",
+      "label": "Kho giao hàng nhiều đơn",
       "kind": "experience",
       "permission_doctype": "Delivery Note",
-      "icon": "calendar-check",
+      "icon": "truck",
       "group": "Bán hàng"
-    },
-    {
-      "key": "Sales Invoice",
-      "label": "Hoá đơn bán hàng",
-      "kind": "doctype",
-      "icon": "receipt",
-      "group": "Bán hàng",
-      "permission_doctype": "Sales Invoice"
     },
     {
       "key": "Material Request",
@@ -314,6 +322,30 @@
       ]
     },
     {
+      "key": "action:don-ban-thanh-hoa-don",
+      "label": "Đơn hàng → Hoá đơn",
+      "kind": "experience",
+      "permission_doctype": "Sales Invoice",
+      "icon": "receipt-text",
+      "group": "Công nợ / Kế toán"
+    },
+    {
+      "key": "Sales Invoice",
+      "label": "Hoá đơn bán hàng",
+      "kind": "doctype",
+      "icon": "receipt",
+      "group": "Công nợ / Kế toán",
+      "permission_doctype": "Sales Invoice"
+    },
+    {
+      "key": "Credit Note",
+      "label": "Giấy báo Có KH",
+      "kind": "doctype",
+      "icon": "file-plus",
+      "group": "Công nợ / Kế toán",
+      "permission_doctype": "Credit Note"
+    },
+    {
       "key": "Payment Entry",
       "label": "Phiếu thu / chi",
       "kind": "doctype",
@@ -547,22 +579,6 @@
       "permission_doctype": "Supplier"
     },
     {
-      "key": "Sales Option",
-      "label": "Phương án bán",
-      "kind": "doctype",
-      "permission_doctype": "Sales Option",
-      "icon": "sliders-horizontal",
-      "group": "Danh mục"
-    },
-    {
-      "key": "Sales Package",
-      "label": "Gói bán hàng",
-      "kind": "doctype",
-      "permission_doctype": "Sales Package",
-      "icon": "package-check",
-      "group": "Danh mục"
-    },
-    {
       "key": "Price List",
       "label": "Bảng giá",
       "kind": "doctype",
@@ -614,9 +630,8 @@
       "key": "Material Grade",
       "label": "Mác vật liệu",
       "kind": "doctype",
-      "icon": "layers-3",
-      "group": "Danh mục",
-      "permission_doctype": "Material Grade"
+      "permission_doctype": "Material Grade",
+      "group": "Danh mục"
     },
     {
       "key": "Material Specification",
@@ -630,9 +645,8 @@
       "key": "Item Attribute",
       "label": "Thuộc tính mặt hàng",
       "kind": "doctype",
-      "icon": "list-filter",
-      "group": "Danh mục",
-      "permission_doctype": "Item Attribute"
+      "permission_doctype": "Item Attribute",
+      "group": "Danh mục"
     },
     {
       "key": "Supplier Item",
@@ -646,17 +660,77 @@
       "key": "Brand",
       "label": "Thương hiệu",
       "kind": "doctype",
-      "icon": "badge-check",
-      "group": "Danh mục",
-      "permission_doctype": "Brand"
+      "permission_doctype": "Brand",
+      "group": "Danh mục"
     },
     {
       "key": "Manufacturer",
       "label": "Nhà sản xuất",
       "kind": "doctype",
-      "icon": "factory",
+      "permission_doctype": "Manufacturer",
+      "group": "Danh mục"
+    },
+    {
+      "key": "Surface Finish",
+      "label": "Bề mặt",
+      "kind": "doctype",
+      "icon": "layers",
       "group": "Danh mục",
-      "permission_doctype": "Manufacturer"
+      "permission_doctype": "Surface Finish"
+    },
+    {
+      "key": "Geometry Field",
+      "label": "Trường hình học",
+      "kind": "doctype",
+      "group": "Danh mục",
+      "permission_doctype": "Geometry Field"
+    },
+    {
+      "key": "Geometry Profile",
+      "label": "Bộ quy cách hình học",
+      "kind": "doctype",
+      "group": "Danh mục",
+      "permission_doctype": "Geometry Profile"
+    },
+    {
+      "key": "Pricing Scope",
+      "label": "Phạm vi áp dụng chính sách",
+      "kind": "doctype",
+      "icon": "tags",
+      "group": "Danh mục",
+      "permission_doctype": "Pricing Scope"
+    },
+    {
+      "key": "BOM Rule",
+      "label": "Quy tắc BOM",
+      "kind": "doctype",
+      "icon": "function-square",
+      "group": "Danh mục",
+      "permission_doctype": "BOM Rule"
+    },
+    {
+      "key": "Quy cách cửa",
+      "label": "Bản lá theo mã nhôm",
+      "kind": "doctype",
+      "icon": "ruler",
+      "group": "Danh mục",
+      "permission_doctype": "Quy cách cửa"
+    },
+    {
+      "key": "Bậc diện tích",
+      "label": "Bậc diện tích",
+      "kind": "doctype",
+      "icon": "ruler-dimension-line",
+      "group": "Danh mục",
+      "permission_doctype": "Bậc diện tích"
+    },
+    {
+      "key": "Ngưỡng chọn Motor",
+      "label": "Ngưỡng chọn Motor / UPS",
+      "kind": "doctype",
+      "icon": "cog",
+      "group": "Danh mục",
+      "permission_doctype": "Ngưỡng chọn Motor"
     },
     {
       "key": "Lý do huỷ",

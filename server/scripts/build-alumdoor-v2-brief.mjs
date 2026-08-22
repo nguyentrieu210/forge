@@ -22,6 +22,7 @@ import { MEASUREMENT_PROFILES, measurementProfilePayload } from "./lib/alumdoor-
 import { ALUMDOOR_COLOR_CATALOG } from "./lib/alumdoor-color-catalog.mjs";
 import { ALUMDOOR_SLAT_CATALOG, slatCatalogFixtureData } from "./lib/alumdoor-slat-catalog.mjs";
 import { ALUMDOOR_ITEM_GROUP_CATALOG } from "./lib/alumdoor-item-group-catalog.mjs";
+import { ALUMDOOR_BOM_RULE_FIXTURES } from "./lib/alumdoor-bom-rule-fixtures.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -102,7 +103,7 @@ const moveFieldsAfter = (dt, names, anchor) => {
  * `unchanged` khi manifest byte-identical, nên giữ nguyên số cũ là mọi sửa đổi metadata nằm im
  * trong file mà không bao giờ vào tenant.
  */
-brief.version = "2.10.0";
+brief.version = "2.26.0";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 for (const role of ["General Accountant", "Chief Accountant", "Director", "Kế toán tổng hợp", "Kế toán trưởng", "Giám đốc"]) {
   if (!brief.roles.includes(role)) brief.roles.push(role);
@@ -239,7 +240,11 @@ operationalSalesOrder.fields = operationalSalesOrder.fields.map((raw, index) => 
   if (["transaction_date", "delivery_date", "payment_method"].includes(field.fieldname)) field.form_region = "aside";
   if (["customer", "responsible_person", "manual_note", "operational_change_reason", "selling_price_list", "customer_group", "install_address"].includes(field.fieldname)) field.form_region = "main";
   if (field.fieldname === "install_address") field.form_width = "full";
-  if (field.fieldname === "customer_group") field.label = "Nhóm khách hàng";
+  if (field.fieldname === "customer_group") {
+    field.label = "Nhóm giá";
+    field.read_only = true;
+    field.fetch_from = "customer.price_group";
+  }
   if (field.fieldname === "payment_method") { field.default = "Ghi công nợ"; field.form_control_style = "choice_list"; }
   const summaryLabels = { total_amount: "Tổng cộng tiền hàng", discount_amount: "Tiền chiết khấu", surcharge_amount: "Phụ thu", vat_rate: "% VAT", vat_amount: "Số tiền VAT", grand_total: "Tiền phải thu" };
   if (field.fieldname in summaryLabels) { field.label = summaryLabels[field.fieldname]; field.form_width = "full"; }
@@ -1992,6 +1997,23 @@ note("MASTER · Measurement Profile chỉ đo/tồn; Geometry Field/Profile sở
             depends_on: "eval:doc.scope_type == 'DOOR_TYPE'", surface: "quick",
           },
           "component_item:Link(Item)*! Thành phần con",
+          {
+            fieldname: "price_variant", label: "Mã giá", fieldtype: "Data",
+            description: "Để trống = mọi mã giá; có giá trị = chỉ áp đúng biến thể này.", surface: "expanded",
+          },
+          {
+            fieldname: "min_area_sqm", label: "Diện tích từ (m²)", fieldtype: "Float",
+            description: "Cận dưới; cách tính tại trường Toán tử cận dưới.", surface: "expanded",
+          },
+          {
+            fieldname: "min_area_operator", label: "Toán tử cận dưới", fieldtype: "Select",
+            options: "GTE\nGT", default: "GTE",
+            description: "GTE = lớn hơn hoặc bằng; GT = lớn hơn nghiêm ngặt.", surface: "expanded",
+          },
+          {
+            fieldname: "max_area_sqm", label: "Diện tích đến (m²)", fieldtype: "Float",
+            description: "Cận trên bao gồm; để trống = không giới hạn.", surface: "expanded",
+          },
           "bom:Link(Bill of Materials) BOM",
           "priority:Int=(0) Ưu tiên",
           "effective_from:Date Hiệu lực từ",
@@ -2000,7 +2022,7 @@ note("MASTER · Measurement Profile chỉ đo/tồn; Geometry Field/Profile sở
           "disabled:Check Ngưng dùng",
         ],
         permissions: permMfg,
-        form: { fields: ["scope_type", "parent_item", "parent_item_group", "door_type", "component_item", "bom", "priority", "effective_from", "effective_to", "note", "disabled"] },
+        form: { fields: ["scope_type", "parent_item", "parent_item_group", "door_type", "component_item", "price_variant", "min_area_sqm", "min_area_operator", "max_area_sqm", "bom", "priority", "effective_from", "effective_to", "note", "disabled"] },
         quickEntry: { fields: ["scope_type", "component_item"] },
       },
     );
@@ -2429,34 +2451,32 @@ note("MASTER · Measurement Profile chỉ đo/tồn; Geometry Field/Profile sở
 
     // Chép nguyên bảng §6, không thêm bớt.
     //
-    // Mã hàng cập nhật 19/08 sau hai đợt đổi mã. Trước đó cả 17 dòng trỏ mã cũ và treo hết:
+    // Mã hàng cập nhật theo canonical Item đang chạy. Trước đó cả 17 dòng trỏ mã cũ và treo hết:
     // cascade đổi tên chỉ theo `documents`/`document_children`, KHÔNG theo `master_records` —
     // mà danh mục này nằm ở đấy. Vá ở D1 là vá vào chỗ sẽ bị đè khi cài lại app, nên sửa nguồn.
     //
-    // Hai chỗ ghi lại chứ không tự quyết:
-    //   · `MOTO-TANKE800` thiếu chữ R — gần như chắc là lỗi gõ, nhưng đổi mã là đổi danh tính.
-    //   · Bình lưu điện có HAI bộ mã: `PIN-UPS-E800I/E1000I` (đúng nhóm) và `PK-UPS-ALE800/
-    //     ALE1000` (nhóm phụ kiện). Chọn bộ `PIN-`; bộ kia trông như trùng lặp.
+    // Mapping này đối chiếu theo tên sản phẩm nguồn với Item canonical; không suy từ chuỗi mã.
+    // UPS chọn mã BLD_UPS_* vì đây là mặt hàng bán, còn LKMT_UPS_* là linh kiện cấu phần.
     const MOTORS = [
-      ["MOTO-TANKER-400", "MOTO-TANKER400", 15, "Motor + Lắc 32 + Bộ ĐK"],
-      ["MOTO-TANKER-600", "MOTO-TANKER600", 18, "Motor + Lắc 32 + Bộ ĐK"],
-      ["MOTO-TANKER-800", "MOTO-TANKE800", 27, "Motor + Lắc 38 + Bộ ĐK"],
-      ["MOTO-ALUMAX-400", "MOTO-ALUMAX400", 15, "Motor + Lắc 32 + Bộ ĐK"],
-      ["MOTO-ALUMAX-600", "MOTO-ALUMAX600", 25, "Motor + Lắc 32 + Bộ ĐK"],
-      ["MOTO-JG-300", "MOTO-JG300", 18, "Motor + Lắc 33 + Bộ ĐK"],
-      ["MOTO-JG-400", "MOTO-JG400", 28, "Motor + Lắc 33 + Bộ ĐK"],
-      ["MOTO-JG-600", "MOTO-JG600", 36, "Motor + Lắc 36 + Bộ ĐK"],
-      ["MOTO-JG-800", "MOTO-JG800", 42, "Motor + Lắc 38 + Bộ ĐK"],
-      ["MOTO-JG-1000", "MOTO-JG1000", 48, "Motor + Lắc 40 + Bộ ĐK"],
-      ["MOTO-JG-1500", "MOTO-JG1500", 55, "Motor + Lắc 40 + Bộ ĐK"],
-      ["MOTO-YHLD-300", "MOTO-YHLD300", 15, "Motor + Lắc 36 + Bộ ĐK"],
-      ["MOTO-YHLD-500", "MOTO-YHLD500", 15, "Motor + Lắc 36 + Bộ ĐK"],
-      ["MOTO-YHLD-800", "MOTO-YHLD800", 25, "Motor + Lắc 40 + Bộ ĐK"],
-      ["MOTO-YHLD-1000", "MOTO-YHLD1000", 35, "Motor + Lắc 40 + Bộ ĐK"],
+      ["MOTO-TANKER-400", "MT_TANKER400KG", 15, "Motor + Lắc 32 + Bộ ĐK"],
+      ["MOTO-TANKER-600", "MT_TANKER600KG", 18, "Motor + Lắc 32 + Bộ ĐK"],
+      ["MOTO-TANKER-800", "MT_TANKE800KG", 27, "Motor + Lắc 38 + Bộ ĐK"],
+      ["MOTO-ALUMAX-400", "MT_ALUMAX400KG", 15, "Motor + Lắc 32 + Bộ ĐK"],
+      ["MOTO-ALUMAX-600", "MT_ALUMAX600KG", 25, "Motor + Lắc 32 + Bộ ĐK"],
+      ["MOTO-JG-300", "MT_JG300KG", 18, "Motor + Lắc 33 + Bộ ĐK"],
+      ["MOTO-JG-400", "MT_JG400KG", 28, "Motor + Lắc 33 + Bộ ĐK"],
+      ["MOTO-JG-600", "MT_JG600KG", 36, "Motor + Lắc 36 + Bộ ĐK"],
+      ["MOTO-JG-800", "MT_JG800KG", 42, "Motor + Lắc 38 + Bộ ĐK"],
+      ["MOTO-JG-1000", "MT_JG1000KG", 48, "Motor + Lắc 40 + Bộ ĐK"],
+      ["MOTO-JG-1500", "MT_JG1500KG", 55, "Motor + Lắc 40 + Bộ ĐK"],
+      ["MOTO-YHLD-300", "MT_YHLD300KG", 15, "Motor + Lắc 36 + Bộ ĐK"],
+      ["MOTO-YHLD-500", "MT_YHLD500KG", 15, "Motor + Lắc 36 + Bộ ĐK"],
+      ["MOTO-YHLD-800", "MT_YHLD800KG", 25, "Motor + Lắc 40 + Bộ ĐK"],
+      ["MOTO-YHLD-1000", "MT_YHLD1000KG", 35, "Motor + Lắc 40 + Bộ ĐK"],
     ];
     const UPS = [
-      ["PIN-E800", "PIN-UPS-E800I", 600, "9 AH"],
-      ["PIN-E1000", "PIN-UPS-E1000I", 1000, "12 AH"],
+      ["PIN-E800", "BLD_UPS_E800I", 600, "9 AH"],
+      ["PIN-E1000", "BLD_UPS_E1000I", 1000, "12 AH"],
     ];
     const SOURCE = "BANG-GIA-CHINH-THUC-31-07-2026 §6 (bảng có mộc, hiệu lực 31/07/2026)";
     brief.fixtures.push(
@@ -2940,21 +2960,15 @@ note(`UI Link · ${leafLinkFilterCount} ô Warehouse/Item Group chỉ chọn nú
 const described = applyFieldDescriptions(brief.doctypes, parseField);
 note(`UI · mô tả tiếng Việt cho trường tính toán: ${described} ô`);
 
-// Rỗng và không nơi nào trỏ tới, nhưng vẫn chiếm một dòng trên menu Danh mục. Giữ DocType (mua
-// hàng sẽ cần) nhưng thôi bày ra cho tới khi có dữ liệu thật.
+// Supplier Item là đường đối chiếu mã hàng/giá mua theo NCC. Giữ trên menu ngay cả khi chưa có
+// dữ liệu để người vận hành nhìn thấy trạng thái thiếu và có chỗ bổ sung; ẩn nó chỉ che mất gap.
 {
-  // `menu: false` một mình là KHÔNG đủ: nó gỡ doctype khỏi tập ứng viên của nav, nên tên còn nằm
-  // trong `navigation.items` sẽ thành nav key lạ và brief không biên dịch được
-  // ("navigation.items names unknown nav key"). Phải gỡ ở CẢ HAI chỗ.
   const supplierItem = brief.doctypes.find((entry) => entry.name === "Supplier Item");
-  if (supplierItem && supplierItem.menu !== false) {
-    supplierItem.menu = false;
+  if (supplierItem) {
+    supplierItem.menu = true;
     const items = brief.navigation?.items;
-    if (Array.isArray(items)) {
-      const at = items.indexOf("Supplier Item");
-      if (at >= 0) items.splice(at, 1);
-    }
-    note("UI · Supplier Item rời menu — 0 bản ghi và không trường nào trỏ tới");
+    if (Array.isArray(items) && !items.includes("Supplier Item")) items.push("Supplier Item");
+    note("UI · Supplier Item giữ trên menu để hiện đúng gap mã/giá theo NCC");
   }
 }
 
@@ -2966,7 +2980,6 @@ const childPresentation = applyAlumdoorChildPresentation(brief);
 // của bộ sinh cũng kẹt luôn — một thế bí hai chiều. Khai lại ở đây để bộ sinh tái lập được
 // đúng bản đang chạy, và từ đó chạy nó trở lại an toàn.
 {
-  const quotationItem = doctype("Quotation Item");
   // Rộng phủ bì đo theo ray (khách Lẻ) và theo nhựa (khách Đại lý) là HAI trường riêng:
   // dùng chung một ô là gộp hai cách đo khác nhau vào một con số.
   const pbWidthFields = [
@@ -2987,17 +3000,6 @@ const childPresentation = applyAlumdoorChildPresentation(brief);
       surface: "quick",
     },
   ];
-  if (!quotationItem.fields.some((entry) => nameOf(entry) === "width_pb_ray_m")) {
-    addAfter(quotationItem, "color", ...pbWidthFields);
-  }
-  // Đơn giá do server chốt từ bảng giá/ĐVT/biến thể — người nhập không sửa tay được.
-  patchField(quotationItem, "rate", {
-    read_only: true,
-    valueSource: "formula",
-    editMode: "readonly",
-    serverEnforced: true,
-    description: "Đơn giá do server lấy từ bảng giá, Item, ĐVT bán và biến thể; người nhập không được sửa tay.",
-  });
   const insertBefore = (list, anchor, ...values) => {
     if (!Array.isArray(list)) return;
     const missing = values.filter((value) => !list.includes(value));
@@ -3005,10 +3007,46 @@ const childPresentation = applyAlumdoorChildPresentation(brief);
     const index = list.indexOf(anchor);
     list.splice(index < 0 ? list.length : index, 0, ...missing);
   };
-  insertBefore(quotationItem.list, "width_m", "width_pb_ray_m", "width_pb_nhua_m");
-  insertBefore(quotationItem.form?.fields, "width_m", "width_pb_ray_m", "width_pb_nhua_m");
-  insertBefore(quotationItem.quickEntry?.fields, "width_m", "width_pb_ray_m", "width_pb_nhua_m");
-  note("SHIPPED · Quotation Item: rộng PB ray/nhựa + đơn giá server-enforced");
+  for (const lineDoctype of [doctype("Quotation Item"), doctype("Sales Order Item")]) {
+    if (!lineDoctype.fields.some((entry) => nameOf(entry) === "width_pb_ray_m")) {
+      addAfter(lineDoctype, "color", ...pbWidthFields);
+    }
+    // Đơn giá do server chốt từ bảng giá/ĐVT/biến thể — người nhập không sửa tay được.
+    patchField(lineDoctype, "rate", {
+      read_only: true,
+      valueSource: "formula",
+      editMode: "readonly",
+      serverEnforced: true,
+      description: "Đơn giá do server lấy từ bảng giá, Item, ĐVT bán và biến thể; người nhập không được sửa tay.",
+    });
+    insertBefore(lineDoctype.list, "width_m", "width_pb_ray_m", "width_pb_nhua_m");
+    insertBefore(lineDoctype.form?.fields, "width_m", "width_pb_ray_m", "width_pb_nhua_m");
+    insertBefore(lineDoctype.quickEntry?.fields, "width_m", "width_pb_ray_m", "width_pb_nhua_m");
+  }
+  note("SHIPPED · Quotation/Sales Order Item: rộng PB ray/nhựa + đơn giá server-enforced");
+
+  const item = doctype("Item");
+  if (!item.fields.some((entry) => nameOf(entry) === "gift_rail_min_area_sqm")) {
+    addAfter(item, "min_area_sqm",
+      {
+        fieldname: "gift_rail_min_area_sqm",
+        fieldtype: "Float",
+        label: "Ngưỡng tặng ray (m²/bộ)",
+        default: 8,
+        depends_on: "eval:doc.door_type == 'Cửa Đức'",
+        description: "Nguồn QUY CÁCH (3).xlsx/ĐƠN GIÁ TRỌN BỘ: chỉ tặng ray khi diện tích một bộ vượt ngưỡng này.",
+      },
+      {
+        fieldname: "gift_rail_area_operator",
+        fieldtype: "Select",
+        label: "Toán tử ngưỡng tặng ray",
+        options: "GT\nGTE",
+        default: "GT",
+        depends_on: "eval:doc.door_type == 'Cửa Đức'",
+        description: "GT = lớn hơn nghiêm ngặt; GTE = lớn hơn hoặc bằng. Quyết định chủ xưởng 22/08/2026 dùng GT (>8 m²).",
+      },
+    );
+  }
 
   const salesOrder = doctype("Sales Order");
   // Người phụ trách lấy theo nhân viên gắn với user đang đăng nhập, không lấy theo khách.
@@ -3076,33 +3114,34 @@ const childPresentation = applyAlumdoorChildPresentation(brief);
     note("SHIPPED · action giao-nhieu-don-fifo (Kho giao hàng nhiều đơn)");
   }
 
-  // `item_group` của Pricing Rule đang ship ở dạng rút gọn, không kèm link_filters.
-  replaceField(doctype("Pricing Rule"), "item_group", "item_group:Link(Item Group) Chỉ áp cho nhóm hàng");
+  // Link chỉ được chọn nhóm lá còn hoạt động; Pricing Scope rỗng phải fail-closed ngay trên form.
+  replaceField(doctype("Pricing Rule"), "item_group", {
+    fieldname: "item_group", label: "Chỉ áp cho nhóm hàng", fieldtype: "Link", options: "Item Group",
+    link_filters: '{"is_group":0,"disabled":0}',
+  });
+  patchField(doctype("Pricing Scope"), "members", {
+    required: true,
+    description: "Danh sách mặt hàng/nhóm hàng mà phạm vi này áp dụng. Để trống thì phạm vi không match được mặt hàng nào — mọi chính sách giá tham chiếu tới nó sẽ không bao giờ chạy. Phải khai ít nhất một dòng.",
+  });
 
-  // Chín trường này đang ship với default dạng CHUỖI. Giá trị y hệt, nhưng kiểu khác nhau
-  // là brief khác nhau, và bộ sinh phải tái lập được đúng bản đang chạy.
-  const stringDefaults = [
-    ["Sales Invoice Item", "set_count"], ["Purchase Invoice Item", "set_count"],
-    ["Production Request Item", "set_count"], ["Warranty Cost Item", "quantity"],
-    ["Cutting Policy Rule", "operand_m"], ["Cutting Policy Rule", "priority"],
-    ["Cutting Policy Rule", "sequence"], ["BOM Component Rule", "priority"],
-    ["BOM Component Rule", "sequence"],
-  ];
-  for (const [doctypeName, fieldname] of stringDefaults) {
-    const target = doctype(doctypeName);
-    const index = target.fields.findIndex((entry) => nameOf(entry) === fieldname);
-    if (index < 0 || typeof target.fields[index] !== "object") continue;
-    const value = target.fields[index];
-    if (typeof value.default === "number") target.fields[index] = { ...value, default: String(value.default) };
-  }
-  // `price_group` đang ship KHÔNG bắt buộc: bật required là chặn lưu mọi khách chưa gán nhóm giá.
+  // Nhóm giá quyết định cả tiền lẫn cơ sở rộng. Không được mặc định âm thầm cho khách chưa phân loại.
   const customer = doctype("Customer");
   const priceGroupIndex = customer.fields.findIndex((entry) => nameOf(entry) === "price_group");
   if (priceGroupIndex >= 0 && typeof customer.fields[priceGroupIndex] === "object") {
-    const value = { ...customer.fields[priceGroupIndex] };
-    delete value.required;
-    customer.fields[priceGroupIndex] = value;
+    customer.fields[priceGroupIndex] = { ...customer.fields[priceGroupIndex], required: true };
   }
+
+  patchField(doctype("Supplier Item"), "last_purchase_rate", { hidden: undefined, read_only: true });
+  {
+    const supplierRate = doctype("Supplier Item").fields.find((entry) => nameOf(entry) === "last_purchase_rate");
+    if (supplierRate && typeof supplierRate === "object") delete supplierRate.hidden;
+  }
+  patchField(item, "measurement_profile", {
+    description: "Quyết định cách theo dõi tồn kho của TOÀN BỘ mặt hàng này (theo cây, mét, kg, lô...). Chọn sai bộ theo dõi thì mọi phiếu nhập/xuất sau này tính tồn sai theo đúng kiểu đã chọn. Mặt hàng không cần theo dõi đặc biệt thì chọn \"Hàng thường\".",
+  });
+  patchField(doctype("Item Price"), "area_tier", {
+    description: "Bậc diện tích mà dòng giá này áp dụng. Mặc định \"Mọi diện tích\" (một giá dùng chung cho mọi kích thước) — chỉ đổi sang một bậc cụ thể khi mặt hàng có bảng giá phân theo diện tích khác nhau. Không được để trống: hệ thống dùng giá trị này để đặt tên bản ghi.",
+  });
 
   // Tiền cọc và phần còn phải thu là hai trường thật trên đơn, không chỉ là ô trên form.
   if (!salesOrder.fields.some((entry) => nameOf(entry) === "deposit_amount")) {
@@ -3114,7 +3153,7 @@ const childPresentation = applyAlumdoorChildPresentation(brief);
         default: 0,
         form_region: "full",
         form_width: "full",
-        description: "Tiền khách đã đặt cọc cho đơn; không làm giảm doanh thu của đơn.",
+        description: "Số tiền khách đặt cọc khi tạo đơn. Không được lớn hơn Tiền phải thu.",
       },
       {
         label: "Còn phải thu",
@@ -3126,11 +3165,87 @@ const childPresentation = applyAlumdoorChildPresentation(brief);
       },
     );
   }
-  patchField(salesOrder, "grand_total", { label: "Tiền phải trả" });
-  note(`SHIPPED · ${stringDefaults.length} trường giữ default dạng chuỗi`);
+  patchField(salesOrder, "grand_total", { label: "Tiền phải thu" });
+
+  // Đơn mua phải nhìn được nguồn yêu cầu, phần đã nhận và phần đã xuất hoá đơn.
+  const purchaseOrder = doctype("Purchase Order");
+  if (!purchaseOrder.fields.some((entry) => nameOf(entry) === "material_request")) {
+    addAfter(purchaseOrder, "supplier_quotation", "material_request:Link(Material Request)- Theo yêu cầu vật tư");
+  }
+  patchField(purchaseOrder, "received_percentage", { hidden: undefined });
+  {
+    const received = purchaseOrder.fields.find((entry) => nameOf(entry) === "received_percentage");
+    if (received && typeof received === "object") delete received.hidden;
+  }
+  if (!purchaseOrder.fields.some((entry) => nameOf(entry) === "billed_percentage")) {
+    addAfter(purchaseOrder, "received_percentage", {
+      fieldname: "billed_percentage", label: "Đã xuất HĐ (%)", fieldtype: "Percent", read_only: true,
+      description: "Phần trăm đã xuất hoá đơn mua của đơn này, tính theo số lượng.",
+    });
+  }
+  if (!purchaseOrder.list.includes("billed_percentage")) purchaseOrder.list.push("billed_percentage");
+
+  // Sơn thuê ngoài là một nhánh nghiệp vụ thật của Paint Job, không được mất khi tái sinh brief.
+  const paintJob = doctype("Paint Job");
+  const paintOutsourceFields = [
+    "is_outsourced:Check Sơn thuê ngoài",
+    "outsource_supplier:Link(Supplier) NCC sơn thuê ngoài",
+    "outsource_formula:Select(Cửa Đức: RCL×Số lá×Số lớp,Cửa Úc: Cao×RCL×2 mặt,Khác - nhập tay) Công thức tính giá thuê sơn",
+    "outsource_width_m:Float RCL - Rộng cắt lá (m)",
+    "outsource_leaf_count:Int Số lá",
+    "outsource_layer_count:Int Số lớp",
+    "outsource_height_m:Float Cao (m)",
+    "outsource_rate:Currency Đơn giá thuê sơn",
+    "outsource_amount:Currency Thành tiền thuê sơn",
+  ];
+  if (!paintJob.fields.some((entry) => nameOf(entry) === "is_outsourced")) {
+    addAfter(paintJob, "note", ...paintOutsourceFields);
+  }
+  for (const fieldname of ["is_outsourced", "outsource_supplier"]) {
+    if (!paintJob.list.includes(fieldname)) paintJob.list.push(fieldname);
+  }
+  if (!paintJob.search.includes("outsource_supplier")) paintJob.search.push("outsource_supplier");
+
+  // Năm quy tắc BOM trích nguồn: ba quy tắc đủ bằng chứng được bật, hai quy tắc thiếu số cây
+  // vẫn giữ disabled để không biến chỗ mơ hồ thành tiêu hao thật.
+  for (const fixture of ALUMDOOR_BOM_RULE_FIXTURES) {
+    const index = brief.fixtures.findIndex((entry) => entry.type === fixture.type && entry.name === fixture.name);
+    const value = structuredClone(fixture);
+    if (index >= 0) brief.fixtures[index] = value; else brief.fixtures.push(value);
+  }
+  note("SHIPPED · catalog authority + purchase progress + outsourced paint preserved by generator");
 }
 
 note(`UI ?? child-grid presentation metadata: ${childPresentation.migrated} child DocType`);
+
+/*
+ * CHẶN GHI ĐÈ BRIEF SOẠN TAY.
+ *
+ * `briefs/alumdoor-v2.json` không còn là thứ bộ sinh này đẻ ra nữa. Nó đã được sửa tay qua
+ * nhiều đợt và bộ sinh tụt lại đúng số mục ghi trong `alumdoor-v2.generator-drift.json`. Chạy
+ * `node scripts/build-alumdoor-v2-brief.mjs` không kèm `--out` là ghi đè và mất sạch từng ấy
+ * quyết định — im lặng, không báo gì.
+ *
+ * Nên: mặc định TỪ CHỐI. Muốn ghi đè thật thì phải nói ra bằng cờ, và phải dọn kiểm kê trước.
+ */
+const KIEM_KE_LECH = resolve(here, "../briefs/alumdoor-v2.generator-drift.json");
+if (resolve(OUT) === resolve(here, "../briefs/alumdoor-v2.json") && !process.argv.includes("--ghi-de-brief-da-soan")) {
+  let soMuc = 0;
+  try {
+    const kk = JSON.parse(readFileSync(KIEM_KE_LECH, "utf8"));
+    soMuc = ["fixtures_brief_co_generator_khong_sinh", "fixtures_generator_sinh_brief_khong_co",
+      "fixtures_hai_ben_khac_noi_dung", "doctypes_khac", "khoa_cap_mot_khac"]
+      .reduce((tong, k) => tong + (kk[k]?.length ?? 0), 0);
+  } catch { soMuc = -1; }
+  throw new Error(
+    `TỪ CHỐI ghi đè briefs/alumdoor-v2.json.\n\n`
+    + `Brief đó nay là bản SOẠN TAY, không phải sản phẩm của bộ sinh này. Bộ sinh đang tụt lại `
+    + `${soMuc < 0 ? "(không đọc được kiểm kê)" : soMuc} mục — xem briefs/alumdoor-v2.generator-drift.json.\n`
+    + `Ghi đè bây giờ là mất đúng từng ấy quyết định mà không báo gì.\n\n`
+    + `  • Muốn xem bộ sinh đẻ ra gì:  --out <đường-dẫn-khác>\n`
+    + `  • Thật sự muốn ghi đè:        --ghi-de-brief-da-soan  (chuyển hết mục trong kiểm kê vào bộ sinh trước đã)`,
+  );
+}
 
 writeFileSync(OUT, JSON.stringify(brief, null, 2) + "\n", "utf8");
 console.log(log.map((l) => "  " + l).join("\n"));

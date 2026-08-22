@@ -1,0 +1,1363 @@
+[
+  {
+    "file": "25.7 QUY TRÌNH (2).docx",
+    "bytes": 623515,
+    "core_properties": {
+      "title": "Word Document",
+      "subject": "",
+      "author": "",
+      "last_modified_by": "python-docx",
+      "created": null,
+      "modified": "2026-08-21T20:02:38+00:00"
+    },
+    "paragraph_count": 239,
+    "table_count": 3,
+    "section_count": 1,
+    "inline_shape_count": 10,
+    "headers": [
+      {
+        "section": 1,
+        "text": []
+      }
+    ],
+    "footers": [
+      {
+        "section": 1,
+        "text": []
+      }
+    ],
+    "blocks": [
+      {
+        "index": 1,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "QUY TRÌNH"
+      },
+      {
+        "index": 2,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Lưu ý dùm em: Em cần có 3 file chính như sau:"
+      },
+      {
+        "index": 3,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "File 1 THEO DÕI CHUNG: trong file này thể hiện theo dõng đơn hàng – xuất hàng, nhập hàng, thu chi nội bộ, chi tiết sơn, Lịch sản xuất, Danh sách lỗi => tất cả kế toán dùng chung"
+      },
+      {
+        "index": 4,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "File 2 TỒN KHO VẬT TƯ: Tồn nhôm (23 sheet), tồn lưới (2 sheet) => tất cả kế toán dùng chung"
+      },
+      {
+        "index": 5,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "File 3 SỔ CHI TIẾT: Hàng ngày bấm chữ cập nhật thì mọi thông tin từ FILE 1 đổ về FILE 3 vào sổ chi tiết hàng ngày => sau đó tách riêng từng nội dung theo từng sheet trên sổ chi tiết => ở file này chỉ có kế toán tổng hợp, kế toán trưởng và Giám đốc phụ trách (tránh trường hợp cập nhật rồi, kế toán có tự ý thay đổi số liệu thì khi cập nhật lên sổ chi tiết rồi, chỉ có người phụ trách được sửa và thay đổi"
+      },
+      {
+        "index": 7,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Quy trình sơ bộ:"
+      },
+      {
+        "index": 8,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "B1: Sales tạo đơn hàng => gửi đơn hàng"
+      },
+      {
+        "index": 9,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "B2: Kế toán nhận đơn hàng => Cập nhật lên file Theo dõi đơn hàng – xuất hàng"
+      },
+      {
+        "index": 10,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "B3: Từ sheet Theo dõi đơn hàng – xuất hàng (nguồn chính) phân bổ ra các sheet sau:"
+      },
+      {
+        "index": 11,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "+ Sheet thu – chi nội bộ"
+      },
+      {
+        "index": 12,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "+ Sheet nhập hàng:"
+      },
+      {
+        "index": 14,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "+ Sheet Đơn hàng sản xuất được phân ra theo 4 loại [ĐỨC – ÚC – ĐÀI LOAN -  LƯỚI (có kết hợp lá Đài loan) – SIÊU TRƯỜNG] :"
+      },
+      {
+        "index": 15,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Dựa vào “nhóm sản phẩm” mà phân bổ ra sheet đơn hàng sản xuất (ĐH theo từng loại sẽ có cấu trúc đơn hàng khác nhau, xem chi tiết bên dưới)"
+      },
+      {
+        "index": 16,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Đơn hàng sản xuất được lưu theo ngày, Tên mỗi sheet là một khách hàng và là ĐH từng loại theo 1 số chứng từ"
+      },
+      {
+        "index": 17,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Trường hợp 1 số chứng từ mà 2 loại cửa khác nhau thì nhảy ra 2 sheet khác nhau theo đơn phân loại SX)"
+      },
+      {
+        "index": 18,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "+ Sheet Chi tiết sơn: Nhận diện trong mỗi đơn hàng đơn hàng “ở ô màu sắc” có chữ “THÔ” thì tự động chuyển sang sheet chi tiết sơn"
+      },
+      {
+        "index": 20,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "+ Sheet Lịch Sản xuất: Dựa vào “nhóm sản phẩm” mà phân bổ vào sheet lịch sản xuất"
+      },
+      {
+        "index": 23,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "+ Sheet Danh sách lỗi: Kế toán nhập lỗi hoặc xuất đổi trả phải tìm số chứng từ đơn hàng từ ngày xuất hàng và lựa chọn nguyên nhân lỗi, các trường hợp lỗi sau:"
+      },
+      {
+        "index": 24,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Nguyên nhân 1: Lỗi motor – bình lưu điện (trong thời gian còn bảo hành 1 năm tính từ ngày giao hàng) mới được xuất đổi lỗi"
+      },
+      {
+        "index": 25,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Nguyên nhân 2: Lỗi do sản xuất (kế toán tự tính) => sau khi người làm lỗi chịu trách nhiệm kế toán tổng hợp xác nhận tình trạng xử lý"
+      },
+      {
+        "index": 26,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Nguyên nhân 3: Lỗi do nhà cung cấp, khi chọn chế độ gửi trả nhà cung cấp thì sẽ tự nhảy vào trừ công nợ của nhà cung cấp nếu chưa nhận được hàng đổi trả"
+      },
+      {
+        "index": 27,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Nguyên nhân 4: Lỗi do KH, tùy theo công đoạn sản xuất thì sẽ có chi phí khác nhau (kế toán tự tính)"
+      },
+      {
+        "index": 29,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "+ B4: Từ sheet theo dõi đơn hàng – xuất hàng, theo ngày sẽ tự sinh ra phiếu xuất kho theo ngày (mỗi tháng là 1 folder, mỗi ngày là 1 file, trong file có từng phiếu xuất kho theo tên của khách hàng và theo từng số chứng)"
+      },
+      {
+        "index": 30,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "+B5: Từ phiếu xuất kho sẽ cập nhật công nợ lên sổ chi tiết và trừ định mức vật tư"
+      },
+      {
+        "index": 31,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "+ B6: Từ công nợ chi tiết, cập nhật công nợ khách hàng theo từng file khác nhau (mỗi khách hàng là 1 file)"
+      },
+      {
+        "index": 32,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "+ Kết thúc"
+      },
+      {
+        "index": 34,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Từ đơn đặt hàng (tính tiền) => chuyển sang file “Theo dõi đơn hàng - xuất hàng”"
+      },
+      {
+        "index": 35,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Lưu ý:"
+      },
+      {
+        "index": 36,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Ở sheet này kế toán sẽ theo dõi được ngày mai giao các đơn hàng nào, có những đơn hàng hôm nay đặt mai giao, có những đơn hôm nay đặt mà 3-4 ngày sau mới giao. Nên kế toán phải tự điều chỉnh tay ở cột giao hàng để nắm lịch trình giao hàng và sắp xếp sản xuất"
+      },
+      {
+        "index": 37,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Ở file “Theo dõi đơn hàng - xuất hàng” sẽ có các nội dung chính cần hiển thị các cột như sau:"
+      },
+      {
+        "index": 38,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "STT / NGÀY ĐẶT HÀNG/ NGÀY GIAO HÀNG / SỐ CHỨNG TỪ / ĐẠI LÝ / NGƯỜI PHỤ TRÁCH / NHÓM SẢN PHẨM / TÊN VẬT TƯ / GHI CHÚ (CỐ ĐỊNH THEO ĐƠN ĐẶT HÀNG/ CHI CHÚ TAY (TỰ ĐIỀN) / THU TIỀN BAO NHIÊU (NẾU CÓ) / LỆNH XUẤT KHO (THÔNG BÁO ĐÃ XUẤT HÀNG THÀNH CÔNG) / LỆNH SẢN XUẤT (THÔNG BÁO ĐÃ TẠO ĐƠN HÀNG SẢN XUẤT) / LỖI"
+      },
+      {
+        "index": 39,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Câu hỏi: Em muốn hiển thị thêm 1 cột lỗi vì khi nhập hàng lỗi về em muốn biết sản phẩm lỗi phát sinh từ số chứng từ nào để theo dõi lịch đổi bảo hành và gửi đổi nhà cung cấp. Hiện tại quy trình của bên em là khi có nhập hàng lỗi hoặc tiến hành đổi lỗi, kế toán sẽ tìm số chứng từ theo Khách hàng đã đặt và bấm chữ lỗi, thì thông tin đơn hàng lỗi sẽ nhảy sang sheet danh sách lỗi (trong file Theo dõi đơn hàng - xuất hàng) . Anh cho em đề xuất?"
+      },
+      {
+        "index": 41,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Từ file “Theo dõi đơn hàng - xuất hàng” nhận diện đơn hàng => đẩy sang sheet “Lịch sản xuất” và “đơn hàng sản xuất”"
+      },
+      {
+        "index": 43,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Ở sheet “Lịch sản xuất’ sẽ có các nội dung chính cần hiển thị các cột như sau:"
+      },
+      {
+        "index": 44,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "NGÀY ĐẶT HÀNG / NGÀY GIAO HÀNG / NGÀY SẢN XUẤT / KHÁCH HÀNG / NHÓM SẢN PHẨM / TÊN SẢN PHẨM / CAO (THEO ĐƠN HÀNG KHÁCH ĐẶT) / RỘNG (THEO ĐƠN HÀNG KHÁCH ĐẶT) / DIỆN TÍCH / THỜI GIAN SẢN XUẤT / BỘ PHẬN PHỤ TRÁCH (ÚC - LƯỚI - ĐỨC - ĐÀI LOAN - SIÊU TRƯỜNG - LÒ SƠN) => nhận diện để phân bổ theo nhóm SP / LỊCH TĂNG CA / ĐỊNH MỨC CÔNG VIỆC (cố định)"
+      },
+      {
+        "index": 46,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Câu hỏi: Từ định mức thời gian hoàn thành cho 1 bộ cửa và số lượng đơn hàng theo nhóm Sản phẩm tính từ ngày đặt hàng. Em muốn hiển thị tổng thời gian sản xuất cho tất cả đơn hàng của một ngày (theo từng loại cửa) thời gian làm việc hành chính là 8 tiếng/ngày thì em sẽ biết được là cần cho thêm thời gian bao lâu để tăng ca ạ. Anh cho em đề xuất?"
+      },
+      {
+        "index": 47,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Ở sheet “đơn hàng sản xuất” sẽ có các nội dung chính cần hiển thị các ở các cột theo từng nhóm SP như sau:"
+      },
+      {
+        "index": 48,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "ĐƠN HÀNG CỬA ĐỨC:"
+      },
+      {
+        "index": 49,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Thông tin KH – Số chứng từ - Ngày đặt hàng – Ngày giao hàng – khách đặt – ghi chú cố định từ Đơn đặt hàng hiển thị sang"
+      },
+      {
+        "index": 50,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Diễn giải theo từng bước như sau:"
+      },
+      {
+        "index": 51,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Bước 1: Xem từ đơn hàng “Tên vật tư/SP” , số đo chiều rộng khách đặt là gì => quy ra rộng cắt lá"
+      },
+      {
+        "index": 52,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Bước 2: Tính số lá ruột"
+      },
+      {
+        "index": 53,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Bước 3: Vào “File tồn nhôm” tìm “Tên vật tư/SP” (mỗi tên vật tư/SP là 1 sheet) => (tìm kiếm theo đối tượng Tên SP / kích thước gần nhất với rộng cắt lá / màu sắc)"
+      },
+      {
+        "index": 54,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "File tồn nhôm hiện tại: https://docs.google.com/spreadsheets/d/1Dp0Ux8kfdrH0x1DaHlr_7HXnxi83TztLMnE5H91c-aU/edit?gid=814818755#gid=814818755"
+      },
+      {
+        "index": 55,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Bước 4: Sau khi tìm được đối tượng vật tư cần lấy => Quay lại đơn hàng sản xuất và điền vào hình bên dưới"
+      },
+      {
+        "index": 58,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Bước 5: Trừ tồn nhôm"
+      },
+      {
+        "index": 59,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Nhập tên KH, số chứng từ, tích vào đối tượng vật tư mình đã chọn để sản xuất (có thể chọn nhiều khẩu độ khác nhau, số lá và số lần cắt) => bấm vào cắt nhôm => tự động trừ và nhập lại phần dư, cập nhật ngày nhập lại)"
+      },
+      {
+        "index": 60,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "+ Trường hợp chưa đóng gói thành phẩm: muốn thu hồi đối tượng vật tư vừa chọn để sản xuất thì nhập số chứng từ => chọn tìm thông tin cần hoàn => chọn hoàn cắt"
+      },
+      {
+        "index": 61,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "+ Trường hợp đã đóng gói thành phẩm: muốn thu hồi đối tượng vật tư vừa chọn để sản xuất thì nhập số chứng từ => chọn tìm thông tin cần hoàn => trả hàng"
+      },
+      {
+        "index": 62,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Bước 6: Sau khi chọn đối tượng vật tư mình sản xuất có cột màu sắc là “THÔ” thì sẽ tự nhảy sang sheet lịch sơn"
+      },
+      {
+        "index": 63,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "+ Đối với cửa Đức: các nội dung chính cần hiển thị theo hình"
+      },
+      {
+        "index": 65,
+        "type": "table",
+        "rows": 16,
+        "cols": 6,
+        "data": [
+          [
+            "Khách hàng",
+            "",
+            "Ngày đặt",
+            "",
+            "",
+            ""
+          ],
+          [
+            "Số chứng từ",
+            "",
+            "Ngày giao",
+            "",
+            "",
+            ""
+          ],
+          [
+            "Khách đặt",
+            "Bộ 1: (hiển thị Tên SP/Vật Tư x kích thước x Màu sắc x hệ thống tự dừng (nếu có) x số lượng)\nVí dụ: AL548 Cpb 3m x Rpb nhựa 4m Ghi sần Hệ thống tự dừng x 1 bộ",
+            "Bộ 1: (hiển thị Tên SP/Vật Tư x kích thước x Màu sắc x hệ thống tự dừng (nếu có) x số lượng)\nVí dụ: AL548 Cpb 3m x Rpb nhựa 4m Ghi sần Hệ thống tự dừng x 1 bộ",
+            "Bộ 1: (hiển thị Tên SP/Vật Tư x kích thước x Màu sắc x hệ thống tự dừng (nếu có) x số lượng)\nVí dụ: AL548 Cpb 3m x Rpb nhựa 4m Ghi sần Hệ thống tự dừng x 1 bộ",
+            "Bộ 1: (hiển thị Tên SP/Vật Tư x kích thước x Màu sắc x hệ thống tự dừng (nếu có) x số lượng)\nVí dụ: AL548 Cpb 3m x Rpb nhựa 4m Ghi sần Hệ thống tự dừng x 1 bộ",
+            "Bộ 1: (hiển thị Tên SP/Vật Tư x kích thước x Màu sắc x hệ thống tự dừng (nếu có) x số lượng)\nVí dụ: AL548 Cpb 3m x Rpb nhựa 4m Ghi sần Hệ thống tự dừng x 1 bộ"
+          ],
+          [
+            "Khách đặt",
+            "Bộ 2:",
+            "Bộ 2:",
+            "Bộ 2:",
+            "Bộ 2:",
+            "Bộ 2:"
+          ],
+          [
+            "Khách đặt",
+            "Bộ 3: …. (nhảy tự động theo đơn hàng khách đặt, nếu khách đặt 10 bộ thì nhảy 10 dòng)",
+            "Bộ 3: …. (nhảy tự động theo đơn hàng khách đặt, nếu khách đặt 10 bộ thì nhảy 10 dòng)",
+            "Bộ 3: …. (nhảy tự động theo đơn hàng khách đặt, nếu khách đặt 10 bộ thì nhảy 10 dòng)",
+            "Bộ 3: …. (nhảy tự động theo đơn hàng khách đặt, nếu khách đặt 10 bộ thì nhảy 10 dòng)",
+            "Bộ 3: …. (nhảy tự động theo đơn hàng khách đặt, nếu khách đặt 10 bộ thì nhảy 10 dòng)"
+          ],
+          [
+            "RAY",
+            "RAY HỘP TD U76 / RAY ĐƠN TD U76 / RAY HỘP U100 (NHÓM RAY) hiển thị chiều cao x số lượng x màu sắc",
+            "RAY HỘP TD U76 / RAY ĐƠN TD U76 / RAY HỘP U100 (NHÓM RAY) hiển thị chiều cao x số lượng x màu sắc",
+            "RAY HỘP TD U76 / RAY ĐƠN TD U76 / RAY HỘP U100 (NHÓM RAY) hiển thị chiều cao x số lượng x màu sắc",
+            "RAY HỘP TD U76 / RAY ĐƠN TD U76 / RAY HỘP U100 (NHÓM RAY) hiển thị chiều cao x số lượng x màu sắc",
+            "RAY HỘP TD U76 / RAY ĐƠN TD U76 / RAY HỘP U100 (NHÓM RAY) hiển thị chiều cao x số lượng x màu sắc"
+          ],
+          [
+            "CẮT RAY",
+            "Bấm chọn “khẩu độ” từ file tồn nhôm để chọn kích thước phù hợp",
+            "Bấm chọn “khẩu độ” từ file tồn nhôm để chọn kích thước phù hợp",
+            "Bấm chọn “khẩu độ” từ file tồn nhôm để chọn kích thước phù hợp",
+            "Bấm chọn “khẩu độ” từ file tồn nhôm để chọn kích thước phù hợp",
+            "Bấm chọn “khẩu độ” từ file tồn nhôm để chọn kích thước phù hợp"
+          ],
+          [
+            "Ghi chú 01 (cố định)",
+            "Từ ghi chú trong file đơn đặt hàng nhảy qua",
+            "Từ ghi chú trong file đơn đặt hàng nhảy qua",
+            "Từ ghi chú trong file đơn đặt hàng nhảy qua",
+            "Từ ghi chú trong file đơn đặt hàng nhảy qua",
+            "Từ ghi chú trong file đơn đặt hàng nhảy qua"
+          ],
+          [
+            "Ghi chú 02",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay"
+          ],
+          [
+            "Đóng gói",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay"
+          ],
+          [
+            "Chạy chữ:",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay"
+          ],
+          [
+            "",
+            "Tên vật tư/SP",
+            "Số lá",
+            "Chiều rộng cắt lá",
+            "Hệ thông tự dừng",
+            "Số KG"
+          ],
+          [
+            "BỘ 1",
+            "AL548",
+            ".... LÁ RUỘT + 1 LÁ ĐẦU + 3 LÁ ĐÁY (hiển thị cố định, kế toán điền tay số lá ruột)\n(trong đó số lá ruột được tính theo công thức theo từng SP (theo bản lá bên dưới)\nCâu hỏi: Trường hợp khách chỉ đặt lá ruột hoặc lá đầu hoặc bộ 3 lá đáy (một trong các loại lá yếm, lá trung gian, lá đáy lớn) thì kế toán sẽ điều chỉnh thế nào anh?\nBấm chọn “khẩu độ” từ file tồn nhôm để chọn kích thước phù hợp (kích thước nhôm chọn để cắt không được nhỏ hơn chiều rộng cắt lá)",
+            "+ Khách đại lý (nhận diện): \nCông thức = kích thước pb nhựa - 0,02\n+ Khách lẻ (nhận diện): \nCông thức = kích thước pb ray - 0,06",
+            "CÓ HOẶC KHÔNG",
+            "ĐIỀN TAY"
+          ],
+          [
+            "SẢN XUẤT BỘ 1",
+            "LẤY KHỔ \n(cố định)",
+            "Ví dụ: \nLá ruột 4100 x 30 LÁ THÔ, 3920 X 22 Ghi sần \nLá đầu: 4150 x 1 lá THÔ\nLá yếm: 3900 x 1 lá THÔ\nLá trung gian: 3950 x 1 LÁ THÔ\nLá đáy lớn: 3985 x 1 LÁ THÔ \nPhát hiện là thô thì nhảy sang sheet theo dõi sơn, nếu lá màu thì không cần",
+            "",
+            "",
+            ""
+          ],
+          [
+            "BỘ 2",
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          [
+            "BỘ 3",
+            "Tùy theo số bộ khách đặt ở trên thì nhảy ra theo bao nhiêu dòng",
+            "Tùy theo số bộ khách đặt ở trên thì nhảy ra theo bao nhiêu dòng",
+            "Tùy theo số bộ khách đặt ở trên thì nhảy ra theo bao nhiêu dòng",
+            "Tùy theo số bộ khách đặt ở trên thì nhảy ra theo bao nhiêu dòng",
+            "Tùy theo số bộ khách đặt ở trên thì nhảy ra theo bao nhiêu dòng"
+          ]
+        ]
+      },
+      {
+        "index": 69,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Ví dụ: theo như đơn hàng Bộ 1 khách đặt ở trên"
+      },
+      {
+        "index": 70,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "“AL548 Cpb 3m x Rpb nhựa 4m Ghi sần Hệ thống tự dừng x 1 bộ”"
+      },
+      {
+        "index": 71,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "thì mình có công thức tính số lá ruột như sau:"
+      },
+      {
+        "index": 72,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Công thức: ((Cao PB – 130) : bản lá theo “mã Tên vật tư/SP” ) – 1)"
+      },
+      {
+        "index": 73,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "= ((3-0.13)/0.055)-1) = 52.18 – 1 = 51 lá"
+      },
+      {
+        "index": 74,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Làm tròn số phẩy lớn hơn 0.6"
+      },
+      {
+        "index": 75,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "(ví dụ: 52.6 thì là 52, nếu <52.6 thì là 51)"
+      },
+      {
+        "index": 76,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Thì: 51 LÁ RUỘT + 1 LÁ ĐẦU + 3 LÁ ĐÁY"
+      },
+      {
+        "index": 82,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "File tồn nhôm hiện tại: (có 23 sheet, mỗi sheet 1 mã Tên Vật tư/tên SP)"
+      },
+      {
+        "index": 87,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "ĐƠN HÀNG CỬA ÚC:"
+      },
+      {
+        "index": 88,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Diễn giải theo từng bước như sau:"
+      },
+      {
+        "index": 89,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Thông tin KH – Số chứng từ - Ngày đặt hàng – Ngày giao hàng – khách đặt – ghi chú cố định từ Đơn đặt hàng hiển thị sang"
+      },
+      {
+        "index": 90,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "B1: Ở cột số (2) tự hiển thị theo đơn hàng khách đặt (Cửa motor ngoài Hoặc cửa kéo tay Hoặc cửa motor trong)"
+      },
+      {
+        "index": 91,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "B2: Ở cột số (3) tự hiển thị độ dày khách đặt (4D, 4.3D – 4.7D, 4.8D – 5.2D, 6D)"
+      },
+      {
+        "index": 92,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "B3: Ở cột số (4) điền tay theo lô khách yêu cầu"
+      },
+      {
+        "index": 93,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "B4: Ở cột số (5) số lá có công thức như sau:"
+      },
+      {
+        "index": 94,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Cửa motor trong và kéo tay: (Chiêu cao PB : 0.465) + 2"
+      },
+      {
+        "index": 95,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Trường hợp 1: Sau dấu phẩy chữ số thứ nhất: Hàng phần mười (ví dụ: 0,0) => làm tròn là 0"
+      },
+      {
+        "index": 96,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Ví dụ: Cao pb (2m8:0.465)+2 = 8.0 => thì số lá sẽ là “8”"
+      },
+      {
+        "index": 97,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Trường hợp 2: Sau dấu phẩy chữ số thứ nhất: Hàng phần mười (ví dụ: 0,1 đến 0,3) => làm tròn là 0.3"
+      },
+      {
+        "index": 98,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Ví dụ: Cao pb (2m9:0.465)+2 = 8.2 => thì số lá sẽ là “8.3”"
+      },
+      {
+        "index": 99,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Trường hợp 3: Sau dấu phẩy chữ số thứ nhất: Hàng phần mười (ví dụ: 0,4 đến 0,7) => làm tròn là 0.7"
+      },
+      {
+        "index": 100,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Ví dụ: Cao pb (3m:0.465)+2 = 8.4 => thì số lá sẽ là “8.7”"
+      },
+      {
+        "index": 101,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Trường hợp 4: Sau dấu phẩy chữ số thứ nhất: Hàng phần mười (ví dụ: 0,8 đến > 0,9) => làm tròn là 1"
+      },
+      {
+        "index": 102,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Ví dụ: Cao pb (3m2:0.465)+2 = 8.8 => thì số lá sẽ là “9”"
+      },
+      {
+        "index": 103,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Cửa motor ngoài (không tự dừng): (Chiêu cao PB : 0.465) + 1.5"
+      },
+      {
+        "index": 104,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Trường hợp 1: Sau dấu phẩy chữ số thứ nhất: Hàng phần mười (ví dụ: 0,0) => làm tròn là 0"
+      },
+      {
+        "index": 105,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Ví dụ: Cao pb (2m6:0.465)+1.5 = 7.0 => thì số lá sẽ là “7”"
+      },
+      {
+        "index": 106,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Trường hợp 2: Sau dấu phẩy chữ số thứ nhất: Hàng phần mười (ví dụ: 0,1 đến 0,3) => làm tròn là 0.3"
+      },
+      {
+        "index": 107,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Ví dụ: Cao pb (2m7:0.465)+1.5 = 7.3 => thì số lá sẽ là “7.3”"
+      },
+      {
+        "index": 108,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Trường hợp 3: Sau dấu phẩy chữ số thứ nhất: Hàng phần mười (ví dụ: 0,4 đến 0,7) => làm tròn là 0.7"
+      },
+      {
+        "index": 109,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Ví dụ: Cao pb (2m8:0.465)+1.5 = 7.5 => thì số lá sẽ là “7.7”"
+      },
+      {
+        "index": 110,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Trường hợp 4: Sau dấu phẩy chữ số thứ nhất: Hàng phần mười (ví dụ: 0,8 đến > 0,9) => làm tròn là 1"
+      },
+      {
+        "index": 111,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Ví dụ: Cao pb (3m:0.465)+1.5 = 7.9 => thì số lá sẽ là “8”"
+      },
+      {
+        "index": 112,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Cửa motor ngoài (có hệ thống tự dừng): (Chiều cao PB : 0.465) + 1.3"
+      },
+      {
+        "index": 113,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Trường hợp 1: Sau dấu phẩy chữ số thứ nhất: Hàng phần mười (ví dụ: 0,0) => làm tròn là 0"
+      },
+      {
+        "index": 114,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Ví dụ: Cao pb (3m15:0.465)+1.3 = 8.0 => thì số lá sẽ là “8”"
+      },
+      {
+        "index": 115,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Trường hợp 2: Sau dấu phẩy chữ số thứ nhất: Hàng phần mười (ví dụ: 0,1 đến 0,3) => làm tròn là 0.3"
+      },
+      {
+        "index": 116,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Ví dụ: Cao pb (3m2:0.465)+1.3 = 8.1  => thì số lá sẽ là “8.3”"
+      },
+      {
+        "index": 117,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Trường hợp 3: Sau dấu phẩy chữ số thứ nhất: Hàng phần mười (ví dụ: 0,4 đến 0,7) => làm tròn là 0.7"
+      },
+      {
+        "index": 118,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Ví dụ: Cao pb (3m4:0.465)+1.3 = 8.6 => thì số lá sẽ là “8.7”"
+      },
+      {
+        "index": 119,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Trường hợp 4: Sau dấu phẩy chữ số thứ nhất: Hàng phần mười (ví dụ: 0,8 đến > 0,9) => làm tròn là 1"
+      },
+      {
+        "index": 120,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Ví dụ: Cao pb (3m5:0.465)+1.3 = 8.8  => thì số lá sẽ là “9”"
+      },
+      {
+        "index": 121,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "B4: Cột (6) Từ số đo phủ bì ray => quy ra rộng cắt lá"
+      },
+      {
+        "index": 122,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Công thức: Rộng pbray – 0.03"
+      },
+      {
+        "index": 123,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "B5: Số lượng (7) hiển thị theo đơn đặt hàng"
+      },
+      {
+        "index": 124,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "B6: Màu sắc (8) hiển thị theo đơn hàng khách đặt"
+      },
+      {
+        "index": 125,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Trường hợp tôn mạ màu (nhận diện bằng các cặp màu như: XN-VK, Café – XR, Trắng – Xám, Ghi úc – kem úc)"
+      },
+      {
+        "index": 126,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Trường hợp sơn tỉnh điện (STĐ) thì sẽ là tôn kẽm => nhảy sang sheet chi tiết sơn"
+      },
+      {
+        "index": 127,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "B7: Cột lò xo (9) (tự điền tay)"
+      },
+      {
+        "index": 128,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "B8: Cột Puly (10) (tự điền tay)"
+      },
+      {
+        "index": 129,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "B9: Khóa ngang (11) nếu đơn đặt hàng có lấy khóa ngang => sẽ tự cập nhật"
+      },
+      {
+        "index": 130,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "B10: Tự dừng (12) nếu như cửa úc Motor ngoài đơn đặt hàng yêu cầu có đặt kèm hệ thống tự dừng => thì cột số (13) sẽ hiện đối tượng vật tư lấy cắt từ file tồn nhôm (nếu là nhôm thô thì cập nhật vào sheet chi tiết sơn)"
+      },
+      {
+        "index": 132,
+        "type": "table",
+        "rows": 11,
+        "cols": 16,
+        "data": [
+          [
+            "Khách hàng",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "Ngày đặt hàng",
+            "Ngày đặt hàng",
+            "Ngày đặt hàng",
+            "",
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          [
+            "Số chứng từ",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "Ngày giao hàng",
+            "Ngày giao hàng",
+            "Ngày giao hàng",
+            "",
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          [
+            "Khách đặt",
+            "Bộ 1: (hiển thị Tên SP/Vật Tư x kích thước x Màu sắc x hệ thống tự dừng (nếu có) x số lượng)\nVí dụ: Cửa motor ngoài 4.6D, lô trong Cpb 3m x Rpbray 4m XN – VK, hệ thống tự dừng x 1 bộ",
+            "Bộ 1: (hiển thị Tên SP/Vật Tư x kích thước x Màu sắc x hệ thống tự dừng (nếu có) x số lượng)\nVí dụ: Cửa motor ngoài 4.6D, lô trong Cpb 3m x Rpbray 4m XN – VK, hệ thống tự dừng x 1 bộ",
+            "Bộ 1: (hiển thị Tên SP/Vật Tư x kích thước x Màu sắc x hệ thống tự dừng (nếu có) x số lượng)\nVí dụ: Cửa motor ngoài 4.6D, lô trong Cpb 3m x Rpbray 4m XN – VK, hệ thống tự dừng x 1 bộ",
+            "Bộ 1: (hiển thị Tên SP/Vật Tư x kích thước x Màu sắc x hệ thống tự dừng (nếu có) x số lượng)\nVí dụ: Cửa motor ngoài 4.6D, lô trong Cpb 3m x Rpbray 4m XN – VK, hệ thống tự dừng x 1 bộ",
+            "Bộ 1: (hiển thị Tên SP/Vật Tư x kích thước x Màu sắc x hệ thống tự dừng (nếu có) x số lượng)\nVí dụ: Cửa motor ngoài 4.6D, lô trong Cpb 3m x Rpbray 4m XN – VK, hệ thống tự dừng x 1 bộ",
+            "Bộ 1: (hiển thị Tên SP/Vật Tư x kích thước x Màu sắc x hệ thống tự dừng (nếu có) x số lượng)\nVí dụ: Cửa motor ngoài 4.6D, lô trong Cpb 3m x Rpbray 4m XN – VK, hệ thống tự dừng x 1 bộ",
+            "Bộ 1: (hiển thị Tên SP/Vật Tư x kích thước x Màu sắc x hệ thống tự dừng (nếu có) x số lượng)\nVí dụ: Cửa motor ngoài 4.6D, lô trong Cpb 3m x Rpbray 4m XN – VK, hệ thống tự dừng x 1 bộ",
+            "Bộ 1: (hiển thị Tên SP/Vật Tư x kích thước x Màu sắc x hệ thống tự dừng (nếu có) x số lượng)\nVí dụ: Cửa motor ngoài 4.6D, lô trong Cpb 3m x Rpbray 4m XN – VK, hệ thống tự dừng x 1 bộ",
+            "Bộ 1: (hiển thị Tên SP/Vật Tư x kích thước x Màu sắc x hệ thống tự dừng (nếu có) x số lượng)\nVí dụ: Cửa motor ngoài 4.6D, lô trong Cpb 3m x Rpbray 4m XN – VK, hệ thống tự dừng x 1 bộ",
+            "Bộ 1: (hiển thị Tên SP/Vật Tư x kích thước x Màu sắc x hệ thống tự dừng (nếu có) x số lượng)\nVí dụ: Cửa motor ngoài 4.6D, lô trong Cpb 3m x Rpbray 4m XN – VK, hệ thống tự dừng x 1 bộ",
+            "Bộ 1: (hiển thị Tên SP/Vật Tư x kích thước x Màu sắc x hệ thống tự dừng (nếu có) x số lượng)\nVí dụ: Cửa motor ngoài 4.6D, lô trong Cpb 3m x Rpbray 4m XN – VK, hệ thống tự dừng x 1 bộ",
+            "Bộ 1: (hiển thị Tên SP/Vật Tư x kích thước x Màu sắc x hệ thống tự dừng (nếu có) x số lượng)\nVí dụ: Cửa motor ngoài 4.6D, lô trong Cpb 3m x Rpbray 4m XN – VK, hệ thống tự dừng x 1 bộ",
+            "Bộ 1: (hiển thị Tên SP/Vật Tư x kích thước x Màu sắc x hệ thống tự dừng (nếu có) x số lượng)\nVí dụ: Cửa motor ngoài 4.6D, lô trong Cpb 3m x Rpbray 4m XN – VK, hệ thống tự dừng x 1 bộ",
+            "Bộ 1: (hiển thị Tên SP/Vật Tư x kích thước x Màu sắc x hệ thống tự dừng (nếu có) x số lượng)\nVí dụ: Cửa motor ngoài 4.6D, lô trong Cpb 3m x Rpbray 4m XN – VK, hệ thống tự dừng x 1 bộ",
+            "Bộ 1: (hiển thị Tên SP/Vật Tư x kích thước x Màu sắc x hệ thống tự dừng (nếu có) x số lượng)\nVí dụ: Cửa motor ngoài 4.6D, lô trong Cpb 3m x Rpbray 4m XN – VK, hệ thống tự dừng x 1 bộ"
+          ],
+          [
+            "Khách đặt",
+            "Bộ 2:",
+            "Bộ 2:",
+            "Bộ 2:",
+            "Bộ 2:",
+            "Bộ 2:",
+            "Bộ 2:",
+            "Bộ 2:",
+            "Bộ 2:",
+            "Bộ 2:",
+            "Bộ 2:",
+            "Bộ 2:",
+            "Bộ 2:",
+            "Bộ 2:",
+            "Bộ 2:",
+            "Bộ 2:"
+          ],
+          [
+            "Khách đặt",
+            "Bộ 3: …. (nhảy tự động theo đơn hàng khách đặt, nếu khách đặt 10 bộ thì nhảy 10 dòng)",
+            "Bộ 3: …. (nhảy tự động theo đơn hàng khách đặt, nếu khách đặt 10 bộ thì nhảy 10 dòng)",
+            "Bộ 3: …. (nhảy tự động theo đơn hàng khách đặt, nếu khách đặt 10 bộ thì nhảy 10 dòng)",
+            "Bộ 3: …. (nhảy tự động theo đơn hàng khách đặt, nếu khách đặt 10 bộ thì nhảy 10 dòng)",
+            "Bộ 3: …. (nhảy tự động theo đơn hàng khách đặt, nếu khách đặt 10 bộ thì nhảy 10 dòng)",
+            "Bộ 3: …. (nhảy tự động theo đơn hàng khách đặt, nếu khách đặt 10 bộ thì nhảy 10 dòng)",
+            "Bộ 3: …. (nhảy tự động theo đơn hàng khách đặt, nếu khách đặt 10 bộ thì nhảy 10 dòng)",
+            "Bộ 3: …. (nhảy tự động theo đơn hàng khách đặt, nếu khách đặt 10 bộ thì nhảy 10 dòng)",
+            "Bộ 3: …. (nhảy tự động theo đơn hàng khách đặt, nếu khách đặt 10 bộ thì nhảy 10 dòng)",
+            "Bộ 3: …. (nhảy tự động theo đơn hàng khách đặt, nếu khách đặt 10 bộ thì nhảy 10 dòng)",
+            "Bộ 3: …. (nhảy tự động theo đơn hàng khách đặt, nếu khách đặt 10 bộ thì nhảy 10 dòng)",
+            "Bộ 3: …. (nhảy tự động theo đơn hàng khách đặt, nếu khách đặt 10 bộ thì nhảy 10 dòng)",
+            "Bộ 3: …. (nhảy tự động theo đơn hàng khách đặt, nếu khách đặt 10 bộ thì nhảy 10 dòng)",
+            "Bộ 3: …. (nhảy tự động theo đơn hàng khách đặt, nếu khách đặt 10 bộ thì nhảy 10 dòng)",
+            "Bộ 3: …. (nhảy tự động theo đơn hàng khách đặt, nếu khách đặt 10 bộ thì nhảy 10 dòng)"
+          ],
+          [
+            "Ghi chú 01 (cố định)",
+            "Từ ghi chú trong file đơn đặt hàng nhảy qua",
+            "Từ ghi chú trong file đơn đặt hàng nhảy qua",
+            "Từ ghi chú trong file đơn đặt hàng nhảy qua",
+            "Từ ghi chú trong file đơn đặt hàng nhảy qua",
+            "Từ ghi chú trong file đơn đặt hàng nhảy qua",
+            "Từ ghi chú trong file đơn đặt hàng nhảy qua",
+            "Từ ghi chú trong file đơn đặt hàng nhảy qua",
+            "Từ ghi chú trong file đơn đặt hàng nhảy qua",
+            "Từ ghi chú trong file đơn đặt hàng nhảy qua",
+            "Từ ghi chú trong file đơn đặt hàng nhảy qua",
+            "Từ ghi chú trong file đơn đặt hàng nhảy qua",
+            "Từ ghi chú trong file đơn đặt hàng nhảy qua",
+            "Từ ghi chú trong file đơn đặt hàng nhảy qua",
+            "Từ ghi chú trong file đơn đặt hàng nhảy qua",
+            "Từ ghi chú trong file đơn đặt hàng nhảy qua"
+          ],
+          [
+            "Ghi chú 02",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay"
+          ],
+          [
+            "Chạy chữ:",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay",
+            "Kế toán điền tay"
+          ],
+          [
+            "STT\n(1)",
+            "Tên SP\n/Vật tư\n(2)",
+            "Độ dày tôn\n(3)",
+            "Lô cuốn\n(4)",
+            "Số lá\n(5)",
+            "Rộng cắt lá\n(6)",
+            "SL\n\n(7)",
+            "SL\n\n(7)",
+            "Màu sắc\nKhách đặt\n(8)",
+            "Lò xo \n(Cái)\n(9)",
+            "Lò xo \n(Cái)\n(9)",
+            "Puly\n(Cái)\n(10)",
+            "Khóa ngang\n(11)",
+            "Hệ thống\ntự dừng\n(12)",
+            "Bộ 3 lá đáy\n(13)"
+          ],
+          [
+            "Bộ 1",
+            "Cửa motor ngoài \nHoặc cửa kéo tay\nHoặc cửa motor trong",
+            "",
+            "Trong hoặc ngoài",
+            "",
+            "Công thức: Rpbray – 0.03",
+            "1",
+            "1",
+            "XN- VK\nHoặc \nSơn tĩnh điện",
+            "",
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          [
+            "Bộ 2",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            ""
+          ]
+        ]
+      },
+      {
+        "index": 134,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "ĐƠN HÀNG CỬA ĐỨC KÉO TAY (NHÓM SP CỬA TẤM LIỀN ÚC):"
+      },
+      {
+        "index": 135,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Áp dụng cho"
+      },
+      {
+        "index": 137,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Diễn giải theo từng bước như sau:"
+      },
+      {
+        "index": 138,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "B1: Thông tin KH – Số chứng từ - Ngày đặt hàng – Ngày giao hàng – khách đặt – ghi chú cố định từ Đơn đặt hàng hiển thị sang"
+      },
+      {
+        "index": 139,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "B2: Ở dòng khóa ngang (2): nếu trong đơn hàng có phát sinh khóa ngang thì dòng AL70 (1 lớp) sẽ hiện là “1 lá”"
+      },
+      {
+        "index": 140,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Nếu ở dòng “Ghi chú cố đinh” thể hiện dập khe thoáng bao nhiêu hàng thì sẽ là bấy nhiêu lá AL70 (1 lớp)"
+      },
+      {
+        "index": 141,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "LƯU Ý: LÁ SỬ DỤNG LẮP KHÓA NGANG VÀ DẬP KHE THOÁNG LÀ LÁ AL70 (1 lớp)"
+      },
+      {
+        "index": 142,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "VD:"
+      },
+      {
+        "index": 143,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Tại sao biết 3 hàng lỗ thoáng thì chiều cao AL70 (1 lớp) là 0.204?"
+      },
+      {
+        "index": 144,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Trả lời: ví dụ 3 hàng lỗ thoáng = 3 lá x bản lá 0.068 [AL70 (1 lớp)] (nếu 4 hàng thì là 4 lá x bản lá)"
+      },
+      {
+        "index": 145,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "B3: Ray (đơn đặt hàng khách chọn thêm ray sắt hoặc ray đơn U76 hoặc ray hộp U76)"
+      },
+      {
+        "index": 146,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "B4: ở dòng cắt ray, nếu khách chọn ray đơn U76 hoặc ray hộp U76 thì tìm đối tượng vật tư lấy cắt từ file tồn nhôm (nếu là nhôm thô thì cập nhật vào sheet chi tiết sơn)"
+      },
+      {
+        "index": 147,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "B5: Ở cột (5) Tên Vật tư/SP luôn thể hiện 1 bộ bao gồm 2 dòng là AL70 (1 lớp) và AL70 (2 lớp) => cố định không thay đổi)"
+      },
+      {
+        "index": 148,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "B6: Ở cột (6) Số lá nhôm:"
+      },
+      {
+        "index": 149,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Áp dụng công thức: (Chiều cao pb – 0.13):0.068"
+      },
+      {
+        "index": 150,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Ví dụ: Cao pb 3m = (3-0.13)/0.068 = 42 lá"
+      },
+      {
+        "index": 152,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "+ Trường hợp 1: Nếu khách đặt là AL70 (2 lớp) thì ở dòng song song với AL70 (2 lớp) thể hiện số 42"
+      },
+      {
+        "index": 158,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "+ Trường hợp 2: Nếu khách đặt là AL70 (1 lớp) thì ở dòng song song với AL70 (2 lớp) thể hiện số 1, đồng thời thì ở dòng song song với AL70 (1 lớp) là 41"
+      },
+      {
+        "index": 161,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "+ Trường hợp 3: Nếu khách đặt là AL70 (2 lớp) có khóa ngang và có 3 hàng lỗ thoáng thì sẽ có 4 lá 1 lớp (trong đó có 3 lá dập khe thoáng và 1 lá sử dụng làm khóa ngang). Lúc này ở dòng song song với AL70 (2 lớp) thể hiện số 38, đồng thời thì ở dòng song song với AL70 (1 lớp) là 4"
+      },
+      {
+        "index": 163,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "B7: Ở cột Bộ 3 lá đáy (13) số lượng bộ thể hiện bao nhiêu bộ thì cắt bao nhiêu bộ 3 lá đáy tìm đối tượng vật tư lấy cắt từ file tồn nhôm (nếu là nhôm thô thì cập nhật vào sheet chi tiết sơn)"
+      },
+      {
+        "index": 169,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "B8: Ở cột Chiều rộng cắt lá (8), có 2 trường hợp:"
+      },
+      {
+        "index": 170,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "+ Trường hợp 1: Đơn hàng nhận diện khách đặt thêm ray sắt U70 (không ron) thì"
+      },
+      {
+        "index": 171,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Công thức rộng cắt lá = Rộng pb ray – 0.05"
+      },
+      {
+        "index": 176,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "+ Trường hợp 2: Đơn hàng nhận diện khách đặt thêm ray hộp U76 hoặc ray đơn U76 thì"
+      },
+      {
+        "index": 177,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Công thức rộng cắt lá = Rộng pb ray – 0.08"
+      },
+      {
+        "index": 179,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "B9: Lô cuốn + Puly + lò xo + số kg tự điền tay"
+      },
+      {
+        "index": 190,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "ĐƠN HÀNG CỬA ĐÀI LOAN:"
+      },
+      {
+        "index": 191,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Diễn giải theo từng bước như sau:"
+      },
+      {
+        "index": 192,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Thông tin KH – Số chứng từ - Ngày đặt hàng – Ngày giao hàng – khách đặt – ghi chú cố định từ Đơn đặt hàng hiển thị sang"
+      },
+      {
+        "index": 193,
+        "type": "table",
+        "rows": 10,
+        "cols": 10,
+        "data": [
+          [
+            "Khách hàng",
+            "",
+            "",
+            "",
+            "",
+            "Ngày giao hàng",
+            "Ngày giao hàng",
+            "",
+            "",
+            ""
+          ],
+          [
+            "Số chứng từ",
+            "",
+            "",
+            "",
+            "",
+            "Ngày xuất hàng",
+            "Ngày xuất hàng",
+            "",
+            "",
+            ""
+          ],
+          [
+            "Khách hàng",
+            "Bộ 1: Từ đơn hàng nhảy sang\nVí dụ: Lá Đài Loan 6D Cpb 3m x Rpbray 4m XN-VK (màu nào trước thì từ sẽ nằm trước), V4 3970 x 2 cây, ray sắt có ron 2m9 x 2 cây",
+            "Bộ 1: Từ đơn hàng nhảy sang\nVí dụ: Lá Đài Loan 6D Cpb 3m x Rpbray 4m XN-VK (màu nào trước thì từ sẽ nằm trước), V4 3970 x 2 cây, ray sắt có ron 2m9 x 2 cây",
+            "Bộ 1: Từ đơn hàng nhảy sang\nVí dụ: Lá Đài Loan 6D Cpb 3m x Rpbray 4m XN-VK (màu nào trước thì từ sẽ nằm trước), V4 3970 x 2 cây, ray sắt có ron 2m9 x 2 cây",
+            "Bộ 1: Từ đơn hàng nhảy sang\nVí dụ: Lá Đài Loan 6D Cpb 3m x Rpbray 4m XN-VK (màu nào trước thì từ sẽ nằm trước), V4 3970 x 2 cây, ray sắt có ron 2m9 x 2 cây",
+            "Bộ 1: Từ đơn hàng nhảy sang\nVí dụ: Lá Đài Loan 6D Cpb 3m x Rpbray 4m XN-VK (màu nào trước thì từ sẽ nằm trước), V4 3970 x 2 cây, ray sắt có ron 2m9 x 2 cây",
+            "Bộ 1: Từ đơn hàng nhảy sang\nVí dụ: Lá Đài Loan 6D Cpb 3m x Rpbray 4m XN-VK (màu nào trước thì từ sẽ nằm trước), V4 3970 x 2 cây, ray sắt có ron 2m9 x 2 cây",
+            "Bộ 1: Từ đơn hàng nhảy sang\nVí dụ: Lá Đài Loan 6D Cpb 3m x Rpbray 4m XN-VK (màu nào trước thì từ sẽ nằm trước), V4 3970 x 2 cây, ray sắt có ron 2m9 x 2 cây",
+            "Bộ 1: Từ đơn hàng nhảy sang\nVí dụ: Lá Đài Loan 6D Cpb 3m x Rpbray 4m XN-VK (màu nào trước thì từ sẽ nằm trước), V4 3970 x 2 cây, ray sắt có ron 2m9 x 2 cây",
+            "Bộ 1: Từ đơn hàng nhảy sang\nVí dụ: Lá Đài Loan 6D Cpb 3m x Rpbray 4m XN-VK (màu nào trước thì từ sẽ nằm trước), V4 3970 x 2 cây, ray sắt có ron 2m9 x 2 cây"
+          ],
+          [
+            "Khách hàng",
+            "Bộ 2:",
+            "Bộ 2:",
+            "Bộ 2:",
+            "Bộ 2:",
+            "Bộ 2:",
+            "Bộ 2:",
+            "Bộ 2:",
+            "Bộ 2:",
+            "Bộ 2:"
+          ],
+          [
+            "Khách hàng",
+            "Bộ 3:",
+            "Bộ 3:",
+            "Bộ 3:",
+            "Bộ 3:",
+            "Bộ 3:",
+            "Bộ 3:",
+            "Bộ 3:",
+            "Bộ 3:",
+            "Bộ 3:"
+          ],
+          [
+            "Ghi chú 01 \n(cố định)",
+            "Từ ghi chú trong file đơn đặt hàng nhảy qua",
+            "Từ ghi chú trong file đơn đặt hàng nhảy qua",
+            "Từ ghi chú trong file đơn đặt hàng nhảy qua",
+            "Từ ghi chú trong file đơn đặt hàng nhảy qua",
+            "Từ ghi chú trong file đơn đặt hàng nhảy qua",
+            "Từ ghi chú trong file đơn đặt hàng nhảy qua",
+            "Từ ghi chú trong file đơn đặt hàng nhảy qua",
+            "Từ ghi chú trong file đơn đặt hàng nhảy qua",
+            "Từ ghi chú trong file đơn đặt hàng nhảy qua"
+          ],
+          [
+            "Ghi chú 02",
+            "kế toán điền tay",
+            "kế toán điền tay",
+            "kế toán điền tay",
+            "kế toán điền tay",
+            "kế toán điền tay",
+            "kế toán điền tay",
+            "kế toán điền tay",
+            "kế toán điền tay",
+            "kế toán điền tay"
+          ],
+          [
+            "Chạy chữ",
+            "kế toán điền tay",
+            "kế toán điền tay",
+            "kế toán điền tay",
+            "kế toán điền tay",
+            "kế toán điền tay",
+            "kế toán điền tay",
+            "kế toán điền tay",
+            "kế toán điền tay",
+            "kế toán điền tay"
+          ],
+          [
+            "STT \n(1)",
+            "Tên SP/Vật tư \n(2)",
+            "Độ dày tôn sản xuất\n(3)",
+            "Số lá \n(4)",
+            "Rộng cắt lá \n(5)",
+            "SL \n(6)",
+            "Màu sắc \n(7)",
+            "V \n(8)",
+            "Ray sắt có ron\n(9)",
+            "Lắc phụ 33 - 3 lỗ \n(cái) (10)"
+          ],
+          [
+            "",
+            "",
+            "",
+            "Số lá ruột + 1 lá đáy",
+            "",
+            "",
+            "",
+            "",
+            "",
+            ""
+          ]
+        ]
+      },
+      {
+        "index": 195,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Diễn giải:"
+      },
+      {
+        "index": 196,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "+ Cột số 1: Số thứ tự"
+      },
+      {
+        "index": 197,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "+ Cột số 2: Điền thông tin Tên SP/Vật tư cửa khách đặt là Cửa Đài loan hoặc Cửa Đài loan kéo tay"
+      },
+      {
+        "index": 198,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "+ Cột số 3: Độ dày tole sản xuất (Tên vật tư là tôn 6D thì tôn sản xuất là 5.2D, 7D thì tôn sản xuất là 5.2D…theo định mức)"
+      },
+      {
+        "index": 199,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "+ Cột số 4: Số lá Cao pb x 13"
+      },
+      {
+        "index": 200,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Trường hợp : Sau dấu phẩy chữ số thứ nhất: Hàng phần mười (ví dụ: >0,8) => làm tròn là 1"
+      },
+      {
+        "index": 201,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Ví dụ: Cao pb 2m97 (2m97x13)= 37.96 => thì số lá sẽ là “37 lá ruột + 1 lá đáy”"
+      },
+      {
+        "index": 202,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Ví dụ: Cao pb 2m97 (2m9x13)= 37.7 => thì số lá sẽ là “36 lá ruột + 1 lá đáy”"
+      },
+      {
+        "index": 203,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Anh cho em hỏi nếu như chỉ có lá ruột thôi thì sao?"
+      },
+      {
+        "index": 239,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Câu hỏi?"
+      },
+      {
+        "index": 240,
+        "type": "paragraph",
+        "style": "normal",
+        "text": "Nếu như đặt hàng khách chỉ lấy lá ruột thôi thì đặt hàng làm sao để “đơn hàng sản xuất” hiểu rằng chỉ lấy lá hoặc phụ kiện chứ không lấy hoàn thiện để đưa ra đơn sản xuất?"
+      }
+    ]
+  }
+]

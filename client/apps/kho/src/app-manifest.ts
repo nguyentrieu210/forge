@@ -26,7 +26,11 @@ export const APP_MANIFEST: AppManifest = {
     { key: "Material Request", label: "Yêu cầu vật tư", kind: "doctype", group: "Giao dịch kho", icon: "clipboard-list" },
     { key: "Purchase Receipt", label: "Phiếu nhập mua", kind: "doctype", group: "Giao dịch kho", icon: "package-check" },
     { key: "Delivery Note", label: "Phiếu giao hàng", kind: "doctype", group: "Giao dịch kho", icon: "truck" },
-    { key: "Pick List", label: "Phiếu lấy hàng", kind: "doctype", group: "Giao dịch kho", icon: "list-checks" },
+    // "Pick List" đã bị GỠ khỏi đây (audit ALUMDOOR-KHO-SAU-VONG2-20260821.md, C2): không có
+    // DocType "Pick List" nào trong bất kỳ brief nào (đã grep toàn bộ server/briefs/*.json), và
+    // app "Kho" này không nối vertical-alumdoor nên không tự trỏ được sang route WMS mới
+    // (alumdoor.wms.plan_picking, xem wms-actions.ts) — nav "kind: doctype" ở đây chỉ render được
+    // DocType có thật. Bấm vào mục cũ trước đây chắc chắn vỡ màn vì không có schema để tải.
 
     // Serial & Lô (khớp card "Serial No and Batch" thật)
     { key: "Serial No", label: "Số serial", kind: "doctype", group: "Serial & Lô", icon: "hash" },

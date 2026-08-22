@@ -14,6 +14,7 @@ import {
   assertGeometryCatalog,
   geometryFieldByCode,
 } from "../scripts/lib/alumdoor-geometry-catalog.mjs";
+import { alumdoorBriefVersion } from "./helpers.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, "..", "..");
@@ -93,7 +94,7 @@ test("static V2 metadata contains Geometry masters and moved ownership", async (
   // Chốt này mục từ lâu — brief đã đi qua 2.4.x → 2.8.0 mà nó vẫn ghi 2.4.0, nên test đỏ âm thầm
   // trong nhóm lỗi nền. Điều test này thật sự cần là các DocType hình học CÓ MẶT, không phải app
   // đứng ở phiên bản nào; giữ chốt version chỉ để nó đỏ đúng lúc metadata đổi.
-  assert.equal(brief.version, "2.10.0");
+  assert.equal(brief.version, alumdoorBriefVersion());
   const byName = new Map(brief.doctypes.map((row) => [row.name, row]));
   for (const name of ["Geometry Field", "Geometry Profile", "Geometry Profile Scope", "Geometry Profile Field"]) {
     assert.ok(byName.has(name), `thiếu ${name}`);
@@ -106,7 +107,10 @@ test("static V2 metadata contains Geometry masters and moved ownership", async (
   assert.ok(geometryProfile);
   assert.equal(typeof geometryProfile === "object" ? geometryProfile.options : "", "Geometry Profile");
   assert.equal(brief.fixtures.filter((row) => row.type === "Measurement Profile").length, 7);
-  assert.equal(brief.fixtures.filter((row) => row.type === "Geometry Field").length, 9, "8 kích thước dài + billable_area_sqm");
+  // 8 kích thước dài + billable_area_sqm + LOT_LONG_CAO/LOT_LONG_RONG. Hai ô lọt lòng thêm
+  // 22/08/2026 khi đọc được bảng quy đổi lọt lòng ↔ phủ bì trong sheet GHI CHÚ: khách đo lọt
+  // lòng, xưởng cắt theo phủ bì, không có hai ô này thì phải nhẩm tay.
+  assert.equal(brief.fixtures.filter((row) => row.type === "Geometry Field").length, 11);
   assert.equal(brief.fixtures.filter((row) => row.type === "Geometry Profile").length, 5);
   const geometryField = byName.get("Geometry Field");
   const axis = (geometryField.fields ?? []).find((field) => typeof field === "object" && field.fieldname === "axis");

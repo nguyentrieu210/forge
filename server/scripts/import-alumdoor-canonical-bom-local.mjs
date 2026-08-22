@@ -14,8 +14,12 @@ if (Number(payload.mutation_blocker_count) !== 0) throw new Error(`mutation_bloc
 if (Number(payload.component_reference_count) !== Number(payload.expected_component_count)) {
   throw new Error(`component coverage must converge before local mutation: components=${payload.component_reference_count} expected=${payload.expected_component_count}`);
 }
+if (!Number.isInteger(Number(payload.pending_value_count)) || Number(payload.pending_value_count) !== 0) {
+  throw new Error(`pending_value_count must be zero before local mutation; got ${payload.pending_value_count}`);
+}
 
 const clean = (value) => String(value ?? '').normalize('NFC').trim();
+const normalizedUom = (value) => clean(value).toLocaleLowerCase('vi').replaceAll('²', '2').replaceAll(' ', '');
 const QUANTITY_BASES = new Set(['Cố định', 'Theo chiều cao', 'Theo chiều rộng', 'Theo diện tích', 'Theo số lá']);
 const optionalNumber = (value) => {
   if (value === null || value === undefined || clean(value) === '') return null;
@@ -94,11 +98,11 @@ function comparisonSnapshot(snapshot) {
     ...snapshot,
     items: snapshot.items.map((line) => ({
       ...line,
-      // The BOM controller defaults a blank conversion factor to 1. The
-      // source-complete payload intentionally keeps unresolved conversions
-      // blank, so this is an equivalence rule for post-write convergence,
-      // not a source-data fill-in.
-      conversion_factor: line.conversion_factor === null ? 1 : line.conversion_factor,
+      // A factor of 1 can only be implicit when source and stock UOM are identical. A blank
+      // cross-UOM factor is unresolved authority and is rejected by validateBom below.
+      conversion_factor: line.conversion_factor === null && normalizedUom(line.uom) === normalizedUom(line.stock_uom)
+        ? 1
+        : line.conversion_factor,
     })),
   };
 }
@@ -108,6 +112,9 @@ function sameBom(expected, actual) {
 function validateBom(bom) {
   if (!clean(bom?.item)) throw new Error('BOM parent item is blank');
   if (!Array.isArray(bom.lines) || bom.lines.length === 0) throw new Error(`BOM ${bom.item} has no source component rows`);
+  if (Array.isArray(bom.pending_lines) && bom.pending_lines.length > 0) {
+    throw new Error(`BOM ${bom.item} still has ${bom.pending_lines.length} pending source row(s)`);
+  }
   const sourceKeys = new Set();
   for (const [index, row] of bom.lines.entries()) {
     if (!clean(row?.item_code)) throw new Error(`BOM ${bom.item} row ${index + 1} has blank canonical Item`);
@@ -116,17 +123,16 @@ function validateBom(bom) {
     if (sourceKeys.has(sourceRow)) throw new Error(`BOM ${bom.item} duplicates source row ${sourceRow}`);
     sourceKeys.add(sourceRow);
     const status = clean(row?.source_value_status);
-    if (!['RESOLVED','PENDING'].includes(status)) throw new Error(`BOM ${bom.item} row ${sourceRow} has invalid source_value_status=${status}`);
-    if (status === 'PENDING' && !clean(row?.source_pending_reason)) throw new Error(`BOM ${bom.item} row ${sourceRow} pending values require source_pending_reason`);
-    if (status === 'PENDING') {
-      for (const numeric of ['qty','conversion_factor']) {
-        const value = row?.[numeric];
-        if (value !== null && value !== undefined && clean(value) !== '' && (!Number.isFinite(Number(value)) || Number(value) <= 0)) {
-          throw new Error(`BOM ${bom.item} row ${sourceRow} ${numeric} must stay blank or positive`);
-        }
-      }
-    } else if (!Number.isFinite(Number(row?.qty)) || Number(row.qty) <= 0) {
+    if (status !== 'RESOLVED') throw new Error(`BOM ${bom.item} row ${sourceRow} is not RESOLVED: ${status || '<blank>'}`);
+    if (!Number.isFinite(Number(row?.qty)) || Number(row.qty) <= 0) {
       throw new Error(`BOM ${bom.item} resolved row ${sourceRow} requires positive qty`);
+    }
+    const fromUom = clean(row?.uom);
+    const stockUom = clean(row?.stock_uom);
+    if (!fromUom || !stockUom) throw new Error(`BOM ${bom.item} row ${sourceRow} requires source and stock UOM`);
+    if (normalizedUom(fromUom) !== normalizedUom(stockUom)
+      && (!Number.isFinite(Number(row?.conversion_factor)) || Number(row.conversion_factor) <= 0)) {
+      throw new Error(`BOM ${bom.item} row ${sourceRow} requires a positive ${fromUom} -> ${stockUom} conversion`);
     }
   }
 }

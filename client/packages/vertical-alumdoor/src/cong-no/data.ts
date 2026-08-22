@@ -11,7 +11,8 @@
  * |---|---|---|
  * | Tổng phát sinh + số dư theo TỪNG KHÁCH | báo cáo app `Công nợ theo khách hàng` | `server/briefs/alumdoor-v2.json` → `reports[]` |
  * | Số dư theo TỪNG CHỨNG TỪ (sổ Payment Ledger) | báo cáo nền tảng `Accounts Receivable` / `Accounts Payable` | `server/packages/query/src/index.ts` → `DEFINITIONS` |
- * | Tuổi nợ chia khoảng | báo cáo nền tảng `Accounts Receivable Aging` / `Accounts Payable Aging` | `server/packages/query/src/finance-aging.ts` — CHƯA nối dây, xem `loadAging` |
+ * | Tuổi nợ chia khoảng | báo cáo nền tảng `Accounts Receivable Aging` / `Accounts Payable Aging` | `server/packages/query/src/finance-aging.ts` — đã nối dây từ commit `c9fcfd1fa`, xem `loadAging` |
+ * | Tổng hợp theo tài khoản-tiền tệ / sao kê luỹ kế / tạm ứng chưa phân bổ | báo cáo nền tảng `Debt Summary` / `Party Statement` / `Advance Balance` | `server/packages/query/src/finance-aging.ts`, xem `loadDebtSummary`/`loadPartyStatement`/`loadAdvanceBalance` |
  * | Giao hàng + đối trừ + công nợ phải trả của 1 NCC | `alumdoor.purchase.supplier_delivery_dashboard` | `server/apps-src/alumdoor-worker/src/purchase-supplier-dashboard.ts` |
  * | Chốt / đảo một kỳ giao hàng | `alumdoor.purchase.supplier_delivery_settlement` | `server/apps-src/alumdoor-worker/src/purchase-supplier-settlement.ts` |
  * | Chứng từ gốc để đối chiếu | `getList` trên đúng DocType | danh mục nền tảng |
@@ -21,10 +22,13 @@ import {
   dateOnly,
   reportRows,
   text,
+  type AdvanceBalanceRow,
   type AgingRow,
   type DebtSideConfig,
+  type DebtSummaryRow,
   type LedgerRow,
   type PartyRow,
+  type PartyStatementRow,
   type SourceDocumentRow,
 } from "./model.js";
 
@@ -126,6 +130,39 @@ export async function loadReceivableParties(
 }
 
 /**
+ * `Customer.credit_limit` cho đúng tập khách hàng đang hiện trên bảng — K2
+ * (docs/audits/ALUMDOOR-SAN-XUAT-KE-TOAN-DANH-MUC-GAP-20260821.md §K2): field đã có sẵn trên
+ * `Customer`, nhưng trước bản vá này không nơi nào trong `cong-no/` đọc lại nó, dù trên đầu mỗi
+ * khách hàng NÓ CHÍNH LÀ ngưỡng công nợ mà bảng "Số dư theo sổ" cần đối chiếu.
+ *
+ * Đọc thẳng `Customer` bằng `getList`, KHÔNG qua báo cáo app — field này không nằm trong báo cáo
+ * "Công nợ theo khách hàng". `Supplier` không có field tương đương (K2 xác nhận riêng) nên hàm
+ * này CHỈ gọi cho mặt PHẢI THU; gọi cho tên đối tác không phải Customer sẽ chỉ ra `undefined` cho
+ * từng tên (Customer không có, không phải lỗi).
+ */
+export async function loadCreditLimits(
+  server: DebtServer,
+  partyNames: string[],
+): Promise<Map<string, number | null>> {
+  const names = [...new Set(partyNames.filter(Boolean))];
+  const result = new Map<string, number | null>();
+  if (!names.length) return result;
+  const chunks: string[][] = [];
+  for (let index = 0; index < names.length; index += 50) chunks.push(names.slice(index, index + 50));
+  const rows = (await Promise.all(chunks.map((chunk) => server.getList("Customer", {
+    fields: ["name", "credit_limit"],
+    filters: [["name", "in", chunk]],
+    pageLength: chunk.length,
+  })))).flat();
+  for (const row of rows) {
+    const name = text(row.name);
+    if (!name) continue;
+    result.set(name, amount(row.credit_limit));
+  }
+  return result;
+}
+
+/**
  * Sổ Payment Ledger còn dư, MỘT DÒNG MỘT CHỨNG TỪ.
  *
  * Đây là bảng "giải trình": mỗi số dư chỉ ra được nó đến từ chứng từ nào.
@@ -220,19 +257,24 @@ export function mergeLedgerIntoParties(parties: PartyRow[], ledger: PartyRow[]):
 /**
  * Tuổi nợ chia khoảng — báo cáo nền tảng.
  *
- * TÌNH TRẠNG THẬT (đọc code 21/08/2026): `Accounts Receivable Aging` /
- * `Accounts Payable Aging` ĐÃ được viết đầy đủ ở
+ * TÌNH TRẠNG THẬT (đọc code 21/08/2026, SAU commit `c9fcfd1fa` lúc 17:43:12 +0700):
+ * `Accounts Receivable Aging` / `Accounts Payable Aging` được viết đầy đủ ở
  * `server/packages/query/src/finance-aging.ts` (5 khoảng: Chưa đến hạn · 1–30 ·
- * 31–60 · 61–90 · Trên 90) và ĐÃ có quyền trong `server/packages/policy/src/index.ts`.
- * Nhưng tuyến chạy report tương tác lại dựng
- * `reports: new D1ReportService(requestDb)` với compiler MẶC ĐỊNH
- * (`server/apps/tenant-worker/src/index-core-base.ts:1263`), tức
- * `FinanceQueryCompiler` KHÔNG nằm trên đường đi — gọi tên báo cáo này hiện trả
- * `Unknown report`.
+ * 31–60 · 61–90 · Trên 90), có quyền trong `server/packages/policy/src/index.ts`, và
+ * NAY ĐÃ CHẠY ĐƯỢC: tuyến report tương tác đăng ký
+ * `reports: new D1ReportService(requestDb, new FinanceClosureQueryCompiler())`
+ * (`server/apps/tenant-worker/src/index-core-base.ts` — xem comment tại chỗ khai báo),
+ * và `FinanceClosureQueryCompiler extends AccountsPayableQueryCompiler extends
+ * FinanceQueryCompiler` nên nằm đủ trên đường đi. Đoạn comment cũ ở đây (nói Aging
+ * "CHƯA nối dây") lỗi thời đúng 46 giây sau khi viết — xem
+ * `docs/audits/ALUMDOOR-CONG-NO-DANH-MUC-GAP-20260821.md` S5 về câu chuyện lệch tài liệu
+ * này, để không lặp lại loại gap "tài liệu nói sai tình trạng chạy được" cho các báo cáo
+ * khác trong file này.
  *
- * Vì vậy màn VẪN GỌI, và khi server từ chối thì hiện NGUYÊN VĂN lời từ chối chứ
- * không tự phân khoảng. Tự tính tuổi nợ ở client là dựng nguồn sự thật thứ hai
- * cho ngày đáo hạn — đúng loại hỏng mà bản kiểm kê §2 gọi là "luật đang ngủ".
+ * Màn VẪN nạp qua đường bình thường và hiện NGUYÊN VĂN lỗi nếu server từ chối (ví dụ
+ * tenant nào đó chưa có dữ liệu `finance_invoice_terms`) chứ không tự phân khoảng —
+ * nguyên tắc không đổi: tự tính tuổi nợ ở client là dựng nguồn sự thật thứ hai cho ngày
+ * đáo hạn, đúng loại hỏng mà bản kiểm kê §2 gọi là "luật đang ngủ".
  */
 export async function loadAging(
   server: DebtServer,
@@ -257,6 +299,121 @@ export async function loadAging(
     outstanding: amount(row.outstanding_amount),
     daysOverdue: amount(row.days_overdue),
     bucket: text(row.aging_bucket),
+  }));
+}
+
+/**
+ * Tổng hợp công nợ theo party-account-currency — báo cáo nền tảng `Debt Summary`.
+ *
+ * TÌNH TRẠNG THẬT (đọc code 21/08/2026, SAU commit `c9fcfd1fa`): `FinanceQueryCompiler`
+ * (đã nằm trên đường chạy report thật kể từ commit đó) xử lý cả "Debt Summary" lẫn
+ * "Party Statement"/"Advance Balance" ngay tại `compile()`
+ * (`server/packages/query/src/finance-aging.ts:45-47`) — không cần thêm compiler nào
+ * khác. Ba báo cáo này CHẠY ĐƯỢC, có RBAC (`server/packages/policy/src/index.ts:67,70,71`),
+ * nhưng trước bản sửa này CHƯA CÓ dòng gọi `runReport()` nào trong toàn màn — xem
+ * `docs/audits/ALUMDOOR-CONG-NO-DANH-MUC-GAP-20260821.md` S4.
+ *
+ * Chỉ gộp `as_of_date` (bắt buộc) + `account_type` (khoá theo đúng mặt đang xem, tránh
+ * lẫn dòng Phải thu vào tab Phải trả) + `party` (tuỳ chọn, để trống = toàn danh mục).
+ * Kết quả TÁCH theo từng tài khoản-tiền tệ — đơn vị mà `loadPartyStatement()` bên dưới
+ * cần để chạy "Party Statement" (báo cáo đó bắt buộc đúng MỘT account + MỘT currency).
+ */
+export async function loadDebtSummary(
+  server: DebtServer,
+  config: DebtSideConfig,
+  input: { asOfDate: string; party: string },
+): Promise<DebtSummaryRow[]> {
+  const filters: ReportFilter[] = [
+    { field: "as_of_date", operator: "=", value: input.asOfDate },
+    { field: "account_type", operator: "=", value: config.side === "receivable" ? "Receivable" : "Payable" },
+    ...(input.party ? [{ field: "party", operator: "=" as const, value: input.party }] : []),
+  ];
+  const result = await server.runReport("Debt Summary", filters);
+  return reportRows(result)
+    .map((row) => ({
+      party: text(row.party),
+      accountType: text(row.account_type),
+      company: text(row.company),
+      account: text(row.account),
+      currency: text(row.currency),
+      totalOutstanding: amount(row.total_outstanding),
+      due: amount(row.due_amount),
+      overdue: amount(row.overdue_amount),
+      oldestDueDate: dateOnly(row.oldest_due_date) || null,
+      advance: amount(row.advance_balance),
+      netExposure: amount(row.net_exposure),
+    }))
+    .filter((row) => row.party && row.account);
+}
+
+/**
+ * Tạm ứng chưa phân bổ hết — báo cáo nền tảng `Advance Balance`.
+ *
+ * Một dòng = một Payment Entry ứng trước còn dư (`remaining_advance > 0` do chính SQL
+ * server lọc bằng `HAVING SUM(amount_minor)<0`, xem `finance-aging.ts::compileAdvanceBalance`).
+ * `party_type` khoá theo đúng mặt đang xem (Customer/Supplier), `party` tuỳ chọn.
+ */
+export async function loadAdvanceBalance(
+  server: DebtServer,
+  config: DebtSideConfig,
+  input: { asOfDate: string; party: string },
+): Promise<AdvanceBalanceRow[]> {
+  const filters: ReportFilter[] = [
+    { field: "as_of_date", operator: "=", value: input.asOfDate },
+    { field: "party_type", operator: "=", value: config.paymentPartyType },
+    ...(input.party ? [{ field: "party", operator: "=" as const, value: input.party }] : []),
+  ];
+  const result = await server.runReport("Advance Balance", filters);
+  return reportRows(result)
+    .map((row) => ({
+      sourcePaymentEntry: text(row.source_payment_entry),
+      sourcePostingAt: dateOnly(row.source_posting_at),
+      partyType: text(row.party_type),
+      party: text(row.party),
+      company: text(row.company),
+      account: text(row.account),
+      currency: text(row.currency),
+      originalAdvance: amount(row.original_advance),
+      allocatedAmount: amount(row.allocated_amount),
+      remainingAdvance: amount(row.remaining_advance),
+    }))
+    .filter((row) => row.sourcePaymentEntry);
+}
+
+/**
+ * Sổ luỹ kế của một đối tác trên đúng MỘT tài khoản-tiền tệ — báo cáo nền tảng
+ * `Party Statement`.
+ *
+ * CHỮ KÝ THẬT bắt buộc đúng NĂM điều kiện `party`/`account`/`currency`/`from_date`/`to_date`,
+ * mỗi điều kiện đúng MỘT lần (`consumeControls`, `finance-aging.ts:125`) — không có
+ * "để trống = tất cả" như các báo cáo khác trong file này. Vì vậy hàm này KHÔNG gọi được
+ * độc lập: màn phải lấy `account`/`currency` từ một dòng `DebtSummaryRow` đã tải qua
+ * `loadDebtSummary()` trước (nút "Sao kê" trên bảng tổng hợp), chứ không tự đoán tài khoản.
+ */
+export async function loadPartyStatement(
+  server: DebtServer,
+  config: DebtSideConfig,
+  input: { party: string; account: string; currency: string; fromDate: string; toDate: string },
+): Promise<PartyStatementRow[]> {
+  const filters: ReportFilter[] = [
+    { field: "party", operator: "=", value: input.party },
+    { field: "account", operator: "=", value: input.account },
+    { field: "currency", operator: "=", value: input.currency },
+    { field: "from_date", operator: "=", value: input.fromDate },
+    { field: "to_date", operator: "=", value: input.toDate },
+    { field: "account_type", operator: "=", value: config.side === "receivable" ? "Receivable" : "Payable" },
+  ];
+  const result = await server.runReport("Party Statement", filters);
+  return reportRows(result).map((row) => ({
+    postingAt: dateOnly(row.posting_at),
+    voucherType: text(row.voucher_type),
+    voucherNo: text(row.voucher_no),
+    entryType: text(row.entry_type),
+    debit: amount(row.debit_amount),
+    credit: amount(row.credit_amount),
+    runningBalance: amount(row.running_balance),
+    againstVoucherType: text(row.against_voucher_type),
+    againstVoucherNo: text(row.against_voucher_no),
   }));
 }
 

@@ -2,12 +2,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   ALUMDOOR_ITEM_GROUP_CATALOG,
   canonicalAlumdoorItemGroup,
 } from "../scripts/lib/alumdoor-item-group-catalog.mjs";
 
-const repoRoot = resolve(new URL("../..", import.meta.url).pathname);
+const repoRoot = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 
 // Guard the tree and every active seed/import consumer together so legacy aliases cannot drift back.
 const byName = new Map(ALUMDOOR_ITEM_GROUP_CATALOG.map((entry) => [entry.name, entry]));

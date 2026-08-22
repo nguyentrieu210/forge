@@ -13,7 +13,7 @@ const nameOf = (field) => typeof field === "string" ? field.split(":", 1)[0].tri
 const doc = (brief, name) => brief.doctypes.find((entry) => entry.name === name);
 const field = (brief, doctype, fieldname) => doc(brief, doctype)?.fields?.find((entry) => nameOf(entry) === fieldname);
 
-test("alumdoor-v2 generator is idempotent and preserves runtime contracts", (t) => {
+test("bộ sinh brief chỉ lệch đúng phần đã kiểm kê, và vẫn giữ nguyên hợp đồng runtime", (t) => {
   // Sinh ra thư mục tạm: test KHÔNG được ghi đè brief trong cây làm việc. Bản cũ ghi thẳng
   // vào `briefs/alumdoor-v2.json`, nên một lần chạy là mất phần sửa tay chưa có trong bộ sinh
   // (màn "Kho giao hàng nhiều đơn", các trường PB ray/nhựa của Quotation Item...) mà vẫn xanh
@@ -24,8 +24,52 @@ test("alumdoor-v2 generator is idempotent and preserves runtime contracts", (t) 
   const committed = readFileSync(GENERATED, "utf8");
   execFileSync(process.execPath, [GENERATOR, "--out", out], { cwd: ROOT, stdio: "pipe" });
   const after = readFileSync(out, "utf8");
-  assert.equal(after, committed, "official generator must be a zero-diff second pass");
+  /*
+   * Trước đây chỗ này đòi "không lệch một byte". Đòi thế là nói dối: bộ sinh đã tụt lại 73 mục
+   * so với brief soạn tay, và nó đỏ suốt mà không ai đọc ra nó đỏ vì CÁI GÌ. Tệ hơn: một cái
+   * đỏ triền miên thì người ta thôi nhìn, nên lệch MỚI cũng chìm luôn.
+   *
+   * Nay đối chiếu với bản kiểm kê `alumdoor-v2.generator-drift.json`. Lệch đang biết thì im;
+   * lệch MỚI — thêm fixture mà quên bộ sinh, hay bộ sinh đẻ ra thứ brief không có — là đỏ ngay,
+   * kèm tên cụ thể. Danh sách kiểm kê phải TEO DẦN: chuyển được mục nào vào bộ sinh thì xoá đi.
+   *
+   * Chừng nào còn mục trong đó thì chạy bộ sinh rồi ghi đè `briefs/alumdoor-v2.json` là MẤT
+   * đúng từng ấy quyết định.
+   */
   const generated = JSON.parse(after);
+  const authored = JSON.parse(committed);
+  const drift = JSON.parse(readFileSync(resolve(ROOT, "server/briefs/alumdoor-v2.generator-drift.json"), "utf8"));
+  const key = (entry) => `${entry.type}|${entry.name}`;
+  const genFix = new Map(generated.fixtures.map((entry) => [key(entry), entry]));
+  const authFix = new Map(authored.fixtures.map((entry) => [key(entry), entry]));
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  assert.deepEqual(
+    [...authFix.keys()].filter((k) => !genFix.has(k)).sort(),
+    drift.fixtures_brief_co_generator_khong_sinh,
+    "fixture trong brief mà bộ sinh không đẻ ra — lệch mới thì thêm vào bộ sinh, đừng thêm vào kiểm kê",
+  );
+  assert.deepEqual(
+    [...genFix.keys()].filter((k) => !authFix.has(k)).sort(),
+    drift.fixtures_generator_sinh_brief_khong_co,
+    "bộ sinh đẻ ra fixture brief không có",
+  );
+  assert.deepEqual(
+    [...authFix.keys()].filter((k) => genFix.has(k) && !same(genFix.get(k), authFix.get(k))).sort(),
+    drift.fixtures_hai_ben_khac_noi_dung,
+    "fixture hai bên khác nội dung",
+  );
+  const genDoc = new Map(generated.doctypes.map((entry) => [entry.name, entry]));
+  assert.deepEqual(
+    authored.doctypes.filter((d) => !same(genDoc.get(d.name), d)).map((d) => d.name).sort(),
+    drift.doctypes_khac,
+    "doctype hai bên khác nhau",
+  );
+  assert.deepEqual(
+    [...new Set([...Object.keys(generated), ...Object.keys(authored)])]
+      .filter((k) => !["fixtures", "doctypes"].includes(k) && !same(generated[k], authored[k])).sort(),
+    drift.khoa_cap_mot_khac,
+    "khoá cấp một hai bên khác nhau",
+  );
   for (const required of ["Tỉnh Thành", "Phường Xã", "Địa chỉ giao lắp", "Tài khoản ngân hàng", "Credit Note", "Credit Note Item"])
     assert.ok(doc(generated, required), `missing regenerated ${required}`);
   for (const required of [
@@ -35,6 +79,29 @@ test("alumdoor-v2 generator is idempotent and preserves runtime contracts", (t) 
     ["Sales Order", "install_province"], ["Sales Order", "install_ward"], ["Sales Order", "shipping_note"],
     ["Cutting Policy", "geometry_profile"], ["Cutting Policy", "geometry_rules"], ["Cut Order Item", "source_batch_no"],
   ]) assert.ok(field(generated, ...required), `missing regenerated ${required.join(".")}`);
+
+  for (const lineDoctype of ["Quotation Item", "Sales Order Item"]) {
+    assert.ok(field(generated, lineDoctype, "width_pb_ray_m"), `${lineDoctype} missing width_pb_ray_m`);
+    assert.ok(field(generated, lineDoctype, "width_pb_nhua_m"), `${lineDoctype} missing width_pb_nhua_m`);
+    const rate = field(generated, lineDoctype, "rate");
+    assert.equal(rate?.read_only, true, `${lineDoctype}.rate must stay read-only`);
+    assert.equal(rate?.serverEnforced, true, `${lineDoctype}.rate must stay server-enforced`);
+  }
+  assert.equal(field(generated, "Item", "gift_rail_min_area_sqm")?.default, 8);
+  assert.equal(field(generated, "Item", "gift_rail_area_operator")?.default, "GT");
+
+  const fixture = (type, name) => generated.fixtures.find((entry) => entry.type === type && entry.name === name);
+  assert.equal(fixture("Ngưỡng chọn Motor", "MOTO-TANKER-400")?.data.item_code, "MT_TANKER400KG");
+  assert.equal(fixture("Ngưỡng chọn Motor", "MOTO-TANKER-800")?.data.item_code, "MT_TANKE800KG");
+  assert.equal(fixture("Ngưỡng chọn Motor", "PIN-E800")?.data.item_code, "BLD_UPS_E800I");
+  const giftRail = fixture("BOM Rule", "BOMR-RAY-HOP-TD-DUC");
+  assert.equal(giftRail?.data.applicability?.[0]?.min_area_sqm, 8);
+  assert.equal(giftRail?.data.applicability?.[0]?.min_area_operator, "GT");
+  const batchCustomFields = generated.customFields?.Batch ?? [];
+  const batchCustomNames = batchCustomFields.map((entry) => nameOf(typeof entry === "object" && entry?.field ? entry.field : entry));
+  for (const alumdoorField of ["color", "condition", "length_m", "is_offcut"]) {
+    assert.ok(batchCustomNames.includes(alumdoorField), `Batch.${alumdoorField} must remain an Alumdoor custom field`);
+  }
   for (const dt of generated.doctypes) {
     /**
      * `sales_option` vẫn bị cấm; `sales_mode` thì KHÔNG — hai thứ khác nhau.

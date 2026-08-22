@@ -46,6 +46,11 @@ const congDangNghe = (cong) => new Promise((ok) => {
  * và bản sao 12 MB rẻ hơn nhiều so với việc dựng lại toàn bộ thang nhập liệu.
  */
 export async function moPhienGhi({ tang }) {
+  throw new Error(
+    `Bộ nhập legacy '${tang}' đã bị khóa: ghi thẳng D1 bỏ qua authority ledger, cascade và validator. `
+    + "Chỉ dùng scripts/local-runner sau khi audit-alumdoor-import-gate-local.mjs trả GO.",
+  );
+  /* c8 ignore next 35 -- retained only as recovery documentation; unreachable by design */
   if (!existsSync(DUONG_D1)) throw new Error(`Không thấy D1: ${DUONG_D1}`);
 
   for (const cong of CONG_RUNTIME) {

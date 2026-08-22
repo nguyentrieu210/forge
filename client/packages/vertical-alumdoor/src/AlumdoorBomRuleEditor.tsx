@@ -88,6 +88,20 @@ const GEOMETRY_FIELDS = [
 
 const OPERATORS = ["COPY", "ADD", "SUBTRACT", "MULTIPLY", "DIVIDE", "PRODUCT", "QUOTIENT", "CONSTANT"] as const;
 
+const GEOMETRY_FIELD_ALIASES: Readonly<Record<string, string>> = Object.freeze({
+  "CAO-PB": "PB_CAO",
+  "RONG-PB-RAY": "PB_RAY_RONG",
+  "RONG-PB-NHUA": "PB_NHUA_RONG",
+  "RONG-CAT-LA": "CAT_LA_RONG",
+  "CAO-LUOI": "LUOI_CAO",
+  "DIEN-TICH": "billable_area_sqm",
+});
+
+function canonicalGeometryField(value: unknown): string {
+  const code = text(value);
+  return GEOMETRY_FIELD_ALIASES[code] ?? code;
+}
+
 const emptyRule = (): BomRuleDoc => ({
   rule_code: "",
   rule_name: "",
@@ -232,7 +246,13 @@ export function AlumdoorBomRuleEditor({ name, onSaved, onCancel }: AlumdoorBomRu
     void adapter.getDoc("BOM Rule", name).then((result) => {
       if (!active) return;
       const loaded = result.doc as BomRuleDoc;
-      setDoc({ ...emptyRule(), ...loaded, applicability: Array.isArray(loaded.applicability) ? loaded.applicability : [] });
+      setDoc({
+        ...emptyRule(),
+        ...loaded,
+        source_field: canonicalGeometryField(loaded.source_field),
+        source_field_2: canonicalGeometryField(loaded.source_field_2),
+        applicability: Array.isArray(loaded.applicability) ? loaded.applicability : [],
+      });
     }).catch((error) => toast.error(adapter.mapError(error).message)).finally(() => active && setLoading(false));
     return () => { active = false; };
   }, [adapter, name]);

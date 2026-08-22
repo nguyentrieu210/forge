@@ -27,7 +27,11 @@ const platform = {
     if (path.endsWith("/resource/Customer/CUST-DEALER")) return Promise.resolve(Response.json({ data: { price_group: "Đại lý" } }));
     if (path.endsWith("/resource/Customer/CUST-RETAIL")) return Promise.resolve(Response.json({ data: { price_group: "Lẻ" } }));
     if (path.endsWith("/resource/Customer/CUST-NO-GROUP")) return Promise.resolve(Response.json({ data: { price_group: "" } }));
-    if (path.endsWith("/resource/Item Color/GS")) return Promise.resolve(Response.json({ data: { color_code: "GS", disabled: false } }));
+    if (path.endsWith("/resource/Surface Finish")) return Promise.resolve(Response.json({ data: [{ name: "SON", finish_name: "Sơn", requires_color: 1, applies_to_all_groups: 1, disabled: 0, usage_scope: "Mua & bán" }] }));
+    if (path.endsWith("/resource/Surface Finish/SON")) return Promise.resolve(Response.json({ data: { name: "SON", finish_name: "Sơn", requires_color: 1, applies_to_all_groups: 1, disabled: 0, usage_scope: "Mua & bán" } }));
+    if (path.endsWith("/resource/Item Color")) return Promise.resolve(Response.json({ data: [{ name: "GS", color_code: "GS", disabled: 0, usage_scope: "Mua & bán" }] }));
+    if (path.endsWith("/resource/Item Color/GS")) return Promise.resolve(Response.json({ data: { name: "GS", color_code: "GS", surface_finish: "SON", disabled: 0, usage_scope: "Mua & bán" } }));
+    if (path.endsWith("/resource/Item Group/Cửa Lưới")) return Promise.resolve(Response.json({ data: { name: "Cửa Lưới", parent_item_group: "" } }));
     return Promise.resolve(Response.json({ message: "not found" }, { status: 404 }));
   },
 };
@@ -86,11 +90,9 @@ test("Worker từ chối cửa khi khách chưa có Nhóm giá", async () => {
   assert.match(body.message, /chưa có Nhóm giá/);
 });
 
-test("Worker từ chối Nhóm giá do payload giả khác hồ sơ khách", async () => {
+test("Worker cho phép snapshot Nhóm giá hợp lệ khác mặc định hồ sơ khách", async () => {
   const response = await alumdoorWorker.fetch(request(11.91, "Đại lý", "CUST-RETAIL"), { PLATFORM: platform }, {});
-  const body = await response.json();
-  assert.equal(response.status, 422);
-  assert.match(body.message, /phải là "Lẻ" theo hồ sơ khách/);
+  assert.equal(response.status, 200, await response.text());
 });
 
 test("method tính thử trả cùng rộng cắt và m2 với validator", async () => {

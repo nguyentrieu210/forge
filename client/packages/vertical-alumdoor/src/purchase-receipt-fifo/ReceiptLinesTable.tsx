@@ -20,6 +20,7 @@ import { AlumdoorSalesOrderField, fallbackField } from "../sales-order-v2/Alumdo
 import {
   isCatchWeightReceiptLine,
   lineFieldLabel,
+  lineFieldRequired,
   lineFieldVisible,
   moneyOrDash,
   quantity,
@@ -119,6 +120,7 @@ export function ReceiptLinesTable(props: ReceiptLinesTableProps) {
               <th className={TH}>Đơn giá</th>
               <th className={TH}>Thành tiền</th>
               <th className={TH}>Kho nhập</th>
+              <th className={TH}>Số SO NCC</th>
               <th className={TH}>Ghi chú</th>
               <th className={TH} />
             </tr>
@@ -181,11 +183,14 @@ export function ReceiptLinesTable(props: ReceiptLinesTableProps) {
                   <td className={TD}>{catchWeight ? control(line, key, "length_m", "Dài cây (m)", "Float", undefined, { width: "min-w-[85px]", required: true }) : <span className="text-[10px] text-muted-foreground">—</span>}</td>
                   <td className={TD}>{lineFieldVisible(line, "color", catchWeight) ? control(line, key, "color", "Màu", "Link", "Item Color", { width: "min-w-[120px]" }) : <span className="text-[10px] text-muted-foreground">—</span>}</td>
                   <td className={TD}>{catchWeight ? control(line, key, "is_stamped", "Dập", "Select", metaField("is_stamped", "Dập", "Select").options, { width: "min-w-[90px]", required: true }) : <span className="text-[10px] text-muted-foreground">—</span>}</td>
-                  <td className={TD}>{catchWeight ? control(line, key, "condition", "Tình trạng", "Select", metaField("condition", "Tình trạng", "Select").options, { width: "min-w-[100px]" }) : <span className="text-[10px] text-muted-foreground">—</span>}</td>
+                  <td className={TD}>{catchWeight && lineFieldVisible(line, "condition", catchWeight)
+                    ? control(line, key, "condition", "Tình trạng", "Select", metaField("condition", "Tình trạng", "Select").options, { width: "min-w-[100px]", required: lineFieldRequired(line, "condition", false) })
+                    : <span className="text-[10px] text-muted-foreground">—</span>}</td>
                   <td className={TD}>{control(line, key, "uom", "ĐVT", "Link", "UOM", { width: "min-w-[85px]" })}</td>
                   <td className={TD}>{control(line, key, "rate", "Đơn giá", "Currency", undefined, { width: "min-w-[110px]", required: true })}</td>
                   <td className={`${NUM} font-semibold`}>{moneyOrDash(line.amount)}</td>
                   <td className={TD}>{control(line, key, "warehouse", "Kho nhập", "Link", "Warehouse", { width: "min-w-[140px]", required: true })}</td>
+                  <td className={TD}>{catchWeight ? control(line, key, "so_no", "Số SO NCC", "Data", undefined, { width: "min-w-[110px]" }) : <span className="text-[10px] text-muted-foreground">—</span>}</td>
                   <td className={TD}>{control(line, key, "note", "Ghi chú", "Data", undefined, { width: "min-w-[130px]" })}</td>
                   <td className={TD}>
                     <Button type="button" size="sm" variant="ghost" className="h-7 px-1.5" disabled={props.readOnly} onClick={() => props.onDelete(key)} aria-label={`Xóa dòng ${index + 1}`}>
@@ -196,7 +201,7 @@ export function ReceiptLinesTable(props: ReceiptLinesTableProps) {
               );
             }) : (
               <tr>
-                <td colSpan={21} className="px-3 py-6 text-center text-[11px] text-muted-foreground">
+                <td colSpan={22} className="px-3 py-6 text-center text-[11px] text-muted-foreground">
                   Chưa có dòng nào. Nạp một đơn mua để kéo về phần còn phải nhận, hoặc thêm dòng thủ công.
                 </td>
               </tr>

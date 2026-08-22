@@ -23,6 +23,7 @@ function context(document, roles = ["AlumDoor QR System"]) {
       shift3_start_minute: 1050, shift3_latest_out_minute: 1439,
       regular_daily_cap_minutes: 480,
     }],
+    ["Shift Type:DAY", { start_time: "07:00", end_time: "17:00", working_minutes: 480, disabled: 0 }],
   ]);
   return {
     command: {
@@ -46,7 +47,12 @@ function context(document, roles = ["AlumDoor QR System"]) {
         return data ? { name, data, docstatus: doctype === "Employee" ? 0 : 1, version: 1 } : null;
       },
       async getMasterRecordData(_tenant, doctype, name) { return records.get(`${doctype}:${name}`) ?? null; },
-      async listDocumentsByDoctype() { return []; },
+      async listDocumentsByDoctype(_tenant, doctype) {
+        return doctype === "Shift Assignment" ? [{
+          name: "SHIFT-EMP-1", docstatus: 1,
+          data: { employee: "EMP-1", company: "ALUMDOOR", branch: "XUONG", shift_type: "DAY", start_date: "2026-01-01" },
+        }] : [];
+      },
     },
   };
 }
@@ -54,7 +60,8 @@ function context(document, roles = ["AlumDoor QR System"]) {
 test("AlumDoor daily projection calculates 3 shifts without changing standard Attendance", async () => {
   const plan = await new AlumDoorAttendanceDayController().buildPlan(context(completeDay));
   assert.equal(plan.document.data.regular_minutes, 480);
-  assert.equal(plan.document.data.overtime_minutes, 60);
+  assert.equal(plan.document.data.raw_overtime_minutes, 60);
+  assert.equal(plan.document.data.overtime_minutes, 0);
   assert.equal(plan.document.data.payable_work_fraction_bp, 10_000);
   assert.equal(plan.document.status, "complete");
   assert.deepEqual(plan.document.children.map((row) => row.child_doctype), [

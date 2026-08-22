@@ -224,6 +224,8 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
   const previewErrorRef = useRef("");
   const closeSeen = useRef(props.closeRequest ?? 0);
   const itemCache = useRef(new Map<string, Json>());
+  const specCache = useRef(new Map<string, number>());
+  const supplierItemCache = useRef(new Map<string, number>());
   const skipSupplierAutofillOnce = useRef(false);
   const supplierHydrationSeq = useRef(0);
   const rowPreviewSeq = useRef(new Map<string, number>());
@@ -312,12 +314,60 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
     return item;
   }, [adapter]);
 
+  /**
+   * "Dài cây" chuẩn từ Quy cách kỹ thuật — CÙNG cơ chế đã dùng ở màn NHẬP
+   * (`AlumdoorPurchaseReceiptWorkbench.tsx`), nay gọi thêm ở màn ĐẶT để người lập đơn không
+   * phải tự nhớ/tra chiều dài cây cho từng dòng nhôm. Chỉ là gợi ý mặc định, người dùng vẫn
+   * sửa được vì mỗi cây một dài.
+   */
+  const loadStandardLengthM = useCallback(async (specName: string): Promise<number | undefined> => {
+    const cached = specCache.current.get(specName);
+    if (cached !== undefined) return cached || undefined;
+    try {
+      const { doc } = await adapter.getDoc("Material Specification", specName);
+      const value = numberValue((doc as Json).standard_length_m);
+      specCache.current.set(specName, value ?? 0);
+      return value;
+    } catch {
+      specCache.current.set(specName, 0);
+      return undefined;
+    }
+  }, [adapter]);
+
+  /**
+   * Giá mua gần nhất theo NCC + mã hàng (`Supplier Item.last_purchase_rate`) — chỉ để THAM
+   * KHẢO khi gõ đơn giá, không tự gán vào `rate`. Tên chứng từ Supplier Item cố định theo
+   * khuôn `{supplier}:{item_code}` (brief `naming: format:{supplier}:{item_code}`), nên tra
+   * thẳng bằng tên thay vì phải tìm kiếm. Phần lớn tổ hợp NCC+mã hàng CHƯA có bản ghi này —
+   * lỗi 404 là bình thường, không phải sự cố.
+   */
+  const loadLastPurchaseRate = useCallback(async (supplier: string, itemCode: string): Promise<number | undefined> => {
+    const key = `${supplier} ${itemCode}`;
+    const cached = supplierItemCache.current.get(key);
+    if (cached !== undefined) return cached || undefined;
+    try {
+      const { doc } = await adapter.getDoc("Supplier Item", `${supplier}:${itemCode}`);
+      const value = numberValue((doc as Json).last_purchase_rate);
+      supplierItemCache.current.set(key, value ?? 0);
+      return value;
+    } catch {
+      supplierItemCache.current.set(key, 0);
+      return undefined;
+    }
+  }, [adapter]);
+
   const hydrateLine = useCallback(async (source: PurchaseLine): Promise<PurchaseLine> => {
     const itemCode = text(source.item_code);
     if (!itemCode) return source;
     const item = await loadItem(itemCode);
     const mode = text(item.inventory_mode) || "Hàng thường";
     const defaultPurchaseUom = text(item.default_purchase_uom) || text(item.stock_uom);
+    const specName = text(item.material_specification);
+    const supplierName = text(headerRef.current.supplier);
+    const [standardLength, lastPurchaseRate] = await Promise.all([
+      mode === ALUMINUM_MODE && specName ? loadStandardLengthM(specName) : Promise.resolve(undefined),
+      supplierName ? loadLastPurchaseRate(supplierName, itemCode) : Promise.resolve(undefined),
+    ]);
     const next: PurchaseLine = {
       ...source,
       _itemName: text(item.item_name) || itemCode,
@@ -325,6 +375,7 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
       _inventoryMode: mode,
       _materialSpecification: text(item.material_specification),
       _defaultPurchaseUom: defaultPurchaseUom,
+      _lastPurchaseRate: lastPurchaseRate,
       item_name: text(item.item_name) || source.item_name,
       item_group: text(item.item_group) || source.item_group,
       inventory_mode: mode,
@@ -332,8 +383,9 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
       material_specification: text(item.material_specification) || source.material_specification,
     } as PurchaseLine;
     if (defaultPurchaseUom && (!text(next.uom) || mode === ALUMINUM_MODE)) next.uom = defaultPurchaseUom;
+    if (standardLength !== undefined && positive(source.length_m) === undefined) next.length_m = standardLength;
     return next;
-  }, [loadItem]);
+  }, [loadItem, loadLastPurchaseRate, loadStandardLengthM]);
 
   const requestClose = useCallback(() => {
     if (dirty && typeof window !== "undefined" && !window.confirm("Đơn mua có thay đổi chưa lưu. Bỏ các thay đổi này?")) return;
@@ -640,6 +692,31 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
     return () => { active = false; };
   }, [adapter, formReadOnly, header.supplier, loading, markChanged, meta, previewDocumentLatest, setHeaderState, setPreviewError]);
 
+  /**
+   * Lịch sử giá theo NCC (`buildSupplierPriceHistory`, `clouderp-core/procurement-analytics.ts`)
+   * — nối qua route `metaforge.api.supplier_price_history`. Trước đây hàm này có công thức
+   * đúng cho câu hỏi "giá lệch bao nhiêu % so với lần mua trước" nhưng 0 route/UI nào gọi
+   * (audit vòng 3, ca S3). Tải MỘT LẦN theo NCC (không theo từng dòng) rồi tra theo mã hàng
+   * khi hiển thị dòng — xem `priceHistoryByItem` truyền cho `AlumdoorPurchaseOrderItemsGrid`.
+   */
+  const [priceHistoryByItem, setPriceHistoryByItem] = useState<Map<string, number | null>>(new Map());
+  useEffect(() => {
+    const supplierName = text(header.supplier);
+    if (!supplierName) { setPriceHistoryByItem(new Map()); return; }
+    let active = true;
+    adapter.callPost<Json>("metaforge.api.supplier_price_history", { supplier: supplierName }).then((result) => {
+      if (!active) return;
+      const series = Array.isArray(result.price_history) ? result.price_history as Json[] : [];
+      const byItem = new Map<string, number | null>();
+      for (const row of series) {
+        const itemCode = text(row.item_code);
+        if (itemCode && !byItem.has(itemCode)) byItem.set(itemCode, (row.latest_change_bps as number | null) ?? null);
+      }
+      setPriceHistoryByItem(byItem);
+    }).catch(() => { if (active) setPriceHistoryByItem(new Map()); });
+    return () => { active = false; };
+  }, [adapter, header.supplier]);
+
   const addLine = useCallback(() => {
     if (!childMeta) return;
     markChanged(true);
@@ -939,9 +1016,10 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
                   {headerControl("transaction_date", "Ngày đặt hàng", "Date")}
                   {hasField("schedule_date") ? headerControl("schedule_date", "Ngày giao dự kiến", "Date") : <div />}
                 </div>
-                <div className="grid gap-x-2 gap-y-2 md:grid-cols-2 xl:grid-cols-[minmax(150px,0.65fr)_minmax(230px,1fr)_minmax(230px,1fr)_minmax(360px,1.6fr)]">
+                <div className="grid gap-x-2 gap-y-2 md:grid-cols-2 xl:grid-cols-[minmax(150px,0.65fr)_minmax(230px,1fr)_minmax(230px,1fr)_minmax(230px,1fr)_minmax(360px,1.6fr)]">
                   {hasField("priority") ? headerControl("priority", "Mức độ", "Select") : <div />}
                   {hasField("supplier_quotation") ? headerControl("supplier_quotation", "Theo báo giá NCC", "Link", "Supplier Quotation") : <div />}
+                  {hasField("material_request") ? headerControl("material_request", "Theo yêu cầu vật tư", "Link", "Material Request") : <div />}
                   {hasField("payment_terms") ? headerControl("payment_terms", "Thanh toán", metaField("payment_terms")!.fieldtype, metaField("payment_terms")!.options) : <div />}
                   {hasField("note") ? headerControl("note", "Ghi chú", metaField("note")!.fieldtype) : <div />}
                 </div>
@@ -949,6 +1027,12 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
               <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 border-t pt-2 text-[10px] text-muted-foreground">
                 <span>Công ty: <strong className="font-medium text-foreground">{text(header.company) || "—"}</strong></span>
                 <span>Tiền tệ: <strong className="font-medium text-foreground">{text(header.currency) || "VND"}</strong></span>
+                {isExisting ? (
+                  <>
+                    <span>Đã nhận: <strong className="font-medium text-foreground">{text(header.received_percentage) || "0"}%</strong></span>
+                    <span>Đã xuất HĐ: <strong className="font-medium text-foreground">{text(header.billed_percentage) || "0"}%</strong></span>
+                  </>
+                ) : null}
               </div>
             </section>
 
@@ -960,6 +1044,7 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
               roles={roles}
               readOnly={formReadOnly || interactionBusy}
               priceLocked={Boolean(text(header.buying_price_list))}
+              priceHistoryByItem={priceHistoryByItem}
               onPatch={patchLineFromUser}
               onCommit={commitLine}
               onAdd={addLine}

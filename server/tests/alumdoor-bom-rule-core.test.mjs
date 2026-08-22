@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  applicableBomRuleComponents,
   bomRuleFormulaDisplay,
   evaluateBomRuleMaster,
   resolveBomRuleMaster,
@@ -129,6 +130,32 @@ test("one reusable rule can serve three parent Items", () => {
 
 test("a rule without applicability is not accidentally global", () => {
   assert.equal(resolveBomRuleMaster([rule("UNWIRED")], { parent_item: "DOOR", component_item: "V4" }), null);
+});
+
+test("price variant and area gates prevent conditional BOM components from leaking", () => {
+  const giftRail = rule("GIFT-RAIL", {
+    applicability: [{
+      scope_type: "DOOR_TYPE",
+      door_type: "Cửa Đức",
+      component_item: "RAY-GIFT",
+      price_variant: "TANG_RAY",
+      min_area_sqm: 10,
+      min_area_operator: "GT",
+      priority: 100,
+    }],
+  });
+  assert.deepEqual(applicableBomRuleComponents([giftRail], {
+    door_type: "Cửa Đức", price_variant: "TANG_RAY", area_sqm: 10,
+  }), []);
+  assert.deepEqual(applicableBomRuleComponents([giftRail], {
+    door_type: "Cửa Đức", price_variant: "TANG_RAY", area_sqm: 10.001,
+  }), ["RAY-GIFT"]);
+  assert.deepEqual(applicableBomRuleComponents([giftRail], {
+    door_type: "Cửa Đức", price_variant: "CHI_LA", area_sqm: 9,
+  }), []);
+  assert.deepEqual(applicableBomRuleComponents([giftRail], {
+    door_type: "Cửa Đức", price_variant: "TANG_RAY", area_sqm: 9.999,
+  }), []);
 });
 
 test("BOM scope wins over Item scope", () => {

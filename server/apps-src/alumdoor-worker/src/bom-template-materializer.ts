@@ -357,8 +357,14 @@ export function bomContextFromProductionLine(line: BomProductionLineInput): { co
     double_layer_leaf_count: line.double_layer_leaf_count,
     estimated_weight_kg: line.estimated_weight_kg,
     output_qty: line.output_qty,
+    // Canonical geometry namespace used by current BOM Rules and source fixtures.
+    PB_CAO: line.height_m,
+    PB_RAY_RONG: line.width_m,
     PB_RONG: line.width_m,
+    CAT_LA_RONG: line.cut_width_m,
+    // Legacy aliases remain read-compatible until every stored template has been cascaded.
     "CAO-PB": line.height_m,
+    "RONG-PB-RAY": line.width_m,
     "RONG-CAT-LA": line.cut_width_m,
   };
   for (const key of Object.keys(values)) {

@@ -47,7 +47,12 @@ test("every vertical method is reachable only through the registry", () => {
   assert.deepEqual(registered, [
     "metaforge.api.approve_alumdoor_payroll",
     "metaforge.api.commit_alumdoor_attendance_scan",
+    "metaforge.api.commit_alumdoor_attendance_station_lite",
+    "metaforge.api.commit_alumdoor_employee_lite",
+    "metaforge.api.commit_alumdoor_hr_lite_settings",
+    "metaforge.api.commit_alumdoor_pay_profile_lite",
     "metaforge.api.get_alumdoor_attendance_qr_config",
+    "metaforge.api.get_alumdoor_hr_lite_organization",
     "metaforge.api.preview_sales_commercial_line",
     "metaforge.api.review_alumdoor_attendance_correction",
     "metaforge.api.rotate_alumdoor_attendance_station_qr",

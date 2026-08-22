@@ -124,6 +124,14 @@ export interface DeliveryItemContext extends Json {
   shortage?: ShortageInfo;
   readiness?: ItemReadiness;
   uom_gap?: UomGap | null;
+  /**
+   * `alumdoor.sales.item_context` LUÔN trả field này bất kể `include_color_scope` — Xuất kho gọi
+   * với `include_color_scope: 0` (khỏi tốn lượt đọc allowed_finishes) nên KHÔNG có `color_scope`,
+   * nhưng vẫn đọc được `require_color` thô để làm lưới an toàn thứ 2 cho luật màu bắt buộc, độc
+   * lập với việc Đơn bán có gọi/qua được `item_context` hay không (audit ALUMDOOR-KHO-DANH-MUC-
+   * GAP-20260821.md, #3).
+   */
+  spec_context?: { measurement_profile?: { require_color?: boolean } | null } | null;
 }
 
 /** Giữ chỗ tồn đang treo — `Stock Reservation`, state "Đang giữ". */
@@ -465,6 +473,19 @@ export function lineAlerts(line: DeliveryLine): DeliveryAlert[] {
         ? `${text(line._contextError)} — danh mục CỐ Ý để trống, chờ chủ xưởng chốt.`
         : text(line._contextError),
       where: text(gap?.fix_where) || undefined,
+    });
+  }
+
+  /**
+   * Lưới an toàn thứ 2 cho luật "màu bắt buộc" (song song với sales-order-v2/model.ts). Đơn bán
+   * đọc `color_scope.requires_color` để chặn dòng thiếu màu, nhưng nếu 1 dòng lọt qua (sửa tay
+   * sau, đơn cũ, import) thì Xuất kho trước đây KHÔNG có lưới thứ 2 — xem #3 trong audit trên.
+   */
+  if (context?.spec_context?.measurement_profile?.require_color === true && !text(line.color)) {
+    alerts.push({
+      level: "block",
+      message: "Chưa chọn màu — bộ theo dõi của mã này bắt buộc có màu.",
+      where: "Chọn ngay trên dòng này",
     });
   }
 

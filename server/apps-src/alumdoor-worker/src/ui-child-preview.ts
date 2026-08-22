@@ -1,4 +1,4 @@
-import { roundTo } from "../../../packages/core/src/index.js";
+import { roundTo } from "./numeric.js";
 import { salesItemContext, type SalesPlatformCall } from "./sales-item-context.js";
 import { calculateSalesProductionLine, type ProductionPlatformCall } from "./sales-production.js";
 import { allowedColorNamesForGroup } from "./color-scopes.js";
@@ -417,7 +417,12 @@ async function previewSales(call: PlatformCall, args: Json, row: Json, parent: J
   if (selectedWidthField) {
     const selectedWidth = positive(patch[selectedWidthField] ?? row[selectedWidthField]);
     const hasSeparateWidth = positive(row.width_pb_ray_m) || positive(row.width_pb_nhua_m);
-    const legacyWidth = !hasSeparateWidth && changed === "initial_load" ? positive(row.width_m) : null;
+    // Nếu người bán nhập ô Rộng PB chung trước khi chọn khách, lúc nhóm giá xuất hiện phải
+    // chuyển đúng một lần sang PB ray/nhựa. Chỉ chuyển khi chưa có bất kỳ số đo chuyên biệt nào;
+    // đổi từ Lẻ sang Đại lý sau đó không được đoán hai loại phủ bì bằng nhau.
+    const legacyWidth = !hasSeparateWidth && ["initial_load", "parent_context"].includes(changed)
+      ? positive(row.width_m)
+      : null;
     if (selectedWidth) patch.width_m = selectedWidth;
     else if (legacyWidth) {
       setIfField(patch, fields, selectedWidthField, legacyWidth);
@@ -509,7 +514,8 @@ async function previewSales(call: PlatformCall, args: Json, row: Json, parent: J
   fieldOverride(overrides, fields, "has_butterfly_bracket", {
     hidden: supportsButterflyBracket ? 0 : 1,
     reqd: 0,
-    label: "Có bản bướm",
+    // Chủ xưởng dùng chữ "bắn bướm" (phản hồi 21/08/2026) — thống nhất một nhãn duy nhất.
+    label: "Có bắn bướm",
     depends_on: null,
     mandatory_depends_on: null,
   });
@@ -573,6 +579,11 @@ async function previewPurchase(call: PlatformCall, args: Json, row: Json, fields
   const requireLength = measurementProfile ? checked(measurementProfile.require_length) : aluminum;
   const requirePieces = measurementProfile ? checked(measurementProfile.require_piece_qty) : aluminum;
   const trackBundles = measurementProfile ? checked(measurementProfile.track_bundle_qty) : false;
+  // `require_condition` — cùng cờ Bộ theo dõi với requireColor/requireLength/requirePieces/
+  // trackBundles ở trên, trước đây bị bỏ sót (audit ALUMDOOR-KHO-DANH-MUC-GAP-20260821.md, #4).
+  // `Purchase Receipt Item`/`Purchase Order Item` đều có field `condition` sẵn (Select
+  // Thô/Đã sơn/Lỗi) — nối field_override cùng khuôn với requireLength ngay dưới.
+  const requireCondition = measurementProfile ? checked(measurementProfile.require_condition) : aluminum;
 
   const plan: Array<[string, unknown]> = [
     ["stock_uom", item.stock_uom], ["inventory_mode", inventoryMode],
@@ -657,6 +668,14 @@ async function previewPurchase(call: PlatformCall, args: Json, row: Json, fields
     reqd: requireLength ? 1 : 0,
     read_only: requireLength ? 0 : 1,
     label: "Dài một cây/đoạn (m)",
+    depends_on: null,
+    mandatory_depends_on: null,
+  });
+  fieldOverride(overrides, fields, "condition", {
+    hidden: requireCondition ? 0 : 1,
+    reqd: requireCondition ? 1 : 0,
+    read_only: requireCondition ? 0 : 1,
+    label: "Tình trạng",
     depends_on: null,
     mandatory_depends_on: null,
   });

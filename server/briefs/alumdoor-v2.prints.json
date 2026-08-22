@@ -25,6 +25,7 @@
         "<div class=\"meta\">",
         "<div class=\"meta-col\">",
         "<div class=\"meta-row\"><span class=\"meta-label\">Khách hàng:</span><span class=\"meta-value\">{{ customer }}</span></div>",
+        "{{#if contact_person}}<div class=\"meta-row\"><span class=\"meta-label\">Người liên hệ:</span><span class=\"meta-value\">{{ contact_person }}</span></div>{{/if}}",
         "{{#if phone}}<div class=\"meta-row\"><span class=\"meta-label\">SĐT:</span><span class=\"meta-value\">{{ phone }}</span></div>{{/if}}",
         "<div class=\"meta-row\"><span class=\"meta-label\">Địa chỉ:</span><span class=\"meta-value\">{{ install_address }}</span></div>",
         "{{#if note}}<div class=\"meta-row\"><span class=\"meta-label\">Ghi chú:</span><span class=\"meta-value\">{{ note }}</span></div>{{/if}}",

@@ -354,6 +354,7 @@ export function AlumdoorDeliveryNoteLineTable(props: AlumdoorDeliveryNoteLineTab
                                     {batch.length_m ? ` · dài ${quantity(batch.length_m)} m` : ""}
                                     {batch.weight_kg ? ` · ${quantity(batch.weight_kg)} kg` : ""}
                                     {text(batch.color) ? ` · ${text(batch.color)}` : ""}
+                                    {text(batch.condition) ? ` · ${text(batch.condition)}` : ""}
                                     {batch.is_offcut ? " · đầu thừa" : ""}
                                   </div>
                                 ))}

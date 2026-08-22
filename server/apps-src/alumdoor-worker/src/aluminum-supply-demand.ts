@@ -1,4 +1,4 @@
-import { roundTo } from "../../../packages/core/src/index.js";
+import { roundTo } from "./numeric.js";
 import type { PurchaseFifoEnv } from "./purchase-fifo-receipt.js";
 
 type Json = Record<string, unknown>;

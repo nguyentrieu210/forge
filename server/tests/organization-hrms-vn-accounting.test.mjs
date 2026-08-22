@@ -17,7 +17,7 @@ test("HRM package exposes complete operational HR, time and payroll dimensions",
   const parsed = parseAppManifest(source);
 
   assert.equal(parsed.id, "hrm");
-  assert.equal(parsed.version, "1.8.0");
+  assert.equal(parsed.version, "1.8.6");
   for (const key of [
     "Branch", "Department", "Job Opening", "Job Applicant", "Job Offer", "Employee", "Employment Contract",
     "Employee Transfer", "Employee Separation", "Leave Policy", "Leave Allocation", "Leave Application", "Holiday List",
@@ -37,9 +37,11 @@ test("HRM package exposes complete operational HR, time and payroll dimensions",
   const employee = parsed.doctypes.find((item) => item.name === "Employee");
   assert.ok(employee);
   const employeeFields = fieldMap(employee);
-  for (const required of ["company", "branch", "department", "employee_number", "employment_type", "cost_center"]) {
+  for (const required of ["company", "branch", "department", "employment_type"]) {
     assert.equal(employeeFields.get(required)?.required, true, `${required} must be required`);
   }
+  assert.equal(employeeFields.get("employee_number")?.required ?? false, false, "autoname may supply employee_number");
+  assert.equal(employeeFields.get("cost_center")?.required ?? false, false, "HR Lite does not require accounting dimensions");
   assert.equal(employeeFields.get("company")?.set_only_once, true);
   assert.equal(employeeFields.get("employee_number")?.set_only_once, true);
   for (const sensitive of ["personal_email", "mobile", "bank_account_no", "tax_code", "social_insurance_number"]) {
@@ -64,12 +66,12 @@ test("HRM package exposes complete operational HR, time and payroll dimensions",
   }
 
   const branchFixture = source.fixtures.find((item) => item.record_type === "Branch");
-  assert.equal(branchFixture?.data.company, "Kairo");
-  assert.ok(branchFixture?.data.cost_center);
+  assert.equal("company" in (branchFixture?.data ?? {}), false, "generic HRM fixtures must not link a tenant-specific Company");
+  assert.equal("cost_center" in (branchFixture?.data ?? {}), false, "generic HRM fixtures must not link a tenant-specific Cost Center");
   for (const department of source.fixtures.filter((item) => item.record_type === "Department")) {
-    assert.equal(department.data.company, "Kairo");
     assert.equal(department.data.branch, "HQ");
-    assert.ok(department.data.cost_center);
+    assert.equal("company" in department.data, false, "Company is selected when the tenant configures HR");
+    assert.equal("cost_center" in department.data, false, "Cost Center is selected when the tenant configures HR");
   }
   for (const leaveType of source.fixtures.filter((item) => item.record_type === "Leave Type")) {
     assert.equal("max_days" in leaveType.data, false, "legal leave entitlement must not be hardcoded in generic fixtures");

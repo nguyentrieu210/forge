@@ -1,0 +1,1151 @@
+{
+  "ghi_chu": "Bản documents của Cutting Policy + Geometry Profile, gỡ khỏi D1 ngày 22/08/2026 vì xung đột với bộ chuẩn trong master_records (bộ có test). GIỮ LẠI vì chứa quy đổi lọt lòng → phủ bì mà bộ chuẩn chưa có.",
+  "go_ngay": "2026-08-22T11:58:33.326Z",
+  "banghi": [
+    {
+      "doc_key": "Cutting Policy:Cửa CN Đức",
+      "doctype": "Cutting Policy",
+      "name": "Cửa CN Đức",
+      "docstatus": 0,
+      "payload_json": "{\"policy_name\":\"Cửa CN Đức\",\"door_type\":\"Cửa Đức\",\"ray_type\":\"Ray hộp/đơn U76\",\"geometry_profile\":\"GP-CUA-DUC\",\"geometry_rules\":[{\"rule_code\":\"CPB\",\"target_field\":\"CAO-PB\",\"source_field\":\"CAO-LOT-LONG\",\"operator\":\"ADD\",\"operand_m\":0.5,\"priority\":0,\"sequence\":1,\"note\":\"CPB = CLL + 500mm\",\"row_id\":\"60733a47-bc0d-4628-abd2-69dd0f9440c7\",\"idx\":1},{\"rule_code\":\"RPBR-U75\",\"target_field\":\"RONG-PB-RAY\",\"source_field\":\"RONG-LOT-LONG\",\"operator\":\"ADD\",\"operand_m\":0.15,\"priority\":0,\"sequence\":2,\"ray_type\":\"U75\",\"note\":\"RPBR U75 = RLL + 150mm\",\"row_id\":\"992611c2-fc26-494e-92ae-8ab223f8b617\",\"idx\":2},{\"rule_code\":\"RPBR-U100\",\"target_field\":\"RONG-PB-RAY\",\"source_field\":\"RONG-LOT-LONG\",\"operator\":\"ADD\",\"operand_m\":0.2,\"priority\":10,\"sequence\":3,\"ray_type\":\"U100\",\"note\":\"RPBR U100 = RLL + 200mm\",\"row_id\":\"4e3b3e81-2c91-402d-826e-8bd15ba1e19a\",\"idx\":3},{\"rule_code\":\"RPBN-U75\",\"target_field\":\"RONG-PB-NHUA\",\"source_field\":\"RONG-LOT-LONG\",\"operator\":\"ADD\",\"operand_m\":0.09,\"priority\":0,\"sequence\":4,\"ray_type\":\"U75\",\"note\":\"RPBN = RLL + 90mm, tương đương RPBR U75 trừ 60mm\",\"row_id\":\"16c62687-c3cd-43af-8dae-29c1549e372b\",\"idx\":4},{\"rule_code\":\"RPBN-U100\",\"target_field\":\"RONG-PB-NHUA\",\"source_field\":\"RONG-LOT-LONG\",\"operator\":\"ADD\",\"operand_m\":0.13,\"priority\":10,\"sequence\":5,\"ray_type\":\"U100\",\"note\":\"RPBN = RLL + 130mm, tương đương RPBR U100 trừ 70mm\",\"row_id\":\"1c234a04-2987-4abe-8196-96bff8b06c7e\",\"idx\":5},{\"rule_code\":\"RCL\",\"target_field\":\"RONG-CAT-LA\",\"source_field\":\"RONG-PB-NHUA\",\"operator\":\"SUBTRACT\",\"operand_m\":0.02,\"priority\":0,\"sequence\":6,\"note\":\"RPBN = RCL + 20mm, nên RCL = RPBN trừ 20mm\",\"row_id\":\"c9c722c1-1b87-4735-8cf6-b30704a20988\",\"idx\":6},{\"rule_code\":\"DT\",\"target_field\":\"DIEN-TICH\",\"source_field\":\"CAO-PB\",\"operator\":\"SUBTRACT\",\"operand_m\":0,\"priority\":0,\"sequence\":9,\"note\":\"Tính tiền = CPB x RPBN\",\"row_id\":\"7be48ba1-c78f-4cab-a670-72b34a106d33\",\"idx\":7}],\"dealer_width_basis\":\"Phủ bì nhựa\",\"retail_width_basis\":\"Phủ bì ray\",\"dealer_cut_deduction_m\":\"0.02\",\"retail_cut_deduction_m\":\"0.08\",\"height_pb_offset_m\":\"0.5\",\"leaf_formula\":\"Kiểu Đức\",\"leaf_height_deduction_m\":\"0.13\",\"leaf_divisor_source\":\"Bản lá của bộ quy cách\",\"leaf_divisor_const\":\"0\",\"leaf_rounding\":\"Ngưỡng trừ-một-lá\",\"leaf_round_threshold\":\"0.6\",\"leaf_variants\":[],\"kerf_mm\":\"3\",\"dealer_split_sales_basis\":\"Phủ bì nhựa\",\"dealer_full_sales_basis\":\"Phủ bì nhựa\",\"retail_sales_basis\":\"Phủ bì ray\",\"purchase_formula\":\"Kg thực tế\",\"purchase_height_basis\":\"Cao phủ bì\",\"purchase_width_basis\":\"Rộng cắt lá\",\"priority\":0,\"note\":\"Số lá ruột = ((CPB − 0,13) / bản lá của mã) − 1. Phần lẻ ≥ 0,6 thì giữ phần nguyên, < 0,6 thì trừ thêm 1 lá (25.7 QUY TRÌNH dòng 109-112). Bộ đủ = số lá ruột + 1 lá đầu + 3 lá đáy.\",\"disabled\":false,\"_metadata_revision\":3}",
+      "payload": {
+        "policy_name": "Cửa CN Đức",
+        "door_type": "Cửa Đức",
+        "ray_type": "Ray hộp/đơn U76",
+        "geometry_profile": "GP-CUA-DUC",
+        "geometry_rules": [
+          {
+            "rule_code": "CPB",
+            "target_field": "CAO-PB",
+            "source_field": "CAO-LOT-LONG",
+            "operator": "ADD",
+            "operand_m": 0.5,
+            "priority": 0,
+            "sequence": 1,
+            "note": "CPB = CLL + 500mm",
+            "row_id": "60733a47-bc0d-4628-abd2-69dd0f9440c7",
+            "idx": 1
+          },
+          {
+            "rule_code": "RPBR-U75",
+            "target_field": "RONG-PB-RAY",
+            "source_field": "RONG-LOT-LONG",
+            "operator": "ADD",
+            "operand_m": 0.15,
+            "priority": 0,
+            "sequence": 2,
+            "ray_type": "U75",
+            "note": "RPBR U75 = RLL + 150mm",
+            "row_id": "992611c2-fc26-494e-92ae-8ab223f8b617",
+            "idx": 2
+          },
+          {
+            "rule_code": "RPBR-U100",
+            "target_field": "RONG-PB-RAY",
+            "source_field": "RONG-LOT-LONG",
+            "operator": "ADD",
+            "operand_m": 0.2,
+            "priority": 10,
+            "sequence": 3,
+            "ray_type": "U100",
+            "note": "RPBR U100 = RLL + 200mm",
+            "row_id": "4e3b3e81-2c91-402d-826e-8bd15ba1e19a",
+            "idx": 3
+          },
+          {
+            "rule_code": "RPBN-U75",
+            "target_field": "RONG-PB-NHUA",
+            "source_field": "RONG-LOT-LONG",
+            "operator": "ADD",
+            "operand_m": 0.09,
+            "priority": 0,
+            "sequence": 4,
+            "ray_type": "U75",
+            "note": "RPBN = RLL + 90mm, tương đương RPBR U75 trừ 60mm",
+            "row_id": "16c62687-c3cd-43af-8dae-29c1549e372b",
+            "idx": 4
+          },
+          {
+            "rule_code": "RPBN-U100",
+            "target_field": "RONG-PB-NHUA",
+            "source_field": "RONG-LOT-LONG",
+            "operator": "ADD",
+            "operand_m": 0.13,
+            "priority": 10,
+            "sequence": 5,
+            "ray_type": "U100",
+            "note": "RPBN = RLL + 130mm, tương đương RPBR U100 trừ 70mm",
+            "row_id": "1c234a04-2987-4abe-8196-96bff8b06c7e",
+            "idx": 5
+          },
+          {
+            "rule_code": "RCL",
+            "target_field": "RONG-CAT-LA",
+            "source_field": "RONG-PB-NHUA",
+            "operator": "SUBTRACT",
+            "operand_m": 0.02,
+            "priority": 0,
+            "sequence": 6,
+            "note": "RPBN = RCL + 20mm, nên RCL = RPBN trừ 20mm",
+            "row_id": "c9c722c1-1b87-4735-8cf6-b30704a20988",
+            "idx": 6
+          },
+          {
+            "rule_code": "DT",
+            "target_field": "DIEN-TICH",
+            "source_field": "CAO-PB",
+            "operator": "SUBTRACT",
+            "operand_m": 0,
+            "priority": 0,
+            "sequence": 9,
+            "note": "Tính tiền = CPB x RPBN",
+            "row_id": "7be48ba1-c78f-4cab-a670-72b34a106d33",
+            "idx": 7
+          }
+        ],
+        "dealer_width_basis": "Phủ bì nhựa",
+        "retail_width_basis": "Phủ bì ray",
+        "dealer_cut_deduction_m": "0.02",
+        "retail_cut_deduction_m": "0.08",
+        "height_pb_offset_m": "0.5",
+        "leaf_formula": "Kiểu Đức",
+        "leaf_height_deduction_m": "0.13",
+        "leaf_divisor_source": "Bản lá của bộ quy cách",
+        "leaf_divisor_const": "0",
+        "leaf_rounding": "Ngưỡng trừ-một-lá",
+        "leaf_round_threshold": "0.6",
+        "leaf_variants": [],
+        "kerf_mm": "3",
+        "dealer_split_sales_basis": "Phủ bì nhựa",
+        "dealer_full_sales_basis": "Phủ bì nhựa",
+        "retail_sales_basis": "Phủ bì ray",
+        "purchase_formula": "Kg thực tế",
+        "purchase_height_basis": "Cao phủ bì",
+        "purchase_width_basis": "Rộng cắt lá",
+        "priority": 0,
+        "note": "Số lá ruột = ((CPB − 0,13) / bản lá của mã) − 1. Phần lẻ ≥ 0,6 thì giữ phần nguyên, < 0,6 thì trừ thêm 1 lá (25.7 QUY TRÌNH dòng 109-112). Bộ đủ = số lá ruột + 1 lá đầu + 3 lá đáy.",
+        "disabled": false,
+        "_metadata_revision": 3
+      }
+    },
+    {
+      "doc_key": "Cutting Policy:Cửa tấm liền Úc",
+      "doctype": "Cutting Policy",
+      "name": "Cửa tấm liền Úc",
+      "docstatus": 0,
+      "payload_json": "{\"policy_name\":\"Cửa tấm liền Úc\",\"door_type\":\"Cửa Úc\",\"ray_type\":\"Ray sắt U70\",\"geometry_profile\":\"GP-CUA-UC\",\"geometry_rules\":[{\"rule_code\":\"CPB\",\"target_field\":\"CAO-PB\",\"source_field\":\"CAO-LOT-LONG\",\"operator\":\"ADD\",\"operand_m\":0.5,\"priority\":0,\"sequence\":1,\"note\":\"CPB = CLL + 500mm\",\"row_id\":\"d3c79d17-4373-4720-8d24-fd3dd09737d5\",\"idx\":1},{\"rule_code\":\"RPBR-U75\",\"target_field\":\"RONG-PB-RAY\",\"source_field\":\"RONG-LOT-LONG\",\"operator\":\"ADD\",\"operand_m\":0.14,\"priority\":0,\"sequence\":2,\"ray_type\":\"U75\",\"note\":\"RPBR = RLL + 140mm\",\"row_id\":\"0ef2a5a3-8ce3-494c-9595-80c8823004e2\",\"idx\":2},{\"rule_code\":\"RPBR-U100\",\"target_field\":\"RONG-PB-RAY\",\"source_field\":\"RONG-LOT-LONG\",\"operator\":\"ADD\",\"operand_m\":0.2,\"priority\":10,\"sequence\":3,\"ray_type\":\"U100\",\"note\":\"RPBR U100 = RLL + 200mm\",\"row_id\":\"ee8f5f47-b269-4c82-83d5-939734e185d6\",\"idx\":3},{\"rule_code\":\"RCL\",\"target_field\":\"RONG-CAT-LA\",\"source_field\":\"RONG-PB-RAY\",\"operator\":\"SUBTRACT\",\"operand_m\":0.03,\"priority\":0,\"sequence\":4,\"note\":\"RPBR = RCL + 30mm\",\"row_id\":\"7727bec3-61a1-4754-82e4-51af96be6461\",\"idx\":4},{\"rule_code\":\"DT\",\"target_field\":\"DIEN-TICH\",\"source_field\":\"CAO-PB\",\"operator\":\"SUBTRACT\",\"operand_m\":0,\"priority\":0,\"sequence\":9,\"note\":\"Tính tiền = CPB x RPBR\",\"row_id\":\"5fb32c51-1a09-4e02-9987-ef0408fc84e1\",\"idx\":5}],\"dealer_width_basis\":\"Phủ bì ray\",\"retail_width_basis\":\"Phủ bì ray\",\"dealer_cut_deduction_m\":\"0.03\",\"retail_cut_deduction_m\":\"0.03\",\"height_pb_offset_m\":\"0.5\",\"leaf_formula\":\"Kiểu Úc\",\"leaf_height_deduction_m\":\"0\",\"leaf_divisor_source\":\"Hằng số của chính sách\",\"leaf_divisor_const\":\"0.465\",\"leaf_rounding\":\"Nấc 0-0.3-0.7-1\",\"leaf_round_threshold\":\"0.6\",\"leaf_variants\":[{\"variant_label\":\"Motor trong / kéo tay\",\"addend\":2,\"note\":\"(CPB : 0,465) + 2\",\"row_id\":\"6c665850-04b2-4808-8e45-ca2cd4052042\",\"idx\":1},{\"variant_label\":\"Motor ngoài, không tự dừng\",\"addend\":1.5,\"note\":\"(CPB : 0,465) + 1,5\",\"row_id\":\"43e58904-d220-470e-876a-104fbba9e3da\",\"idx\":2},{\"variant_label\":\"Motor ngoài, có tự dừng\",\"addend\":1.3,\"note\":\"(CPB : 0,465) + 1,3\",\"row_id\":\"443b5199-945b-48f8-ae4f-d3adb06db624\",\"idx\":3}],\"kerf_mm\":\"3\",\"dealer_split_sales_basis\":\"Phủ bì ray\",\"dealer_full_sales_basis\":\"Phủ bì ray\",\"retail_sales_basis\":\"Phủ bì ray\",\"purchase_formula\":\"Barem kg/m2\",\"purchase_height_basis\":\"Cao phủ bì\",\"purchase_width_basis\":\"Rộng cắt lá\",\"priority\":0,\"note\":\"Số lá = (CPB : 0,465) + phần cộng theo loại motor. Làm tròn theo nấc 0 / 0,3 / 0,7 / 1 (25.7 QUY TRÌNH dòng 121-148).\",\"disabled\":false,\"_metadata_revision\":3}",
+      "payload": {
+        "policy_name": "Cửa tấm liền Úc",
+        "door_type": "Cửa Úc",
+        "ray_type": "Ray sắt U70",
+        "geometry_profile": "GP-CUA-UC",
+        "geometry_rules": [
+          {
+            "rule_code": "CPB",
+            "target_field": "CAO-PB",
+            "source_field": "CAO-LOT-LONG",
+            "operator": "ADD",
+            "operand_m": 0.5,
+            "priority": 0,
+            "sequence": 1,
+            "note": "CPB = CLL + 500mm",
+            "row_id": "d3c79d17-4373-4720-8d24-fd3dd09737d5",
+            "idx": 1
+          },
+          {
+            "rule_code": "RPBR-U75",
+            "target_field": "RONG-PB-RAY",
+            "source_field": "RONG-LOT-LONG",
+            "operator": "ADD",
+            "operand_m": 0.14,
+            "priority": 0,
+            "sequence": 2,
+            "ray_type": "U75",
+            "note": "RPBR = RLL + 140mm",
+            "row_id": "0ef2a5a3-8ce3-494c-9595-80c8823004e2",
+            "idx": 2
+          },
+          {
+            "rule_code": "RPBR-U100",
+            "target_field": "RONG-PB-RAY",
+            "source_field": "RONG-LOT-LONG",
+            "operator": "ADD",
+            "operand_m": 0.2,
+            "priority": 10,
+            "sequence": 3,
+            "ray_type": "U100",
+            "note": "RPBR U100 = RLL + 200mm",
+            "row_id": "ee8f5f47-b269-4c82-83d5-939734e185d6",
+            "idx": 3
+          },
+          {
+            "rule_code": "RCL",
+            "target_field": "RONG-CAT-LA",
+            "source_field": "RONG-PB-RAY",
+            "operator": "SUBTRACT",
+            "operand_m": 0.03,
+            "priority": 0,
+            "sequence": 4,
+            "note": "RPBR = RCL + 30mm",
+            "row_id": "7727bec3-61a1-4754-82e4-51af96be6461",
+            "idx": 4
+          },
+          {
+            "rule_code": "DT",
+            "target_field": "DIEN-TICH",
+            "source_field": "CAO-PB",
+            "operator": "SUBTRACT",
+            "operand_m": 0,
+            "priority": 0,
+            "sequence": 9,
+            "note": "Tính tiền = CPB x RPBR",
+            "row_id": "5fb32c51-1a09-4e02-9987-ef0408fc84e1",
+            "idx": 5
+          }
+        ],
+        "dealer_width_basis": "Phủ bì ray",
+        "retail_width_basis": "Phủ bì ray",
+        "dealer_cut_deduction_m": "0.03",
+        "retail_cut_deduction_m": "0.03",
+        "height_pb_offset_m": "0.5",
+        "leaf_formula": "Kiểu Úc",
+        "leaf_height_deduction_m": "0",
+        "leaf_divisor_source": "Hằng số của chính sách",
+        "leaf_divisor_const": "0.465",
+        "leaf_rounding": "Nấc 0-0.3-0.7-1",
+        "leaf_round_threshold": "0.6",
+        "leaf_variants": [
+          {
+            "variant_label": "Motor trong / kéo tay",
+            "addend": 2,
+            "note": "(CPB : 0,465) + 2",
+            "row_id": "6c665850-04b2-4808-8e45-ca2cd4052042",
+            "idx": 1
+          },
+          {
+            "variant_label": "Motor ngoài, không tự dừng",
+            "addend": 1.5,
+            "note": "(CPB : 0,465) + 1,5",
+            "row_id": "43e58904-d220-470e-876a-104fbba9e3da",
+            "idx": 2
+          },
+          {
+            "variant_label": "Motor ngoài, có tự dừng",
+            "addend": 1.3,
+            "note": "(CPB : 0,465) + 1,3",
+            "row_id": "443b5199-945b-48f8-ae4f-d3adb06db624",
+            "idx": 3
+          }
+        ],
+        "kerf_mm": "3",
+        "dealer_split_sales_basis": "Phủ bì ray",
+        "dealer_full_sales_basis": "Phủ bì ray",
+        "retail_sales_basis": "Phủ bì ray",
+        "purchase_formula": "Barem kg/m2",
+        "purchase_height_basis": "Cao phủ bì",
+        "purchase_width_basis": "Rộng cắt lá",
+        "priority": 0,
+        "note": "Số lá = (CPB : 0,465) + phần cộng theo loại motor. Làm tròn theo nấc 0 / 0,3 / 0,7 / 1 (25.7 QUY TRÌNH dòng 121-148).",
+        "disabled": false,
+        "_metadata_revision": 3
+      }
+    },
+    {
+      "doc_key": "Cutting Policy:Cửa Đài Loan",
+      "doctype": "Cutting Policy",
+      "name": "Cửa Đài Loan",
+      "docstatus": 0,
+      "payload_json": "{\"policy_name\":\"Cửa Đài Loan\",\"door_type\":\"Cửa Đài Loan\",\"ray_type\":\"Ray sắt U70\",\"geometry_profile\":\"GP-CUA-DAI-LOAN\",\"geometry_rules\":[{\"rule_code\":\"CPB\",\"target_field\":\"CAO-PB\",\"source_field\":\"CAO-LOT-LONG\",\"operator\":\"ADD\",\"operand_m\":0.5,\"priority\":0,\"sequence\":1,\"note\":\"CPB = CLL + 500mm\",\"row_id\":\"3601105d-1960-4019-8a79-8f8645850117\",\"idx\":1},{\"rule_code\":\"RCL-U75\",\"target_field\":\"RONG-CAT-LA\",\"source_field\":\"RONG-LOT-LONG\",\"operator\":\"ADD\",\"operand_m\":0.11,\"priority\":0,\"sequence\":2,\"ray_type\":\"U75\",\"note\":\"RCL = RLL + 110mm\",\"row_id\":\"e33410be-1aa4-47a9-be25-978a86dece63\",\"idx\":2},{\"rule_code\":\"RCL-U100\",\"target_field\":\"RONG-CAT-LA\",\"source_field\":\"RONG-LOT-LONG\",\"operator\":\"ADD\",\"operand_m\":0.17,\"priority\":10,\"sequence\":3,\"ray_type\":\"U100\",\"note\":\"RCL = RLL + 170mm\",\"row_id\":\"8dcefa4d-cb11-400a-b389-0c4d36dd0365\",\"idx\":3},{\"rule_code\":\"RCL-BUOM\",\"target_field\":\"RONG-CAT-LA\",\"source_field\":\"RONG-LOT-LONG\",\"operator\":\"ADD\",\"operand_m\":0.105,\"priority\":20,\"sequence\":4,\"has_butterfly_bracket\":true,\"note\":\"Có bắn bướm: RCL = RPBR trừ 35mm thay vì 30mm\",\"row_id\":\"cd817dbc-47e6-49fb-840d-d5fff322bda8\",\"idx\":4},{\"rule_code\":\"RPBR\",\"target_field\":\"RONG-PB-RAY\",\"source_field\":\"RONG-CAT-LA\",\"operator\":\"ADD\",\"operand_m\":0.03,\"priority\":0,\"sequence\":5,\"note\":\"RPBR = RCL + 30mm\",\"row_id\":\"a156ebc7-0478-4e76-b594-790511306457\",\"idx\":5},{\"rule_code\":\"DT\",\"target_field\":\"DIEN-TICH\",\"source_field\":\"CAO-PB\",\"operator\":\"SUBTRACT\",\"operand_m\":0,\"priority\":0,\"sequence\":9,\"note\":\"Tính tiền = CPB x RCL; mua cả bộ tính theo RPBR\",\"row_id\":\"0756e644-580c-4e81-9be0-c0b81df5da08\",\"idx\":6}],\"dealer_width_basis\":\"Phủ bì ray\",\"retail_width_basis\":\"Phủ bì ray\",\"dealer_cut_deduction_m\":\"0.03\",\"retail_cut_deduction_m\":\"0.03\",\"butterfly_cut_deduction_m\":\"0.035\",\"height_pb_offset_m\":\"0.5\",\"leaf_formula\":\"Kiểu Đài Loan Lưới\",\"leaf_height_deduction_m\":\"0\",\"leaf_divisor_source\":\"Hằng số của chính sách\",\"leaf_divisor_const\":\"0.0769\",\"leaf_rounding\":\"Ngưỡng trừ-một-lá\",\"leaf_round_threshold\":\"0.8\",\"leaf_variants\":[],\"kerf_mm\":\"3\",\"dealer_split_sales_basis\":\"Rộng cắt lá\",\"dealer_full_sales_basis\":\"Phủ bì ray\",\"retail_sales_basis\":\"Phủ bì ray\",\"purchase_formula\":\"Barem kg/m2\",\"purchase_height_basis\":\"Cao lưới\",\"purchase_width_basis\":\"Rộng cắt lá\",\"priority\":0,\"note\":\"Số lá = CPB × 13, tức chia cho 0,0769. Phần lẻ > 0,8 thì lên 1. Kết quả đọc là N lá ruột + 1 lá đáy (25.7 QUY TRÌNH dòng 286-289). Khớp với GHI CHÚ: CPB = số lá × 0,077.\",\"disabled\":false,\"_metadata_revision\":3}",
+      "payload": {
+        "policy_name": "Cửa Đài Loan",
+        "door_type": "Cửa Đài Loan",
+        "ray_type": "Ray sắt U70",
+        "geometry_profile": "GP-CUA-DAI-LOAN",
+        "geometry_rules": [
+          {
+            "rule_code": "CPB",
+            "target_field": "CAO-PB",
+            "source_field": "CAO-LOT-LONG",
+            "operator": "ADD",
+            "operand_m": 0.5,
+            "priority": 0,
+            "sequence": 1,
+            "note": "CPB = CLL + 500mm",
+            "row_id": "3601105d-1960-4019-8a79-8f8645850117",
+            "idx": 1
+          },
+          {
+            "rule_code": "RCL-U75",
+            "target_field": "RONG-CAT-LA",
+            "source_field": "RONG-LOT-LONG",
+            "operator": "ADD",
+            "operand_m": 0.11,
+            "priority": 0,
+            "sequence": 2,
+            "ray_type": "U75",
+            "note": "RCL = RLL + 110mm",
+            "row_id": "e33410be-1aa4-47a9-be25-978a86dece63",
+            "idx": 2
+          },
+          {
+            "rule_code": "RCL-U100",
+            "target_field": "RONG-CAT-LA",
+            "source_field": "RONG-LOT-LONG",
+            "operator": "ADD",
+            "operand_m": 0.17,
+            "priority": 10,
+            "sequence": 3,
+            "ray_type": "U100",
+            "note": "RCL = RLL + 170mm",
+            "row_id": "8dcefa4d-cb11-400a-b389-0c4d36dd0365",
+            "idx": 3
+          },
+          {
+            "rule_code": "RCL-BUOM",
+            "target_field": "RONG-CAT-LA",
+            "source_field": "RONG-LOT-LONG",
+            "operator": "ADD",
+            "operand_m": 0.105,
+            "priority": 20,
+            "sequence": 4,
+            "has_butterfly_bracket": true,
+            "note": "Có bắn bướm: RCL = RPBR trừ 35mm thay vì 30mm",
+            "row_id": "cd817dbc-47e6-49fb-840d-d5fff322bda8",
+            "idx": 4
+          },
+          {
+            "rule_code": "RPBR",
+            "target_field": "RONG-PB-RAY",
+            "source_field": "RONG-CAT-LA",
+            "operator": "ADD",
+            "operand_m": 0.03,
+            "priority": 0,
+            "sequence": 5,
+            "note": "RPBR = RCL + 30mm",
+            "row_id": "a156ebc7-0478-4e76-b594-790511306457",
+            "idx": 5
+          },
+          {
+            "rule_code": "DT",
+            "target_field": "DIEN-TICH",
+            "source_field": "CAO-PB",
+            "operator": "SUBTRACT",
+            "operand_m": 0,
+            "priority": 0,
+            "sequence": 9,
+            "note": "Tính tiền = CPB x RCL; mua cả bộ tính theo RPBR",
+            "row_id": "0756e644-580c-4e81-9be0-c0b81df5da08",
+            "idx": 6
+          }
+        ],
+        "dealer_width_basis": "Phủ bì ray",
+        "retail_width_basis": "Phủ bì ray",
+        "dealer_cut_deduction_m": "0.03",
+        "retail_cut_deduction_m": "0.03",
+        "butterfly_cut_deduction_m": "0.035",
+        "height_pb_offset_m": "0.5",
+        "leaf_formula": "Kiểu Đài Loan Lưới",
+        "leaf_height_deduction_m": "0",
+        "leaf_divisor_source": "Hằng số của chính sách",
+        "leaf_divisor_const": "0.0769",
+        "leaf_rounding": "Ngưỡng trừ-một-lá",
+        "leaf_round_threshold": "0.8",
+        "leaf_variants": [],
+        "kerf_mm": "3",
+        "dealer_split_sales_basis": "Rộng cắt lá",
+        "dealer_full_sales_basis": "Phủ bì ray",
+        "retail_sales_basis": "Phủ bì ray",
+        "purchase_formula": "Barem kg/m2",
+        "purchase_height_basis": "Cao lưới",
+        "purchase_width_basis": "Rộng cắt lá",
+        "priority": 0,
+        "note": "Số lá = CPB × 13, tức chia cho 0,0769. Phần lẻ > 0,8 thì lên 1. Kết quả đọc là N lá ruột + 1 lá đáy (25.7 QUY TRÌNH dòng 286-289). Khớp với GHI CHÚ: CPB = số lá × 0,077.",
+        "disabled": false,
+        "_metadata_revision": 3
+      }
+    },
+    {
+      "doc_key": "Cutting Policy:Cửa Lưới",
+      "doctype": "Cutting Policy",
+      "name": "Cửa Lưới",
+      "docstatus": 0,
+      "payload_json": "{\"policy_name\":\"Cửa Lưới\",\"door_type\":\"Cửa Lưới\",\"ray_type\":\"Ray sắt U70\",\"geometry_profile\":\"GP-CUA-LUOI\",\"geometry_rules\":[{\"rule_code\":\"CPB\",\"target_field\":\"CAO-PB\",\"source_field\":\"CAO-LOT-LONG\",\"operator\":\"ADD\",\"operand_m\":0.5,\"priority\":0,\"sequence\":1,\"note\":\"CPB = CLL + 500mm\",\"row_id\":\"5dd4b669-2f19-48af-af15-34ad40501a71\",\"idx\":1},{\"rule_code\":\"RCL-U75\",\"target_field\":\"RONG-CAT-LA\",\"source_field\":\"RONG-LOT-LONG\",\"operator\":\"ADD\",\"operand_m\":0.11,\"priority\":0,\"sequence\":2,\"ray_type\":\"U75\",\"note\":\"RCL = RLL + 110mm\",\"row_id\":\"0f867de1-45f7-4b6d-9ed9-4995a6b19b79\",\"idx\":2},{\"rule_code\":\"RCL-U100\",\"target_field\":\"RONG-CAT-LA\",\"source_field\":\"RONG-LOT-LONG\",\"operator\":\"ADD\",\"operand_m\":0.17,\"priority\":10,\"sequence\":3,\"ray_type\":\"U100\",\"note\":\"RCL = RLL + 170mm\",\"row_id\":\"ed083ade-fec9-4886-91b3-6a88e79604de\",\"idx\":3},{\"rule_code\":\"RCL-BUOM\",\"target_field\":\"RONG-CAT-LA\",\"source_field\":\"RONG-LOT-LONG\",\"operator\":\"ADD\",\"operand_m\":0.105,\"priority\":20,\"sequence\":4,\"has_butterfly_bracket\":true,\"note\":\"Có bắn bướm: RCL = RPBR trừ 35mm thay vì 30mm\",\"row_id\":\"5c2d42fe-b43b-4fbd-9716-962c55e2b0f8\",\"idx\":4},{\"rule_code\":\"RPBR\",\"target_field\":\"RONG-PB-RAY\",\"source_field\":\"RONG-CAT-LA\",\"operator\":\"ADD\",\"operand_m\":0.03,\"priority\":0,\"sequence\":5,\"note\":\"RPBR = RCL + 30mm\",\"row_id\":\"a3c06ebe-e55f-49c9-8d3f-f4cb31a0524e\",\"idx\":5},{\"rule_code\":\"DT\",\"target_field\":\"DIEN-TICH\",\"source_field\":\"CAO-PB\",\"operator\":\"SUBTRACT\",\"operand_m\":0,\"priority\":0,\"sequence\":9,\"note\":\"Tính tiền = CPB x RCL; mua cả bộ tính theo RPBR\",\"row_id\":\"f458f68b-7c8e-4413-bfd0-757ac4ea7f6a\",\"idx\":6}],\"dealer_width_basis\":\"Phủ bì ray\",\"retail_width_basis\":\"Phủ bì ray\",\"dealer_cut_deduction_m\":\"0.03\",\"retail_cut_deduction_m\":\"0.03\",\"butterfly_cut_deduction_m\":\"0.035\",\"height_pb_offset_m\":\"0.5\",\"leaf_formula\":\"Kiểu Đài Loan Lưới\",\"leaf_height_deduction_m\":\"0\",\"leaf_divisor_source\":\"Hằng số của chính sách\",\"leaf_divisor_const\":\"0.0769\",\"leaf_rounding\":\"Ngưỡng trừ-một-lá\",\"leaf_round_threshold\":\"0.8\",\"leaf_variants\":[],\"kerf_mm\":\"3\",\"dealer_split_sales_basis\":\"Rộng cắt lá\",\"dealer_full_sales_basis\":\"Phủ bì ray\",\"retail_sales_basis\":\"Phủ bì ray\",\"purchase_formula\":\"Barem kg/m2\",\"purchase_height_basis\":\"Cao lưới\",\"purchase_width_basis\":\"Rộng cắt lá\",\"priority\":0,\"note\":\"Dùng chung công thức cửa Đài Loan: số lá = CPB × 13, phần lẻ > 0,8 lên 1.\",\"disabled\":false,\"_metadata_revision\":3}",
+      "payload": {
+        "policy_name": "Cửa Lưới",
+        "door_type": "Cửa Lưới",
+        "ray_type": "Ray sắt U70",
+        "geometry_profile": "GP-CUA-LUOI",
+        "geometry_rules": [
+          {
+            "rule_code": "CPB",
+            "target_field": "CAO-PB",
+            "source_field": "CAO-LOT-LONG",
+            "operator": "ADD",
+            "operand_m": 0.5,
+            "priority": 0,
+            "sequence": 1,
+            "note": "CPB = CLL + 500mm",
+            "row_id": "5dd4b669-2f19-48af-af15-34ad40501a71",
+            "idx": 1
+          },
+          {
+            "rule_code": "RCL-U75",
+            "target_field": "RONG-CAT-LA",
+            "source_field": "RONG-LOT-LONG",
+            "operator": "ADD",
+            "operand_m": 0.11,
+            "priority": 0,
+            "sequence": 2,
+            "ray_type": "U75",
+            "note": "RCL = RLL + 110mm",
+            "row_id": "0f867de1-45f7-4b6d-9ed9-4995a6b19b79",
+            "idx": 2
+          },
+          {
+            "rule_code": "RCL-U100",
+            "target_field": "RONG-CAT-LA",
+            "source_field": "RONG-LOT-LONG",
+            "operator": "ADD",
+            "operand_m": 0.17,
+            "priority": 10,
+            "sequence": 3,
+            "ray_type": "U100",
+            "note": "RCL = RLL + 170mm",
+            "row_id": "ed083ade-fec9-4886-91b3-6a88e79604de",
+            "idx": 3
+          },
+          {
+            "rule_code": "RCL-BUOM",
+            "target_field": "RONG-CAT-LA",
+            "source_field": "RONG-LOT-LONG",
+            "operator": "ADD",
+            "operand_m": 0.105,
+            "priority": 20,
+            "sequence": 4,
+            "has_butterfly_bracket": true,
+            "note": "Có bắn bướm: RCL = RPBR trừ 35mm thay vì 30mm",
+            "row_id": "5c2d42fe-b43b-4fbd-9716-962c55e2b0f8",
+            "idx": 4
+          },
+          {
+            "rule_code": "RPBR",
+            "target_field": "RONG-PB-RAY",
+            "source_field": "RONG-CAT-LA",
+            "operator": "ADD",
+            "operand_m": 0.03,
+            "priority": 0,
+            "sequence": 5,
+            "note": "RPBR = RCL + 30mm",
+            "row_id": "a3c06ebe-e55f-49c9-8d3f-f4cb31a0524e",
+            "idx": 5
+          },
+          {
+            "rule_code": "DT",
+            "target_field": "DIEN-TICH",
+            "source_field": "CAO-PB",
+            "operator": "SUBTRACT",
+            "operand_m": 0,
+            "priority": 0,
+            "sequence": 9,
+            "note": "Tính tiền = CPB x RCL; mua cả bộ tính theo RPBR",
+            "row_id": "f458f68b-7c8e-4413-bfd0-757ac4ea7f6a",
+            "idx": 6
+          }
+        ],
+        "dealer_width_basis": "Phủ bì ray",
+        "retail_width_basis": "Phủ bì ray",
+        "dealer_cut_deduction_m": "0.03",
+        "retail_cut_deduction_m": "0.03",
+        "butterfly_cut_deduction_m": "0.035",
+        "height_pb_offset_m": "0.5",
+        "leaf_formula": "Kiểu Đài Loan Lưới",
+        "leaf_height_deduction_m": "0",
+        "leaf_divisor_source": "Hằng số của chính sách",
+        "leaf_divisor_const": "0.0769",
+        "leaf_rounding": "Ngưỡng trừ-một-lá",
+        "leaf_round_threshold": "0.8",
+        "leaf_variants": [],
+        "kerf_mm": "3",
+        "dealer_split_sales_basis": "Rộng cắt lá",
+        "dealer_full_sales_basis": "Phủ bì ray",
+        "retail_sales_basis": "Phủ bì ray",
+        "purchase_formula": "Barem kg/m2",
+        "purchase_height_basis": "Cao lưới",
+        "purchase_width_basis": "Rộng cắt lá",
+        "priority": 0,
+        "note": "Dùng chung công thức cửa Đài Loan: số lá = CPB × 13, phần lẻ > 0,8 lên 1.",
+        "disabled": false,
+        "_metadata_revision": 3
+      }
+    },
+    {
+      "doc_key": "Cutting Policy:Cửa Siêu Trường",
+      "doctype": "Cutting Policy",
+      "name": "Cửa Siêu Trường",
+      "docstatus": 0,
+      "payload_json": "{\"policy_name\":\"Cửa Siêu Trường\",\"door_type\":\"Cửa Siêu Trường\",\"ray_type\":\"Ray sắt U70\",\"geometry_profile\":\"GP-CUA-SIEU-TRUONG\",\"geometry_rules\":[{\"rule_code\":\"CPB\",\"target_field\":\"CAO-PB\",\"source_field\":\"CAO-LOT-LONG\",\"operator\":\"ADD\",\"operand_m\":0.5,\"priority\":0,\"sequence\":1,\"note\":\"CPB = CLL + 500mm\",\"row_id\":\"3bd88956-f927-4a46-b67a-7b06a583f819\",\"idx\":1},{\"rule_code\":\"RCL-U75\",\"target_field\":\"RONG-CAT-LA\",\"source_field\":\"RONG-LOT-LONG\",\"operator\":\"ADD\",\"operand_m\":0.11,\"priority\":0,\"sequence\":2,\"ray_type\":\"U75\",\"note\":\"RCL = RLL + 110mm\",\"row_id\":\"5e6163cb-056f-4586-b1d9-99fde4d03d10\",\"idx\":2},{\"rule_code\":\"RCL-U100\",\"target_field\":\"RONG-CAT-LA\",\"source_field\":\"RONG-LOT-LONG\",\"operator\":\"ADD\",\"operand_m\":0.17,\"priority\":10,\"sequence\":3,\"ray_type\":\"U100\",\"note\":\"RCL = RLL + 170mm\",\"row_id\":\"379bf28c-2193-4891-bcc3-df6d32951e30\",\"idx\":3},{\"rule_code\":\"RCL-BUOM\",\"target_field\":\"RONG-CAT-LA\",\"source_field\":\"RONG-LOT-LONG\",\"operator\":\"ADD\",\"operand_m\":0.105,\"priority\":20,\"sequence\":4,\"has_butterfly_bracket\":true,\"note\":\"Có bắn bướm: RCL = RPBR trừ 35mm thay vì 30mm\",\"row_id\":\"da68fad2-d86e-45ba-8972-8dca80f46fbe\",\"idx\":4},{\"rule_code\":\"RPBR\",\"target_field\":\"RONG-PB-RAY\",\"source_field\":\"RONG-CAT-LA\",\"operator\":\"ADD\",\"operand_m\":0.03,\"priority\":0,\"sequence\":5,\"note\":\"RPBR = RCL + 30mm\",\"row_id\":\"6509fb1f-3e90-4e34-95b1-56e9100b8c54\",\"idx\":5},{\"rule_code\":\"DT\",\"target_field\":\"DIEN-TICH\",\"source_field\":\"CAO-PB\",\"operator\":\"SUBTRACT\",\"operand_m\":0,\"priority\":0,\"sequence\":9,\"note\":\"Tính tiền = CPB x RCL; mua cả bộ tính theo RPBR\",\"row_id\":\"ee57fc64-0830-46c0-a76f-dbf64b012c44\",\"idx\":6}],\"dealer_width_basis\":\"Phủ bì ray\",\"retail_width_basis\":\"Phủ bì ray\",\"dealer_cut_deduction_m\":\"0.03\",\"retail_cut_deduction_m\":\"0.03\",\"butterfly_cut_deduction_m\":\"0.035\",\"height_pb_offset_m\":\"0.5\",\"leaf_formula\":\"Kiểu Đài Loan Lưới\",\"leaf_height_deduction_m\":\"0\",\"leaf_divisor_source\":\"Hằng số của chính sách\",\"leaf_divisor_const\":\"0.102\",\"leaf_rounding\":\"Ngưỡng trừ-một-lá\",\"leaf_round_threshold\":\"0.8\",\"leaf_variants\":[],\"kerf_mm\":\"3\",\"dealer_split_sales_basis\":\"Rộng cắt lá\",\"dealer_full_sales_basis\":\"Rộng cắt lá\",\"retail_sales_basis\":\"Phủ bì ray\",\"purchase_formula\":\"Barem kg/m2\",\"purchase_height_basis\":\"Cao lưới\",\"purchase_width_basis\":\"Rộng cắt lá\",\"priority\":0,\"note\":\"Chia lá theo BẢN 100: ước số 0,102 m mỗi lá — CHỦ XƯỞNG XÁC NHẬN 20/08/2026. Công thức này không được viết trong tài liệu nào (đã tìm 25.7 QUY TRÌNH, GHI CHÚ, QUY CÁCH); căn cứ suy: bảng giá ghi \\\"SIÊU TRƯỜNG — BẢNG 100\\\" còn Đài Loan \\\"BẢNG 75\\\", cùng dòng lá Đài Loan, và QUY CÁCH cho siêu trường đúng cùng công thức rộng với Đài Loan. Đài Loan bản 75 dùng 0,077 (chồng mí 2mm) nên bản 100 là 0,102.\",\"disabled\":false,\"_metadata_revision\":3}",
+      "payload": {
+        "policy_name": "Cửa Siêu Trường",
+        "door_type": "Cửa Siêu Trường",
+        "ray_type": "Ray sắt U70",
+        "geometry_profile": "GP-CUA-SIEU-TRUONG",
+        "geometry_rules": [
+          {
+            "rule_code": "CPB",
+            "target_field": "CAO-PB",
+            "source_field": "CAO-LOT-LONG",
+            "operator": "ADD",
+            "operand_m": 0.5,
+            "priority": 0,
+            "sequence": 1,
+            "note": "CPB = CLL + 500mm",
+            "row_id": "3bd88956-f927-4a46-b67a-7b06a583f819",
+            "idx": 1
+          },
+          {
+            "rule_code": "RCL-U75",
+            "target_field": "RONG-CAT-LA",
+            "source_field": "RONG-LOT-LONG",
+            "operator": "ADD",
+            "operand_m": 0.11,
+            "priority": 0,
+            "sequence": 2,
+            "ray_type": "U75",
+            "note": "RCL = RLL + 110mm",
+            "row_id": "5e6163cb-056f-4586-b1d9-99fde4d03d10",
+            "idx": 2
+          },
+          {
+            "rule_code": "RCL-U100",
+            "target_field": "RONG-CAT-LA",
+            "source_field": "RONG-LOT-LONG",
+            "operator": "ADD",
+            "operand_m": 0.17,
+            "priority": 10,
+            "sequence": 3,
+            "ray_type": "U100",
+            "note": "RCL = RLL + 170mm",
+            "row_id": "379bf28c-2193-4891-bcc3-df6d32951e30",
+            "idx": 3
+          },
+          {
+            "rule_code": "RCL-BUOM",
+            "target_field": "RONG-CAT-LA",
+            "source_field": "RONG-LOT-LONG",
+            "operator": "ADD",
+            "operand_m": 0.105,
+            "priority": 20,
+            "sequence": 4,
+            "has_butterfly_bracket": true,
+            "note": "Có bắn bướm: RCL = RPBR trừ 35mm thay vì 30mm",
+            "row_id": "da68fad2-d86e-45ba-8972-8dca80f46fbe",
+            "idx": 4
+          },
+          {
+            "rule_code": "RPBR",
+            "target_field": "RONG-PB-RAY",
+            "source_field": "RONG-CAT-LA",
+            "operator": "ADD",
+            "operand_m": 0.03,
+            "priority": 0,
+            "sequence": 5,
+            "note": "RPBR = RCL + 30mm",
+            "row_id": "6509fb1f-3e90-4e34-95b1-56e9100b8c54",
+            "idx": 5
+          },
+          {
+            "rule_code": "DT",
+            "target_field": "DIEN-TICH",
+            "source_field": "CAO-PB",
+            "operator": "SUBTRACT",
+            "operand_m": 0,
+            "priority": 0,
+            "sequence": 9,
+            "note": "Tính tiền = CPB x RCL; mua cả bộ tính theo RPBR",
+            "row_id": "ee57fc64-0830-46c0-a76f-dbf64b012c44",
+            "idx": 6
+          }
+        ],
+        "dealer_width_basis": "Phủ bì ray",
+        "retail_width_basis": "Phủ bì ray",
+        "dealer_cut_deduction_m": "0.03",
+        "retail_cut_deduction_m": "0.03",
+        "butterfly_cut_deduction_m": "0.035",
+        "height_pb_offset_m": "0.5",
+        "leaf_formula": "Kiểu Đài Loan Lưới",
+        "leaf_height_deduction_m": "0",
+        "leaf_divisor_source": "Hằng số của chính sách",
+        "leaf_divisor_const": "0.102",
+        "leaf_rounding": "Ngưỡng trừ-một-lá",
+        "leaf_round_threshold": "0.8",
+        "leaf_variants": [],
+        "kerf_mm": "3",
+        "dealer_split_sales_basis": "Rộng cắt lá",
+        "dealer_full_sales_basis": "Rộng cắt lá",
+        "retail_sales_basis": "Phủ bì ray",
+        "purchase_formula": "Barem kg/m2",
+        "purchase_height_basis": "Cao lưới",
+        "purchase_width_basis": "Rộng cắt lá",
+        "priority": 0,
+        "note": "Chia lá theo BẢN 100: ước số 0,102 m mỗi lá — CHỦ XƯỞNG XÁC NHẬN 20/08/2026. Công thức này không được viết trong tài liệu nào (đã tìm 25.7 QUY TRÌNH, GHI CHÚ, QUY CÁCH); căn cứ suy: bảng giá ghi \"SIÊU TRƯỜNG — BẢNG 100\" còn Đài Loan \"BẢNG 75\", cùng dòng lá Đài Loan, và QUY CÁCH cho siêu trường đúng cùng công thức rộng với Đài Loan. Đài Loan bản 75 dùng 0,077 (chồng mí 2mm) nên bản 100 là 0,102.",
+        "disabled": false,
+        "_metadata_revision": 3
+      }
+    },
+    {
+      "doc_key": "Geometry Profile:GP-CUA-DUC",
+      "doctype": "Geometry Profile",
+      "name": "GP-CUA-DUC",
+      "docstatus": 0,
+      "payload_json": "{\"profile_code\":\"GP-CUA-DUC\",\"profile_name\":\"Cửa CN Đức\",\"item_groups\":[{\"item_group\":\"Cửa CN Đức\",\"row_id\":\"cd3e085b-47ad-4c70-a563-1af3e1c40f73\",\"idx\":1}],\"fields\":[{\"geometry_field\":\"CAO-LOT-LONG\",\"role\":\"INPUT\",\"required\":true,\"visible\":true,\"editable\":true,\"sequence\":1,\"row_id\":\"dfae8e59-a3d4-4ec2-85d9-dc810e154e93\",\"idx\":1},{\"geometry_field\":\"RONG-LOT-LONG\",\"role\":\"INPUT\",\"required\":true,\"visible\":true,\"editable\":true,\"sequence\":2,\"row_id\":\"3b9ee47f-46c5-4296-81f7-c6a9e401ef22\",\"idx\":2},{\"geometry_field\":\"CAO-PB\",\"role\":\"CALCULATED\",\"required\":true,\"visible\":true,\"editable\":false,\"sequence\":3,\"row_id\":\"86d19f1c-7c4f-4fad-b55f-fd64033cb078\",\"idx\":3},{\"geometry_field\":\"RONG-PB-RAY\",\"role\":\"CALCULATED\",\"required\":true,\"visible\":true,\"editable\":false,\"sequence\":4,\"row_id\":\"c40fa40f-4fd2-448e-bab2-1fc71c5a22c4\",\"idx\":4},{\"geometry_field\":\"RONG-PB-NHUA\",\"role\":\"INPUT\",\"required\":true,\"visible\":true,\"editable\":true,\"sequence\":5,\"row_id\":\"21ceb4a5-9d5f-4a49-9e63-0c5478444524\",\"idx\":5},{\"geometry_field\":\"RONG-CAT-LA\",\"role\":\"CALCULATED\",\"required\":false,\"visible\":true,\"editable\":false,\"sequence\":6,\"row_id\":\"b45d7dc5-6fc9-4957-8104-8faa7161662b\",\"idx\":6},{\"geometry_field\":\"DAI-RAY\",\"role\":\"CALCULATED\",\"required\":false,\"visible\":true,\"editable\":false,\"sequence\":7,\"row_id\":\"80b7fa0c-24da-45fc-8fa9-b69059c8a144\",\"idx\":7},{\"geometry_field\":\"DIEN-TICH\",\"role\":\"CALCULATED\",\"required\":false,\"visible\":true,\"editable\":false,\"sequence\":8,\"row_id\":\"176f8ec2-5b14-4fdf-a5d1-0af1ca3e95ca\",\"idx\":8}],\"note\":\"Dựng từ QUY CÁCH (3).xlsx sheet CT TT-SX.\",\"disabled\":false,\"_metadata_revision\":4}",
+      "payload": {
+        "profile_code": "GP-CUA-DUC",
+        "profile_name": "Cửa CN Đức",
+        "item_groups": [
+          {
+            "item_group": "Cửa CN Đức",
+            "row_id": "cd3e085b-47ad-4c70-a563-1af3e1c40f73",
+            "idx": 1
+          }
+        ],
+        "fields": [
+          {
+            "geometry_field": "CAO-LOT-LONG",
+            "role": "INPUT",
+            "required": true,
+            "visible": true,
+            "editable": true,
+            "sequence": 1,
+            "row_id": "dfae8e59-a3d4-4ec2-85d9-dc810e154e93",
+            "idx": 1
+          },
+          {
+            "geometry_field": "RONG-LOT-LONG",
+            "role": "INPUT",
+            "required": true,
+            "visible": true,
+            "editable": true,
+            "sequence": 2,
+            "row_id": "3b9ee47f-46c5-4296-81f7-c6a9e401ef22",
+            "idx": 2
+          },
+          {
+            "geometry_field": "CAO-PB",
+            "role": "CALCULATED",
+            "required": true,
+            "visible": true,
+            "editable": false,
+            "sequence": 3,
+            "row_id": "86d19f1c-7c4f-4fad-b55f-fd64033cb078",
+            "idx": 3
+          },
+          {
+            "geometry_field": "RONG-PB-RAY",
+            "role": "CALCULATED",
+            "required": true,
+            "visible": true,
+            "editable": false,
+            "sequence": 4,
+            "row_id": "c40fa40f-4fd2-448e-bab2-1fc71c5a22c4",
+            "idx": 4
+          },
+          {
+            "geometry_field": "RONG-PB-NHUA",
+            "role": "INPUT",
+            "required": true,
+            "visible": true,
+            "editable": true,
+            "sequence": 5,
+            "row_id": "21ceb4a5-9d5f-4a49-9e63-0c5478444524",
+            "idx": 5
+          },
+          {
+            "geometry_field": "RONG-CAT-LA",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 6,
+            "row_id": "b45d7dc5-6fc9-4957-8104-8faa7161662b",
+            "idx": 6
+          },
+          {
+            "geometry_field": "DAI-RAY",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 7,
+            "row_id": "80b7fa0c-24da-45fc-8fa9-b69059c8a144",
+            "idx": 7
+          },
+          {
+            "geometry_field": "DIEN-TICH",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 8,
+            "row_id": "176f8ec2-5b14-4fdf-a5d1-0af1ca3e95ca",
+            "idx": 8
+          }
+        ],
+        "note": "Dựng từ QUY CÁCH (3).xlsx sheet CT TT-SX.",
+        "disabled": false,
+        "_metadata_revision": 4
+      }
+    },
+    {
+      "doc_key": "Geometry Profile:GP-CUA-UC",
+      "doctype": "Geometry Profile",
+      "name": "GP-CUA-UC",
+      "docstatus": 0,
+      "payload_json": "{\"profile_code\":\"GP-CUA-UC\",\"profile_name\":\"Cửa tấm liền Úc\",\"item_groups\":[{\"item_group\":\"Cửa tấm liền Úc\",\"row_id\":\"20c74a97-f31a-4225-9077-88cf523f8cc9\",\"idx\":1}],\"fields\":[{\"geometry_field\":\"CAO-LOT-LONG\",\"role\":\"INPUT\",\"required\":true,\"visible\":true,\"editable\":true,\"sequence\":1,\"row_id\":\"945f7ff1-0361-4d76-9db0-52aefc439ee1\",\"idx\":1},{\"geometry_field\":\"RONG-LOT-LONG\",\"role\":\"INPUT\",\"required\":true,\"visible\":true,\"editable\":true,\"sequence\":2,\"row_id\":\"165d4b6f-1e9c-49df-952e-d8b0026539d4\",\"idx\":2},{\"geometry_field\":\"CAO-PB\",\"role\":\"CALCULATED\",\"required\":true,\"visible\":true,\"editable\":false,\"sequence\":3,\"row_id\":\"3ee1ee1b-3407-43c3-b907-9cbc4ac5be11\",\"idx\":3},{\"geometry_field\":\"RONG-PB-RAY\",\"role\":\"CALCULATED\",\"required\":true,\"visible\":true,\"editable\":false,\"sequence\":4,\"row_id\":\"3a2aaac6-18ca-4cac-b7d4-314f7539dfa5\",\"idx\":4},{\"geometry_field\":\"RONG-CAT-LA\",\"role\":\"CALCULATED\",\"required\":false,\"visible\":true,\"editable\":false,\"sequence\":5,\"row_id\":\"39ba7f41-e269-4168-8c38-2cd6bff4e4f1\",\"idx\":5},{\"geometry_field\":\"DAI-RAY\",\"role\":\"CALCULATED\",\"required\":false,\"visible\":true,\"editable\":false,\"sequence\":6,\"row_id\":\"fab449b5-4f6e-4d73-b862-246b92ad7b82\",\"idx\":6},{\"geometry_field\":\"DIEN-TICH\",\"role\":\"CALCULATED\",\"required\":false,\"visible\":true,\"editable\":false,\"sequence\":7,\"row_id\":\"10f2b650-adc1-42cf-a5b3-5d5dbce5bcae\",\"idx\":7}],\"note\":\"Dựng từ QUY CÁCH (3).xlsx sheet CT TT-SX.\",\"disabled\":false,\"_metadata_revision\":4}",
+      "payload": {
+        "profile_code": "GP-CUA-UC",
+        "profile_name": "Cửa tấm liền Úc",
+        "item_groups": [
+          {
+            "item_group": "Cửa tấm liền Úc",
+            "row_id": "20c74a97-f31a-4225-9077-88cf523f8cc9",
+            "idx": 1
+          }
+        ],
+        "fields": [
+          {
+            "geometry_field": "CAO-LOT-LONG",
+            "role": "INPUT",
+            "required": true,
+            "visible": true,
+            "editable": true,
+            "sequence": 1,
+            "row_id": "945f7ff1-0361-4d76-9db0-52aefc439ee1",
+            "idx": 1
+          },
+          {
+            "geometry_field": "RONG-LOT-LONG",
+            "role": "INPUT",
+            "required": true,
+            "visible": true,
+            "editable": true,
+            "sequence": 2,
+            "row_id": "165d4b6f-1e9c-49df-952e-d8b0026539d4",
+            "idx": 2
+          },
+          {
+            "geometry_field": "CAO-PB",
+            "role": "CALCULATED",
+            "required": true,
+            "visible": true,
+            "editable": false,
+            "sequence": 3,
+            "row_id": "3ee1ee1b-3407-43c3-b907-9cbc4ac5be11",
+            "idx": 3
+          },
+          {
+            "geometry_field": "RONG-PB-RAY",
+            "role": "CALCULATED",
+            "required": true,
+            "visible": true,
+            "editable": false,
+            "sequence": 4,
+            "row_id": "3a2aaac6-18ca-4cac-b7d4-314f7539dfa5",
+            "idx": 4
+          },
+          {
+            "geometry_field": "RONG-CAT-LA",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 5,
+            "row_id": "39ba7f41-e269-4168-8c38-2cd6bff4e4f1",
+            "idx": 5
+          },
+          {
+            "geometry_field": "DAI-RAY",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 6,
+            "row_id": "fab449b5-4f6e-4d73-b862-246b92ad7b82",
+            "idx": 6
+          },
+          {
+            "geometry_field": "DIEN-TICH",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 7,
+            "row_id": "10f2b650-adc1-42cf-a5b3-5d5dbce5bcae",
+            "idx": 7
+          }
+        ],
+        "note": "Dựng từ QUY CÁCH (3).xlsx sheet CT TT-SX.",
+        "disabled": false,
+        "_metadata_revision": 4
+      }
+    },
+    {
+      "doc_key": "Geometry Profile:GP-CUA-DAI-LOAN",
+      "doctype": "Geometry Profile",
+      "name": "GP-CUA-DAI-LOAN",
+      "docstatus": 0,
+      "payload_json": "{\"profile_code\":\"GP-CUA-DAI-LOAN\",\"profile_name\":\"Cửa Đài Loan\",\"item_groups\":[{\"item_group\":\"Cửa Đài Loan\",\"row_id\":\"0b0b6a18-7ff2-45e1-a591-786a4ce398db\",\"idx\":1},{\"item_group\":\"Cửa Đài Loan Inox\",\"row_id\":\"f96a91c8-f44e-48b7-b8c4-a23c60ece0a0\",\"idx\":2},{\"item_group\":\"Cửa kéo Đài Loan\",\"row_id\":\"5df4f040-4e8f-4090-9331-992d5e1668e5\",\"idx\":3}],\"fields\":[{\"geometry_field\":\"CAO-LOT-LONG\",\"role\":\"INPUT\",\"required\":true,\"visible\":true,\"editable\":true,\"sequence\":1,\"row_id\":\"60f6f5f7-88f8-420e-9e8e-3d29ac4b068e\",\"idx\":1},{\"geometry_field\":\"RONG-LOT-LONG\",\"role\":\"INPUT\",\"required\":true,\"visible\":true,\"editable\":true,\"sequence\":2,\"row_id\":\"b5f8c4a2-4542-4747-a3d4-cce38c3e6675\",\"idx\":2},{\"geometry_field\":\"CAO-PB\",\"role\":\"CALCULATED\",\"required\":true,\"visible\":true,\"editable\":false,\"sequence\":3,\"row_id\":\"24070169-be5a-4c04-9f96-1535cda3c71e\",\"idx\":3},{\"geometry_field\":\"RONG-PB-RAY\",\"role\":\"CALCULATED\",\"required\":true,\"visible\":true,\"editable\":false,\"sequence\":4,\"row_id\":\"f4b07f33-38a1-4a09-b1d1-c498254cb998\",\"idx\":4},{\"geometry_field\":\"CAO-LUOI\",\"role\":\"INPUT\",\"required\":true,\"visible\":true,\"editable\":true,\"sequence\":5,\"row_id\":\"55bef16e-dce5-43d3-97f8-c6a457a8ea7c\",\"idx\":5},{\"geometry_field\":\"RONG-CAT-LA\",\"role\":\"CALCULATED\",\"required\":false,\"visible\":true,\"editable\":false,\"sequence\":6,\"row_id\":\"04f004ae-1d84-4500-a02b-b68dd53f9045\",\"idx\":6},{\"geometry_field\":\"DAI-RAY\",\"role\":\"CALCULATED\",\"required\":false,\"visible\":true,\"editable\":false,\"sequence\":7,\"row_id\":\"d252adde-1a96-456d-91b9-3a53412652e0\",\"idx\":7},{\"geometry_field\":\"DAI-TRUC\",\"role\":\"CALCULATED\",\"required\":false,\"visible\":true,\"editable\":false,\"sequence\":8,\"row_id\":\"6d03a463-529e-4257-9c77-e88d164d83e7\",\"idx\":8},{\"geometry_field\":\"DAI-V4\",\"role\":\"CALCULATED\",\"required\":false,\"visible\":true,\"editable\":false,\"sequence\":9,\"row_id\":\"986f1007-0b8d-4f28-8402-64d58e547839\",\"idx\":9},{\"geometry_field\":\"DIEN-TICH\",\"role\":\"CALCULATED\",\"required\":false,\"visible\":true,\"editable\":false,\"sequence\":10,\"row_id\":\"164d0e2f-4221-404f-a7f1-ba1deb827394\",\"idx\":10}],\"note\":\"Dựng từ QUY CÁCH (3).xlsx sheet CT TT-SX.\",\"disabled\":false,\"_metadata_revision\":4}",
+      "payload": {
+        "profile_code": "GP-CUA-DAI-LOAN",
+        "profile_name": "Cửa Đài Loan",
+        "item_groups": [
+          {
+            "item_group": "Cửa Đài Loan",
+            "row_id": "0b0b6a18-7ff2-45e1-a591-786a4ce398db",
+            "idx": 1
+          },
+          {
+            "item_group": "Cửa Đài Loan Inox",
+            "row_id": "f96a91c8-f44e-48b7-b8c4-a23c60ece0a0",
+            "idx": 2
+          },
+          {
+            "item_group": "Cửa kéo Đài Loan",
+            "row_id": "5df4f040-4e8f-4090-9331-992d5e1668e5",
+            "idx": 3
+          }
+        ],
+        "fields": [
+          {
+            "geometry_field": "CAO-LOT-LONG",
+            "role": "INPUT",
+            "required": true,
+            "visible": true,
+            "editable": true,
+            "sequence": 1,
+            "row_id": "60f6f5f7-88f8-420e-9e8e-3d29ac4b068e",
+            "idx": 1
+          },
+          {
+            "geometry_field": "RONG-LOT-LONG",
+            "role": "INPUT",
+            "required": true,
+            "visible": true,
+            "editable": true,
+            "sequence": 2,
+            "row_id": "b5f8c4a2-4542-4747-a3d4-cce38c3e6675",
+            "idx": 2
+          },
+          {
+            "geometry_field": "CAO-PB",
+            "role": "CALCULATED",
+            "required": true,
+            "visible": true,
+            "editable": false,
+            "sequence": 3,
+            "row_id": "24070169-be5a-4c04-9f96-1535cda3c71e",
+            "idx": 3
+          },
+          {
+            "geometry_field": "RONG-PB-RAY",
+            "role": "CALCULATED",
+            "required": true,
+            "visible": true,
+            "editable": false,
+            "sequence": 4,
+            "row_id": "f4b07f33-38a1-4a09-b1d1-c498254cb998",
+            "idx": 4
+          },
+          {
+            "geometry_field": "CAO-LUOI",
+            "role": "INPUT",
+            "required": true,
+            "visible": true,
+            "editable": true,
+            "sequence": 5,
+            "row_id": "55bef16e-dce5-43d3-97f8-c6a457a8ea7c",
+            "idx": 5
+          },
+          {
+            "geometry_field": "RONG-CAT-LA",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 6,
+            "row_id": "04f004ae-1d84-4500-a02b-b68dd53f9045",
+            "idx": 6
+          },
+          {
+            "geometry_field": "DAI-RAY",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 7,
+            "row_id": "d252adde-1a96-456d-91b9-3a53412652e0",
+            "idx": 7
+          },
+          {
+            "geometry_field": "DAI-TRUC",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 8,
+            "row_id": "6d03a463-529e-4257-9c77-e88d164d83e7",
+            "idx": 8
+          },
+          {
+            "geometry_field": "DAI-V4",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 9,
+            "row_id": "986f1007-0b8d-4f28-8402-64d58e547839",
+            "idx": 9
+          },
+          {
+            "geometry_field": "DIEN-TICH",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 10,
+            "row_id": "164d0e2f-4221-404f-a7f1-ba1deb827394",
+            "idx": 10
+          }
+        ],
+        "note": "Dựng từ QUY CÁCH (3).xlsx sheet CT TT-SX.",
+        "disabled": false,
+        "_metadata_revision": 4
+      }
+    },
+    {
+      "doc_key": "Geometry Profile:GP-CUA-LUOI",
+      "doctype": "Geometry Profile",
+      "name": "GP-CUA-LUOI",
+      "docstatus": 0,
+      "payload_json": "{\"profile_code\":\"GP-CUA-LUOI\",\"profile_name\":\"Cửa Lưới\",\"item_groups\":[{\"item_group\":\"Cửa Lưới\",\"row_id\":\"a4b59805-13fb-4abf-98a0-1e1163608975\",\"idx\":1}],\"fields\":[{\"geometry_field\":\"CAO-LOT-LONG\",\"role\":\"INPUT\",\"required\":true,\"visible\":true,\"editable\":true,\"sequence\":1,\"row_id\":\"a4a20381-dab8-4492-81da-56a26cc22ee2\",\"idx\":1},{\"geometry_field\":\"RONG-LOT-LONG\",\"role\":\"INPUT\",\"required\":true,\"visible\":true,\"editable\":true,\"sequence\":2,\"row_id\":\"d34be74b-77cc-48a0-9e86-9234e6da2513\",\"idx\":2},{\"geometry_field\":\"CAO-PB\",\"role\":\"CALCULATED\",\"required\":true,\"visible\":true,\"editable\":false,\"sequence\":3,\"row_id\":\"68929442-1d0b-4b91-bb73-1a0f0a1a761e\",\"idx\":3},{\"geometry_field\":\"RONG-PB-RAY\",\"role\":\"CALCULATED\",\"required\":true,\"visible\":true,\"editable\":false,\"sequence\":4,\"row_id\":\"ab8cc655-52f1-42a3-aff1-4d5a760e061e\",\"idx\":4},{\"geometry_field\":\"CAO-LUOI\",\"role\":\"INPUT\",\"required\":true,\"visible\":true,\"editable\":true,\"sequence\":5,\"row_id\":\"eee96916-5b36-49a9-ac99-332323f47300\",\"idx\":5},{\"geometry_field\":\"RONG-CAT-LA\",\"role\":\"CALCULATED\",\"required\":false,\"visible\":true,\"editable\":false,\"sequence\":6,\"row_id\":\"2d905e78-726e-42c9-9585-aa32a8474a63\",\"idx\":6},{\"geometry_field\":\"DAI-RAY\",\"role\":\"CALCULATED\",\"required\":false,\"visible\":true,\"editable\":false,\"sequence\":7,\"row_id\":\"b109cf74-ab5a-4b31-8d2b-9ff6a53e0e6a\",\"idx\":7},{\"geometry_field\":\"DAI-TRUC\",\"role\":\"CALCULATED\",\"required\":false,\"visible\":true,\"editable\":false,\"sequence\":8,\"row_id\":\"b5741100-40c2-4b56-9e31-e87e01dbc341\",\"idx\":8},{\"geometry_field\":\"DAI-V4\",\"role\":\"CALCULATED\",\"required\":false,\"visible\":true,\"editable\":false,\"sequence\":9,\"row_id\":\"c335220e-43b4-4d86-a3f7-40508c46ad4c\",\"idx\":9},{\"geometry_field\":\"DIEN-TICH\",\"role\":\"CALCULATED\",\"required\":false,\"visible\":true,\"editable\":false,\"sequence\":10,\"row_id\":\"bcfc27a3-21cd-4b4a-8310-fd8383b9444b\",\"idx\":10}],\"note\":\"Dựng từ QUY CÁCH (3).xlsx sheet CT TT-SX.\",\"disabled\":false,\"_metadata_revision\":4}",
+      "payload": {
+        "profile_code": "GP-CUA-LUOI",
+        "profile_name": "Cửa Lưới",
+        "item_groups": [
+          {
+            "item_group": "Cửa Lưới",
+            "row_id": "a4b59805-13fb-4abf-98a0-1e1163608975",
+            "idx": 1
+          }
+        ],
+        "fields": [
+          {
+            "geometry_field": "CAO-LOT-LONG",
+            "role": "INPUT",
+            "required": true,
+            "visible": true,
+            "editable": true,
+            "sequence": 1,
+            "row_id": "a4a20381-dab8-4492-81da-56a26cc22ee2",
+            "idx": 1
+          },
+          {
+            "geometry_field": "RONG-LOT-LONG",
+            "role": "INPUT",
+            "required": true,
+            "visible": true,
+            "editable": true,
+            "sequence": 2,
+            "row_id": "d34be74b-77cc-48a0-9e86-9234e6da2513",
+            "idx": 2
+          },
+          {
+            "geometry_field": "CAO-PB",
+            "role": "CALCULATED",
+            "required": true,
+            "visible": true,
+            "editable": false,
+            "sequence": 3,
+            "row_id": "68929442-1d0b-4b91-bb73-1a0f0a1a761e",
+            "idx": 3
+          },
+          {
+            "geometry_field": "RONG-PB-RAY",
+            "role": "CALCULATED",
+            "required": true,
+            "visible": true,
+            "editable": false,
+            "sequence": 4,
+            "row_id": "ab8cc655-52f1-42a3-aff1-4d5a760e061e",
+            "idx": 4
+          },
+          {
+            "geometry_field": "CAO-LUOI",
+            "role": "INPUT",
+            "required": true,
+            "visible": true,
+            "editable": true,
+            "sequence": 5,
+            "row_id": "eee96916-5b36-49a9-ac99-332323f47300",
+            "idx": 5
+          },
+          {
+            "geometry_field": "RONG-CAT-LA",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 6,
+            "row_id": "2d905e78-726e-42c9-9585-aa32a8474a63",
+            "idx": 6
+          },
+          {
+            "geometry_field": "DAI-RAY",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 7,
+            "row_id": "b109cf74-ab5a-4b31-8d2b-9ff6a53e0e6a",
+            "idx": 7
+          },
+          {
+            "geometry_field": "DAI-TRUC",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 8,
+            "row_id": "b5741100-40c2-4b56-9e31-e87e01dbc341",
+            "idx": 8
+          },
+          {
+            "geometry_field": "DAI-V4",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 9,
+            "row_id": "c335220e-43b4-4d86-a3f7-40508c46ad4c",
+            "idx": 9
+          },
+          {
+            "geometry_field": "DIEN-TICH",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 10,
+            "row_id": "bcfc27a3-21cd-4b4a-8310-fd8383b9444b",
+            "idx": 10
+          }
+        ],
+        "note": "Dựng từ QUY CÁCH (3).xlsx sheet CT TT-SX.",
+        "disabled": false,
+        "_metadata_revision": 4
+      }
+    },
+    {
+      "doc_key": "Geometry Profile:GP-CUA-SIEU-TRUONG",
+      "doctype": "Geometry Profile",
+      "name": "GP-CUA-SIEU-TRUONG",
+      "docstatus": 0,
+      "payload_json": "{\"profile_code\":\"GP-CUA-SIEU-TRUONG\",\"profile_name\":\"Cửa Siêu Trường\",\"item_groups\":[{\"item_group\":\"Cửa Siêu Trường\",\"row_id\":\"7112e861-19ab-431d-9bab-dec34c8809ff\",\"idx\":1}],\"fields\":[{\"geometry_field\":\"CAO-LOT-LONG\",\"role\":\"INPUT\",\"required\":true,\"visible\":true,\"editable\":true,\"sequence\":1,\"row_id\":\"2f1c9d01-2f80-4f3d-9b6e-d412206b56e2\",\"idx\":1},{\"geometry_field\":\"RONG-LOT-LONG\",\"role\":\"INPUT\",\"required\":true,\"visible\":true,\"editable\":true,\"sequence\":2,\"row_id\":\"fc137e5b-7022-4962-acd6-8638ee2d9b8b\",\"idx\":2},{\"geometry_field\":\"CAO-PB\",\"role\":\"CALCULATED\",\"required\":true,\"visible\":true,\"editable\":false,\"sequence\":3,\"row_id\":\"3cd09e02-a95a-4288-a783-e4ef8d8ca7a2\",\"idx\":3},{\"geometry_field\":\"RONG-PB-RAY\",\"role\":\"CALCULATED\",\"required\":true,\"visible\":true,\"editable\":false,\"sequence\":4,\"row_id\":\"a20ff6db-4ed2-4841-adb3-f75823766afd\",\"idx\":4},{\"geometry_field\":\"CAO-LUOI\",\"role\":\"INPUT\",\"required\":true,\"visible\":true,\"editable\":true,\"sequence\":5,\"row_id\":\"7baa820d-7447-40a4-93c7-9bd73833bcdc\",\"idx\":5},{\"geometry_field\":\"RONG-CAT-LA\",\"role\":\"CALCULATED\",\"required\":false,\"visible\":true,\"editable\":false,\"sequence\":6,\"row_id\":\"8cac1e15-577a-447d-b0ec-3fea201c5098\",\"idx\":6},{\"geometry_field\":\"DAI-RAY\",\"role\":\"CALCULATED\",\"required\":false,\"visible\":true,\"editable\":false,\"sequence\":7,\"row_id\":\"350696e0-9a8e-4ee9-afe6-8ebd2d3beacf\",\"idx\":7},{\"geometry_field\":\"DIEN-TICH\",\"role\":\"CALCULATED\",\"required\":false,\"visible\":true,\"editable\":false,\"sequence\":8,\"row_id\":\"eb1b7a7a-305e-4c90-88ed-1bacac9a29e9\",\"idx\":8}],\"note\":\"Dựng từ QUY CÁCH (3).xlsx sheet CT TT-SX.\",\"disabled\":false,\"_metadata_revision\":4}",
+      "payload": {
+        "profile_code": "GP-CUA-SIEU-TRUONG",
+        "profile_name": "Cửa Siêu Trường",
+        "item_groups": [
+          {
+            "item_group": "Cửa Siêu Trường",
+            "row_id": "7112e861-19ab-431d-9bab-dec34c8809ff",
+            "idx": 1
+          }
+        ],
+        "fields": [
+          {
+            "geometry_field": "CAO-LOT-LONG",
+            "role": "INPUT",
+            "required": true,
+            "visible": true,
+            "editable": true,
+            "sequence": 1,
+            "row_id": "2f1c9d01-2f80-4f3d-9b6e-d412206b56e2",
+            "idx": 1
+          },
+          {
+            "geometry_field": "RONG-LOT-LONG",
+            "role": "INPUT",
+            "required": true,
+            "visible": true,
+            "editable": true,
+            "sequence": 2,
+            "row_id": "fc137e5b-7022-4962-acd6-8638ee2d9b8b",
+            "idx": 2
+          },
+          {
+            "geometry_field": "CAO-PB",
+            "role": "CALCULATED",
+            "required": true,
+            "visible": true,
+            "editable": false,
+            "sequence": 3,
+            "row_id": "3cd09e02-a95a-4288-a783-e4ef8d8ca7a2",
+            "idx": 3
+          },
+          {
+            "geometry_field": "RONG-PB-RAY",
+            "role": "CALCULATED",
+            "required": true,
+            "visible": true,
+            "editable": false,
+            "sequence": 4,
+            "row_id": "a20ff6db-4ed2-4841-adb3-f75823766afd",
+            "idx": 4
+          },
+          {
+            "geometry_field": "CAO-LUOI",
+            "role": "INPUT",
+            "required": true,
+            "visible": true,
+            "editable": true,
+            "sequence": 5,
+            "row_id": "7baa820d-7447-40a4-93c7-9bd73833bcdc",
+            "idx": 5
+          },
+          {
+            "geometry_field": "RONG-CAT-LA",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 6,
+            "row_id": "8cac1e15-577a-447d-b0ec-3fea201c5098",
+            "idx": 6
+          },
+          {
+            "geometry_field": "DAI-RAY",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 7,
+            "row_id": "350696e0-9a8e-4ee9-afe6-8ebd2d3beacf",
+            "idx": 7
+          },
+          {
+            "geometry_field": "DIEN-TICH",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 8,
+            "row_id": "eb1b7a7a-305e-4c90-88ed-1bacac9a29e9",
+            "idx": 8
+          }
+        ],
+        "note": "Dựng từ QUY CÁCH (3).xlsx sheet CT TT-SX.",
+        "disabled": false,
+        "_metadata_revision": 4
+      }
+    }
+  ]
+}

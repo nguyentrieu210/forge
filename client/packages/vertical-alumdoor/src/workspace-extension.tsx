@@ -8,6 +8,7 @@ const AlumdoorPurchaseOrderCreate = lazy(() => import("./AlumdoorPurchaseOrderCr
 const AlumdoorDeliveryNoteCreate = lazy(() => import("./AlumdoorDeliveryNoteCreate.js").then((module) => ({ default: module.AlumdoorDeliveryNoteCreate })));
 const AlumdoorPurchaseReceiptCreate = lazy(() => import("./AlumdoorPurchaseReceiptCreate.js").then((module) => ({ default: module.AlumdoorPurchaseReceiptCreate })));
 const AlumdoorProductionRequestDetail = lazy(() => import("./AlumdoorProductionRequestDetail.js").then((module) => ({ default: module.AlumdoorProductionRequestDetail })));
+const AlumdoorProductionPlanDetail = lazy(() => import("./AlumdoorProductionPlanDetail.js").then((module) => ({ default: module.AlumdoorProductionPlanDetail })));
 const AlumdoorWorkOrderDetail = lazy(() => import("./AlumdoorWorkOrderDetail.js").then((module) => ({ default: module.AlumdoorWorkOrderDetail })));
 const AlumdoorManufacturingStockEntryCreate = lazy(() => import("./AlumdoorManufacturingStockEntryCreate.js").then((module) => ({ default: module.AlumdoorManufacturingStockEntryCreate })));
 const AlumdoorBomRuleEditor = lazy(() => import("./AlumdoorBomRuleEditor.js").then((module) => ({ default: module.AlumdoorBomRuleEditor })));
@@ -16,6 +17,34 @@ type ManufacturingStockPurpose = "Material Transfer" | "Manufacture";
 
 function stockPurpose(raw: string | null): ManufacturingStockPurpose | undefined {
   return raw === "Material Transfer" || raw === "Manufacture" ? raw : undefined;
+}
+
+/**
+ * Mẫu in ALUMDOOR phải mở theo tên, KHÔNG dựa vào "mẫu mặc định" của máy chủ.
+ *
+ * Máy chủ chọn mẫu mặc định bằng `ORDER BY is_default DESC, name`
+ * (server/packages/frappe-model/src/store.ts:149) và PrintContainer lấy phần tử
+ * `is_default` đầu tiên (client/packages/views/src/print/PrintContainer.tsx:35).
+ * Với Sales Order, tenant có HAI mẫu cùng `is_default=1`: "Standard Sales Order"
+ * (mẫu rỗng của nền tảng: mỗi tiêu đề + tổng tiền) và "Đơn bán hàng ALUMDOOR".
+ * Sắp xếp nhị phân UTF-8 xếp "S" (0x53) trước "Đ" (0xC4 0x90), nên không truyền tên
+ * mẫu thì bản in đơn hàng ra mẫu rỗng tiếng Anh — đúng triệu chứng "mẫu đã có trong
+ * source nhưng in không ra". Phiếu xuất kho thoát nạn chỉ vì "P" < "S".
+ *
+ * Truyền thẳng tên mẫu là cách sửa cục bộ trong vertical AlumDoor, không đụng vào
+ * thứ tự mặc định dùng chung cho mọi tenant.
+ */
+const ALUMDOOR_PRINT_FORMAT: Record<string, string> = {
+  "Sales Order": "Đơn bán hàng ALUMDOOR",
+  "Delivery Note": "Phiếu giao hàng / lắp đặt ALUMDOOR",
+};
+
+/** Đường dẫn bản in kèm tên mẫu AlumDoor, cho cả shell `/print` lẫn shell có printBase riêng. */
+function alumdoorPrintPath(printBase: string, doctype: string, name: string): string {
+  const format = ALUMDOOR_PRINT_FORMAT[doctype];
+  if (printBase === "/print") return buildPrintPath(doctype, name, format);
+  const path = `${printBase}/${encodeURIComponent(doctype)}/${encodeURIComponent(name)}`;
+  return format ? `${path}?format=${encodeURIComponent(format)}` : path;
 }
 
 /**
@@ -143,9 +172,7 @@ export const alumdoorWorkspaceExtension: DoctypeWorkspaceExtension = {
             <AlumdoorSalesOrderCreate
               closeRequest={closeRequest}
               onCreated={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
-              onPreviewCreated={(newName) => onNavigate(printBase === "/print"
-                ? buildPrintPath(doctype, newName)
-                : `${printBase}/${encodeURIComponent(doctype)}/${encodeURIComponent(newName)}`)}
+              onPreviewCreated={(newName) => onNavigate(alumdoorPrintPath(printBase, doctype, newName))}
               onCancel={() => onNavigate(listPath)}
             />
           </Suspense>
@@ -163,9 +190,7 @@ export const alumdoorWorkspaceExtension: DoctypeWorkspaceExtension = {
               name={decoded}
               onCreated={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
               onSaved={() => {}}
-              onPreviewCreated={(currentName) => onNavigate(printBase === "/print"
-                ? buildPrintPath(doctype, currentName)
-                : `${printBase}/${encodeURIComponent(doctype)}/${encodeURIComponent(currentName)}`)}
+              onPreviewCreated={(currentName) => onNavigate(alumdoorPrintPath(printBase, doctype, currentName))}
               onCancel={() => onNavigate(listPath)}
             />
           </Suspense>
@@ -183,9 +208,7 @@ export const alumdoorWorkspaceExtension: DoctypeWorkspaceExtension = {
             <AlumdoorDeliveryNoteCreate
               closeRequest={closeRequest}
               onCreated={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
-              onPreviewCreated={(newName) => onNavigate(printBase === "/print"
-                ? buildPrintPath(doctype, newName)
-                : `${printBase}/${encodeURIComponent(doctype)}/${encodeURIComponent(newName)}`)}
+              onPreviewCreated={(newName) => onNavigate(alumdoorPrintPath(printBase, doctype, newName))}
               onCancel={() => onNavigate(listPath)}
             />
           </Suspense>
@@ -203,9 +226,7 @@ export const alumdoorWorkspaceExtension: DoctypeWorkspaceExtension = {
               name={decoded}
               onCreated={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
               onSaved={() => {}}
-              onPreviewCreated={(currentName) => onNavigate(printBase === "/print"
-                ? buildPrintPath(doctype, currentName)
-                : `${printBase}/${encodeURIComponent(doctype)}/${encodeURIComponent(currentName)}`)}
+              onPreviewCreated={(currentName) => onNavigate(alumdoorPrintPath(printBase, doctype, currentName))}
               onCancel={() => onNavigate(listPath)}
             />
           </Suspense>
@@ -219,6 +240,17 @@ export const alumdoorWorkspaceExtension: DoctypeWorkspaceExtension = {
         detail: (
           <Suspense fallback={<div className="grid h-full place-items-center text-sm text-muted-foreground">Đang mở yêu cầu sản xuất…</div>}>
             <AlumdoorProductionRequestDetail key={`alumdoor-production-request/${decoded}`} name={decoded} onNavigate={onNavigate} />
+          </Suspense>
+        ),
+      };
+    }
+
+    if (decoded && doctype === "Production Plan") {
+      return {
+        hasDetail: true,
+        detail: (
+          <Suspense fallback={<div className="grid h-full place-items-center text-sm text-muted-foreground">Đang mở kế hoạch sản xuất…</div>}>
+            <AlumdoorProductionPlanDetail key={`alumdoor-production-plan/${decoded}`} name={decoded} onNavigate={onNavigate} />
           </Suspense>
         ),
       };

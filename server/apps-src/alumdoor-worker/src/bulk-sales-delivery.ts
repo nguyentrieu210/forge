@@ -1,4 +1,4 @@
-import { roundTo } from "../../../packages/core/src/index.js";
+import { roundTo } from "./numeric.js";
 type Json = Record<string, unknown>;
 type PlatformCall = (path: string, init?: RequestInit) => Promise<Response>;
 

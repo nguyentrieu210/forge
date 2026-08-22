@@ -740,7 +740,11 @@ test("foreign-currency invoice and payment post base GL with exchange difference
 
 test("business posting dates, not mutation time, are persisted on every accounting and fulfillment ledger", async () => {
   const { store, kernel } = setup();
-  await createAndSubmit(kernel, { doctype: "Sales Order", name: "SO-POSTING", document: orderDocument("1", "100") });
+  await createAndSubmit(kernel, {
+    doctype: "Sales Order",
+    name: "SO-POSTING",
+    document: { ...orderDocument("1", "100"), transaction_date: "2026-06-27" },
+  });
   const dnPosting = "2026-06-28T09:30:00.000Z";
   await createAndSubmit(kernel, {
     doctype: "Delivery Note", name: "DN-POSTING",

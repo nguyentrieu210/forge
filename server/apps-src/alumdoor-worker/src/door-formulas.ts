@@ -1,4 +1,4 @@
-import { roundTo } from "../../../packages/core/src/index.js";
+import { roundTo } from "./numeric.js";
 /**
  * Công thức hình học và thương mại của một bộ cửa.
  *

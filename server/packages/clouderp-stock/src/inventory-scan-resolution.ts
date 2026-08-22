@@ -113,9 +113,26 @@ export class D1InventoryScanLookup implements InventoryScanLookup {
     const typeClause = expectedDoctype
       ? "record_type=?3"
       : "record_type IN ('Item','Batch','Serial No','Warehouse')";
-    const sql = `SELECT record_type,name,data_json
-      FROM master_records
-      WHERE tenant_id=?1 AND disabled=0 AND ${typeClause}
+    const sql = `WITH candidate_records AS (
+        SELECT doctype AS record_type,name,payload_json AS data_json
+        FROM documents
+        WHERE tenant_id=?1 AND doctype IN ('Item','Batch','Serial No','Warehouse')
+          AND docstatus<>2
+          AND COALESCE(CAST(json_extract(payload_json,'$.disabled') AS INTEGER),0)=0
+        UNION ALL
+        SELECT record_type,name,data_json
+        FROM master_records master
+        WHERE tenant_id=?1 AND record_type IN ('Item','Batch','Serial No','Warehouse') AND disabled=0
+          AND NOT EXISTS (
+            SELECT 1 FROM documents document
+            WHERE document.tenant_id=?1
+              AND document.doctype=master.record_type
+              AND document.name=master.name
+          )
+      )
+      SELECT record_type,name,data_json
+      FROM candidate_records
+      WHERE ${typeClause}
         AND (
           name=?2
           OR (record_type='Item' AND (

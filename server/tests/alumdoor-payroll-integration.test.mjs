@@ -56,6 +56,10 @@ test("AlumDoor Salary Slip input is calculated from Attendance Day, never standa
       company: "ALUMDOOR", payroll_payable_account: "Phải trả lương",
       components: [{ salary_component: "Lương" }, { salary_component: "Khấu trừ" }],
     }),
+    "Shift Assignment:SA-1": document("SA-1", {
+      employee: "EMP-1", company: "ALUMDOOR", branch: "XUONG", shift_type: "DAY", start_date: "2026-01-01",
+    }),
+    "Shift Type:DAY": document("DAY", { working_minutes: 480, disabled: 0 }),
     "AlumDoor Attendance Day:AAD-01": document("AAD-01", {
       employee: "EMP-1", work_date: "2026-08-01", state: "complete",
       regular_minutes: 480, overtime_minutes: 120, payable_work_fraction_bp: 10_000,
@@ -64,6 +68,10 @@ test("AlumDoor Salary Slip input is calculated from Attendance Day, never standa
       employee: "EMP-1", work_date: "2026-08-02", state: "approved",
       regular_minutes: 240, overtime_minutes: 0, payable_work_fraction_bp: 5_000,
     }, 0, 4),
+    "Overtime Request:OT-01": document("OT-01", {
+      employee: "EMP-1", company: "ALUMDOOR", overtime_date: "2026-08-01",
+      approved_minutes: 120,
+    }),
     // This standard Attendance record is intentionally contradictory. AlumDoor payroll must ignore it.
     "Attendance:WRONG": document("WRONG", { employee: "EMP-1", attendance_date: "2026-08-01", attendance_status: "Vắng" }),
   };

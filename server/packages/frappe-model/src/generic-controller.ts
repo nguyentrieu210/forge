@@ -24,7 +24,7 @@ export class GenericMetadataController implements DocumentController<JsonObject>
     const existing = context.existing;
     const data = context.command.action === "cancel"
       ? { ...structuredClone(requireExisting(context).data), ...(context.command.document.workflow_state === undefined ? {} : { workflow_state: context.command.document.workflow_state }) }
-      : await normalizeDocument(context, meta);
+      : await normalizeDocument(context, meta, this.metadata);
     const workflow = await this.metadata.getWorkflow(context.command.tenant_id, doctype);
     const workflowResult = workflow?.is_active ? applyWorkflow(context, data, workflow) : null;
     const docstatus = workflowResult?.docstatus ?? (meta.is_submittable ? nextDocStatus(context.command.action) : 0);
@@ -63,7 +63,11 @@ export class GenericMetadataController implements DocumentController<JsonObject>
   }
 }
 
-async function normalizeDocument(context: ControllerContext<JsonObject>, meta: DocTypeMeta): Promise<JsonObject> {
+async function normalizeDocument(
+  context: ControllerContext<JsonObject>,
+  meta: DocTypeMeta,
+  metadata: MetadataStore,
+): Promise<JsonObject> {
   const input = context.command.document;
   const output: JsonObject = {};
   const known = new Map(meta.fields.map((field) => [field.fieldname, field]));
@@ -197,7 +201,7 @@ async function normalizeDocument(context: ControllerContext<JsonObject>, meta: D
      */
     const khongBaoGioChotSo = meta.is_submittable !== true;
     if (context.command.action === "submit" || khongBaoGioChotSo) {
-      await validateReference(context, field, value);
+      await validateReference(context, field, value, metadata, input);
     }
   }
   if (input.workflow_state !== undefined) output.workflow_state = input.workflow_state;
@@ -308,7 +312,14 @@ function normalizeValue(field: DocFieldMeta, value: JsonValue, action: string): 
   }
 }
 
-async function validateReference(context: ControllerContext<JsonObject>, field: DocFieldMeta, value: JsonValue | undefined): Promise<void> {
+async function validateReference(
+  context: ControllerContext<JsonObject>,
+  field: DocFieldMeta,
+  value: JsonValue | undefined,
+  metadata: MetadataStore,
+  source: JsonObject,
+  depth = 0,
+): Promise<void> {
   if (value === undefined || value === null || value === "") return;
   if (field.fieldtype === "Link" && field.options) {
     const exists = await context.reader.hasMasterRecord(context.command.tenant_id, field.options, String(value))
@@ -319,7 +330,7 @@ async function validateReference(context: ControllerContext<JsonObject>, field: 
     // The target doctype is named by ANOTHER field on the same document. This was
     // previously unvalidated entirely: a Dynamic Link could point at a doctype
     // that does not exist, or at a record that does not, and nothing objected.
-    const targetDoctype = context.command.document[field.options];
+    const targetDoctype = source[field.options];
     if (typeof targetDoctype !== "string" || !targetDoctype) {
       throw errors.reference(`${field.label} needs ${field.options} to name its target doctype`, { fieldname: field.options });
     }
@@ -327,8 +338,23 @@ async function validateReference(context: ControllerContext<JsonObject>, field: 
       || Boolean(await context.reader.getDocument(context.command.tenant_id, targetDoctype, String(value)));
     if (!exists) throw errors.reference(`${targetDoctype} reference is invalid or unavailable`, { fieldname: field.fieldname });
   }
-  if (field.fieldtype === "Table" && field.options && Array.isArray(value)) {
-    for (const row of value) if (!row || typeof row !== "object" || Array.isArray(row)) throw errors.validation(`${field.label} contains an invalid child row`);
+  if ((field.fieldtype === "Table" || field.fieldtype === "Table MultiSelect") && field.options && Array.isArray(value)) {
+    if (depth >= 5) throw errors.validation(`${field.label} exceeds the child-table nesting limit`);
+    const childMeta = await metadata.getDocType(context.command.tenant_id, field.options);
+    if (!childMeta || !childMeta.is_child) throw errors.reference(`${field.options} child DocType is invalid or unavailable`);
+    for (const [index, entry] of value.entries()) {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        throw errors.validation(`${field.label} contains an invalid child row`);
+      }
+      const row = entry as JsonObject;
+      for (const childField of childMeta.fields) {
+        if (!["Link", "Dynamic Link", "Table", "Table MultiSelect"].includes(childField.fieldtype)) continue;
+        await validateReference(context, childField, row[childField.fieldname], metadata, row, depth + 1).catch((error: unknown) => {
+          if (error instanceof Error) error.message = `${field.label} row ${index + 1}: ${error.message}`;
+          throw error;
+        });
+      }
+    }
   }
 }
 

@@ -1,0 +1,5166 @@
+{
+  "format": "alumdoor-bom-rules-audit/v1",
+  "source_payload": "C:\\alumdoor\\work\\bom-rule-rebuild-20260822\\bom-importable.json",
+  "owner_override_source": "C:\\alumdoor\\local-imports\\alumdoor-bom-rules\\owner-overrides.json",
+  "owner_override_records": 1,
+  "unverified_owner_override_records": 1,
+  "owner_override_matches": 0,
+  "component_rows": 1279,
+  "source_runtime_formula_rows": 278,
+  "fixed_quantity_rows": 358,
+  "unique_formula_signatures": 78,
+  "rules_created": 78,
+  "applicability_count": 636,
+  "rows_mapped": 636,
+  "rows_pending": 643,
+  "owner_overrides": 0,
+  "engineering_inference_not_promoted": 643,
+  "conversions_separated": 8,
+  "coverage_pct": 49.72634871,
+  "pending": [
+    {
+      "parent_item": "TP-CON LĂN",
+      "component_item": "NVL-BACDAN",
+      "component_key": "",
+      "source_row": 12,
+      "source_value_status": "PENDING",
+      "reason": "rate_uom_stock_mismatch"
+    },
+    {
+      "parent_item": "TP-RAYHOP",
+      "component_item": "NVL-RNHUA-DR",
+      "component_key": "",
+      "source_row": 23,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TD87A1 GS",
+      "component_item": "NVL-RNHUA-DR",
+      "component_key": "",
+      "source_row": 27,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-RAY HỘP TD U100",
+      "component_item": "NVL-RNHUA-DR",
+      "component_key": "",
+      "source_row": 31,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TD-AL595 GS",
+      "component_item": "NVL-AL595-GS",
+      "component_key": "",
+      "source_row": 36,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TD-AL595 GS",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 37,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TD-AL595 GS",
+      "component_item": "NVL-PHOTLONG4X5",
+      "component_key": "",
+      "source_row": 40,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TD-AL595 VK",
+      "component_item": "NVL-AL595-VK",
+      "component_key": "",
+      "source_row": 65,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-TD-AL595 VK",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 66,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-TD-AL595 VK",
+      "component_item": "NVL-BO1VIS-503N-71-595",
+      "component_key": "",
+      "source_row": 67,
+      "source_value_status": "PENDING",
+      "reason": "rate_uom_unresolved"
+    },
+    {
+      "parent_item": "TP-TD-AL595 VK",
+      "component_item": "NVL-PHOTLONG4X5",
+      "component_key": "",
+      "source_row": 69,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TD-AL595 THÔ",
+      "component_item": "NVL-AL595-THO",
+      "component_key": "",
+      "source_row": 73,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-TD-AL595 THÔ",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 74,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-TD-AL595 THÔ",
+      "component_item": "NVL-PHOTLONG4X5",
+      "component_key": "",
+      "source_row": 77,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TD-AL70 THÔ",
+      "component_item": "NVL-AL70(2LOP)-THO",
+      "component_key": "",
+      "source_row": 81,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-TD-AL70 THÔ",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 82,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-TD-AL70 GS",
+      "component_item": "NVL-AL70(2LOP)-GS",
+      "component_key": "",
+      "source_row": 88,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-TD-AL70 GS",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 89,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-TD-AL70 VK",
+      "component_item": "NVL-AL70(2LOP)-VK",
+      "component_key": "",
+      "source_row": 95,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-TD-AL70 VK",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 96,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-AL70-1LOP THÔ",
+      "component_item": "NVL-AL70(1LOP)-THO",
+      "component_key": "",
+      "source_row": 102,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-AL70-1LOP THÔ",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 103,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-TD-AL71N THÔ",
+      "component_item": "NVL-AL71-THO",
+      "component_key": "",
+      "source_row": 109,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-TD-AL71N THÔ",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 110,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-TD-AL71N THÔ",
+      "component_item": "NVL-PHOTLONG4X5",
+      "component_key": "",
+      "source_row": 114,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TD-AL71N GS",
+      "component_item": "NVL-AL71-GS",
+      "component_key": "",
+      "source_row": 117,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-TD-AL71N GS",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 118,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-TD-AL71N GS",
+      "component_item": "NVL-PHOTLONG4X5",
+      "component_key": "",
+      "source_row": 122,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TD-AL71N VK",
+      "component_item": "NVL-AL71-VK",
+      "component_key": "",
+      "source_row": 125,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-TD-AL71N VK",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 126,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-TD-AL71N VK",
+      "component_item": "NVL-PHOTLONG4X5",
+      "component_key": "",
+      "source_row": 130,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TD-AL503N26 VK",
+      "component_item": "NVL-AL503-VK",
+      "component_key": "",
+      "source_row": 133,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-TD-AL503N26 VK",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 134,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-TD-AL503N26 VK",
+      "component_item": "NVL-PHOTLONG4X5",
+      "component_key": "",
+      "source_row": 138,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TD-AL503N26 GS",
+      "component_item": "NVL-AL503-GS",
+      "component_key": "",
+      "source_row": 141,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-TD-AL503N26 GS",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 142,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-TD-AL503N26 GS",
+      "component_item": "NVL-PHOTLONG4X5",
+      "component_key": "",
+      "source_row": 146,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TD-AL503N26 THO",
+      "component_item": "NVL-AL503-THO",
+      "component_key": "",
+      "source_row": 149,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-TD-AL503N26 THO",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 150,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-TD-AL503N26 THO",
+      "component_item": "NVL-PHOTLONG4X5",
+      "component_key": "",
+      "source_row": 154,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-ALD-548N GS",
+      "component_item": "NVL-AL548-GS",
+      "component_key": "",
+      "source_row": 157,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-ALD-548N GS",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 158,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-ALD-548N GS",
+      "component_item": "NVL-PHOTLONG4X5",
+      "component_key": "",
+      "source_row": 162,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-ALD-548N THO",
+      "component_item": "NVL-AL548-THO",
+      "component_key": "",
+      "source_row": 165,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-ALD-548N THO",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 166,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-ALD-548N THO",
+      "component_item": "NVL-PHOTLONG4X5",
+      "component_key": "",
+      "source_row": 170,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-ALD-548N VK",
+      "component_item": "NVL-AL548-VK",
+      "component_key": "",
+      "source_row": 173,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-ALD-548N VK",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 174,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-ALD-548N VK",
+      "component_item": "NVL-PHOTLONG4X5",
+      "component_key": "",
+      "source_row": 178,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TD-AL501N VK",
+      "component_item": "NVL-AL501-VK",
+      "component_key": "",
+      "source_row": 181,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-TD-AL501N VK",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 182,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-TD-AL501N VK",
+      "component_item": "NVL-PHOTLONG4X5",
+      "component_key": "",
+      "source_row": 186,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TD-AL501N GS",
+      "component_item": "NVL-AL501-GS",
+      "component_key": "",
+      "source_row": 189,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-TD-AL501N GS",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 190,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-TD-AL501N GS",
+      "component_item": "NVL-PHOTLONG4X5",
+      "component_key": "",
+      "source_row": 194,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TD-AL501NTHO",
+      "component_item": "NVL-AL501-THO",
+      "component_key": "",
+      "source_row": 197,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-TD-AL501NTHO",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 198,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-TD-AL501NTHO",
+      "component_item": "NVL-PHOTLONG4X5",
+      "component_key": "",
+      "source_row": 202,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-ALD-DL552 VK",
+      "component_item": "NVL-AL552-VK",
+      "component_key": "",
+      "source_row": 205,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-ALD-DL552 VK",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 206,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-ALD-DL552 VK",
+      "component_item": "NVL-PHOTLONG4X5",
+      "component_key": "",
+      "source_row": 210,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-ALD-DL552 THO",
+      "component_item": "NVL-AL552-THO",
+      "component_key": "",
+      "source_row": 213,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-ALD-DL552 THO",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 214,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-ALD-DL552 THO",
+      "component_item": "NVL-PHOTLONG4X5",
+      "component_key": "",
+      "source_row": 218,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-ALD-DL552 GS",
+      "component_item": "NVL-AL552-GS",
+      "component_key": "",
+      "source_row": 221,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-ALD-DL552 GS",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 222,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-ALD-DL552 GS",
+      "component_item": "NVL-PHOTLONG4X5",
+      "component_key": "",
+      "source_row": 226,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TD-AL752N GS",
+      "component_item": "NVL-AL752-GS",
+      "component_key": "",
+      "source_row": 229,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-TD-AL752N GS",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 230,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-TD-AL752N GS",
+      "component_item": "NVL-PHOTLONG4X5",
+      "component_key": "",
+      "source_row": 234,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TD-AL752N VK",
+      "component_item": "NVL-AL752-VK",
+      "component_key": "",
+      "source_row": 237,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-TD-AL752N VK",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 238,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-TD-AL752N VK",
+      "component_item": "NVL-PHOTLONG4X5",
+      "component_key": "",
+      "source_row": 242,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TD-AL752N THO",
+      "component_item": "NVL-AL752-THO",
+      "component_key": "",
+      "source_row": 245,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-TD-AL752N THO",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 246,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-TD-AL752N THO",
+      "component_item": "NVL-PHOTLONG4X5",
+      "component_key": "",
+      "source_row": 250,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TD-AL652N THO",
+      "component_item": "NVL-AL652-THO",
+      "component_key": "",
+      "source_row": 253,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-TD-AL652N THO",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 254,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-TD-AL652N THO",
+      "component_item": "NVL-PHOTLONG5X6",
+      "component_key": "",
+      "source_row": 258,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TD-AL652 GS",
+      "component_item": "NVL-AL652-GS",
+      "component_key": "",
+      "source_row": 261,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-TD-AL652 GS",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 262,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-TD-AL652 GS",
+      "component_item": "NVL-PHOTLONG5X6",
+      "component_key": "",
+      "source_row": 266,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TD-AL652 VK",
+      "component_item": "NVL-AL652-VK",
+      "component_key": "",
+      "source_row": 269,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-TD-AL652 VK",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 270,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-TD-AL652 VK",
+      "component_item": "NVL-PHOTLONG5X6",
+      "component_key": "",
+      "source_row": 274,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TD-AL50 THO",
+      "component_item": "NVL-AL50-THO",
+      "component_key": "",
+      "source_row": 277,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-TD-AL50 THO",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 278,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-TD-AL50 THO",
+      "component_item": "NVL-PHOTLONG5X6",
+      "component_key": "",
+      "source_row": 282,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TD-AL50 GS",
+      "component_item": "NVL-AL50-GS",
+      "component_key": "",
+      "source_row": 285,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-TD-AL50 GS",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 286,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-TD-AL50 GS",
+      "component_item": "NVL-PHOTLONG5X6",
+      "component_key": "",
+      "source_row": 290,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TD-AL50 VK",
+      "component_item": "NVL-AL50-VK",
+      "component_key": "",
+      "source_row": 293,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-TD-AL50 VK",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 294,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-TD-AL50 VK",
+      "component_item": "NVL-PHOTLONG5X6",
+      "component_key": "",
+      "source_row": 298,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-ALVIP50 GS",
+      "component_item": "NVL-ALVIP50-GS",
+      "component_key": "",
+      "source_row": 301,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-ALVIP50 GS",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 302,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-ALVIP50 GS",
+      "component_item": "NVL-PHOTLONG5X6",
+      "component_key": "",
+      "source_row": 306,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-ALVIP50 THO",
+      "component_item": "NVL-ALVIP50-THO",
+      "component_key": "",
+      "source_row": 309,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-ALVIP50 THO",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 310,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-ALVIP50 THO",
+      "component_item": "NVL-PHOTLONG5X6",
+      "component_key": "",
+      "source_row": 314,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-ALVIPST500 THO",
+      "component_item": "NVL-ALVIPST500-THO",
+      "component_key": "",
+      "source_row": 317,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-ALVIPST500 THO",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 318,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-ALVIPST500 THO",
+      "component_item": "NVL-PHOTLONG5X6",
+      "component_key": "",
+      "source_row": 322,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-ALVIPST700 THO",
+      "component_item": "NVL-ALVIPST700-THO",
+      "component_key": "",
+      "source_row": 325,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-ALVIPST700 THO",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 326,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-ALVIPST700 THO",
+      "component_item": "NVL-PHOTLONG5X6",
+      "component_key": "",
+      "source_row": 330,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-AL75 THO",
+      "component_item": "NVL-AL75-THO",
+      "component_key": "",
+      "source_row": 360,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-AL75 THO",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 361,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-AL75 THO",
+      "component_item": "NVL-PHOTLONG4X5",
+      "component_key": "",
+      "source_row": 365,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-AL75 VK",
+      "component_item": "NVL-AL75-VK",
+      "component_key": "",
+      "source_row": 368,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-AL75 VK",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 369,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-AL75 VK",
+      "component_item": "NVL-PHOTLONG4X5",
+      "component_key": "",
+      "source_row": 373,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-AL75 GS",
+      "component_item": "NVL-AL75-GS",
+      "component_key": "",
+      "source_row": 376,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-AL75 GS",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 377,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-AL75 GS",
+      "component_item": "NVL-PHOTLONG4X5",
+      "component_key": "",
+      "source_row": 381,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-MT-TANKER400KG",
+      "component_item": "HH-LMT33-TK400-600",
+      "component_key": "",
+      "source_row": 384,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-MT-TANKER400KG",
+      "component_item": "HH-LMT36-TK400-600",
+      "component_key": "",
+      "source_row": 385,
+      "source_value_status": "PENDING",
+      "reason": "missing_conditional_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-MT-TANKER600KG",
+      "component_item": "HH-LMT33-TK400-600",
+      "component_key": "",
+      "source_row": 493,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-MT-TANKER600KG",
+      "component_item": "HH-LMT36-TK400-600",
+      "component_key": "",
+      "source_row": 494,
+      "source_value_status": "PENDING",
+      "reason": "missing_conditional_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-BUOMSAT-DL",
+      "component_item": "NVL-BUOMFE-DL",
+      "component_key": "",
+      "source_row": 521,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula_semantics"
+    },
+    {
+      "parent_item": "TP-BUOMSAT-ST",
+      "component_item": "NVL-BUOMFE-ST",
+      "component_key": "",
+      "source_row": 523,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula_semantics"
+    },
+    {
+      "parent_item": "TP_PAT_CODAY",
+      "component_item": "TP-PAT_KHONGDAY",
+      "component_key": "",
+      "source_row": 543,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-MT-ALUMAX600KG",
+      "component_item": "HH-LMT33-TK400-600",
+      "component_key": "",
+      "source_row": 555,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-MT-ALUMAX600KG",
+      "component_item": "HH-LMT36-TK400-600",
+      "component_key": "",
+      "source_row": 556,
+      "source_value_status": "PENDING",
+      "reason": "missing_conditional_quantity_evidence"
+    },
+    {
+      "parent_item": "NVL-VDAY-TDU-KTD",
+      "component_item": "NVL-VDAY-TDU",
+      "component_key": "",
+      "source_row": 684,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-UC KT 4D XN-VK",
+      "component_item": "NVL-RONDAYUC",
+      "component_key": "BOTTOM_SEAL",
+      "source_row": 692,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4D XN-VK",
+      "component_item": "NVL-XOP-N45",
+      "component_key": "FOAM_45CM",
+      "source_row": 694,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4D XN-VK",
+      "component_item": "NVL-PULYUC34",
+      "component_key": "PULLEY_34",
+      "source_row": 696,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4D XN-VK",
+      "component_item": "NVL-LX5.5x70x46V",
+      "component_key": "SPRING",
+      "source_row": 697,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4D XN-VK",
+      "component_item": "NVL-LX-5.5 x 70 x 50V",
+      "component_key": "SPRING",
+      "source_row": 698,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4D XN-VK",
+      "component_item": "NVL-LV-6.0 x 70 x 53V",
+      "component_key": "SPRING",
+      "source_row": 699,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4D XN-VK",
+      "component_item": "NVL-LV-6.5 x 80 x 63V",
+      "component_key": "SPRING",
+      "source_row": 700,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4D XN-VK",
+      "component_item": "NVL-LV-6.5 x 80 x 68V",
+      "component_key": "SPRING",
+      "source_row": 701,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4D XN-VK",
+      "component_item": "NVL-LV-7.0 x 90 x 65V",
+      "component_key": "SPRING",
+      "source_row": 702,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4D XN-VK",
+      "component_item": "NVL-LV-7.0 x 90 x 73V",
+      "component_key": "SPRING",
+      "source_row": 703,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4D XN-VK",
+      "component_item": "NVL-LV-7.0 x 90 x 83V",
+      "component_key": "SPRING",
+      "source_row": 704,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4D XN-VK",
+      "component_item": "NVL-VAIHAMXO",
+      "component_key": "SPRING_STOP_ARM",
+      "source_row": 707,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4D XN-VK",
+      "component_item": "NVL-BKAN",
+      "component_key": "",
+      "source_row": 710,
+      "source_value_status": "PENDING",
+      "reason": "rate_uom_stock_mismatch"
+    },
+    {
+      "parent_item": "TP-UC KT 4D XN-VK",
+      "component_item": "NVL-VISDD-BANLO",
+      "component_key": "SCREW_HEAD_PULLEY",
+      "source_row": 711,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4D XN-VK",
+      "component_item": "NVL-VIS-BANLO2P",
+      "component_key": "SCREW_2P_PULLEY",
+      "source_row": 712,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC MTN 4D XN-VK",
+      "component_item": "NVL-VDAY-TDU",
+      "component_key": "",
+      "source_row": 715,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-UC MTN 4D XN-VK",
+      "component_item": "NVL-TOLE1.2x190-KRON",
+      "component_key": "",
+      "source_row": 718,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_multiplier_evidence"
+    },
+    {
+      "parent_item": "TP-UC MTN 4D XN-VK",
+      "component_item": "NVL-XOP-N45",
+      "component_key": "",
+      "source_row": 719,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_multiplier_and_rounding_evidence"
+    },
+    {
+      "parent_item": "TP-UC MTN 4D XN-VK",
+      "component_item": "NVL-PULYUC114",
+      "component_key": "",
+      "source_row": 721,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC MTN 4D XN-VK",
+      "component_item": "NVL-BKAN",
+      "component_key": "",
+      "source_row": 722,
+      "source_value_status": "PENDING",
+      "reason": "rate_uom_stock_mismatch"
+    },
+    {
+      "parent_item": "TP-KN",
+      "component_item": "NVL-TIINOX",
+      "component_key": "",
+      "source_row": 727,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula_semantics"
+    },
+    {
+      "parent_item": "TP-BKAN",
+      "component_item": "NVL-BKAN",
+      "component_key": "",
+      "source_row": 731,
+      "source_value_status": "PENDING",
+      "reason": "rate_uom_stock_mismatch"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XN-VK",
+      "component_item": "NVL-TOLE0.42x598-XNVK",
+      "component_key": "LEAF_SHEET",
+      "source_row": 733,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XN-VK",
+      "component_item": "NVL-PULYGAI",
+      "component_key": "SPIKE_PULLEY_WEIGHT",
+      "source_row": 735,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XN-VK",
+      "component_item": "NVL-VDAY-TDU",
+      "component_key": "BOTTOM_BAR_WEIGHT",
+      "source_row": 736,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XN-VK",
+      "component_item": "NVL-TOLE1.2x190-KRON",
+      "component_key": "RAY_U70_WEIGHT",
+      "source_row": 738,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XN-VK",
+      "component_item": "NVL-XOP-N45",
+      "component_key": "FOAM_45CM",
+      "source_row": 739,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XN-VK",
+      "component_item": "NVL-TRUC34",
+      "component_key": "SHAFT_34_WEIGHT",
+      "source_row": 740,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XN-VK",
+      "component_item": "NVL-PULYUC34",
+      "component_key": "PULLEY_34",
+      "source_row": 741,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XN-VK",
+      "component_item": "NVL-LX5.5x70x46V",
+      "component_key": "SPRING",
+      "source_row": 742,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XN-VK",
+      "component_item": "NVL-LX-5.5 x 70 x 50V",
+      "component_key": "SPRING",
+      "source_row": 743,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XN-VK",
+      "component_item": "NVL-LV-6.0 x 70 x 53V",
+      "component_key": "SPRING",
+      "source_row": 744,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XN-VK",
+      "component_item": "NVL-LV-6.5 x 80 x 63V",
+      "component_key": "SPRING",
+      "source_row": 745,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XN-VK",
+      "component_item": "NVL-LV-6.5 x 80 x 68V",
+      "component_key": "SPRING",
+      "source_row": 746,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XN-VK",
+      "component_item": "NVL-LV-7.0 x 90 x 65V",
+      "component_key": "SPRING",
+      "source_row": 747,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XN-VK",
+      "component_item": "NVL-LV-7.0 x 90 x 73V",
+      "component_key": "SPRING",
+      "source_row": 748,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XN-VK",
+      "component_item": "NVL-LV-7.0 x 90 x 83V",
+      "component_key": "SPRING",
+      "source_row": 749,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XN-VK",
+      "component_item": "NVL-VAIHAMXO",
+      "component_key": "SPRING_STOP_ARM",
+      "source_row": 751,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XN-VK",
+      "component_item": "NVL-BKAN",
+      "component_key": "",
+      "source_row": 754,
+      "source_value_status": "PENDING",
+      "reason": "rate_uom_stock_mismatch"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XN-VK",
+      "component_item": "NVL-VISDD-BANLO",
+      "component_key": "SCREW_HEAD_PULLEY",
+      "source_row": 755,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XN-VK",
+      "component_item": "NVL-VIS-BANLO2P",
+      "component_key": "SCREW_2P_PULLEY",
+      "source_row": 756,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XR-CF",
+      "component_item": "NVL-TOLE0.42x598-XR-CAFE",
+      "component_key": "LEAF_SHEET",
+      "source_row": 758,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XR-CF",
+      "component_item": "NVL-PULYGAI",
+      "component_key": "SPIKE_PULLEY_WEIGHT",
+      "source_row": 760,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XR-CF",
+      "component_item": "NVL-VDAY-TDU",
+      "component_key": "BOTTOM_BAR_WEIGHT",
+      "source_row": 761,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XR-CF",
+      "component_item": "NVL-TOLE1.2x190-KRON",
+      "component_key": "RAY_U70_WEIGHT",
+      "source_row": 763,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XR-CF",
+      "component_item": "NVL-XOP-N45",
+      "component_key": "FOAM_45CM",
+      "source_row": 764,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XR-CF",
+      "component_item": "NVL-TRUC34",
+      "component_key": "SHAFT_34_WEIGHT",
+      "source_row": 765,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XR-CF",
+      "component_item": "NVL-PULYUC34",
+      "component_key": "PULLEY_34",
+      "source_row": 766,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XR-CF",
+      "component_item": "NVL-LX5.5x70x46V",
+      "component_key": "SPRING",
+      "source_row": 767,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XR-CF",
+      "component_item": "NVL-LX-5.5 x 70 x 50V",
+      "component_key": "SPRING",
+      "source_row": 768,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XR-CF",
+      "component_item": "NVL-LV-6.0 x 70 x 53V",
+      "component_key": "SPRING",
+      "source_row": 769,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XR-CF",
+      "component_item": "NVL-LV-6.5 x 80 x 63V",
+      "component_key": "SPRING",
+      "source_row": 770,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XR-CF",
+      "component_item": "NVL-LV-6.5 x 80 x 68V",
+      "component_key": "SPRING",
+      "source_row": 771,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XR-CF",
+      "component_item": "NVL-LV-7.0 x 90 x 65V",
+      "component_key": "SPRING",
+      "source_row": 772,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XR-CF",
+      "component_item": "NVL-LV-7.0 x 90 x 73V",
+      "component_key": "SPRING",
+      "source_row": 773,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XR-CF",
+      "component_item": "NVL-LV-7.0 x 90 x 83V",
+      "component_key": "SPRING",
+      "source_row": 774,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XR-CF",
+      "component_item": "NVL-VAIHAMXO",
+      "component_key": "SPRING_STOP_ARM",
+      "source_row": 776,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XR-CF",
+      "component_item": "NVL-BKAN",
+      "component_key": "",
+      "source_row": 779,
+      "source_value_status": "PENDING",
+      "reason": "rate_uom_stock_mismatch"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XR-CF",
+      "component_item": "NVL-VISDD-BANLO",
+      "component_key": "SCREW_HEAD_PULLEY",
+      "source_row": 780,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D XR-CF",
+      "component_item": "NVL-VIS-BANLO2P",
+      "component_key": "SCREW_2P_PULLEY",
+      "source_row": 781,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D TRẮNG-XLC",
+      "component_item": "NVL-TOLE0.42x598-TRXLC",
+      "component_key": "LEAF_SHEET",
+      "source_row": 783,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D TRẮNG-XLC",
+      "component_item": "NVL-PULYGAI",
+      "component_key": "SPIKE_PULLEY_WEIGHT",
+      "source_row": 785,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D TRẮNG-XLC",
+      "component_item": "NVL-VDAY-TDU",
+      "component_key": "BOTTOM_BAR_WEIGHT",
+      "source_row": 786,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D TRẮNG-XLC",
+      "component_item": "NVL-TOLE1.2x190-KRON",
+      "component_key": "RAY_U70_WEIGHT",
+      "source_row": 788,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D TRẮNG-XLC",
+      "component_item": "NVL-XOP-N45",
+      "component_key": "FOAM_45CM",
+      "source_row": 789,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D TRẮNG-XLC",
+      "component_item": "NVL-TRUC34",
+      "component_key": "SHAFT_34_WEIGHT",
+      "source_row": 790,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D TRẮNG-XLC",
+      "component_item": "NVL-PULYUC34",
+      "component_key": "PULLEY_34",
+      "source_row": 791,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D TRẮNG-XLC",
+      "component_item": "NVL-LX5.5x70x46V",
+      "component_key": "SPRING",
+      "source_row": 792,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D TRẮNG-XLC",
+      "component_item": "NVL-LX-5.5 x 70 x 50V",
+      "component_key": "SPRING",
+      "source_row": 793,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D TRẮNG-XLC",
+      "component_item": "NVL-LV-6.0 x 70 x 53V",
+      "component_key": "SPRING",
+      "source_row": 794,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D TRẮNG-XLC",
+      "component_item": "NVL-LV-6.5 x 80 x 63V",
+      "component_key": "SPRING",
+      "source_row": 795,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D TRẮNG-XLC",
+      "component_item": "NVL-LV-6.5 x 80 x 68V",
+      "component_key": "SPRING",
+      "source_row": 796,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D TRẮNG-XLC",
+      "component_item": "NVL-LV-7.0 x 90 x 65V",
+      "component_key": "SPRING",
+      "source_row": 797,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D TRẮNG-XLC",
+      "component_item": "NVL-LV-7.0 x 90 x 73V",
+      "component_key": "SPRING",
+      "source_row": 798,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D TRẮNG-XLC",
+      "component_item": "NVL-LV-7.0 x 90 x 83V",
+      "component_key": "SPRING",
+      "source_row": 799,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D TRẮNG-XLC",
+      "component_item": "NVL-VAIHAMXO",
+      "component_key": "SPRING_STOP_ARM",
+      "source_row": 801,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D TRẮNG-XLC",
+      "component_item": "NVL-BKAN",
+      "component_key": "",
+      "source_row": 804,
+      "source_value_status": "PENDING",
+      "reason": "rate_uom_stock_mismatch"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D TRẮNG-XLC",
+      "component_item": "NVL-VISDD-BANLO",
+      "component_key": "SCREW_HEAD_PULLEY",
+      "source_row": 805,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D TRẮNG-XLC",
+      "component_item": "NVL-VIS-BANLO2P",
+      "component_key": "SCREW_2P_PULLEY",
+      "source_row": 806,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D KU-GU",
+      "component_item": "NVL-TOLE0.42x598-GUKU",
+      "component_key": "LEAF_SHEET",
+      "source_row": 808,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D KU-GU",
+      "component_item": "NVL-PULYGAI",
+      "component_key": "SPIKE_PULLEY_WEIGHT",
+      "source_row": 810,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D KU-GU",
+      "component_item": "NVL-VDAY-TDU",
+      "component_key": "BOTTOM_BAR_WEIGHT",
+      "source_row": 811,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D KU-GU",
+      "component_item": "NVL-TOLE1.2x190-KRON",
+      "component_key": "RAY_U70_WEIGHT",
+      "source_row": 813,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D KU-GU",
+      "component_item": "NVL-XOP-N45",
+      "component_key": "FOAM_45CM",
+      "source_row": 814,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D KU-GU",
+      "component_item": "NVL-TRUC34",
+      "component_key": "SHAFT_34_WEIGHT",
+      "source_row": 815,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D KU-GU",
+      "component_item": "NVL-PULYUC34",
+      "component_key": "PULLEY_34",
+      "source_row": 816,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D KU-GU",
+      "component_item": "NVL-LX5.5x70x46V",
+      "component_key": "SPRING",
+      "source_row": 817,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D KU-GU",
+      "component_item": "NVL-LX-5.5 x 70 x 50V",
+      "component_key": "SPRING",
+      "source_row": 818,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D KU-GU",
+      "component_item": "NVL-LV-6.0 x 70 x 53V",
+      "component_key": "SPRING",
+      "source_row": 819,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D KU-GU",
+      "component_item": "NVL-LV-6.5 x 80 x 63V",
+      "component_key": "SPRING",
+      "source_row": 820,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D KU-GU",
+      "component_item": "NVL-LV-6.5 x 80 x 68V",
+      "component_key": "SPRING",
+      "source_row": 821,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D KU-GU",
+      "component_item": "NVL-LV-7.0 x 90 x 65V",
+      "component_key": "SPRING",
+      "source_row": 822,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D KU-GU",
+      "component_item": "NVL-LV-7.0 x 90 x 73V",
+      "component_key": "SPRING",
+      "source_row": 823,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D KU-GU",
+      "component_item": "NVL-LV-7.0 x 90 x 83V",
+      "component_key": "SPRING",
+      "source_row": 824,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D KU-GU",
+      "component_item": "NVL-VAIHAMXO",
+      "component_key": "SPRING_STOP_ARM",
+      "source_row": 826,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D KU-GU",
+      "component_item": "NVL-BKAN",
+      "component_key": "",
+      "source_row": 829,
+      "source_value_status": "PENDING",
+      "reason": "rate_uom_stock_mismatch"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D KU-GU",
+      "component_item": "NVL-VISDD-BANLO",
+      "component_key": "SCREW_HEAD_PULLEY",
+      "source_row": 830,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 4.6D KU-GU",
+      "component_item": "NVL-VIS-BANLO2P",
+      "component_key": "SCREW_2P_PULLEY",
+      "source_row": 831,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D KU-GU",
+      "component_item": "NVL-VDAY-TDU",
+      "component_key": "",
+      "source_row": 836,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D KU-GU",
+      "component_item": "NVL-TOLE1.2x190-KRON",
+      "component_key": "",
+      "source_row": 838,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_multiplier_evidence"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D KU-GU",
+      "component_item": "NVL-XOP-N45",
+      "component_key": "",
+      "source_row": 839,
+      "source_value_status": "PENDING",
+      "reason": "missing_rounding_rule"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D KU-GU",
+      "component_item": "NVL-PULYUC34",
+      "component_key": "",
+      "source_row": 841,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D KU-GU",
+      "component_item": "NVL-LX5.5x70x46V",
+      "component_key": "",
+      "source_row": 842,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D KU-GU",
+      "component_item": "NVL-LX-5.5 x 70 x 50V",
+      "component_key": "",
+      "source_row": 843,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D KU-GU",
+      "component_item": "NVL-LV-6.0 x 70 x 53V",
+      "component_key": "",
+      "source_row": 844,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D KU-GU",
+      "component_item": "NVL-LV-6.5 x 80 x 63V",
+      "component_key": "",
+      "source_row": 845,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D KU-GU",
+      "component_item": "NVL-LV-6.5 x 80 x 68V",
+      "component_key": "",
+      "source_row": 846,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D KU-GU",
+      "component_item": "NVL-LV-7.0 x 90 x 65V",
+      "component_key": "",
+      "source_row": 847,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D KU-GU",
+      "component_item": "NVL-LV-7.0 x 90 x 73V",
+      "component_key": "",
+      "source_row": 848,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D KU-GU",
+      "component_item": "NVL-LV-7.0 x 90 x 83V",
+      "component_key": "",
+      "source_row": 849,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D KU-GU",
+      "component_item": "NVL-BKAN",
+      "component_key": "",
+      "source_row": 854,
+      "source_value_status": "PENDING",
+      "reason": "rate_uom_stock_mismatch"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D TR-XLC",
+      "component_item": "NVL-VDAY-TDU",
+      "component_key": "",
+      "source_row": 861,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D TR-XLC",
+      "component_item": "NVL-TOLE1.2x190-KRON",
+      "component_key": "",
+      "source_row": 863,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_multiplier_evidence"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D TR-XLC",
+      "component_item": "NVL-XOP-N45",
+      "component_key": "",
+      "source_row": 864,
+      "source_value_status": "PENDING",
+      "reason": "missing_rounding_rule"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D TR-XLC",
+      "component_item": "NVL-PULYUC34",
+      "component_key": "",
+      "source_row": 866,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D TR-XLC",
+      "component_item": "NVL-LX5.5x70x46V",
+      "component_key": "",
+      "source_row": 867,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D TR-XLC",
+      "component_item": "NVL-LX-5.5 x 70 x 50V",
+      "component_key": "",
+      "source_row": 868,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D TR-XLC",
+      "component_item": "NVL-LV-6.0 x 70 x 53V",
+      "component_key": "",
+      "source_row": 869,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D TR-XLC",
+      "component_item": "NVL-LV-6.5 x 80 x 63V",
+      "component_key": "",
+      "source_row": 870,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D TR-XLC",
+      "component_item": "NVL-LV-6.5 x 80 x 68V",
+      "component_key": "",
+      "source_row": 871,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D TR-XLC",
+      "component_item": "NVL-LV-7.0 x 90 x 65V",
+      "component_key": "",
+      "source_row": 872,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D TR-XLC",
+      "component_item": "NVL-LV-7.0 x 90 x 73V",
+      "component_key": "",
+      "source_row": 873,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D TR-XLC",
+      "component_item": "NVL-LV-7.0 x 90 x 83V",
+      "component_key": "",
+      "source_row": 874,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D TR-XLC",
+      "component_item": "NVL-BKAN",
+      "component_key": "",
+      "source_row": 879,
+      "source_value_status": "PENDING",
+      "reason": "rate_uom_stock_mismatch"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D XN-VK",
+      "component_item": "NVL-VDAY-TDU",
+      "component_key": "",
+      "source_row": 886,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D XN-VK",
+      "component_item": "NVL-TOLE1.2x190-KRON",
+      "component_key": "",
+      "source_row": 888,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_multiplier_evidence"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D XN-VK",
+      "component_item": "NVL-XOP-N45",
+      "component_key": "",
+      "source_row": 889,
+      "source_value_status": "PENDING",
+      "reason": "missing_rounding_rule"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D XN-VK",
+      "component_item": "NVL-PULYUC34",
+      "component_key": "",
+      "source_row": 891,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D XN-VK",
+      "component_item": "NVL-LX5.5x70x46V",
+      "component_key": "",
+      "source_row": 892,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D XN-VK",
+      "component_item": "NVL-LX-5.5 x 70 x 50V",
+      "component_key": "",
+      "source_row": 893,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D XN-VK",
+      "component_item": "NVL-LV-6.0 x 70 x 53V",
+      "component_key": "",
+      "source_row": 894,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D XN-VK",
+      "component_item": "NVL-LV-6.5 x 80 x 63V",
+      "component_key": "",
+      "source_row": 895,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D XN-VK",
+      "component_item": "NVL-LV-6.5 x 80 x 68V",
+      "component_key": "",
+      "source_row": 896,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D XN-VK",
+      "component_item": "NVL-LV-7.0 x 90 x 65V",
+      "component_key": "",
+      "source_row": 897,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D XN-VK",
+      "component_item": "NVL-LV-7.0 x 90 x 73V",
+      "component_key": "",
+      "source_row": 898,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D XN-VK",
+      "component_item": "NVL-LV-7.0 x 90 x 83V",
+      "component_key": "",
+      "source_row": 899,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D XN-VK",
+      "component_item": "NVL-BKAN",
+      "component_key": "",
+      "source_row": 904,
+      "source_value_status": "PENDING",
+      "reason": "rate_uom_stock_mismatch"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D XR-CF",
+      "component_item": "NVL-VDAY-TDU",
+      "component_key": "",
+      "source_row": 911,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D XR-CF",
+      "component_item": "NVL-TOLE1.2x190-KRON",
+      "component_key": "",
+      "source_row": 913,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_multiplier_evidence"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D XR-CF",
+      "component_item": "NVL-XOP-N45",
+      "component_key": "",
+      "source_row": 914,
+      "source_value_status": "PENDING",
+      "reason": "missing_rounding_rule"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D XR-CF",
+      "component_item": "NVL-PULYUC34",
+      "component_key": "",
+      "source_row": 916,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D XR-CF",
+      "component_item": "NVL-LX5.5x70x46V",
+      "component_key": "",
+      "source_row": 917,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D XR-CF",
+      "component_item": "NVL-LX-5.5 x 70 x 50V",
+      "component_key": "",
+      "source_row": 918,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D XR-CF",
+      "component_item": "NVL-LV-6.0 x 70 x 53V",
+      "component_key": "",
+      "source_row": 919,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D XR-CF",
+      "component_item": "NVL-LV-6.5 x 80 x 63V",
+      "component_key": "",
+      "source_row": 920,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D XR-CF",
+      "component_item": "NVL-LV-6.5 x 80 x 68V",
+      "component_key": "",
+      "source_row": 921,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D XR-CF",
+      "component_item": "NVL-LV-7.0 x 90 x 65V",
+      "component_key": "",
+      "source_row": 922,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D XR-CF",
+      "component_item": "NVL-LV-7.0 x 90 x 73V",
+      "component_key": "",
+      "source_row": 923,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D XR-CF",
+      "component_item": "NVL-LV-7.0 x 90 x 83V",
+      "component_key": "",
+      "source_row": 924,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 5.5D XR-CF",
+      "component_item": "NVL-BKAN",
+      "component_key": "",
+      "source_row": 929,
+      "source_value_status": "PENDING",
+      "reason": "rate_uom_stock_mismatch"
+    },
+    {
+      "parent_item": "TP-UC MTN 4.6D XN-VK",
+      "component_item": "NVL-VDAY-TDU",
+      "component_key": "",
+      "source_row": 934,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-UC MTN 4.6D XN-VK",
+      "component_item": "NVL-TOLE1.2x190-KRON",
+      "component_key": "",
+      "source_row": 937,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_multiplier_evidence"
+    },
+    {
+      "parent_item": "TP-UC MTN 4.6D XN-VK",
+      "component_item": "NVL-XOP-N45",
+      "component_key": "",
+      "source_row": 938,
+      "source_value_status": "PENDING",
+      "reason": "missing_rounding_rule"
+    },
+    {
+      "parent_item": "TP-UC MTN 4.6D XN-VK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 939,
+      "source_value_status": "PENDING",
+      "reason": "rate_uom_unresolved"
+    },
+    {
+      "parent_item": "TP-UC MTN 4.6D XN-VK",
+      "component_item": "NVL-PULYUC114",
+      "component_key": "",
+      "source_row": 940,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC MTN 4.6D XN-VK",
+      "component_item": "NVL-BKAN",
+      "component_key": "",
+      "source_row": 941,
+      "source_value_status": "PENDING",
+      "reason": "rate_uom_stock_mismatch"
+    },
+    {
+      "parent_item": "TP-UC MTN 4.6D XR-CF",
+      "component_item": "NVL-VDAY-TDU",
+      "component_key": "",
+      "source_row": 945,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-UC MTN 4.6D XR-CF",
+      "component_item": "NVL-TOLE1.2x190-KRON",
+      "component_key": "",
+      "source_row": 948,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_multiplier_evidence"
+    },
+    {
+      "parent_item": "TP-UC MTN 4.6D XR-CF",
+      "component_item": "NVL-XOP-N45",
+      "component_key": "",
+      "source_row": 949,
+      "source_value_status": "PENDING",
+      "reason": "missing_rounding_rule"
+    },
+    {
+      "parent_item": "TP-UC MTN 4.6D XR-CF",
+      "component_item": "NVL-PULYUC114",
+      "component_key": "",
+      "source_row": 951,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC MTN 4.6D XR-CF",
+      "component_item": "NVL-BKAN",
+      "component_key": "",
+      "source_row": 952,
+      "source_value_status": "PENDING",
+      "reason": "rate_uom_stock_mismatch"
+    },
+    {
+      "parent_item": "TP-UC MTN 4.6D TR-XLC",
+      "component_item": "NVL-VDAY-TDU",
+      "component_key": "",
+      "source_row": 956,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-UC MTN 4.6D TR-XLC",
+      "component_item": "NVL-TOLE1.2x190-KRON",
+      "component_key": "",
+      "source_row": 959,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_multiplier_evidence"
+    },
+    {
+      "parent_item": "TP-UC MTN 4.6D TR-XLC",
+      "component_item": "NVL-XOP-N45",
+      "component_key": "",
+      "source_row": 960,
+      "source_value_status": "PENDING",
+      "reason": "missing_rounding_rule"
+    },
+    {
+      "parent_item": "TP-UC MTN 4.6D TR-XLC",
+      "component_item": "NVL-PULYUC114",
+      "component_key": "",
+      "source_row": 962,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC MTN 4.6D TR-XLC",
+      "component_item": "NVL-BKAN",
+      "component_key": "",
+      "source_row": 963,
+      "source_value_status": "PENDING",
+      "reason": "rate_uom_stock_mismatch"
+    },
+    {
+      "parent_item": "TP-UC MTN 4.6D GU-KU",
+      "component_item": "NVL-VDAY-TDU",
+      "component_key": "",
+      "source_row": 967,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-UC MTN 4.6D GU-KU",
+      "component_item": "NVL-TOLE1.2x190-KRON",
+      "component_key": "",
+      "source_row": 970,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_multiplier_evidence"
+    },
+    {
+      "parent_item": "TP-UC MTN 4.6D GU-KU",
+      "component_item": "NVL-XOP-N45",
+      "component_key": "",
+      "source_row": 971,
+      "source_value_status": "PENDING",
+      "reason": "missing_rounding_rule"
+    },
+    {
+      "parent_item": "TP-UC MTN 4.6D GU-KU",
+      "component_item": "NVL-PULYUC114",
+      "component_key": "",
+      "source_row": 973,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC MTN 4.6D GU-KU",
+      "component_item": "NVL-BKAN",
+      "component_key": "",
+      "source_row": 974,
+      "source_value_status": "PENDING",
+      "reason": "rate_uom_stock_mismatch"
+    },
+    {
+      "parent_item": "TP-UC MTN 5.5D XN-VK",
+      "component_item": "NVL-VDAY-TDU",
+      "component_key": "",
+      "source_row": 978,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-UC MTN 5.5D XN-VK",
+      "component_item": "NVL-TOLE1.2x190-KRON",
+      "component_key": "",
+      "source_row": 981,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_multiplier_evidence"
+    },
+    {
+      "parent_item": "TP-UC MTN 5.5D XN-VK",
+      "component_item": "NVL-XOP-N45",
+      "component_key": "",
+      "source_row": 982,
+      "source_value_status": "PENDING",
+      "reason": "missing_rounding_rule"
+    },
+    {
+      "parent_item": "TP-UC MTN 5.5D XN-VK",
+      "component_item": "NVL-PULYUC114",
+      "component_key": "",
+      "source_row": 984,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC MTN 5.5D XN-VK",
+      "component_item": "NVL-BKAN",
+      "component_key": "",
+      "source_row": 985,
+      "source_value_status": "PENDING",
+      "reason": "rate_uom_stock_mismatch"
+    },
+    {
+      "parent_item": "TP-UC MTN 5.5D XR-CF",
+      "component_item": "NVL-VDAY-TDU",
+      "component_key": "",
+      "source_row": 989,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-UC MTN 5.5D XR-CF",
+      "component_item": "NVL-TOLE1.2x190-KRON",
+      "component_key": "",
+      "source_row": 992,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_multiplier_evidence"
+    },
+    {
+      "parent_item": "TP-UC MTN 5.5D XR-CF",
+      "component_item": "NVL-XOP-N45",
+      "component_key": "",
+      "source_row": 993,
+      "source_value_status": "PENDING",
+      "reason": "missing_rounding_rule"
+    },
+    {
+      "parent_item": "TP-UC MTN 5.5D XR-CF",
+      "component_item": "NVL-PULYUC114",
+      "component_key": "",
+      "source_row": 995,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC MTN 5.5D XR-CF",
+      "component_item": "NVL-BKAN",
+      "component_key": "",
+      "source_row": 996,
+      "source_value_status": "PENDING",
+      "reason": "rate_uom_stock_mismatch"
+    },
+    {
+      "parent_item": "TP-UC MTN 5.5D TR-XLC",
+      "component_item": "NVL-VDAY-TDU",
+      "component_key": "",
+      "source_row": 1000,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-UC MTN 5.5D TR-XLC",
+      "component_item": "NVL-TOLE1.2x190-KRON",
+      "component_key": "",
+      "source_row": 1003,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_multiplier_evidence"
+    },
+    {
+      "parent_item": "TP-UC MTN 5.5D TR-XLC",
+      "component_item": "NVL-XOP-N45",
+      "component_key": "",
+      "source_row": 1004,
+      "source_value_status": "PENDING",
+      "reason": "missing_rounding_rule"
+    },
+    {
+      "parent_item": "TP-UC MTN 5.5D TR-XLC",
+      "component_item": "NVL-PULYUC114",
+      "component_key": "",
+      "source_row": 1006,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC MTN 5.5D TR-XLC",
+      "component_item": "NVL-BKAN",
+      "component_key": "",
+      "source_row": 1007,
+      "source_value_status": "PENDING",
+      "reason": "rate_uom_stock_mismatch"
+    },
+    {
+      "parent_item": "TP-UC MTN 5.5D GU-KU",
+      "component_item": "NVL-VDAY-TDU",
+      "component_key": "",
+      "source_row": 1011,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-UC MTN 5.5D GU-KU",
+      "component_item": "NVL-TOLE1.2x190-KRON",
+      "component_key": "",
+      "source_row": 1014,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_multiplier_evidence"
+    },
+    {
+      "parent_item": "TP-UC MTN 5.5D GU-KU",
+      "component_item": "NVL-XOP-N45",
+      "component_key": "",
+      "source_row": 1015,
+      "source_value_status": "PENDING",
+      "reason": "missing_rounding_rule"
+    },
+    {
+      "parent_item": "TP-UC MTN 5.5D GU-KU",
+      "component_item": "NVL-PULYUC114",
+      "component_key": "",
+      "source_row": 1017,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC MTN 5.5D GU-KU",
+      "component_item": "NVL-BKAN",
+      "component_key": "",
+      "source_row": 1018,
+      "source_value_status": "PENDING",
+      "reason": "rate_uom_stock_mismatch"
+    },
+    {
+      "parent_item": "TP-UC MTN 6D STD MSK",
+      "component_item": "NVL-VDAY-TDU",
+      "component_key": "",
+      "source_row": 1022,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-UC MTN 6D STD MSK",
+      "component_item": "NVL-TOLE1.2x190-KRON",
+      "component_key": "",
+      "source_row": 1025,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_multiplier_evidence"
+    },
+    {
+      "parent_item": "TP-UC MTN 6D STD MSK",
+      "component_item": "NVL-XOP-N45",
+      "component_key": "",
+      "source_row": 1026,
+      "source_value_status": "PENDING",
+      "reason": "missing_rounding_rule"
+    },
+    {
+      "parent_item": "TP-UC MTN 6D STD MSK",
+      "component_item": "NVL-PULYUC114",
+      "component_key": "",
+      "source_row": 1028,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC MTN 6D STD MSK",
+      "component_item": "NVL-BKAN",
+      "component_key": "",
+      "source_row": 1029,
+      "source_value_status": "PENDING",
+      "reason": "rate_uom_stock_mismatch"
+    },
+    {
+      "parent_item": "TP-UC KT 6D STĐ MSK",
+      "component_item": "NVL-VDAY-TDU",
+      "component_key": "",
+      "source_row": 1035,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula"
+    },
+    {
+      "parent_item": "TP-UC KT 6D STĐ MSK",
+      "component_item": "NVL-TOLE1.2x190-KRON",
+      "component_key": "",
+      "source_row": 1037,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_multiplier_evidence"
+    },
+    {
+      "parent_item": "TP-UC KT 6D STĐ MSK",
+      "component_item": "NVL-XOP-N45",
+      "component_key": "",
+      "source_row": 1038,
+      "source_value_status": "PENDING",
+      "reason": "missing_rounding_rule"
+    },
+    {
+      "parent_item": "TP-UC KT 6D STĐ MSK",
+      "component_item": "NVL-PULYUC34",
+      "component_key": "",
+      "source_row": 1040,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 6D STĐ MSK",
+      "component_item": "NVL-LX5.5x70x46V",
+      "component_key": "",
+      "source_row": 1041,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-UC KT 6D STĐ MSK",
+      "component_item": "NVL-LX-5.5 x 70 x 50V",
+      "component_key": "",
+      "source_row": 1042,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 6D STĐ MSK",
+      "component_item": "NVL-LV-6.0 x 70 x 53V",
+      "component_key": "",
+      "source_row": 1043,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 6D STĐ MSK",
+      "component_item": "NVL-LV-6.5 x 80 x 63V",
+      "component_key": "",
+      "source_row": 1044,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 6D STĐ MSK",
+      "component_item": "NVL-LV-6.5 x 80 x 68V",
+      "component_key": "",
+      "source_row": 1045,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 6D STĐ MSK",
+      "component_item": "NVL-LV-7.0 x 90 x 65V",
+      "component_key": "",
+      "source_row": 1046,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 6D STĐ MSK",
+      "component_item": "NVL-LV-7.0 x 90 x 73V",
+      "component_key": "",
+      "source_row": 1047,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 6D STĐ MSK",
+      "component_item": "NVL-LV-7.0 x 90 x 83V",
+      "component_key": "",
+      "source_row": 1048,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-UC KT 6D STĐ MSK",
+      "component_item": "NVL-BKAN",
+      "component_key": "",
+      "source_row": 1053,
+      "source_value_status": "PENDING",
+      "reason": "rate_uom_stock_mismatch"
+    },
+    {
+      "parent_item": "TP-DUC-KT AL70 (2 LỚP) STĐ MSK",
+      "component_item": "NVL-AL70(2LOP)-THO",
+      "component_key": "",
+      "source_row": 1058,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-DUC-KT AL70 (2 LỚP) STĐ MSK",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 1061,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula_semantics"
+    },
+    {
+      "parent_item": "TP-DUC-KT AL70 (2 LỚP) STĐ MSK",
+      "component_item": "NVL-XOP-N45",
+      "component_key": "",
+      "source_row": 1064,
+      "source_value_status": "PENDING",
+      "reason": "missing_rounding_rule"
+    },
+    {
+      "parent_item": "TP-DUC-KT AL70 (2 LỚP) STĐ MSK",
+      "component_item": "NVL-PULYUC34",
+      "component_key": "",
+      "source_row": 1066,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-DUC-KT AL70 (2 LỚP) STĐ MSK",
+      "component_item": "NVL-LX5.5x70x46V",
+      "component_key": "",
+      "source_row": 1067,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-DUC-KT AL70 (2 LỚP) STĐ MSK",
+      "component_item": "NVL-LX-5.5 x 70 x 50V",
+      "component_key": "",
+      "source_row": 1068,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-DUC-KT AL70 (2 LỚP) STĐ MSK",
+      "component_item": "NVL-LV-6.0 x 70 x 53V",
+      "component_key": "",
+      "source_row": 1069,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-DUC-KT AL70 (2 LỚP) STĐ MSK",
+      "component_item": "NVL-LV-6.5 x 80 x 63V",
+      "component_key": "",
+      "source_row": 1070,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-DUC-KT AL70 (2 LỚP) STĐ MSK",
+      "component_item": "NVL-LV-6.5 x 80 x 68V",
+      "component_key": "",
+      "source_row": 1071,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-DUC-KT AL70 (2 LỚP) STĐ MSK",
+      "component_item": "NVL-LV-7.0 x 90 x 65V",
+      "component_key": "",
+      "source_row": 1072,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-DUC-KT AL70 (2 LỚP) STĐ MSK",
+      "component_item": "NVL-LV-7.0 x 90 x 73V",
+      "component_key": "",
+      "source_row": 1073,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-DUC-KT AL70 (2 LỚP) STĐ MSK",
+      "component_item": "NVL-LV-7.0 x 90 x 83V",
+      "component_key": "",
+      "source_row": 1074,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-DUC-KT AL70 (2 LỚP) STĐ MSK",
+      "component_item": "NVL-BKAN",
+      "component_key": "",
+      "source_row": 1078,
+      "source_value_status": "PENDING",
+      "reason": "rate_uom_stock_mismatch"
+    },
+    {
+      "parent_item": "TP-DUC-KT AL70 STĐ MSK",
+      "component_item": "NVL-AL70(1LOP)-THO",
+      "component_key": "",
+      "source_row": 1083,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-DUC-KT AL70 STĐ MSK",
+      "component_item": "NVL-RON-DD",
+      "component_key": "",
+      "source_row": 1086,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula_semantics"
+    },
+    {
+      "parent_item": "TP-DUC-KT AL70 STĐ MSK",
+      "component_item": "NVL-BO1VIS-AL701LOP",
+      "component_key": "",
+      "source_row": 1087,
+      "source_value_status": "PENDING",
+      "reason": "conflicting_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-DUC-KT AL70 STĐ MSK",
+      "component_item": "NVL-VIS",
+      "component_key": "",
+      "source_row": 1088,
+      "source_value_status": "PENDING",
+      "reason": "conflicting_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-DUC-KT AL70 STĐ MSK",
+      "component_item": "NVL-XOP-N45",
+      "component_key": "",
+      "source_row": 1089,
+      "source_value_status": "PENDING",
+      "reason": "missing_rounding_rule"
+    },
+    {
+      "parent_item": "TP-DUC-KT AL70 STĐ MSK",
+      "component_item": "NVL-TRUC34",
+      "component_key": "",
+      "source_row": 1090,
+      "source_value_status": "PENDING",
+      "reason": "ambiguous_formula_semantics"
+    },
+    {
+      "parent_item": "TP-DUC-KT AL70 STĐ MSK",
+      "component_item": "NVL-PULYUC34",
+      "component_key": "",
+      "source_row": 1091,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-DUC-KT AL70 STĐ MSK",
+      "component_item": "NVL-LX5.5x70x46V",
+      "component_key": "",
+      "source_row": 1092,
+      "source_value_status": "PENDING",
+      "reason": "missing_or_non_authoritative_source_value"
+    },
+    {
+      "parent_item": "TP-DUC-KT AL70 STĐ MSK",
+      "component_item": "NVL-LX-5.5 x 70 x 50V",
+      "component_key": "",
+      "source_row": 1093,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-DUC-KT AL70 STĐ MSK",
+      "component_item": "NVL-LV-6.0 x 70 x 53V",
+      "component_key": "",
+      "source_row": 1094,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-DUC-KT AL70 STĐ MSK",
+      "component_item": "NVL-LV-6.5 x 80 x 63V",
+      "component_key": "",
+      "source_row": 1095,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-DUC-KT AL70 STĐ MSK",
+      "component_item": "NVL-LV-6.5 x 80 x 68V",
+      "component_key": "",
+      "source_row": 1096,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-DUC-KT AL70 STĐ MSK",
+      "component_item": "NVL-LV-7.0 x 90 x 65V",
+      "component_key": "",
+      "source_row": 1097,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-DUC-KT AL70 STĐ MSK",
+      "component_item": "NVL-LV-7.0 x 90 x 73V",
+      "component_key": "",
+      "source_row": 1098,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-DUC-KT AL70 STĐ MSK",
+      "component_item": "NVL-LV-7.0 x 90 x 83V",
+      "component_key": "",
+      "source_row": 1099,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-DUC-KT AL70 STĐ MSK",
+      "component_item": "NVL-BKAN",
+      "component_key": "",
+      "source_row": 1103,
+      "source_value_status": "PENDING",
+      "reason": "rate_uom_stock_mismatch"
+    },
+    {
+      "parent_item": "TP-LUOI-MV-STD - TRONBO",
+      "component_item": "NVL-LUOIMV_STD",
+      "component_key": "",
+      "source_row": 1107,
+      "source_value_status": "PENDING",
+      "reason": "missing_rounding_rule"
+    },
+    {
+      "parent_item": "TP-LUOI-MV-STD - TRONBO",
+      "component_item": "NVL-TON-DL6Dx124-STD",
+      "component_key": "",
+      "source_row": 1109,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-LUOI-MV-STD - TRONBO",
+      "component_item": "NVL-TON-DL8Dx124-STD",
+      "component_key": "",
+      "source_row": 1110,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-LUOI-MV-STD - TRONBO",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1119,
+      "source_value_status": "PENDING",
+      "reason": "rate_uom_unresolved"
+    },
+    {
+      "parent_item": "TP-LUOI-MV-STD - TRONBO",
+      "component_item": "NVL-BANBUOM-FE",
+      "component_key": "",
+      "source_row": 1120,
+      "source_value_status": "PENDING",
+      "reason": "rate_uom_stock_mismatch"
+    },
+    {
+      "parent_item": "TP-LUOI-MV-STD - TRONBO",
+      "component_item": "NVL-BANBUOM-INOX",
+      "component_key": "",
+      "source_row": 1121,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-LUOI-MV-STD - TRONBO",
+      "component_item": "RONNHUAVANGCANHAY_RSU70",
+      "component_key": "",
+      "source_row": 1122,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_multiplier_evidence"
+    },
+    {
+      "parent_item": "TP-LUOI-MV-STD - TRONBO",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1123,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_multiplier_evidence"
+    },
+    {
+      "parent_item": "NVL-TOLE1.4x270x1.2ly-CRON",
+      "component_item": "RONNHUAVANGCẢNHAY_RSU100",
+      "component_key": "",
+      "source_row": 1134,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_multiplier_evidence"
+    },
+    {
+      "parent_item": "NVL-TOLE1.4x270x1.4ly-CRON",
+      "component_item": "RONNHUAVANGCẢNHAY_RSU100",
+      "component_key": "",
+      "source_row": 1139,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_multiplier_evidence"
+    },
+    {
+      "parent_item": "NVL-TOLE1.4x270x1.4ly-CRON+TD",
+      "component_item": "RONNHUAVANGCẢNHAY_RSU100",
+      "component_key": "",
+      "source_row": 1142,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_multiplier_evidence"
+    },
+    {
+      "parent_item": "NVL-TOLE1.4x270x1.4ly-CRON+TD",
+      "component_item": "NVL-RNHUA-DR",
+      "component_key": "",
+      "source_row": 1143,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_multiplier_evidence"
+    },
+    {
+      "parent_item": "NVL-TOLE1.4x270x1.4ly-CRON+TD",
+      "component_item": "NVL-RINOX-DR",
+      "component_key": "",
+      "source_row": 1144,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_multiplier_evidence"
+    },
+    {
+      "parent_item": "TP-RS7P (CÓ RON)",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1146,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_multiplier_evidence"
+    },
+    {
+      "parent_item": "TP-RS7P (CÓ RON)",
+      "component_item": "RONNHUAVANGCANHAY_RSU70",
+      "component_key": "",
+      "source_row": 1147,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_multiplier_evidence"
+    },
+    {
+      "parent_item": "TP-LUOI-SN-STD - TM",
+      "component_item": "NVL-LUOISNPHI19_STD",
+      "component_key": "",
+      "source_row": 1158,
+      "source_value_status": "PENDING",
+      "reason": "missing_rounding_rule"
+    },
+    {
+      "parent_item": "TP-LUOI-SN-STD - TM",
+      "component_item": "NVL-BOLSN",
+      "component_key": "",
+      "source_row": 1159,
+      "source_value_status": "PENDING",
+      "reason": "missing_rounding_rule"
+    },
+    {
+      "parent_item": "TP-LUOI-SN-STD - TRONBO",
+      "component_item": "NVL-LUOISNPHI19_STD",
+      "component_key": "",
+      "source_row": 1169,
+      "source_value_status": "PENDING",
+      "reason": "missing_rounding_rule"
+    },
+    {
+      "parent_item": "TP-LUOI-SN-STD - TRONBO",
+      "component_item": "NVL-BOLSN",
+      "component_key": "",
+      "source_row": 1170,
+      "source_value_status": "PENDING",
+      "reason": "missing_rounding_rule"
+    },
+    {
+      "parent_item": "TP-LUOI-SN-STD - TRONBO",
+      "component_item": "NVL-TON-DL6Dx124-STD",
+      "component_key": "",
+      "source_row": 1177,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-LUOI-SN-STD - TRONBO",
+      "component_item": "NVL-TON-DL8Dx124-STD",
+      "component_key": "",
+      "source_row": 1178,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-LUOI-SN-STD - TRONBO",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1183,
+      "source_value_status": "PENDING",
+      "reason": "conflicting_formula_authority"
+    },
+    {
+      "parent_item": "TP-LUOI-SN13x26-STD - TRONBO",
+      "component_item": "TP-LUOISN13x26_STD",
+      "component_key": "",
+      "source_row": 1185,
+      "source_value_status": "PENDING",
+      "reason": "missing_rounding_rule"
+    },
+    {
+      "parent_item": "TP-LUOI-SN13x26-STD - TRONBO",
+      "component_item": "NVL-TON-DL6Dx124-STD",
+      "component_key": "",
+      "source_row": 1186,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-LUOI-SN13x26-STD - TRONBO",
+      "component_item": "NVL-TON-DL8Dx124-STD",
+      "component_key": "",
+      "source_row": 1187,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-LUOI-SN13x26-STD - TRONBO",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1191,
+      "source_value_status": "PENDING",
+      "reason": "conflicting_formula_authority"
+    },
+    {
+      "parent_item": "TP-LUOI-SN13x26-STD - TACHMON",
+      "component_item": "TP-LUOISN13x26_STD",
+      "component_key": "",
+      "source_row": 1193,
+      "source_value_status": "PENDING",
+      "reason": "missing_rounding_rule"
+    },
+    {
+      "parent_item": "TP-LUOI-SN13x26-INOX - TACHMON",
+      "component_item": "TP-LUOISN13x26_INOX",
+      "component_key": "",
+      "source_row": 1195,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-LUOI-SN13x26-INOX - TRONBO",
+      "component_item": "TP-LUOISN13x26_INOX",
+      "component_key": "",
+      "source_row": 1197,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-LUOI-SN13x26-INOX - TRONBO",
+      "component_item": "TP-LADLINOX_8D",
+      "component_key": "",
+      "source_row": 1198,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-LUOI-SN13x26-INOX - TRONBO",
+      "component_item": "TP-V4_INOX",
+      "component_key": "",
+      "source_row": 1199,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-LUOI-SN13x26-INOX - TRONBO",
+      "component_item": "TP-RAYINOX-8P-RON",
+      "component_key": "",
+      "source_row": 1200,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-LUOI-SN13x26-INOX - TRONBO",
+      "component_item": "TP-RAYINOX-6P-RON",
+      "component_key": "",
+      "source_row": 1201,
+      "source_value_status": "PENDING",
+      "reason": "missing_conditional_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-LUOI-SNPHI19-INOX - TM",
+      "component_item": "TP-LUOISNPHI19_INOX",
+      "component_key": "",
+      "source_row": 1204,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-LUOI-SNPHI19-INOX - TRONBO",
+      "component_item": "TP-LUOISNPHI19_INOX",
+      "component_key": "",
+      "source_row": 1206,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-LUOI-SNPHI19-INOX - TRONBO",
+      "component_item": "TP-LADLINOX_8D",
+      "component_key": "",
+      "source_row": 1207,
+      "source_value_status": "PENDING",
+      "reason": "missing_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-LUOI-SNPHI19-INOX - TRONBO",
+      "component_item": "TP-RAYINOX-8P-RON",
+      "component_key": "",
+      "source_row": 1209,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-LUOI-SNPHI19-INOX - TRONBO",
+      "component_item": "TP-RAYINOX-6P-RON",
+      "component_key": "",
+      "source_row": 1210,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-LUOI-SNPHI19-INOX - TRONBO",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1211,
+      "source_value_status": "PENDING",
+      "reason": "conflicting_formula_authority"
+    },
+    {
+      "parent_item": "TP-LUOIMV-INOX- TM",
+      "component_item": "TP-LUOIMV_INOX",
+      "component_key": "",
+      "source_row": 1213,
+      "source_value_status": "PENDING",
+      "reason": "unknown_uom"
+    },
+    {
+      "parent_item": "TP-LUOIMV-INOX- TRONBO",
+      "component_item": "TP-LUOIMV_INOX",
+      "component_key": "",
+      "source_row": 1215,
+      "source_value_status": "PENDING",
+      "reason": "unknown_uom"
+    },
+    {
+      "parent_item": "TP-LUOIMV-INOX- TRONBO",
+      "component_item": "TP-LADLINOX_8D",
+      "component_key": "",
+      "source_row": 1216,
+      "source_value_status": "PENDING",
+      "reason": "unknown_uom"
+    },
+    {
+      "parent_item": "TP-LUOIMV-INOX- TRONBO",
+      "component_item": "TP-RAYINOX-8P-RON",
+      "component_key": "",
+      "source_row": 1218,
+      "source_value_status": "PENDING",
+      "reason": "unknown_uom"
+    },
+    {
+      "parent_item": "TP-LUOIMV-INOX- TRONBO",
+      "component_item": "TP-RAYINOX-6P-RON",
+      "component_key": "",
+      "source_row": 1219,
+      "source_value_status": "PENDING",
+      "reason": "unknown_uom"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_6D",
+      "component_item": "NVL-TON-DL6Dx124-STD",
+      "component_key": "",
+      "source_row": 1253,
+      "source_value_status": "PENDING",
+      "reason": "conflicting_quantity_evidence"
+    },
+    {
+      "parent_item": "TP-CUADL6D XN-VK_TRONBO>10m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1263,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL6D XN-VK_TRONBO>10m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1265,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL6D XN-XLC_TRONBO>10m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1269,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL6D XN-XLC_TRONBO_9-10m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1275,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL6D XN-VK_TRONBO_9-10m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1281,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL6D XN-XLC_TRONBO_8-9m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1287,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL6D XN-VK_TRONBO_8-9m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1293,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL6D XN-VK_TRONBO_8-9m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1295,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL6D XN-VK_TRONBO_7-8m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1299,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL6D XN-XLC_TRONBO_7-8m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1305,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL6D XN-XLC_TRONBO_7-8m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1307,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL6D XN-XLC_TRONBO_6-7m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1311,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL6D XN-XLC_TRONBO_6-7m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1313,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL6D XN-VK_TRONBO_6-7m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1317,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL6D XN-VK_TRONBO_6-7m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1319,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL6D XN-XLC_TRONBO_5-6m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1323,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL6D XN-XLC_TRONBO_5-6m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1325,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL6D XN-VK_TRONBO_5-6m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1329,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL6D XN-XLC_TRONBO_4-5m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1335,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL6D XN-XLC_TRONBO_4-5m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1337,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL6D XN-VK_TRONBO_4-5m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1341,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL6D XN-VK_TRONBO_4-5m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1343,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL6D XN-VK_TRONBO_3-4m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1347,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL6D XN-VK_TRONBO_3-4m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1349,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL6D XN-XLC_TRONBO_3-4m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1353,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL6D XN-XLC_TRONBO_3-4m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1355,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-VK_TRONBO>10m²",
+      "component_item": "NVL-TON-DL6.2Dx124-XNVK",
+      "component_key": "",
+      "source_row": 1358,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-VK_TRONBO>10m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1359,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-VK_TRONBO>10m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1361,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-XLC_TRONBO>10m²",
+      "component_item": "NVL-TON-DL6.2Dx124-XNXLC",
+      "component_key": "",
+      "source_row": 1364,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-XLC_TRONBO>10m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1365,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-XLC_TRONBO>10m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1367,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-XLC_TRONBO_9-10m²",
+      "component_item": "NVL-TON-DL6.2Dx124-XNXLC",
+      "component_key": "",
+      "source_row": 1370,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-XLC_TRONBO_9-10m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1371,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-XLC_TRONBO_9-10m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1373,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-VK_TRONBO_9-10m²",
+      "component_item": "NVL-TON-DL6.2Dx124-XNVK",
+      "component_key": "",
+      "source_row": 1376,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-VK_TRONBO_9-10m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1377,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-VK_TRONBO_9-10m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1379,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-XLC_TRONBO_8-9m²",
+      "component_item": "NVL-TON-DL6.2Dx124-XNXLC",
+      "component_key": "",
+      "source_row": 1382,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-XLC_TRONBO_8-9m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1383,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-XLC_TRONBO_8-9m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1385,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-VK_TRONBO_8-9m²",
+      "component_item": "NVL-TON-DL6.2Dx124-XNVK",
+      "component_key": "",
+      "source_row": 1388,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-VK_TRONBO_8-9m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1389,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-VK_TRONBO_8-9m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1391,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-VK_TRONBO_7-8m²",
+      "component_item": "NVL-TON-DL6.2Dx124-XNVK",
+      "component_key": "",
+      "source_row": 1394,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-VK_TRONBO_7-8m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1395,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-VK_TRONBO_7-8m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1397,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-XLC_TRONBO_7-8m²",
+      "component_item": "NVL-TON-DL6.2Dx124-XNXLC",
+      "component_key": "",
+      "source_row": 1400,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-XLC_TRONBO_7-8m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1401,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-XLC_TRONBO_7-8m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1403,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-XLC_TRONBO_6-7m²",
+      "component_item": "NVL-TON-DL6.2Dx124-XNXLC",
+      "component_key": "",
+      "source_row": 1406,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-XLC_TRONBO_6-7m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1407,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-XLC_TRONBO_6-7m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1409,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-VK_TRONBO_6-7m²",
+      "component_item": "NVL-TON-DL6.2Dx124-XNVK",
+      "component_key": "",
+      "source_row": 1412,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-VK_TRONBO_6-7m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1413,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-VK_TRONBO_6-7m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1415,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-XLC_TRONBO_5-6m²",
+      "component_item": "NVL-TON-DL6.2Dx124-XNXLC",
+      "component_key": "",
+      "source_row": 1418,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-XLC_TRONBO_5-6m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1419,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-XLC_TRONBO_5-6m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1421,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-VK_TRONBO_5-6m²",
+      "component_item": "NVL-TON-DL6.2Dx124-XNVK",
+      "component_key": "",
+      "source_row": 1424,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-VK_TRONBO_5-6m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1425,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-VK_TRONBO_5-6m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1427,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-XLC_TRONBO_4-5m²",
+      "component_item": "NVL-TON-DL6.2Dx124-XNXLC",
+      "component_key": "",
+      "source_row": 1430,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-XLC_TRONBO_4-5m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1431,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-XLC_TRONBO_4-5m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1433,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-VK_TRONBO_4-5m²",
+      "component_item": "NVL-TON-DL6.2Dx124-XNVK",
+      "component_key": "",
+      "source_row": 1436,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-VK_TRONBO_4-5m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1437,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-VK_TRONBO_4-5m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1439,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-VK_TRONBO_3-4m²",
+      "component_item": "NVL-TON-DL6.2Dx124-XNVK",
+      "component_key": "",
+      "source_row": 1442,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-VK_TRONBO_3-4m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1443,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-VK_TRONBO_3-4m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1445,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-XLC_TRONBO_3-4m²",
+      "component_item": "NVL-TON-DL6.2Dx124-XNXLC",
+      "component_key": "",
+      "source_row": 1448,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-XLC_TRONBO_3-4m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1449,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL7D XN-XLC_TRONBO_3-4m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1451,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-VK_TRONBO>10m²",
+      "component_item": "NVL-TON-DL7.2Dx124-XNVK",
+      "component_key": "",
+      "source_row": 1454,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-VK_TRONBO>10m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1455,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-VK_TRONBO>10m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1457,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-XLC_TRONBO>10m²",
+      "component_item": "NVL-TON-DL7.2Dx124-XNXLC",
+      "component_key": "",
+      "source_row": 1460,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-XLC_TRONBO>10m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1461,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-XLC_TRONBO>10m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1463,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-XLC_TRONBO_9-10m²",
+      "component_item": "NVL-TON-DL7.2Dx124-XNXLC",
+      "component_key": "",
+      "source_row": 1466,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-XLC_TRONBO_9-10m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1467,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-XLC_TRONBO_9-10m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1469,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-VK_TRONBO_9-10m²",
+      "component_item": "NVL-TON-DL7.2Dx124-XNVK",
+      "component_key": "",
+      "source_row": 1472,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-VK_TRONBO_9-10m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1473,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-VK_TRONBO_9-10m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1475,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-XLC_TRONBO_8-9m²",
+      "component_item": "NVL-TON-DL7.2Dx124-XNXLC",
+      "component_key": "",
+      "source_row": 1478,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-XLC_TRONBO_8-9m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1479,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-XLC_TRONBO_8-9m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1481,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-VK_TRONBO_8-9m²",
+      "component_item": "NVL-TON-DL7.2Dx124-XNVK",
+      "component_key": "",
+      "source_row": 1484,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-VK_TRONBO_8-9m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1485,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-VK_TRONBO_8-9m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1487,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-VK_TRONBO_7-8m²",
+      "component_item": "NVL-TON-DL7.2Dx124-XNVK",
+      "component_key": "",
+      "source_row": 1490,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-VK_TRONBO_7-8m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1491,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-VK_TRONBO_7-8m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1493,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-XLC_TRONBO_7-8m²",
+      "component_item": "NVL-TON-DL7.2Dx124-XNXLC",
+      "component_key": "",
+      "source_row": 1496,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-XLC_TRONBO_7-8m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1497,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-XLC_TRONBO_7-8m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1499,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-XLC_TRONBO_6-7m²",
+      "component_item": "NVL-TON-DL7.2Dx124-XNXLC",
+      "component_key": "",
+      "source_row": 1502,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-XLC_TRONBO_6-7m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1503,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-XLC_TRONBO_6-7m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1505,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-VK_TRONBO_6-7m²",
+      "component_item": "NVL-TON-DL7.2Dx124-XNVK",
+      "component_key": "",
+      "source_row": 1508,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-VK_TRONBO_6-7m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1509,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-VK_TRONBO_6-7m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1511,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-XLC_TRONBO_5-6m²",
+      "component_item": "NVL-TON-DL7.2Dx124-XNXLC",
+      "component_key": "",
+      "source_row": 1514,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-XLC_TRONBO_5-6m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1515,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-XLC_TRONBO_5-6m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1517,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-VK_TRONBO_5-6m²",
+      "component_item": "NVL-TON-DL7.2Dx124-XNVK",
+      "component_key": "",
+      "source_row": 1520,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-VK_TRONBO_5-6m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1521,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-VK_TRONBO_5-6m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1523,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-XLC_TRONBO_4-5m²",
+      "component_item": "NVL-TON-DL7.2Dx124-XNXLC",
+      "component_key": "",
+      "source_row": 1526,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-XLC_TRONBO_4-5m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1527,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-XLC_TRONBO_4-5m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1529,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-VK_TRONBO_4-5m²",
+      "component_item": "NVL-TON-DL7.2Dx124-XNVK",
+      "component_key": "",
+      "source_row": 1532,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-VK_TRONBO_4-5m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1533,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-VK_TRONBO_4-5m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1535,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-VK_TRONBO_3-4m²",
+      "component_item": "NVL-TON-DL7.2Dx124-XNVK",
+      "component_key": "",
+      "source_row": 1538,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-VK_TRONBO_3-4m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1539,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-VK_TRONBO_3-4m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1541,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-XLC_TRONBO_3-4m²",
+      "component_item": "NVL-TON-DL7.2Dx124-XNXLC",
+      "component_key": "",
+      "source_row": 1544,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-XLC_TRONBO_3-4m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1545,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL8D XN-XLC_TRONBO_3-4m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1547,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-VK_TRONBO>10m²",
+      "component_item": "NVL-TON-DL9.2Dx124-XNVK",
+      "component_key": "",
+      "source_row": 1550,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-VK_TRONBO>10m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1551,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-VK_TRONBO>10m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1553,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-XLC_TRONBO>10m²",
+      "component_item": "NVL-TON-DL9.2Dx124-XNXLC",
+      "component_key": "",
+      "source_row": 1556,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-XLC_TRONBO>10m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1557,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-XLC_TRONBO>10m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1559,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-XLC_TRONBO_9-10m²",
+      "component_item": "NVL-TON-DL9.2Dx124-XNXLC",
+      "component_key": "",
+      "source_row": 1562,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-XLC_TRONBO_9-10m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1563,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-XLC_TRONBO_9-10m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1565,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-VK_TRONBO_9-10m²",
+      "component_item": "NVL-TON-DL9.2Dx124-XNVK",
+      "component_key": "",
+      "source_row": 1568,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-VK_TRONBO_9-10m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1569,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-VK_TRONBO_9-10m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1571,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-XLC_TRONBO_8-9m²",
+      "component_item": "NVL-TON-DL9.2Dx124-XNXLC",
+      "component_key": "",
+      "source_row": 1574,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-XLC_TRONBO_8-9m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1575,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-XLC_TRONBO_8-9m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1577,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-VK_TRONBO_8-9m²",
+      "component_item": "NVL-TON-DL9.2Dx124-XNVK",
+      "component_key": "",
+      "source_row": 1580,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-VK_TRONBO_8-9m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1581,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-VK_TRONBO_8-9m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1583,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-VK_TRONBO_7-8m²",
+      "component_item": "NVL-TON-DL9.2Dx124-XNVK",
+      "component_key": "",
+      "source_row": 1586,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-VK_TRONBO_7-8m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1587,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-VK_TRONBO_7-8m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1589,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-XLC_TRONBO_7-8m²",
+      "component_item": "NVL-TON-DL9.2Dx124-XNXLC",
+      "component_key": "",
+      "source_row": 1592,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-XLC_TRONBO_7-8m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1593,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-XLC_TRONBO_7-8m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1595,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-XLC_TRONBO_6-7m²",
+      "component_item": "NVL-TON-DL9.2Dx124-XNXLC",
+      "component_key": "",
+      "source_row": 1598,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-XLC_TRONBO_6-7m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1599,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-XLC_TRONBO_6-7m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1601,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-VK_TRONBO_6-7m²",
+      "component_item": "NVL-TON-DL9.2Dx124-XNVK",
+      "component_key": "",
+      "source_row": 1604,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-VK_TRONBO_6-7m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1605,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-VK_TRONBO_6-7m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1607,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-XLC_TRONBO_5-6m²",
+      "component_item": "NVL-TON-DL9.2Dx124-XNXLC",
+      "component_key": "",
+      "source_row": 1610,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-XLC_TRONBO_5-6m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1611,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-XLC_TRONBO_5-6m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1613,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-VK_TRONBO_5-6m²",
+      "component_item": "NVL-TON-DL9.2Dx124-XNVK",
+      "component_key": "",
+      "source_row": 1616,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-VK_TRONBO_5-6m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1617,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-VK_TRONBO_5-6m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1619,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-XLC_TRONBO_4-5m²",
+      "component_item": "NVL-TON-DL9.2Dx124-XNXLC",
+      "component_key": "",
+      "source_row": 1622,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-XLC_TRONBO_4-5m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1623,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-XLC_TRONBO_4-5m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1625,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-VK_TRONBO_4-5m²",
+      "component_item": "NVL-TON-DL9.2Dx124-XNVK",
+      "component_key": "",
+      "source_row": 1628,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-VK_TRONBO_4-5m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1629,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-VK_TRONBO_4-5m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1631,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-VK_TRONBO_3-4m²",
+      "component_item": "NVL-TON-DL9.2Dx124-XNVK",
+      "component_key": "",
+      "source_row": 1634,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-VK_TRONBO_3-4m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1635,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-VK_TRONBO_3-4m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1637,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-XLC_TRONBO_3-4m²",
+      "component_item": "NVL-TON-DL9.2Dx124-XNXLC",
+      "component_key": "",
+      "source_row": 1640,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-XLC_TRONBO_3-4m²",
+      "component_item": "NVL-TOLE1.2x190-RON",
+      "component_key": "",
+      "source_row": 1641,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-CUADL1LY XN-XLC_TRONBO_3-4m²",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1643,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_6D_TRONBO>10m²_MSK",
+      "component_item": "NVL-TON-DL6Dx124-STD",
+      "component_key": "",
+      "source_row": 1646,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_6D_TRONBO>10m²_MSK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1648,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_6D_TRONBO_9-10m²_MSK",
+      "component_item": "NVL-TON-DL6Dx124-STD",
+      "component_key": "",
+      "source_row": 1654,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_6D_TRONBO_9-10m²_MSK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1656,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_6D_TRONBO_8-9m²_MSK",
+      "component_item": "NVL-TON-DL6Dx124-STD",
+      "component_key": "",
+      "source_row": 1662,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_6D_TRONBO_8-9m²_MSK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1664,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_6D_TRONBO_7-8m²_MSK",
+      "component_item": "NVL-TON-DL6Dx124-STD",
+      "component_key": "",
+      "source_row": 1670,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_6D_TRONBO_7-8m²_MSK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1672,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_6D_TRONBO_6-7m²_MSK",
+      "component_item": "NVL-TON-DL6Dx124-STD",
+      "component_key": "",
+      "source_row": 1678,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_6D_TRONBO_6-7m²_MSK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1680,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_6D_TRONBO_6-7m²_MSK",
+      "component_item": "NVL-TON-DL6Dx124-STD",
+      "component_key": "",
+      "source_row": 1685,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_6D_TRONBO_6-7m²_MSK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1687,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_6D_TRONBO_5-6m²_MSK",
+      "component_item": "NVL-TON-DL6Dx124-STD",
+      "component_key": "",
+      "source_row": 1693,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_6D_TRONBO_5-6m²_MSK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1695,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_6D_TRONBO_4-5m²_MSK",
+      "component_item": "NVL-TON-DL6Dx124-STD",
+      "component_key": "",
+      "source_row": 1701,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_6D_TRONBO_4-5m²_MSK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1703,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_6D_TRONBO_4-5m²_MSK",
+      "component_item": "NVL-TON-DL6Dx124-STD",
+      "component_key": "",
+      "source_row": 1708,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_6D_TRONBO_4-5m²_MSK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1710,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_6D_TRONBO_3-4m²_MSK",
+      "component_item": "NVL-TON-DL6Dx124-STD",
+      "component_key": "",
+      "source_row": 1716,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_6D_TRONBO_3-4m²_MSK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1718,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_6D_TRONBO_3-4m²_MSK",
+      "component_item": "NVL-TON-DL6Dx124-STD",
+      "component_key": "",
+      "source_row": 1723,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_6D_TRONBO_3-4m²_MSK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1725,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_8D_TRONBO>10m²_MSK",
+      "component_item": "NVL-TON-DL8Dx124-STD",
+      "component_key": "",
+      "source_row": 1731,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_8D_TRONBO>10m²_MSK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1733,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_8D_TRONBO_9-10m²_MSK",
+      "component_item": "NVL-TON-DL8Dx124-STD",
+      "component_key": "",
+      "source_row": 1739,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_8D_TRONBO_9-10m²_MSK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1741,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_8D_TRONBO_8-9m²_MSK",
+      "component_item": "NVL-TON-DL8Dx124-STD",
+      "component_key": "",
+      "source_row": 1747,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_8D_TRONBO_8-9m²_MSK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1749,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_8D_TRONBO_7-8m²_MSK",
+      "component_item": "NVL-TON-DL8Dx124-STD",
+      "component_key": "",
+      "source_row": 1755,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_8D_TRONBO_7-8m²_MSK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1757,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_8D_TRONBO_7-8m²_MSK",
+      "component_item": "NVL-TON-DL8Dx124-STD",
+      "component_key": "",
+      "source_row": 1762,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_8D_TRONBO_7-8m²_MSK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1764,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_8D_TRONBO_6-7m²_MSK",
+      "component_item": "NVL-TON-DL8Dx124-STD",
+      "component_key": "",
+      "source_row": 1770,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_8D_TRONBO_6-7m²_MSK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1772,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_8D_TRONBO_5-6m²_MSK",
+      "component_item": "NVL-TON-DL8Dx124-STD",
+      "component_key": "",
+      "source_row": 1778,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_8D_TRONBO_5-6m²_MSK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1780,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_8D_TRONBO_5-6m²_MSK",
+      "component_item": "NVL-TON-DL8Dx124-STD",
+      "component_key": "",
+      "source_row": 1785,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_8D_TRONBO_5-6m²_MSK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1787,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_8D_TRONBO_4-5m²_MSK",
+      "component_item": "NVL-TON-DL8Dx124-STD",
+      "component_key": "",
+      "source_row": 1793,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_8D_TRONBO_4-5m²_MSK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1795,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_8D_TRONBO_4-5m²_MSK",
+      "component_item": "NVL-TON-DL8Dx124-STD",
+      "component_key": "",
+      "source_row": 1800,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_8D_TRONBO_4-5m²_MSK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1802,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_8D_TRONBO_3-4m²_MSK",
+      "component_item": "NVL-TON-DL8Dx124-STD",
+      "component_key": "",
+      "source_row": 1808,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_8D_TRONBO_3-4m²_MSK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1810,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_1LY_TRONBO>10m²_MSK",
+      "component_item": "NVL-TOLEKEM124_1LY_MSK",
+      "component_key": "",
+      "source_row": 1816,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_1LY_TRONBO>10m²_MSK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1818,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_1LY_TRONBO_9-10m²_MSK",
+      "component_item": "NVL-TOLEKEM124_1LY_MSK",
+      "component_key": "",
+      "source_row": 1824,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_1LY_TRONBO_9-10m²_MSK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1826,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_1LY_TRONBO_8-9m²_MSK",
+      "component_item": "NVL-TOLEKEM124_1LY_MSK",
+      "component_key": "",
+      "source_row": 1832,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_1LY_TRONBO_8-9m²_MSK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1834,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_1LY_TRONBO_7-8m²_MSK",
+      "component_item": "NVL-TOLEKEM124_1LY_MSK",
+      "component_key": "",
+      "source_row": 1840,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_1LY_TRONBO_7-8m²_MSK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1842,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_1LY_TRONBO_7-8m²_MSK",
+      "component_item": "NVL-TOLEKEM124_1LY_MSK",
+      "component_key": "",
+      "source_row": 1847,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_1LY_TRONBO_7-8m²_MSK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1849,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_1LY_TRONBO_6-7m²_MSK",
+      "component_item": "NVL-TOLEKEM124_1LY_MSK",
+      "component_key": "",
+      "source_row": 1855,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_1LY_TRONBO_6-7m²_MSK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1857,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_1LY_TRONBO_5-6m²_MSK",
+      "component_item": "NVL-TOLEKEM124_1LY_MSK",
+      "component_key": "",
+      "source_row": 1863,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_1LY_TRONBO_5-6m²_MSK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1865,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_1LY_TRONBO_5-6m²_MSK",
+      "component_item": "NVL-TOLEKEM124_1LY_MSK",
+      "component_key": "",
+      "source_row": 1870,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_1LY_TRONBO_5-6m²_MSK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1872,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_1LY_TRONBO_4-5m²_MSK",
+      "component_item": "NVL-TOLEKEM124_1LY_MSK",
+      "component_key": "",
+      "source_row": 1878,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_1LY_TRONBO_4-5m²_MSK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1880,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_1LY_TRONBO_3-4m²_MSK",
+      "component_item": "NVL-TOLEKEM124_1LY_MSK",
+      "component_key": "",
+      "source_row": 1886,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "TP-TOLEKEM124_1LY_TRONBO_3-4m²_MSK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1888,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    },
+    {
+      "parent_item": "NVL-TOLEKEM124_1LY_MSK",
+      "component_item": "NVL-TR114-1.8",
+      "component_key": "",
+      "source_row": 1896,
+      "source_value_status": "PENDING",
+      "reason": "missing_conversion"
+    }
+  ]
+}

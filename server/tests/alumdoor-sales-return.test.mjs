@@ -14,6 +14,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { stockReturnDirectionError } from "../dist/apps-src/alumdoor-worker/src/index.js";
+import { buildAlumdoorUiRec02Sidebar } from "../scripts/build-alumdoor-ui-rec-02-sidebar.mjs";
 
 const brief = JSON.parse(readFileSync(new URL("../briefs/alumdoor-v2.json", import.meta.url), "utf8"));
 const doctype = (name) => brief.doctypes.find((row) => row?.name === name);
@@ -101,8 +102,8 @@ test("Giấy báo Có đối xứng với Giấy báo Nợ và trỏ đúng nhá
   assert.equal(doctype("Credit Note Item").child, true);
 });
 
-test("Giấy báo Có đứng cạnh hoá đơn bán trên thanh bên", () => {
-  const items = brief.navigation.items;
+test("Giấy báo Có đứng cạnh hoá đơn bán trên thanh bên", async () => {
+  const items = (await buildAlumdoorUiRec02Sidebar()).nav.map((entry) => entry.key);
   assert.ok(items.indexOf("Sales Invoice") < items.indexOf("Credit Note"));
   assert.ok(items.indexOf("Credit Note") < items.indexOf("Payment Entry"));
 });

@@ -1,4 +1,4 @@
-import { roundTo } from "../../../packages/core/src/index.js";
+import { roundTo } from "./numeric.js";
 export type GeometryRuleOperator = "COPY" | "SUBTRACT" | "ADD";
 
 export interface GeometryPolicyRule {
@@ -37,6 +37,26 @@ export interface GeometryRuleResult {
 
 function text(value: unknown): string {
   return String(value ?? "").normalize("NFC").trim();
+}
+
+// Workbook/legacy imports used Vietnamese words with hyphens while the generated catalog,
+// TSX editors and canonical BOM formulas use axis-first underscore codes. Treat the former
+// as aliases only; formula/source text remains untouched for audit evidence.
+const GEOMETRY_FIELD_ALIASES: Readonly<Record<string, string>> = Object.freeze({
+  "CAO-PB": "PB_CAO",
+  "RONG-PB-RAY": "PB_RAY_RONG",
+  "RONG-PB-NHUA": "PB_NHUA_RONG",
+  "RONG-CAT-LA": "CAT_LA_RONG",
+  "CAO-LUOI": "LUOI_CAO",
+  "DAI-RAY": "RAY_DAI",
+  "DAI-V4": "V4_DAI",
+  "DAI-TRUC": "TRUC_DAI",
+  "DIEN-TICH": "billable_area_sqm",
+});
+
+export function canonicalGeometryFieldCode(value: unknown): string {
+  const code = text(value);
+  return GEOMETRY_FIELD_ALIASES[code] ?? code;
 }
 
 function checked(value: unknown): boolean {
@@ -102,14 +122,28 @@ export function evaluateGeometryRules(input: {
 }): GeometryRuleResult {
   const policyName = text(input.policy_name) || "Cutting Policy";
   if (!text(input.geometry_profile)) throw new Error(`${policyName}: thiếu Bộ quy cách hình học.`);
-  const profileRoles = new Map(input.profile_fields.map((field) => [text(field.geometry_field ?? field.geometryField), text(field.role)]));
+  const profileRoles = new Map<string, string>();
+  for (const field of input.profile_fields) {
+    const code = canonicalGeometryFieldCode(field.geometry_field ?? field.geometryField);
+    const role = text(field.role);
+    const previous = profileRoles.get(code);
+    if (previous && previous !== role) {
+      throw new Error(`${policyName}: Geometry Profile khai trùng alias ${code} với hai vai trò ${previous}/${role}.`);
+    }
+    profileRoles.set(code, role);
+  }
   const allowed = new Set(profileRoles.keys());
   const calculated = [...profileRoles].filter(([, role]) => role === "CALCULATED").map(([code]) => code);
-  const required = new Set((input.required_targets ?? []).map(text).filter(Boolean));
+  const required = new Set((input.required_targets ?? []).map(canonicalGeometryFieldCode).filter(Boolean));
+  const rules = input.rules.map((rule) => ({
+    ...rule,
+    target_field: canonicalGeometryFieldCode(rule.target_field),
+    source_field: canonicalGeometryFieldCode(rule.source_field),
+  }));
 
-  for (const rule of input.rules) {
-    const target = text(rule.target_field);
-    const source = text(rule.source_field);
+  for (const rule of rules) {
+    const target = rule.target_field;
+    const source = rule.source_field;
     if (!allowed.has(target) || !allowed.has(source)) throw new Error(`${policyName}: rule ${text(rule.rule_code)} dùng field ngoài Geometry Profile.`);
     if (profileRoles.get(target) !== "CALCULATED") throw new Error(`${policyName}: ${target} không phải trường Tự tính.`);
     if (profileRoles.get(source) !== "INPUT") throw new Error(`${policyName}: ${source} không phải trường Nhập liệu.`);
@@ -117,16 +151,21 @@ export function evaluateGeometryRules(input: {
   }
 
   const values: Record<string, number> = {};
-  for (const [code, value] of Object.entries(input.inputs)) {
-    if (!allowed.has(code)) throw new Error(`${policyName}: input ${code} không thuộc Geometry Profile ${input.geometry_profile}.`);
+  for (const [rawCode, value] of Object.entries(input.inputs)) {
+    const code = canonicalGeometryFieldCode(rawCode);
+    if (!allowed.has(code)) throw new Error(`${policyName}: input ${rawCode} không thuộc Geometry Profile ${input.geometry_profile}.`);
     if (value === undefined || value === null || value === "") continue;
-    values[code] = finiteDimension(value, code);
+    const dimension = finiteDimension(value, code);
+    if (code in values && Math.abs(values[code]! - dimension) > 1e-9) {
+      throw new Error(`${policyName}: hai alias của ${code} mang giá trị khác nhau; hệ thống không đoán.`);
+    }
+    values[code] = dimension;
   }
 
   const applied: GeometryRuleResult["applied_rules"] = [];
   const context = input.context ?? {};
   for (const target of calculated) {
-    const rule = chooseRule(target, input.rules, context);
+    const rule = chooseRule(target, rules, context);
     if (!rule) {
       if (required.has(target)) throw new Error(`${policyName}: chưa có quy tắc phù hợp để tính ${target} với ngữ cảnh hiện tại.`);
       continue;

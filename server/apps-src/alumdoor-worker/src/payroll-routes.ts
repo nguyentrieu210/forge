@@ -1,7 +1,7 @@
 import {
   ALUMDOOR_OVERTIME_RATE_VND_PER_HOUR,
   ALUMDOOR_SHIFT_HOURLY_RATE_VND,
-} from "../../../packages/alumdoor-hr-payroll-contract/src/index.js";
+} from "./payroll-policy.js";
 
 export type PayrollPlatformCall = (path: string, init?: RequestInit) => Promise<Response>;
 

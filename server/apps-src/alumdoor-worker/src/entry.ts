@@ -19,6 +19,12 @@ import { handlePurchaseSupplierSettlement } from "./purchase-supplier-settlement
 import { handleProductionRequestLifecycle } from "./production-request-lifecycle-route.js";
 import { handleCustomerImportRequest } from "./customer-import.js";
 import { handleBulkSalesDelivery } from "./bulk-sales-delivery.js";
+import {
+  handleBuildPickWaves,
+  handlePlanPicking,
+  handlePlanPutaway,
+  handleValidatePacking,
+} from "./wms-actions.js";
 
 type WorkerEnv = Parameters<typeof baseWorker.fetch>[1];
 type WorkerContext = Parameters<typeof baseWorker.fetch>[2];
@@ -60,6 +66,13 @@ export default {
       if (method === "alumdoor.inventory.plan_sales_order") return handleAluminumSalesPlan(request, env);
       if (method === "alumdoor.inventory.reserve_sales_order") return handleReserveAluminumForSales(request, env);
       if (method === "alumdoor.inventory.material_request_from_shortage") return handleMaterialRequestFromAluminumShortage(request, env);
+      // Nối tầng WMS pick/pack/putaway/wave (clouderp-stock) — trước không có route nào gọi tới
+      // (audit ALUMDOOR-KHO-SAU-VONG2-20260821.md, S1/C1). Xem wms-actions.ts để biết vì sao
+      // plan_putaway chỉ nhận candidates thẳng (Warehouse chưa có field sức chứa).
+      if (method === "alumdoor.wms.plan_picking") return handlePlanPicking(request, env);
+      if (method === "alumdoor.wms.validate_packing") return handleValidatePacking(request, env);
+      if (method === "alumdoor.wms.plan_putaway") return handlePlanPutaway(request, env);
+      if (method === "alumdoor.wms.build_pick_waves") return handleBuildPickWaves(request, env);
     }
 
     if (url.pathname === "/hooks/event" && request.method === "POST") {

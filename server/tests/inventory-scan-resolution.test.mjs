@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { DatabaseSync } from "node:sqlite";
 import {
+  D1InventoryScanLookup,
   resolveInventoryScan,
 } from "../dist/packages/clouderp-stock/src/inventory-scan-resolution.js";
 import {
@@ -8,6 +10,35 @@ import {
 } from "../dist/apps/tenant-worker/src/inventory-scan-api.js";
 
 const actor = { user_id: "stock@example.test", roles: ["Stock User"] };
+
+class SqliteStatementAdapter {
+  constructor(db, sql) { this.db = db; this.sql = sql; this.args = []; }
+  bind(...args) { this.args = args; return this; }
+  parameters() {
+    if (!/\?\d+/.test(this.sql)) return this.args;
+    return Object.fromEntries(this.args.map((value, index) => [String(index + 1), value]));
+  }
+  async all() {
+    const values = this.parameters();
+    return { results: Array.isArray(values) ? this.db.prepare(this.sql).all(...values) : this.db.prepare(this.sql).all(values) };
+  }
+}
+
+class SqliteD1Adapter {
+  constructor() {
+    this.db = new DatabaseSync(":memory:");
+    this.db.exec(`
+      CREATE TABLE documents (
+        tenant_id TEXT NOT NULL, doctype TEXT NOT NULL, name TEXT NOT NULL,
+        docstatus INTEGER NOT NULL, payload_json TEXT NOT NULL);
+      CREATE TABLE master_records (
+        tenant_id TEXT NOT NULL, record_type TEXT NOT NULL, name TEXT NOT NULL,
+        data_json TEXT NOT NULL, disabled INTEGER NOT NULL DEFAULT 0);
+    `);
+  }
+  prepare(sql) { return new SqliteStatementAdapter(this.db, sql); }
+  withSession() { return this; }
+}
 
 function lookup(records) {
   return {
@@ -46,6 +77,24 @@ test("inventory scan resolves one permission-visible canonical master without cr
   });
   assert.equal("stock_entries" in result, false);
   assert.equal("reservation" in result, false);
+});
+
+test("D1 inventory scan uses documents authority and treats disabled/cancelled documents as tombstones", async () => {
+  const adapter = new SqliteD1Adapter();
+  const insertMaster = adapter.db.prepare("INSERT INTO master_records VALUES ('demo','Item',?,?,0)");
+  const insertDocument = adapter.db.prepare("INSERT INTO documents VALUES ('demo','Item',?,?,?)");
+  insertMaster.run("OVERLAP", JSON.stringify({ item_code: "OVERLAP", barcode: "OLD-BARCODE" }));
+  insertDocument.run("OVERLAP", 0, JSON.stringify({ item_code: "OVERLAP", barcode: "NEW-BARCODE" }));
+  insertMaster.run("DISABLED", JSON.stringify({ item_code: "DISABLED", barcode: "MUST-NOT-RESURRECT" }));
+  insertDocument.run("DISABLED", 0, JSON.stringify({ item_code: "DISABLED", disabled: 1 }));
+  insertMaster.run("CANCELLED", JSON.stringify({ item_code: "CANCELLED", barcode: "MUST-NOT-RESURRECT-2" }));
+  insertDocument.run("CANCELLED", 2, JSON.stringify({ item_code: "CANCELLED" }));
+
+  const lookup = new D1InventoryScanLookup(adapter);
+  assert.deepEqual((await lookup.findCandidates("demo", "NEW-BARCODE", "Item")).map((row) => row.name), ["OVERLAP"]);
+  assert.deepEqual(await lookup.findCandidates("demo", "OLD-BARCODE", "Item"), []);
+  assert.deepEqual(await lookup.findCandidates("demo", "MUST-NOT-RESURRECT", "Item"), []);
+  assert.deepEqual(await lookup.findCandidates("demo", "MUST-NOT-RESURRECT-2", "Item"), []);
 });
 
 test("inventory scan never guesses when one code resolves to multiple visible entities", async () => {

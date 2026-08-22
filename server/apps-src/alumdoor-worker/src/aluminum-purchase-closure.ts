@@ -1,4 +1,4 @@
-import { roundTo } from "../../../packages/core/src/index.js";
+import { roundTo } from "./numeric.js";
 import { handlePurchaseFifoRequest, type PurchaseFifoEnv } from "./purchase-fifo-receipt.js";
 import { handleBulkPurchaseFifoRequest } from "./bulk-purchase-fifo-receipt.js";
 import { allowedColorNamesForGroup } from "./color-scopes.js";

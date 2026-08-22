@@ -164,6 +164,42 @@ export async function attendanceChallenge(): Promise<Response> {
   return fail("DYNAMIC_QR_REMOVED", "QR động đã ngừng sử dụng. Hãy in mã QR cố định của trạm.", 410);
 }
 
+/**
+ * Minimal station creation surface used by the operator setup flow. Company and policy are
+ * resolved by the trusted platform callback; accepting either from the browser would let a
+ * manager bind a station outside their scoped organization.
+ */
+export async function attendanceStationLiteCreate(input: {
+  request: Request;
+  call: AttendancePlatformCall;
+  args: Json;
+}): Promise<Response> {
+  try {
+    requireManager(input.request);
+    trustedTenant(input.request);
+    const stationName = text(input.args.station_name, "Tên trạm", 120);
+    if (stationName.length < 2) throw new AttendanceRouteError("VALIDATION_ERROR", "Tên trạm phải có ít nhất 2 ký tự.");
+    const latitude = number(input.args.latitude, "Vĩ độ", -90, 90);
+    const longitude = number(input.args.longitude, "Kinh độ", -180, 180);
+    const allowedRadiusM = number(input.args.allowed_radius_m ?? 50, "Bán kính trạm", 10, 500);
+    const idempotencyKey = text(input.args.idempotency_key, "Khoá chống ghi trùng", 128);
+    if (idempotencyKey.length < 12) throw new AttendanceRouteError("VALIDATION_ERROR", "Khoá chống ghi trùng quá ngắn.");
+    const response = await input.call("method/metaforge.api.commit_alumdoor_attendance_station_lite", {
+      method: "POST",
+      body: JSON.stringify({
+        station_name: stationName,
+        latitude,
+        longitude,
+        allowed_radius_m: allowedRadiusM,
+        idempotency_key: idempotencyKey,
+      }),
+    });
+    if (!response.ok) return response;
+    const payload = await response.json() as { message?: unknown; data?: unknown };
+    return json(object(payload.message ?? payload.data ?? payload, "Trạm vừa tạo"));
+  } catch (error) { return attendanceError(error); }
+}
+
 export async function attendanceStationQr(input: { request: Request; call: AttendancePlatformCall; env: AttendanceRouteEnv; args: Json; now?: Date }): Promise<Response> {
   try {
     requireManager(input.request);

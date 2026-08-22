@@ -30,6 +30,8 @@ export type PurchaseLine = Doc & {
   _inventoryMode?: string;
   _materialSpecification?: string;
   _defaultPurchaseUom?: string;
+  /** `Supplier Item.last_purchase_rate` cho tổ hợp NCC + mã hàng đang chọn — chỉ tham khảo. */
+  _lastPurchaseRate?: number;
   _overrides?: Record<string, PurchaseFieldOverride>;
   _loading?: boolean;
   _error?: string;
@@ -44,6 +46,7 @@ type DynamicFieldName =
   | "qty_bar"
   | "theoretical_kg"
   | "is_stamped"
+  | "so_no"
   | "qty";
 
 const DYNAMIC_FIELD_ORDER: DynamicFieldName[] = [
@@ -55,6 +58,7 @@ const DYNAMIC_FIELD_ORDER: DynamicFieldName[] = [
   "qty_bar",
   "theoretical_kg",
   "is_stamped",
+  "so_no",
   "qty",
 ];
 
@@ -67,6 +71,7 @@ const DYNAMIC_FALLBACK_LABELS: Record<DynamicFieldName, string> = {
   qty_bar: "Số cây/lá",
   theoretical_kg: "Kg đặt",
   is_stamped: "Dập",
+  so_no: "Số SO NCC",
   qty: "SL",
 };
 
@@ -79,6 +84,7 @@ const DYNAMIC_TYPES: Record<DynamicFieldName, DocField["fieldtype"]> = {
   qty_bar: "Int",
   theoretical_kg: "Float",
   is_stamped: "Select",
+  so_no: "Data",
   qty: "Float",
 };
 
@@ -96,9 +102,11 @@ const DYNAMIC_WIDTHS: Record<DynamicFieldName, string> = {
   qty_bar: "w-24",
   theoretical_kg: "w-28",
   is_stamped: "w-20",
+  so_no: "w-28",
   qty: "w-24",
 };
 
+/** so_no theo brief chỉ áp dụng cho dòng nhôm (`depends_on: inventory_mode == 'Nhôm cây/lá'`). */
 const ALUMINUM_DYNAMIC_FIELDS = new Set<string>([
   "material_specification",
   "length_m",
@@ -106,6 +114,7 @@ const ALUMINUM_DYNAMIC_FIELDS = new Set<string>([
   "qty_bar",
   "theoretical_kg",
   "is_stamped",
+  "so_no",
 ]);
 
 export interface AlumdoorPurchaseOrderItemsGridProps {
@@ -116,6 +125,8 @@ export interface AlumdoorPurchaseOrderItemsGridProps {
   roles: string[];
   readOnly: boolean;
   priceLocked: boolean;
+  /** `latest_change_bps` theo mã hàng — từ `buildSupplierPriceHistory` (chỉ tham khảo). */
+  priceHistoryByItem?: Map<string, number | null>;
   onPatch: (key: string, patch: Partial<PurchaseLine>) => void;
   onCommit: (key: string, fieldname: string, value: unknown) => void;
   onAdd: () => void;
@@ -446,6 +457,21 @@ export function AlumdoorPurchaseOrderItemsGrid(props: AlumdoorPurchaseOrderItems
                   {dynamicColumns.map((fieldname) => renderDynamicCell(line, key, fieldname, rowTone))}
                   <TableCell className={`${rowTone} px-1.5 py-1`}><ReadOnlyCell strong>{text(line.uom) || "—"}</ReadOnlyCell></TableCell>
                   <TableCell className={`${rowTone} px-1.5 py-1`}>
+                    {(() => {
+                      const changeBps = props.priceHistoryByItem?.get(text(line.item_code));
+                      const changePct = typeof changeBps === "number" ? changeBps / 100 : undefined;
+                      if (line._lastPurchaseRate === undefined && changePct === undefined) return null;
+                      return (
+                        <div className="mb-0.5 truncate text-center text-[9px] leading-tight text-muted-foreground" title="Giá tham khảo lần mua gần nhất — máy không tự lấy làm giá. % lệch so với lần mua liền trước (Đơn mua đã ghi sổ).">
+                          {line._lastPurchaseRate !== undefined ? <>Giá gần nhất: {money(line._lastPurchaseRate)}</> : null}
+                          {changePct !== undefined ? (
+                            <span className={changePct > 0 ? "text-destructive" : changePct < 0 ? "text-emerald-600" : ""}>
+                              {" "}({changePct > 0 ? "+" : ""}{changePct.toFixed(1)}%)
+                            </span>
+                          ) : null}
+                        </div>
+                      );
+                    })()}
                     <AlumdoorSalesOrderField
                       id={`purchase-grid-${key}-rate`}
                       field={rateField}

@@ -13,6 +13,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { buildAlumdoorUiRec02Sidebar } from "../scripts/build-alumdoor-ui-rec-02-sidebar.mjs";
 
 const brief = JSON.parse(readFileSync(new URL("../briefs/alumdoor-v2.json", import.meta.url), "utf8"));
 
@@ -42,8 +43,8 @@ test("thao tác chuyển chứng từ của nhánh bán đều bấm được", 
   }
 });
 
-test("thanh bên xếp đúng thứ tự nghiệp vụ bán hàng", () => {
-  const items = brief.navigation.items;
+test("thanh bên xếp đúng thứ tự nghiệp vụ bán hàng", async () => {
+  const items = (await buildAlumdoorUiRec02Sidebar()).nav.map((entry) => entry.key);
   const rank = (key) => {
     const index = items.indexOf(key);
     assert.ok(index >= 0, `${key} chưa được xếp chỗ trong navigation.items`);

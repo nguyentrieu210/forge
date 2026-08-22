@@ -1,6 +1,7 @@
-import { roundTo } from "../../../packages/core/src/index.js";
+import { roundTo } from "./numeric.js";
 import {
   bomRuleFormulaDisplay,
+  applicableBomRuleComponents,
   evaluateBomRuleMaster,
   resolveBomRuleMaster,
   type BomRuleMaster,
@@ -73,9 +74,11 @@ async function loadBomRules(call: ProductionPlatformCall): Promise<BomRuleMaster
   const docs = await Promise.all(names.map(async (row) => {
     const name = text(row.name);
     if (!name) return null;
-    return readDoc<BomRuleMaster & Json>(call, "BOM Rule", name);
+    // Gắn lại `name`: dòng BOM chỉ đích danh luật bằng tên, mà payload trả về không chắc
+    // mang theo trường đó. Thiếu nó thì ô `bom_rule` trên dòng không tra được luật nào.
+    return { ...(await readDoc<Json>(call, "BOM Rule", name)), name } as BomRuleMaster;
   }));
-  return docs.filter((row): row is BomRuleMaster & Json => Boolean(row && text(row.rule_code)));
+  return docs.filter((row): row is BomRuleMaster => Boolean(row && text(row.rule_code)));
 }
 
 function safeFormulaDisplay(rule: BomRuleMaster): string {
@@ -113,11 +116,19 @@ function geometryValues(args: Json): Json {
     leaf_count: positive(args.leaf_count),
     set_count: 1,
     "RONG-PB-RAY": widthRay,
+    PB_RAY_RONG: widthRay,
     PB_NHUA_RONG: widthPlastic,
     PB_RONG: width,
     "CAO-PB": height,
+    PB_CAO: height,
     "RONG-CAT-LA": cut,
+    CAT_LA_RONG: cut,
+    // `CAO_LUOI` là tên viết đảo còn sót lại; bộ mã chuẩn dùng trục-sau là `LUOI_CAO`.
+    // Phát cả hai: bom-rule-core KHÔNG có bảng alias như geometry-policy, nên luật khai
+    // tên chuẩn mà đây phát tên cũ là gãy im lặng — dòng cấu kiện hiện "Chưa map Quy tắc BOM"
+    // chứ không báo lỗi. Ngày 22/08 có 9 luật dính đúng thế: 6 luật CAT_LA_RONG, 3 luật LUOI_CAO.
     CAO_LUOI: positive(args.mesh_height_m),
+    LUOI_CAO: positive(args.mesh_height_m),
   };
   for (const key of Object.keys(values)) {
     if (values[key] === undefined || values[key] === null || values[key] === "") delete values[key];
@@ -160,7 +171,6 @@ export async function enrichSalesBomPreviewWithRules(
   const components = Array.isArray(preview.components)
     ? preview.components.filter((row): row is Json => Boolean(row) && typeof row === "object" && !Array.isArray(row))
     : [];
-  if (!components.length) return preview;
 
   const rules = await loadBomRules(call);
   if (!rules.length) return {
@@ -171,20 +181,68 @@ export async function enrichSalesBomPreviewWithRules(
 
   const values = geometryValues(args);
   const setCount = positive(args.set_count) ?? 1;
-  const itemCodes = [...new Set(components.map((row) => text(row.item_code)).filter(Boolean))];
+  /*
+   * Loại cửa và nhóm hàng đọc từ chính MẶT HÀNG, không bắt phía gọi phải gửi.
+   *
+   * `cleanLine` ở màn bán hàng chỉ giữ những trường có khai trên dòng Sales Order Item, mà
+   * `door_type` là thuộc tính của Item chứ không phải của dòng bán — nên nó không bao giờ
+   * được gửi lên, và MỌI luật đều trượt: từng dòng cấu kiện hiện "Chưa map Quy tắc BOM"
+   * trong khi luật có đủ. Suy ở đây thì mọi phía gọi cùng hưởng, kể cả gọi bằng tay.
+   *
+   * Vẫn tôn trọng giá trị phía gọi gửi lên nếu có — dòng bán được phép ghi đè.
+   */
+  const parentItem = text(args.item_code)
+    ? await readDoc<ItemDoc & { door_type?: string; item_group?: string }>(call, "Item", text(args.item_code)).catch(() => ({} as Json))
+    : ({} as Json);
+  const doorType = text(args.door_type) || text((parentItem as Json).door_type);
+  const itemGroup = text(args.item_group) || text((parentItem as Json).item_group);
+  const ruleContext = {
+    bom: text(preview.bom_no),
+    parent_item: text(args.item_code),
+    parent_item_group: itemGroup,
+    door_type: doorType,
+    price_variant: text(args.price_variant),
+    ...(positive(values.billable_area_sqm) === undefined
+      ? {}
+      : { area_sqm: positive(values.billable_area_sqm)! }),
+    on: text(args.delivery_date),
+  };
+  // BOM tĩnh quyết định CÓ NHỮNG CẤU KIỆN NÀO; luật chỉ quyết định BAO NHIÊU. Luật khai theo
+  // `door_type` nên một cửa Đài Loan khớp cả lá 6D, 7D lẫn 1LY, cả V4 kẽm lẫn V4 sơn — bơm hết
+  // vào là ra BOM có ba độ dày lá cùng lúc. Chỉ dựng cấu kiện từ luật khi BOM không có dòng nào.
+  const existingCodes = new Set(components.map((row) => text(row.item_code)).filter(Boolean));
+  const generated = components.length
+    ? []
+    : applicableBomRuleComponents(rules, ruleContext)
+      .filter((itemCode) => !existingCodes.has(itemCode))
+      .map((itemCode): Json => ({
+        component_key: `BOM-RULE:${itemCode}`,
+        item_code: itemCode,
+        auto_generated_by_bom_rule: true,
+      }));
+  const ruleComponents = [...components, ...generated];
+  const itemCodes = [...new Set(ruleComponents.map((row) => text(row.item_code)).filter(Boolean))];
   const itemPairs = await Promise.all(itemCodes.map(async (code) => [code, await readDoc<ItemDoc>(call, "Item", code)] as const));
   const itemByCode = new Map(itemPairs);
   const missing: string[] = [];
 
-  const enriched = components.map((component) => {
+  /*
+   * Dòng BOM có thể CHỈ ĐÍCH DANH luật qua ô `bom_rule`. Ưu tiên nó trước khi tra tự động.
+   *
+   * Tra tự động khớp theo (loại cửa · mã cấu kiện), nên một mã chỉ được đúng một luật cho cả
+   * dòng cửa — không diễn tả nổi trường hợp một BOM cá biệt cần công thức khác. Và khi tra
+   * trượt thì mãi tới lúc báo giá mới lộ, chứ mở BOM ra không thấy gì.
+   *
+   * Chỉ nhận luật còn hiệu lực; luật đã ngừng dùng hoặc không tồn tại thì lùi về tra tự động
+   * thay vì ném lỗi — dòng cũ trỏ tới luật vừa bị gỡ vẫn phải chạy được.
+   */
+  const ruleByName = new Map(rules.filter((r) => text(r.name)).map((r) => [text(r.name), r]));
+  const enriched = ruleComponents.map((component) => {
     const itemCode = text(component.item_code);
-    const rule = resolveBomRuleMaster(rules, {
-      bom: text(preview.bom_no),
-      parent_item: text(args.item_code),
-      parent_item_group: text(args.item_group),
-      door_type: text(args.door_type),
+    const chiDinh = text(component.bom_rule);
+    const rule = (chiDinh ? ruleByName.get(chiDinh) : undefined) ?? resolveBomRuleMaster(rules, {
+      ...ruleContext,
       component_item: itemCode,
-      on: text(args.delivery_date),
     });
     if (!rule) {
       missing.push(itemCode);
@@ -216,8 +274,32 @@ export async function enrichSalesBomPreviewWithRules(
         ...base
       } = component;
       void _widthPbRay; void _widthPbNhua; void _width; void _height; void _meshHeight; void _cutWidth; void _oldSalesUomMessage;
+      /*
+       * Trả KÍCH THƯỚC CẮT về đúng cột số đo mà nó sinh ra từ.
+       *
+       * Gỡ số đo của cha khỏi dòng con là đúng — 2,90 m của cây ray không phải "cao phủ bì
+       * 3 m" của cửa. Nhưng gỡ xong mà không đặt lại gì thì bảng cấu kiện trống trơn cột số
+       * đo, và thợ không biết cắt ray dài bao nhiêu, trục dài bao nhiêu: con số duy nhất hiện
+       * ra là 5,8 — TỔNG mét của 2 cây, không phải chiều dài mỗi cây.
+       *
+       * Nên đặt `result_per_piece` vào chính cột đã chi phối nó: ray tính từ Cao PB thì hiện ở
+       * cột Cao, trục tính từ Rộng PB ray thì hiện ở cột Rộng. Đọc ngang một dòng là ra
+       * "cắt cây này dài bấy nhiêu", đúng thứ mang xuống xưởng.
+       */
+      const TRUC_SANG_O: Readonly<Record<string, string>> = {
+        PB_CAO: "height_m", "CAO-PB": "height_m",
+        PB_RAY_RONG: "width_pb_ray_m", "RONG-PB-RAY": "width_pb_ray_m",
+        PB_NHUA_RONG: "width_pb_nhua_m", "RONG-PB-NHUA": "width_pb_nhua_m",
+        CAT_LA_RONG: "cut_width_m", "RONG-CAT-LA": "cut_width_m",
+        LUOI_CAO: "mesh_height_m", CAO_LUOI: "mesh_height_m", "CAO-LUOI": "mesh_height_m",
+      };
+      const oCat = text(rule.result_kind) === "LENGTH" ? TRUC_SANG_O[text(rule.source_field)] : undefined;
+      const kichThuocCat: Json = oCat && Number.isFinite(result.result_per_piece)
+        ? { [oCat]: result.result_per_piece }
+        : {};
       return {
         ...base,
+        ...kichThuocCat,
         bom_rule_code: result.rule_code,
         bom_rule_version: result.rule_version,
         bom_rule_authority: result.authority_type,

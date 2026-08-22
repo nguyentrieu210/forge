@@ -36,6 +36,24 @@ function setup(clock = now) {
     scrap_threshold_m: "0.200000",
   });
   store.seedMaster("Cutting Policy", "CAT-CUA-DUC", "demo", { disabled: 0, kerf_mm: 3 });
+  store.seedMaster("Lý do huỷ", "GHI_NHAM_CHUNG_TU", "demo", {
+    reason_code: "GHI_NHAM_CHUNG_TU",
+    reason_name: "Ghi nhầm chứng từ",
+    applies_to_doctype: "Tất cả",
+    disabled: 0,
+  });
+  store.seedMaster("Nguyên nhân chênh lệch", "HU_HONG", "demo", {
+    reason_code: "HU_HONG",
+    reason_name: "Hư hỏng",
+    variance_kind: "Thiếu",
+    disabled: 0,
+  });
+  store.seedMaster("Nguyên nhân chênh lệch", "LECH_CAN", "demo", {
+    reason_code: "LECH_CAN",
+    reason_name: "Lệch cân thực tế",
+    variance_kind: "Cả hai",
+    disabled: 0,
+  });
   store.seedMaster("Warehouse", "KHO-CHINH", "demo", {
     company: "Demo", stock_role: "Kho chính", is_group: 0,
   });
@@ -125,7 +143,7 @@ test("Cut Order ghi cây + kg đúng batch, nhập đầu thừa theo giá tỷ 
     name: "CN-2026-00001",
     action: "cancel",
     expectedVersion: 2,
-    document: { cancel_reason: "Ghi nhầm" },
+    document: { cancel_reason: "GHI_NHAM_CHUNG_TU" },
   });
   lines = store.snapshot().stock_entries.filter((row) => /(CUT|OFFCUT)-/.test(row.line_key));
   for (const batch of ["LO-46", "DAU-THUA-0594"]) {
@@ -415,7 +433,7 @@ test("kiểm kê catch-weight ghi đồng thời -2 cây/-20 kg, bắt buộc ng
       row_id: "ROW-1", item_code: "AL548", batch_no: "LO-KK",
       serial_and_batch_bundle: "BUNDLE-KK-OUT",
       counted_qty: "8", counted_weight_kg: "80",
-      variance_reason: "Hỏng/mất",
+      variance_reason: "HU_HONG",
     }],
   };
   await mutate(kernel, {
@@ -440,20 +458,26 @@ test("kiểm kê catch-weight ghi đồng thời -2 cây/-20 kg, bắt buộc ng
   assert.equal(line.actual_weight_micros, -20_000_000);
   assert.equal(line.batch_no, "LO-KK");
 
+  await bundle(kernel, "BUNDLE-KK-NO-REASON", "KHO-CHINH", "Outward", [{ batch_no: "LO-KK", qty: "1" }]);
   const noReason = {
     ...base,
     items: [{
       ...base.items[0],
-      serial_and_batch_bundle: undefined,
+      serial_and_batch_bundle: "BUNDLE-KK-NO-REASON",
       variance_reason: undefined,
       counted_qty: "7",
       counted_weight_kg: "70",
     }],
   };
+  await mutate(kernel, {
+    commandId: "KK-NO-REASON-create", doctype: "Stock Reconciliation", name: "KK-NO-REASON",
+    action: "create", expectedVersion: null, document: noReason,
+  });
   await assert.rejects(
     mutate(kernel, {
-      commandId: "KK-NO-REASON-create", doctype: "Stock Reconciliation", name: "KK-NO-REASON",
-      action: "create", expectedVersion: null, document: noReason,
+      commandId: "KK-NO-REASON-submit", doctype: "Stock Reconciliation", name: "KK-NO-REASON",
+      action: "submit", expectedVersion: 1, document: noReason,
+      actor: { user_id: "CHU-XUONG", roles: ["Chủ xưởng"] },
     }),
     /phải chọn nguyên nhân/,
   );
@@ -473,7 +497,7 @@ test("kiểm kê chỉ lệch kg vẫn ghi đúng lô với số cây bằng 0 v
     counted_by: "THU-KHO",
     items: [{
       row_id: "ROW-1", item_code: "AL548", batch_no: "LO-KG-ONLY",
-      counted_qty: "10", counted_weight_kg: "95", variance_reason: "Cân lại",
+      counted_qty: "10", counted_weight_kg: "95", variance_reason: "LECH_CAN",
     }],
   };
   await mutate(kernel, {

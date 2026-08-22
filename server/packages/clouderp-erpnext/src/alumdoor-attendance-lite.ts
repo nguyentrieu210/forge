@@ -35,16 +35,25 @@ export class AlumDoorLiteAttendanceDayController implements DocumentController<J
     const policyName = text(plan.document.data.policy, "Attendance policy");
     const scheduledMinutes = integer(plan.document.data.scheduled_minutes, "Attendance scheduled_minutes", 1, 1_440);
 
-    const shift = await context.reader.getDocument<JsonObject>(context.command.tenant_id, "Shift Type", shiftName);
-    if (!shift || shift.docstatus === 2) throw errors.reference(`Shift Type ${shiftName} is required`);
-    const policy = await context.reader.getDocument<JsonObject>(context.command.tenant_id, "AlumDoor Attendance Policy", policyName);
-    if (!policy || policy.docstatus === 2) throw errors.reference(`Attendance policy ${policyName} is required`);
+    // Shift/policy masters may live in either authoritative storage layer. Requiring a
+    // `documents` row here made Lite fail even though the base controller had just read the
+    // same active master successfully from `master_records`.
+    const shiftDocument = await context.reader.getDocument<JsonObject>(context.command.tenant_id, "Shift Type", shiftName);
+    const shiftData = shiftDocument && shiftDocument.docstatus !== 2
+      ? shiftDocument.data
+      : await context.reader.getMasterRecordData(context.command.tenant_id, "Shift Type", shiftName);
+    if (!shiftData) throw errors.reference(`Shift Type ${shiftName} is required`);
+    const policyDocument = await context.reader.getDocument<JsonObject>(context.command.tenant_id, "AlumDoor Attendance Policy", policyName);
+    const policyData = policyDocument && policyDocument.docstatus !== 2
+      ? policyDocument.data
+      : await context.reader.getMasterRecordData(context.command.tenant_id, "AlumDoor Attendance Policy", policyName);
+    if (!policyData) throw errors.reference(`Attendance policy ${policyName} is required`);
 
     const split = splitByAssignedShift({
       workDate,
-      timeZone: text(policy.data.timezone, "Attendance policy timezone"),
-      shiftStart: text(shift.data.start_time, `Shift Type ${shiftName} start_time`),
-      shiftEnd: text(shift.data.end_time, `Shift Type ${shiftName} end_time`),
+      timeZone: text(policyData.timezone, "Attendance policy timezone"),
+      shiftStart: text(shiftData.start_time, `Shift Type ${shiftName} start_time`),
+      shiftEnd: text(shiftData.end_time, `Shift Type ${shiftName} end_time`),
       scheduledMinutes,
       segments: arrayObjects(plan.document.data.segments),
     });

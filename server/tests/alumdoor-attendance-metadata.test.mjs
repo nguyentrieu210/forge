@@ -17,7 +17,7 @@ function permission(meta, role) {
 test("AlumDoor attendance payroll metadata stays an isolated HRM-dependent package", async () => {
   const manifest = parseAppManifest(await readAppSource(source));
   assert.equal(manifest.id, "alumdoor-attendance");
-  assert.equal(manifest.version, "0.7.0");
+  assert.equal(manifest.version, "0.7.5");
   assert.deepEqual(manifest.requires, [{ id: "hrm", version: "1.8.0" }]);
   assert.deepEqual(
     manifest.doctypes.map((meta) => meta.name).sort(),
@@ -63,7 +63,7 @@ test("AlumDoor attendance payroll metadata stays an isolated HRM-dependent packa
   }
 });
 
-test("AlumDoor attendance daily projection is system-written and payroll-lockable only internally", async () => {
+test("AlumDoor attendance daily projection is writable only by scan/payroll coordinators", async () => {
   const manifest = parseAppManifest(await readAppSource(source));
   const day = manifest.doctypes.find((meta) => meta.name === "AlumDoor Attendance Day");
   assert.equal(day?.kind, "transaction");
@@ -78,7 +78,7 @@ test("AlumDoor attendance daily projection is system-written and payroll-lockabl
   assert.equal(qrSystem?.write, true);
   const payrollSystem = permission(day, "AlumDoor Payroll System");
   assert.equal(payrollSystem?.write, true);
-  assert.notEqual(payrollSystem?.create, true);
+  assert.equal(payrollSystem?.create, true, "trusted payroll may create a locked paid-leave-only projection");
   for (const role of ["AlumDoor Attendance Viewer", "AlumDoor Attendance Manager", "AlumDoor Payroll User", "AlumDoor Payroll Approver", "HR Manager", "System Manager"]) {
     assert.notEqual(permission(day, role)?.create, true, `${role} must not create a daily projection`);
     assert.notEqual(permission(day, role)?.write, true, `${role} must not modify a daily projection`);

@@ -14,7 +14,7 @@ import type { FrappeRouterContext } from "./router.js";
 // đọc-có-kiểm-quyền đều phải kéo cả router vào.
 
 export async function loadReadable(doctype: string, name: string, context: FrappeRouterContext): Promise<CanonicalDocument> {
-  const document = await context.documents.getDocument(context.tenantId, doctype, name);
+  const document = await getReadableStoredDocument(doctype, name, context);
   if (!document) throw errors.notFound();
   try {
     await context.permissions.assert({
@@ -28,6 +28,28 @@ export async function loadReadable(doctype: string, name: string, context: Frapp
   if (!meta) return document;
   const share = await context.access.getShare(context.tenantId, doctype, name, context.actor.user_id);
   return context.permissions.redactDocumentWithPolicies(context.tenantId, meta, document, context.actor, Boolean(share?.read));
+}
+
+/**
+ * Read-path compatibility seam.
+ *
+ * Production's D1MutationStore implements the two-layer reader. A few bounded route adapters
+ * and tests still provide the older MutationStore contract with getDocument only; treating
+ * those as a TypeError turns an otherwise valid request into a 417. Keep the production path
+ * authoritative and fall back only when the supplied store genuinely lacks the new method.
+ */
+export async function getReadableStoredDocument(
+  doctype: string,
+  name: string,
+  context: FrappeRouterContext,
+): Promise<CanonicalDocument | null> {
+  const store = context.documents as typeof context.documents & {
+    getReadableDocument?: typeof context.documents.getDocument;
+  };
+  if (typeof store.getReadableDocument === "function") {
+    return store.getReadableDocument(context.tenantId, doctype, name);
+  }
+  return store.getDocument(context.tenantId, doctype, name);
 }
 
 /** Loads a document the actor may write. A refusal here is reported as a refusal. */

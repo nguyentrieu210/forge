@@ -1,13 +1,14 @@
 import { formatMoney } from "@metaforge/core";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
-  Banknote, CalendarDays, CheckCircle2, Clock3, Loader2, RefreshCw, ReceiptText,
-  Send, TriangleAlert,
+  Banknote, CalendarDays, CheckCircle2, Clock3, Loader2, MapPin, Printer, RefreshCw, ReceiptText,
+  Save, Send, TriangleAlert, UserPlus, WalletCards,
 } from "lucide-react";
 import { useMetaForge } from "@metaforge/views/provider";
 import { Button } from "@metaforge/ui";
+import qrcode from "qrcode-generator";
 
-export type AlumdoorAttendanceMode = "today" | "month" | "exceptions" | "payroll-run" | "payroll-my-slips";
+export type AlumdoorAttendanceMode = "kiosk" | "today" | "month" | "exceptions" | "employees-lite" | "payroll-run" | "payroll-my-slips" | "hr-settings";
 
 interface AttendanceSegment {
   segment_code?: string;
@@ -70,6 +71,16 @@ interface SalarySlip {
   alu_manual_deduction_vnd?: number;
   net_pay?: string | number;
 }
+interface LiteChoice { value: string; label: string; company?: string; currency?: string }
+interface LiteSettings {
+  company: string; workplace: string; currency: string; ready: boolean; configured: boolean;
+  morning_start: string; morning_end: string; afternoon_start: string; afternoon_end: string;
+  overtime_start: string; pay_day_of_month: number; owner_only_mode: boolean;
+  overtime_rate_vnd_per_hour: number; companies: LiteChoice[]; workplaces: LiteChoice[]; currencies: LiteChoice[];
+}
+interface StationQr { station: string; station_name: string; token: string; token_version: string | number }
+interface EmployeeLiteResult { name: string; employee_name: string; mobile: string }
+interface EmployeeChoice { name: string; employee_name?: string }
 
 const inputClass = "h-9 rounded-md border border-input bg-background px-3 text-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/25";
 const tableCell = "whitespace-nowrap border-b px-3 py-2.5 text-sm";
@@ -132,11 +143,146 @@ function PageTitle({ title, subtitle, onExit }: { title: string; subtitle: strin
 }
 
 export function AlumdoorAttendanceOperations({ mode, onExit }: { mode: AlumdoorAttendanceMode; onExit: () => void }) {
+  if (mode === "kiosk") return <KioskScreen onExit={onExit} />;
   if (mode === "today") return <TodayScreen onExit={onExit} />;
   if (mode === "month") return <MonthScreen onExit={onExit} />;
   if (mode === "exceptions") return <ExceptionScreen onExit={onExit} />;
+  if (mode === "employees-lite") return <EmployeesLiteScreen onExit={onExit} />;
   if (mode === "payroll-run") return <PayrollScreen onExit={onExit} />;
+  if (mode === "hr-settings") return <HrSettingsScreen onExit={onExit} />;
   return <MySlipsScreen onExit={onExit} />;
+}
+
+function idempotency(prefix: string): string {
+  const random = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return `${prefix}:${random}`;
+}
+
+function StaticQr({ value, label }: { value: string; label: string }) {
+  const matrix = useMemo(() => {
+    if (!value) return null;
+    const qr = qrcode(0, "M");
+    qr.addData(value); qr.make();
+    const size = qr.getModuleCount();
+    let path = "";
+    for (let row = 0; row < size; row += 1) for (let column = 0; column < size; column += 1) {
+      if (qr.isDark(row, column)) path += `M${column} ${row}h1v1h-1z`;
+    }
+    return { size, path };
+  }, [value]);
+  if (!matrix) return null;
+  return <svg className="size-64 max-w-full border-8 border-white bg-white shadow-sm" viewBox={`0 0 ${matrix.size} ${matrix.size}`} shapeRendering="crispEdges" role="img" aria-label={label}><rect width={matrix.size} height={matrix.size} fill="white" /><path d={matrix.path} fill="black" /></svg>;
+}
+
+function KioskScreen({ onExit }: { onExit: () => void }) {
+  const { adapter } = useMetaForge();
+  const [station, setStation] = useState(() => typeof localStorage === "undefined" ? "" : localStorage.getItem("alumdoor-attendance-print-station") ?? "");
+  const [stationName, setStationName] = useState("");
+  const [latitude, setLatitude] = useState(""); const [longitude, setLongitude] = useState(""); const [radius, setRadius] = useState("50");
+  const [qr, setQr] = useState<StationQr | null>(null); const [failure, setFailure] = useState(""); const [loading, setLoading] = useState(false);
+  const [createKey, setCreateKey] = useState(() => idempotency("station"));
+  const loadQr = useCallback(async (code: string) => {
+    if (!code) return;
+    setLoading(true);
+    try { setQr(await adapter.callPost<StationQr>("alumdoor.attendance.station_qr", { station: code })); setFailure(""); }
+    catch (error) { setFailure(errorText(adapter, error)); }
+    finally { setLoading(false); }
+  }, [adapter]);
+  useEffect(() => { if (station) void loadQr(station); }, [loadQr, station]);
+  const locate = () => {
+    if (!navigator.geolocation) { setFailure("Thiết bị này không hỗ trợ lấy vị trí."); return; }
+    navigator.geolocation.getCurrentPosition(
+      (position) => { setLatitude(position.coords.latitude.toFixed(6)); setLongitude(position.coords.longitude.toFixed(6)); setFailure(""); },
+      () => setFailure("Không lấy được vị trí. Hãy cho phép GPS rồi thử lại."),
+      { enableHighAccuracy: true, timeout: 15_000 },
+    );
+  };
+  const create = async () => {
+    setLoading(true);
+    try {
+      const created = await adapter.callPost<{ name: string }>("alumdoor.attendance.station_create_lite", {
+        station_name: stationName.trim(), latitude: Number(latitude), longitude: Number(longitude),
+        allowed_radius_m: Number(radius), idempotency_key: createKey,
+      });
+      setStation(created.name); localStorage.setItem("alumdoor-attendance-print-station", created.name);
+      setCreateKey(idempotency("station")); setFailure("");
+    } catch (error) { setFailure(errorText(adapter, error)); }
+    finally { setLoading(false); }
+  };
+  const rotate = async () => {
+    if (!qr || !window.confirm("QR cũ sẽ ngừng dùng ngay. Tạo lại QR trạm?")) return;
+    setLoading(true);
+    try { setQr(await adapter.callPost<StationQr>("alumdoor.attendance.rotate_station_qr", { station: qr.station })); setFailure(""); }
+    catch (error) { setFailure(errorText(adapter, error)); }
+    finally { setLoading(false); }
+  };
+  return <Shell><PageTitle title="In mã QR cố định của trạm" subtitle="QR giữ nguyên cho đến khi quản lý chủ động tạo lại để thu hồi bản in cũ." onExit={onExit} />
+    {failure && <Failure message={failure} />}
+    {!station ? <section className="rounded-xl border bg-card p-4"><h2 className="font-medium">Thiết lập trạm chấm công</h2><p className="mt-1 text-sm text-muted-foreground">Cấu hình giờ làm phải được lưu trước. Vị trí và bán kính được server kiểm tra mỗi lần quét.</p><div className="mt-4 grid gap-3 md:grid-cols-2"><input className={inputClass} value={stationName} onChange={(event) => setStationName(event.target.value)} placeholder="Tên trạm, ví dụ Cổng xưởng" /><div className="flex gap-2"><input className={`${inputClass} min-w-0 flex-1`} inputMode="decimal" value={latitude} onChange={(event) => setLatitude(event.target.value)} placeholder="Vĩ độ" /><input className={`${inputClass} min-w-0 flex-1`} inputMode="decimal" value={longitude} onChange={(event) => setLongitude(event.target.value)} placeholder="Kinh độ" /></div><input className={inputClass} type="number" min="10" max="500" value={radius} onChange={(event) => setRadius(event.target.value)} placeholder="Bán kính (m)" /><div className="flex flex-wrap gap-2"><Button variant="outline" onClick={locate}><MapPin className="mr-2 size-4" />Dùng vị trí hiện tại</Button><Button onClick={() => void create()} disabled={loading || stationName.trim().length < 2 || !latitude || !longitude}><Save className="mr-2 size-4" />Tạo trạm</Button></div></div></section>
+      : loading && !qr ? <Empty><Loader2 className="mx-auto mb-2 size-5 animate-spin" />Đang lấy QR trạm…</Empty>
+        : qr && <section className="mx-auto flex w-full max-w-xl flex-col items-center gap-4 rounded-xl border bg-white p-6 text-center text-slate-950 print:border-0 print:shadow-none"><div><h2 className="text-xl font-semibold">{qr.station_name}</h2><p className="mt-1 text-sm text-slate-600">Mã trạm: {qr.station}</p></div><StaticQr value={qr.token} label={`QR trạm ${qr.station_name}`} /><p className="text-sm text-slate-600">Phiên bản token: {qr.token_version}</p><div className="flex flex-wrap justify-center gap-2 print:hidden"><Button onClick={() => window.print()}><Printer className="mr-2 size-4" />In QR</Button><Button variant="outline" onClick={() => void rotate()} disabled={loading}>Tạo lại QR</Button><Button variant="ghost" onClick={() => { localStorage.removeItem("alumdoor-attendance-print-station"); setStation(""); setQr(null); }}>Đổi trạm</Button></div></section>}
+  </Shell>;
+}
+
+function EmployeesLiteScreen({ onExit }: { onExit: () => void }) {
+  const { adapter } = useMetaForge();
+  const [fullName, setFullName] = useState(""); const [mobile, setMobile] = useState(""); const [joining, setJoining] = useState(todayIso());
+  const [employeeKey, setEmployeeKey] = useState(() => idempotency("employee")); const [created, setCreated] = useState<EmployeeLiteResult | null>(null);
+  const [employees, setEmployees] = useState<EmployeeChoice[]>([]); const [employee, setEmployee] = useState("");
+  const [payMode, setPayMode] = useState("MONTHLY"); const [salary, setSalary] = useState(""); const [allowance, setAllowance] = useState("0"); const [effective, setEffective] = useState(todayIso());
+  const [profileKey, setProfileKey] = useState(() => idempotency("pay-profile")); const [failure, setFailure] = useState(""); const [success, setSuccess] = useState(""); const [busy, setBusy] = useState(false);
+  const loadEmployees = useCallback(async () => {
+    try {
+      const rows = await adapter.callPost<EmployeeChoice[]>("frappe.client.get_list", { doctype: "Employee", fields: ["name", "employee_name"], limit_page_length: 500, order_by: "employee_name asc" });
+      setEmployees(rows);
+    } catch { /* A newly provisioned tenant may not yet have readable employees. */ }
+  }, [adapter]);
+  useEffect(() => { void loadEmployees(); }, [loadEmployees]);
+  const createEmployee = async () => {
+    setBusy(true);
+    try {
+      const result = await adapter.callPost<EmployeeLiteResult>("alumdoor.hr.employee_lite_create", { employee_name: fullName, mobile, date_of_joining: joining, idempotency_key: employeeKey });
+      setCreated(result); setEmployee(result.name); setFullName(""); setMobile(""); setEmployeeKey(idempotency("employee")); setSuccess(`Đã tạo ${result.employee_name} (${result.name}).`); setFailure(""); await loadEmployees();
+    } catch (error) { setFailure(errorText(adapter, error)); setSuccess(""); }
+    finally { setBusy(false); }
+  };
+  const saveProfile = async () => {
+    setBusy(true);
+    try {
+      await adapter.callPost("alumdoor.hr.pay_profile_lite_save", { employee, pay_mode: payMode, base_salary_vnd: Number(salary), fixed_allowance_vnd: Number(allowance), effective_from: effective, idempotency_key: profileKey });
+      setProfileKey(idempotency("pay-profile")); setSuccess(`Đã duyệt hồ sơ lương mới cho ${employee}.`); setFailure("");
+    } catch (error) { setFailure(errorText(adapter, error)); setSuccess(""); }
+    finally { setBusy(false); }
+  };
+  return <Shell><PageTitle title="Nhân viên & mức lương" subtitle="Tạo nhân viên tối giản và lưu hồ sơ lương có ngày hiệu lực; hồ sơ cũ được đóng tự động." onExit={onExit} />
+    {failure && <Failure message={failure} />}{success && <div className="rounded-xl border border-primary/25 bg-primary/5 p-4 text-sm text-primary">{success}</div>}
+    <div className="grid gap-4 lg:grid-cols-2"><section className="rounded-xl border bg-card p-4"><h2 className="flex items-center gap-2 font-medium"><UserPlus className="size-4" />Thêm nhân viên</h2><div className="mt-4 grid gap-3"><input className={inputClass} value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Họ và tên" /><input className={inputClass} inputMode="tel" value={mobile} onChange={(event) => setMobile(event.target.value)} placeholder="Số điện thoại" /><label className="text-xs text-muted-foreground">Ngày vào làm<input className={`${inputClass} mt-1 w-full`} type="date" value={joining} onChange={(event) => setJoining(event.target.value)} /></label><Button onClick={() => void createEmployee()} disabled={busy || !fullName.trim() || !mobile.trim()}><UserPlus className="mr-2 size-4" />Tạo nhân viên</Button>{created && <p className="text-xs text-muted-foreground">Mã vừa tạo: <strong>{created.name}</strong></p>}</div></section>
+      <section className="rounded-xl border bg-card p-4"><h2 className="flex items-center gap-2 font-medium"><WalletCards className="size-4" />Mức lương hiệu lực</h2><div className="mt-4 grid gap-3"><input className={inputClass} list="employee-lite-options" value={employee} onChange={(event) => setEmployee(event.target.value)} placeholder="Mã nhân viên" /><datalist id="employee-lite-options">{employees.map((row) => <option key={row.name} value={row.name}>{row.employee_name ?? row.name}</option>)}</datalist><select className={inputClass} value={payMode} onChange={(event) => setPayMode(event.target.value)}><option value="MONTHLY">Lương tháng</option><option value="DAILY">Lương ngày</option></select><input className={inputClass} type="number" min="0" step="1000" value={salary} onChange={(event) => setSalary(event.target.value)} placeholder="Lương cơ bản (VND)" /><input className={inputClass} type="number" min="0" step="1000" value={allowance} onChange={(event) => setAllowance(event.target.value)} placeholder="Phụ cấp cố định (VND)" /><label className="text-xs text-muted-foreground">Hiệu lực từ<input className={`${inputClass} mt-1 w-full`} type="date" value={effective} onChange={(event) => setEffective(event.target.value)} /></label><Button onClick={() => void saveProfile()} disabled={busy || !employee || salary === ""}><Save className="mr-2 size-4" />Lưu và duyệt mức lương</Button></div></section></div>
+  </Shell>;
+}
+
+function HrSettingsScreen({ onExit }: { onExit: () => void }) {
+  const { adapter } = useMetaForge();
+  const [settings, setSettings] = useState<LiteSettings | null>(null); const [failure, setFailure] = useState(""); const [success, setSuccess] = useState(""); const [busy, setBusy] = useState(false);
+  const [saveKey, setSaveKey] = useState(() => idempotency("hr-settings"));
+  const load = useCallback(async () => { setBusy(true); try { setSettings(await adapter.callPost<LiteSettings>("alumdoor.hr.payroll_lite_settings_get", {})); setFailure(""); } catch (error) { setFailure(errorText(adapter, error)); } finally { setBusy(false); } }, [adapter]);
+  useEffect(() => { void load(); }, [load]);
+  const patch = <K extends keyof LiteSettings>(field: K, value: LiteSettings[K]) => setSettings((current) => current ? { ...current, [field]: value } : current);
+  const save = async () => {
+    if (!settings) return;
+    setBusy(true);
+    try {
+      const next = await adapter.callPost<LiteSettings>("alumdoor.hr.payroll_lite_settings_save", { company: settings.company, workplace: settings.workplace, currency: settings.currency, morning_start: settings.morning_start, morning_end: settings.morning_end, afternoon_start: settings.afternoon_start, afternoon_end: settings.afternoon_end, overtime_start: settings.overtime_start, pay_day_of_month: settings.pay_day_of_month, idempotency_key: saveKey });
+      setSettings(next); setSaveKey(idempotency("hr-settings")); setSuccess("Đã lưu cấu hình giờ làm và kỳ lương."); setFailure("");
+    } catch (error) { setFailure(errorText(adapter, error)); setSuccess(""); }
+    finally { setBusy(false); }
+  };
+  return <Shell><PageTitle title="Cài đặt nhân sự & tiền lương" subtitle="Nguồn duy nhất cho công ty, nơi làm việc, giờ thường và giờ bắt đầu tăng ca." onExit={onExit} />
+    {failure && <Failure message={failure} />}{success && <div className="rounded-xl border border-primary/25 bg-primary/5 p-4 text-sm text-primary">{success}</div>}
+    {!settings ? <Empty>{busy ? <><Loader2 className="mx-auto mb-2 size-5 animate-spin" />Đang đọc cấu hình…</> : <Button variant="outline" onClick={() => void load()}>Thử lại</Button>}</Empty> : <section className="rounded-xl border bg-card p-4"><div className="grid gap-4 md:grid-cols-3"><label className="text-xs text-muted-foreground">Công ty<select className={`${inputClass} mt-1 w-full`} value={settings.company} onChange={(event) => patch("company", event.target.value)}>{settings.companies.map((row) => <option key={row.value} value={row.value}>{row.label}</option>)}</select></label><label className="text-xs text-muted-foreground">Nơi làm việc<select className={`${inputClass} mt-1 w-full`} value={settings.workplace} onChange={(event) => patch("workplace", event.target.value)}>{settings.workplaces.filter((row) => !row.company || row.company === settings.company).map((row) => <option key={row.value} value={row.value}>{row.label}</option>)}</select></label><label className="text-xs text-muted-foreground">Tiền tệ<select className={`${inputClass} mt-1 w-full`} value={settings.currency} onChange={(event) => patch("currency", event.target.value)}>{settings.currencies.map((row) => <option key={row.value} value={row.value}>{row.label}</option>)}</select></label></div><div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">{([['morning_start','Sáng bắt đầu'],['morning_end','Sáng kết thúc'],['afternoon_start','Chiều bắt đầu'],['afternoon_end','Chiều kết thúc'],['overtime_start','Tăng ca từ']] as const).map(([field, label]) => <label key={field} className="text-xs text-muted-foreground">{label}<input className={`${inputClass} mt-1 w-full`} type="time" value={settings[field]} onChange={(event) => patch(field, event.target.value)} /></label>)}</div><div className="mt-4 grid gap-4 md:grid-cols-3"><label className="text-xs text-muted-foreground">Ngày trả lương<input className={`${inputClass} mt-1 w-full`} type="number" min="1" max="28" value={settings.pay_day_of_month} onChange={(event) => patch("pay_day_of_month", Number(event.target.value))} /></label><div className="rounded-lg border bg-muted/30 p-3 text-sm"><span className="text-muted-foreground">Tăng ca cố định</span><div className="mt-1 font-semibold">{money(settings.overtime_rate_vnd_per_hour)} / giờ</div></div><div className="flex items-end"><Button className="w-full" onClick={() => void save()} disabled={busy || !settings.ready}><Save className="mr-2 size-4" />Lưu cấu hình</Button></div></div>{!settings.ready && <p className="mt-3 text-sm text-destructive">Thiếu danh mục Công ty hoặc Nơi làm việc. Cần bổ sung danh mục trước khi lưu.</p>}</section>}
+  </Shell>;
 }
 
 function TodayScreen({ onExit }: { onExit: () => void }) {

@@ -1,0 +1,422 @@
+{
+  "format": "alumdoor-local-import-gate/v1",
+  "generated_at": "2026-08-22T15:26:20.103Z",
+  "mode": "read-only",
+  "decision": "NO-GO",
+  "runtime": {
+    "tenant": "demo",
+    "d1_path": "C:\\alumdoor\\server\\apps\\tenant-worker\\.wrangler\\state\\v3\\d1\\miniflare-D1DatabaseObject\\0f70e06fc007ec84591c21ca1daaf09474ca2074a0d42ba21eb2a3fcdbb2cdf8.sqlite",
+    "d1_sha256": "9364A38138CDC0215E6471C2EE13B827C3497F90DC2EB68B43DFEFFB0EC05013",
+    "stable_during_gate": true,
+    "app_version": "2.22.0",
+    "app_content_hash": "4f01c25094e8f4c65269c1e5f8fb5cdc3ea34b9dcdb1d0cf3ebdc9bb32149212",
+    "installed_apps": [
+      {
+        "app_id": "alumdoor",
+        "version": "2.22.0",
+        "content_hash": "4f01c25094e8f4c65269c1e5f8fb5cdc3ea34b9dcdb1d0cf3ebdc9bb32149212"
+      },
+      {
+        "app_id": "alumdoor-attendance",
+        "version": "0.7.5",
+        "content_hash": "93d146741c7089e4ea06ea8c99edc64b1a96513e5508fb7b73e88fbad8b05fbc"
+      },
+      {
+        "app_id": "hrm",
+        "version": "1.8.6",
+        "content_hash": "03fcd00b7546f037a0b2009bb1b7050e0e6bfc38f0cf7aec8bb8ae76c1ff2518"
+      },
+      {
+        "app_id": "vn-accounting",
+        "version": "1.6.1",
+        "content_hash": "dc7e8fa00b8fba4cc5ca2cc16f6f43ebbaafdf42d0d993d946ad16115833298c"
+      }
+    ],
+    "quick_check": [
+      "ok"
+    ],
+    "foreign_key_violations": 0
+  },
+  "source": {
+    "root": "C:\\Users\\Admin\\Downloads\\New folder (3)",
+    "hashes": [
+      {
+        "name": "25.7 QUY TRÌNH (2).docx",
+        "file": "C:\\Users\\Admin\\Downloads\\New folder (3)\\25.7 QUY TRÌNH (2).docx",
+        "expected": "0397A208844ED5C8AD6AC75DE48693582AA9E0A40B2086A5F3FC24B9AC250228",
+        "actual": "0397A208844ED5C8AD6AC75DE48693582AA9E0A40B2086A5F3FC24B9AC250228",
+        "ok": true
+      },
+      {
+        "name": "danh mục sản phẩm.xlsx",
+        "file": "C:\\Users\\Admin\\Downloads\\New folder (3)\\danh mục sản phẩm.xlsx",
+        "expected": "1C2044A4DE98EFD16F66715ECB96151CA8F073F9A6E7D07A2FEA5FFA52DAA95F",
+        "actual": "1C2044A4DE98EFD16F66715ECB96151CA8F073F9A6E7D07A2FEA5FFA52DAA95F",
+        "ok": true
+      },
+      {
+        "name": "MS LIÊN BS.xlsx",
+        "file": "C:\\Users\\Admin\\Downloads\\New folder (3)\\MS LIÊN BS.xlsx",
+        "expected": "64820A840AA22D763875930D13095076A2A3F33D9FA7027E3263D8A7D4EE2E41",
+        "actual": "64820A840AA22D763875930D13095076A2A3F33D9FA7027E3263D8A7D4EE2E41",
+        "ok": true
+      },
+      {
+        "name": "QUY CÁCH  (3).xlsx",
+        "file": "C:\\Users\\Admin\\Downloads\\New folder (3)\\QUY CÁCH  (3).xlsx",
+        "expected": "37423D7702C9BF44FB3078AE69776C603072367C469A3BB134C0831C65FC1A32",
+        "actual": "37423D7702C9BF44FB3078AE69776C603072367C469A3BB134C0831C65FC1A32",
+        "ok": true
+      },
+      {
+        "name": "TỒN NHÔM 2026 NEW (1).xlsx",
+        "file": "C:\\Users\\Admin\\Downloads\\New folder (3)\\TỒN NHÔM 2026 NEW (1).xlsx",
+        "expected": "C2E6C8FA2A64DD36BA8EC3F8F64926ACFC72529EF609F737EFD00E077CA2E20C",
+        "actual": "C2E6C8FA2A64DD36BA8EC3F8F64926ACFC72529EF609F737EFD00E077CA2E20C",
+        "ok": true
+      }
+    ],
+    "app_package_dir": "C:\\alumdoor\\work\\source-packages-current",
+    "app_packages": [
+      {
+        "app_id": "alumdoor",
+        "file": "C:\\alumdoor\\work\\source-packages-current\\alumdoor.json",
+        "source_version": "2.22.0",
+        "installed_version": "2.22.0",
+        "source_content_hash": "4f01c25094e8f4c65269c1e5f8fb5cdc3ea34b9dcdb1d0cf3ebdc9bb32149212",
+        "installed_content_hash": "4f01c25094e8f4c65269c1e5f8fb5cdc3ea34b9dcdb1d0cf3ebdc9bb32149212",
+        "package_hash_match": true,
+        "manifest_match": true,
+        "exact": true,
+        "reasons": []
+      },
+      {
+        "app_id": "alumdoor-attendance",
+        "file": "C:\\alumdoor\\work\\source-packages-current\\alumdoor-attendance.json",
+        "source_version": "0.7.5",
+        "installed_version": "0.7.5",
+        "source_content_hash": "93d146741c7089e4ea06ea8c99edc64b1a96513e5508fb7b73e88fbad8b05fbc",
+        "installed_content_hash": "93d146741c7089e4ea06ea8c99edc64b1a96513e5508fb7b73e88fbad8b05fbc",
+        "package_hash_match": true,
+        "manifest_match": true,
+        "exact": true,
+        "reasons": []
+      },
+      {
+        "app_id": "hrm",
+        "file": "C:\\alumdoor\\work\\source-packages-current\\hrm.json",
+        "source_version": "1.8.6",
+        "installed_version": "1.8.6",
+        "source_content_hash": "03fcd00b7546f037a0b2009bb1b7050e0e6bfc38f0cf7aec8bb8ae76c1ff2518",
+        "installed_content_hash": "03fcd00b7546f037a0b2009bb1b7050e0e6bfc38f0cf7aec8bb8ae76c1ff2518",
+        "package_hash_match": true,
+        "manifest_match": true,
+        "exact": true,
+        "reasons": []
+      },
+      {
+        "app_id": "vn-accounting",
+        "file": "C:\\alumdoor\\work\\source-packages-current\\vn-accounting.json",
+        "source_version": "1.6.1",
+        "installed_version": "1.6.1",
+        "source_content_hash": "dc7e8fa00b8fba4cc5ca2cc16f6f43ebbaafdf42d0d993d946ad16115833298c",
+        "installed_content_hash": "dc7e8fa00b8fba4cc5ca2cc16f6f43ebbaafdf42d0d993d946ad16115833298c",
+        "package_hash_match": true,
+        "manifest_match": true,
+        "exact": true,
+        "reasons": []
+      }
+    ],
+    "formula_errors": [
+      {
+        "file": "MS LIÊN BS.xlsx",
+        "sheet": "chi tiết nhập hàng ngày",
+        "cell": "T323",
+        "value": "#VALUE!",
+        "resolved": false
+      },
+      {
+        "file": "MS LIÊN BS.xlsx",
+        "sheet": "chi tiết nhập hàng ngày",
+        "cell": "V323",
+        "value": "#VALUE!",
+        "resolved": false
+      },
+      {
+        "file": "MS LIÊN BS.xlsx",
+        "sheet": "chi tiết nhập hàng ngày",
+        "cell": "X323",
+        "value": "#VALUE!",
+        "resolved": false
+      },
+      {
+        "file": "MS LIÊN BS.xlsx",
+        "sheet": "chi tiết nhập hàng ngày",
+        "cell": "T491",
+        "value": "#REF!",
+        "resolved": false
+      },
+      {
+        "file": "MS LIÊN BS.xlsx",
+        "sheet": "chi tiết nhập hàng ngày",
+        "cell": "V491",
+        "value": "#REF!",
+        "resolved": false
+      },
+      {
+        "file": "MS LIÊN BS.xlsx",
+        "sheet": "chi tiết nhập hàng ngày",
+        "cell": "X491",
+        "value": "#REF!",
+        "resolved": false
+      }
+    ],
+    "formula_errors_resolved": [
+      {
+        "file": "MS LIÊN BS.xlsx",
+        "sheet": "ĐM",
+        "cell": "C1925",
+        "value": "#REF!",
+        "resolved": true,
+        "resolved_by": "ALUMDOOR-QD-20260822#o-cong-thuc",
+        "evidence": {
+          "ok": true,
+          "artifact": "docs/decisions/ALUMDOOR-QUYET-DINH-CHU-XUONG-20260822.md",
+          "sha256": "77A4BDC5F7F82F731B6739118B5DE2DB15A9C504F6453CDA1C3E1BC16A71C361"
+        }
+      },
+      {
+        "file": "MS LIÊN BS.xlsx",
+        "sheet": "ĐM",
+        "cell": "C1983",
+        "value": "#REF!",
+        "resolved": true,
+        "resolved_by": "ALUMDOOR-QD-20260822#o-cong-thuc",
+        "evidence": {
+          "ok": true,
+          "artifact": "docs/decisions/ALUMDOOR-QUYET-DINH-CHU-XUONG-20260822.md",
+          "sha256": "77A4BDC5F7F82F731B6739118B5DE2DB15A9C504F6453CDA1C3E1BC16A71C361"
+        }
+      },
+      {
+        "file": "MS LIÊN BS.xlsx",
+        "sheet": "BCKQKD",
+        "cell": "M21",
+        "value": "#N/A",
+        "resolved": true,
+        "resolved_by": "ALUMDOOR-QD-20260822#o-cong-thuc",
+        "evidence": {
+          "ok": true,
+          "artifact": "docs/decisions/ALUMDOOR-QUYET-DINH-CHU-XUONG-20260822.md",
+          "sha256": "77A4BDC5F7F82F731B6739118B5DE2DB15A9C504F6453CDA1C3E1BC16A71C361"
+        }
+      },
+      {
+        "file": "MS LIÊN BS.xlsx",
+        "sheet": "BCKQKD",
+        "cell": "M24",
+        "value": "#N/A",
+        "resolved": true,
+        "resolved_by": "ALUMDOOR-QD-20260822#o-cong-thuc",
+        "evidence": {
+          "ok": true,
+          "artifact": "docs/decisions/ALUMDOOR-QUYET-DINH-CHU-XUONG-20260822.md",
+          "sha256": "77A4BDC5F7F82F731B6739118B5DE2DB15A9C504F6453CDA1C3E1BC16A71C361"
+        }
+      }
+    ],
+    "unresolved_conflict_cells": [],
+    "resolved_conflict_cells": [
+      {
+        "cell": "ĐM!G1088/I1088",
+        "resolved_by": "ALUMDOOR-QD-20260822#QĐ-1",
+        "note": "Số ở cột Định mức là kết quả tính cho một cỡ cửa cụ thể; lấy công thức ở cột I.",
+        "resolved": true,
+        "evidence": {
+          "ok": true,
+          "artifact": "docs/decisions/ALUMDOOR-QUYET-DINH-CHU-XUONG-20260822.md",
+          "sha256": "77A4BDC5F7F82F731B6739118B5DE2DB15A9C504F6453CDA1C3E1BC16A71C361"
+        }
+      },
+      {
+        "cell": "ĐM!G1089/I1089",
+        "resolved_by": "ALUMDOOR-QD-20260822#QĐ-1",
+        "note": "Như G1088.",
+        "resolved": true,
+        "evidence": {
+          "ok": true,
+          "artifact": "docs/decisions/ALUMDOOR-QUYET-DINH-CHU-XUONG-20260822.md",
+          "sha256": "77A4BDC5F7F82F731B6739118B5DE2DB15A9C504F6453CDA1C3E1BC16A71C361"
+        }
+      },
+      {
+        "cell": "ĐM!G1184/I1184",
+        "resolved_by": "ALUMDOOR-QD-20260822#QĐ-2",
+        "note": "Không mâu thuẫn: cột G là hệ số cân 4,4 kg/m, cột I là công thức chiều dài.",
+        "resolved": true,
+        "evidence": {
+          "ok": true,
+          "artifact": "docs/decisions/ALUMDOOR-QUYET-DINH-CHU-XUONG-20260822.md",
+          "sha256": "77A4BDC5F7F82F731B6739118B5DE2DB15A9C504F6453CDA1C3E1BC16A71C361"
+        }
+      },
+      {
+        "cell": "ĐM!G1192/I1192",
+        "resolved_by": "ALUMDOOR-QD-20260822#QĐ-2",
+        "note": "Như G1184.",
+        "resolved": true,
+        "evidence": {
+          "ok": true,
+          "artifact": "docs/decisions/ALUMDOOR-QUYET-DINH-CHU-XUONG-20260822.md",
+          "sha256": "77A4BDC5F7F82F731B6739118B5DE2DB15A9C504F6453CDA1C3E1BC16A71C361"
+        }
+      },
+      {
+        "cell": "ĐM!G1212/I1212",
+        "resolved_by": "ALUMDOOR-QD-20260822#QĐ-2",
+        "note": "Như G1184; riêng nhãn ĐVT ở dòng này ghi KG thay vì KG/M — lỗi nhãn trong nguồn.",
+        "resolved": true,
+        "evidence": {
+          "ok": true,
+          "artifact": "docs/decisions/ALUMDOOR-QUYET-DINH-CHU-XUONG-20260822.md",
+          "sha256": "77A4BDC5F7F82F731B6739118B5DE2DB15A9C504F6453CDA1C3E1BC16A71C361"
+        }
+      },
+      {
+        "cell": "ĐM!G1254/I1254",
+        "resolved_by": "ALUMDOOR-QD-20260822#QĐ-5",
+        "note": "Công thức bị chép từ dòng 1257 (tôn 8D) mà quên đổi hệ số; tôn 6D là 8,2 kg/m². Nguồn vẫn cần sửa.",
+        "resolved": true,
+        "evidence": {
+          "ok": true,
+          "artifact": "docs/decisions/ALUMDOOR-QUYET-DINH-CHU-XUONG-20260822.md",
+          "sha256": "77A4BDC5F7F82F731B6739118B5DE2DB15A9C504F6453CDA1C3E1BC16A71C361"
+        }
+      }
+    ],
+    "lifecycle_gaps": [],
+    "resolved_lifecycle_gaps": [
+      {
+        "name": "TP-PULYDEN 114N",
+        "resolved_item": "PKDUC_PULY_114N",
+        "resolved_by": "ALUMDOOR-QD-20260822#QĐ-6",
+        "note": "Tên trong danh sách bị sai chính tả; nguồn ghi TP-PULY 114N \"PULY 114 NHỎ\" (danh mục sản phẩm.xlsx dòng 145).",
+        "resolved": true,
+        "evidence": {
+          "ok": true,
+          "artifact": "docs/decisions/ALUMDOOR-QUYET-DINH-CHU-XUONG-20260822.md",
+          "sha256": "77A4BDC5F7F82F731B6739118B5DE2DB15A9C504F6453CDA1C3E1BC16A71C361"
+        }
+      },
+      {
+        "name": "TP-PULYDEN 114L",
+        "resolved_item": "PKDUC_PULY_114L",
+        "resolved_by": "ALUMDOOR-QD-20260822#QĐ-6",
+        "note": "Như trên, dòng 146: TP-PULY 114L \"PULY 114 LỚN\".",
+        "resolved": true,
+        "evidence": {
+          "ok": true,
+          "artifact": "docs/decisions/ALUMDOOR-QUYET-DINH-CHU-XUONG-20260822.md",
+          "sha256": "77A4BDC5F7F82F731B6739118B5DE2DB15A9C504F6453CDA1C3E1BC16A71C361"
+        }
+      },
+      {
+        "name": "LONG ĐỀN",
+        "resolved_item": "LKMT_LONGDEN",
+        "resolved_by": "ALUMDOOR-QD-20260822",
+        "resolved": true,
+        "evidence": {
+          "ok": true,
+          "artifact": "docs/decisions/ALUMDOOR-QUYET-DINH-CHU-XUONG-20260822.md",
+          "sha256": "77A4BDC5F7F82F731B6739118B5DE2DB15A9C504F6453CDA1C3E1BC16A71C361"
+        }
+      },
+      {
+        "name": "HOA KHẾ",
+        "resolved_item": "LKMT_HOAKHE",
+        "resolved_by": "ALUMDOOR-QD-20260822",
+        "resolved": true,
+        "evidence": {
+          "ok": true,
+          "artifact": "docs/decisions/ALUMDOOR-QUYET-DINH-CHU-XUONG-20260822.md",
+          "sha256": "77A4BDC5F7F82F731B6739118B5DE2DB15A9C504F6453CDA1C3E1BC16A71C361"
+        }
+      },
+      {
+        "name": "CỐT TRỤC 140",
+        "resolved_item": "LKMT_COT",
+        "resolved_by": "ALUMDOOR-QD-20260822#QĐ-4",
+        "note": "Chủ xưởng: cốt và trục là hai mặt hàng khác nhau. Trục 140 đã có RT_TR140.",
+        "resolved": true,
+        "evidence": {
+          "ok": true,
+          "artifact": "docs/decisions/ALUMDOOR-QUYET-DINH-CHU-XUONG-20260822.md",
+          "sha256": "77A4BDC5F7F82F731B6739118B5DE2DB15A9C504F6453CDA1C3E1BC16A71C361"
+        }
+      }
+    ]
+  },
+  "d1": {
+    "documents": 4791,
+    "master_records": 283,
+    "union": 4992,
+    "overlap": 82,
+    "conflicts": [],
+    "link_findings": [],
+    "child_mismatches": [],
+    "invalid_conversions": [],
+    "missing_default_conversions": [],
+    "placeholder_prices": [],
+    "supplier_items": 16
+  },
+  "payloads": {
+    "bom_pending": 0,
+    "bom_source_value_pending": 921,
+    "bom_rule_mapped": 0,
+    "bom_rule_coverage_d1": {
+      "lines_needing_rule": 0,
+      "lines_mapped": 0,
+      "lines_pending": 0,
+      "missing": []
+    },
+    "bom_rule_artifact_pending": 643,
+    "bom_rule_pending": 0,
+    "bom_projection_consistent": true,
+    "unverified_owner_overrides": []
+  },
+  "backup": {
+    "verified": true,
+    "file": "C:\\alumdoor\\work\\_backup\\demo-d1-CHOT-20260822.sqlite",
+    "bytes": 53506048,
+    "sha256": "9364A38138CDC0215E6471C2EE13B827C3497F90DC2EB68B43DFEFFB0EC05013",
+    "runtime_sha256": "9364A38138CDC0215E6471C2EE13B827C3497F90DC2EB68B43DFEFFB0EC05013",
+    "sha256_match": true,
+    "runtime_stable_during_gate": true,
+    "quick_check": [
+      "ok"
+    ],
+    "foreign_key_violations": 0,
+    "app_version": "2.22.0",
+    "app_content_hash": "4f01c25094e8f4c65269c1e5f8fb5cdc3ea34b9dcdb1d0cf3ebdc9bb32149212",
+    "reason": ""
+  },
+  "blockers": {
+    "source_hash_mismatch": 0,
+    "app_source_stale": 0,
+    "source_formula_error": 6,
+    "source_authority_conflict": 0,
+    "source_lifecycle_missing": 0,
+    "unverified_owner_override": 0,
+    "d1_authority_conflict": 0,
+    "dangling_reference": 0,
+    "inactive_reference": 0,
+    "child_storage_mismatch": 0,
+    "invalid_conversion": 0,
+    "missing_default_conversion": 0,
+    "placeholder_price": 0,
+    "bom_pending": 0,
+    "bom_rule_pending": 0,
+    "supplier_item_empty": 0,
+    "backup_unverified": 0
+  }
+}

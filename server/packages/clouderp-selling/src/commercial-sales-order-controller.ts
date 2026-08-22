@@ -8,7 +8,10 @@ import {
   SalesOrderController,
   alumdoorCommercialBenefits,
   alumdoorOrderTotals,
+  assertAlumdoorGiftRailAllowed,
   defaultAlumdoorDiscountPercent,
+  hasAlumdoorDiscountEffect,
+  isAlumdoorCommercialContext,
   withAlumdoorDefaultDiscountSnapshot,
   withStableRowIds,
 } from "./controllers.js";
@@ -18,7 +21,6 @@ import type { SalesItem, SalesOrderData } from "./types.js";
 import type { PricingRuleSnapshot } from "../../clouderp-pricing/src/commercial-policy.js";
 import { areaTierBasisSqm } from "../../clouderp-pricing/src/index.js";
 
-const ALUMDOOR_COMPANY = "ALUMDOOR";
 const ALUMDOOR_PRICE_GROUPS = new Set(["Đại lý", "Lẻ"]);
 
 /**
@@ -28,7 +30,7 @@ const ALUMDOOR_PRICE_GROUPS = new Set(["Đại lý", "Lẻ"]);
 export class CommercialSalesOrderController extends SalesOrderController {
   override async normalize(context: ControllerContext<SalesOrderData>): Promise<SalesOrderData> {
     const input = context.command.document;
-    if (input.company !== ALUMDOOR_COMPANY) return super.normalize(context);
+    if (!await isAlumdoorCommercialContext(context, input)) return super.normalize(context);
 
     if (!input.customer) throw errors.validation("Customer is required");
     if (!input.currency) throw errors.validation("Currency is required");
@@ -66,10 +68,34 @@ export class CommercialSalesOrderController extends SalesOrderController {
       const pricedQty = Number(fromScaledInt(qtyMicros, 6));
       const submittedRate = submittedNumber(item.rate);
       const submittedDiscount = submittedNumber(item.discount_percentage);
-      const expectedDiscount = defaultAlumdoorDiscountPercent({ ...itemMaster, item_code: item.item_code });
+      // P0-2: nhóm giá là dữ kiện bắt buộc của mức chiết khấu — "Lẻ" thì bằng 0.
+      const expectedDiscount = defaultAlumdoorDiscountPercent(
+        { ...itemMaster, item_code: item.item_code },
+        customerGroup,
+      );
+      const frozenSource = quotation ? sourceQuotationLine(quotation, item, index) : null;
+      const policyVariant = frozenSource && hasCommercialSnapshot(frozenSource)
+        ? frozenSource.price_variant
+        : item.price_variant;
+      const giftRailArea = giftRailAreaPerSet(item);
+      /**
+       * "10 chặn cảnh báo" — chặn NGAY, trước mọi nhánh tính giá.
+       *
+       * Đặt ở đây vì đây là điểm DUY NHẤT mà cả ba nhánh bên dưới (dòng đóng băng từ báo giá,
+       * dòng nhập tay không bảng giá, dòng tra bảng giá) đều đi qua. Chặn sau khi rẽ nhánh thì
+       * phải viết luật ba lần rồi trôi dạt.
+       */
+      assertAlumdoorGiftRailAllowed(
+        { ...itemMaster, item_code: item.item_code },
+        giftRailArea,
+        policyVariant,
+        item.item_code,
+      );
+      // P0-3: quyền lợi tặng ray chỉ thuộc về biến thể giá TANG_RAY, không thuộc CHI_LA.
       const benefitItems = alumdoorCommercialBenefits(
         { ...itemMaster, item_code: item.item_code },
-        item.billable_area_sqm ?? pricedQty,
+        giftRailArea,
+        policyVariant,
       );
       if (submittedDiscount !== undefined
         && toScaledInt(submittedDiscount, 6, `${item.item_code}.discount_percentage`)
@@ -77,7 +103,6 @@ export class CommercialSalesOrderController extends SalesOrderController {
         requiresApproval = true;
       }
 
-      const frozenSource = quotation ? sourceQuotationLine(quotation, item, index) : null;
       if (frozenSource && hasCommercialSnapshot(frozenSource)) {
         const frozen = rebuildFrozenQuotationLine(frozenSource, item, currency.transactionScale, qtyMicros);
         const rateChanged = submittedRate !== undefined
@@ -94,6 +119,7 @@ export class CommercialSalesOrderController extends SalesOrderController {
           ...(discountChanged && submittedDiscount !== undefined
             ? recomputeManualFrozenDiscount(frozen, submittedDiscount, currency.transactionScale)
             : {}),
+          benefit_items: benefitItems,
           rate_requires_approval: rateChanged,
         });
         continue;
@@ -114,13 +140,15 @@ export class CommercialSalesOrderController extends SalesOrderController {
           pricing_rule_snapshots: withAlumdoorDefaultDiscountSnapshot(
             manual.pricing_rule_snapshots ?? [],
             { ...itemMaster, item_code: item.item_code },
+            customerGroup,
+            manual.discount_percentage,
           ),
         });
         continue;
       }
 
       const facts = trustedCommercialFacts(itemMaster, item, customerGroup, sellingPriceList);
-      const resolved = await resolveCommercialLine(context as unknown as ControllerContext<JsonObject>, {
+      const resolveInput: Parameters<typeof resolveCommercialLine>[1] = {
         itemCode: item.item_code,
         priceList: sellingPriceList,
         documentCurrency: input.currency,
@@ -132,16 +160,61 @@ export class CommercialSalesOrderController extends SalesOrderController {
         party: input.customer,
         customerGroup,
         facts,
-        ...(submittedDiscount !== undefined || expectedDiscount > 0
-          ? { discountPercentageOverride: submittedDiscount ?? expectedDiscount }
+        /**
+         * P0-1 — KHÔNG còn đổ `expectedDiscount` (hằng số 15% suy từ Item master) xuống đây.
+         *
+         * Cùng một chính sách "giảm 15%" trước đây đi HAI đường độc lập: hằng số này, và
+         * luật Pricing Rule `ADJUSTMENT` rate âm trong danh mục. Cả hai cùng cộng vào
+         * `net = gross − discount + adjustment` ⇒ trừ hai lần (đo được: gross 12.339.000,
+         * discount 1.850.850, adjustment −1.850.850, net 8.637.300 thay vì 10.488.150).
+         *
+         * Bỏ đường hằng số — KHÔNG bỏ đường danh mục — vì đã ĐO trên D1 ngày 21/08/2026:
+         * 15/15 mã mà hằng số áp 15% đều có đúng một luật "Chiết khấu đại lý 15% — …"
+         * đang bật, và tập luật KHỚP CHÍNH XÁC tập mã (không mã nào thừa, không mã nào thiếu).
+         * Luật danh mục còn khai `customer_group: "Đại lý"` nên nó cũng là đường duy nhất
+         * phân biệt được Đại lý/Lẻ. `expectedDiscount` vẫn giữ để so mức người bán nhập
+         * (cờ `requiresApproval`) và cho đường KHÔNG có bảng giá ở trên.
+         *
+         * Chỉ còn mức người bán TỰ NHẬP mới đi xuống — và nếu nó trùng luật danh mục thì
+         * `resolveCommercialLine` chặn cứng (xem chốt chặn trùng chiết khấu ở đó).
+         */
+        ...(submittedDiscount !== undefined
+          ? { discountPercentageOverride: submittedDiscount }
           : {}),
         ...optionalPositiveFacts(item),
-      });
+      };
+      let resolved = await resolveCommercialLine(
+        context as unknown as ControllerContext<JsonObject>,
+        resolveInput,
+      );
+      if (expectedDiscount > 0
+        && submittedDiscount === undefined
+        && !resolved.pricing_rule_snapshots.some(hasAlumdoorDiscountEffect)) {
+        resolved = await resolveCommercialLine(
+          context as unknown as ControllerContext<JsonObject>,
+          { ...resolveInput, discountPercentageOverride: expectedDiscount },
+        );
+      }
+
+      /**
+       * Chặn lần thứ hai theo biến thể ENGINE thực sự dùng: người bán có thể không gửi
+       * `price_variant` mà `resolveCommercialLine` vẫn rơi vào `TANG_RAY` (mã không còn dòng
+       * `STANDARD` thì engine lấy tuỳ chọn đầu tiên). Không phải chặn thừa — là chặn đúng chỗ
+       * con số tiền được sinh ra.
+       */
+      assertAlumdoorGiftRailAllowed(
+        { ...itemMaster, item_code: item.item_code },
+        giftRailArea,
+        resolved.price_variant,
+        item.item_code,
+      );
 
       const canonicalRateMinor = canonicalRateFromSnapshot(resolved.base_rate_minor, resolved.pricing_rule_snapshots);
       const pricingRuleSnapshots = withAlumdoorDefaultDiscountSnapshot(
         resolved.pricing_rule_snapshots,
         { ...itemMaster, item_code: item.item_code },
+        customerGroup,
+        resolved.discount_percentage,
       );
       pricedItems.push({
         ...item,
@@ -170,7 +243,12 @@ export class CommercialSalesOrderController extends SalesOrderController {
         net_amount_minor: resolved.net_before_tax_minor,
         pricing_as_of: resolved.pricing_as_of,
         pricing_rule_snapshots: pricingRuleSnapshots,
-        benefit_items: benefitItems,
+        // P0-3: chốt lại theo biến thể engine THỰC SỰ dùng để ra giá, không theo chuỗi client gửi.
+        benefit_items: alumdoorCommercialBenefits(
+          { ...itemMaster, item_code: item.item_code },
+          giftRailArea,
+          resolved.price_variant,
+        ),
         ...(pricingRuleSnapshots[0]?.rule_name ? { pricing_rule: pricingRuleSnapshots[0].rule_name } : {}),
       });
     }
@@ -368,6 +446,25 @@ function optionalPositiveFacts(line: SalesItem): {
     ...(length === undefined ? {} : { lengthM: length }),
     ...(sets === undefined ? {} : { setCount: sets }),
   };
+}
+
+/**
+ * Diện tích thật của MỘT bộ dùng cho quà tặng. Không lấy diện tích tính tiền đã bị nâng bởi
+ * `min_area_sqm`, và không cộng nhiều bộ nhỏ thành một bộ lớn. Chỉ fallback về diện tích-một-bộ
+ * canonical khi payload cũ chưa có hai kích thước phủ bì.
+ */
+function giftRailAreaPerSet(line: SalesItem): number | undefined {
+  const row = line as unknown as Record<string, unknown>;
+  const width = finitePositive(row.width_pb_ray_m)
+    ?? finitePositive(row.width_pb_nhua_m)
+    ?? finitePositive(row.width_m);
+  const height = finitePositive(row.height_m);
+  if (width !== undefined && height !== undefined) return width * height;
+  return areaTierBasisSqm({
+    area_per_set_sqm: row.area_per_set_sqm,
+    billable_area_sqm: row.billable_area_sqm,
+    set_count: row.set_count,
+  });
 }
 
 function canonicalRateFromSnapshot(baseRateMinor: number, snapshots: PricingRuleSnapshot[]): number {

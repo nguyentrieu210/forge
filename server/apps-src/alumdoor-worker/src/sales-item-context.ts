@@ -698,7 +698,7 @@ async function readCatalogExtras(
   const geometryName = normalizedText(item.geometry_profile);
   const specName = normalizedText(item.material_specification);
 
-  const [profile, geometry, spec, doorSpec, colorScope] = await Promise.all([
+  const [profile, geometry, spec, doorSpec, colorScope, cuttingPolicies] = await Promise.all([
     profileName ? readResource(call, "Measurement Profile", profileName).catch(() => null) : Promise.resolve(null),
     geometryName ? readResource(call, "Geometry Profile", geometryName).catch(() => null) : Promise.resolve(null),
     specName ? readResource(call, "Material Specification", specName).catch(() => null) : Promise.resolve(null),
@@ -709,6 +709,16 @@ async function readCatalogExtras(
         (error: unknown) => ({ ok: false as const, error }),
       )
       : Promise.resolve(null),
+    /*
+     * Ước số chia lá còn có thể nằm trên CHÍNH SÁCH CẮT, và `calculateLeafPlan` ƯU TIÊN chỗ đó
+     * trước khi nhìn tới mặt hàng. Không hỏi ở đây thì cảnh báo "chưa có bản lá" nổi lên vĩnh
+     * viễn dù hệ thống tính lá đúng — đúng cảnh ngày 22/08: màn bán hàng vừa in
+     * "Bản lá / ước số chia: 0,077 m" vừa báo thiếu ngay bên trên.
+     * Đi chung Promise.all nên không thêm độ trễ.
+     */
+    doorType
+      ? listResources(call, "Cutting Policy", ["name", "door_type", "leaf_divisor_const"], [["door_type", "=", doorType]], 5).catch(() => [])
+      : Promise.resolve([] as Json[]),
   ]);
 
   const gaps: CatalogGap[] = [];
@@ -752,7 +762,10 @@ async function readCatalogExtras(
 
   const itemDivisor = positive(item.leaf_divisor_m);
   const specDivisor = positive(doorSpec?.buoc_la_m);
-  if (doorType && itemDivisor === null && specDivisor === null) {
+  const policyDivisor = (cuttingPolicies as Json[])
+    .map((row) => positive(row?.leaf_divisor_const))
+    .find((value) => value !== null) ?? null;
+  if (doorType && itemDivisor === null && specDivisor === null && policyDivisor === null) {
     gaps.push({
       code: "LEAF_DIVISOR_MISSING",
       label: `Mã bán theo công thức ${doorType} nhưng chưa có bản lá / ước số chia`,
@@ -778,7 +791,17 @@ async function readCatalogExtras(
   const scopeError = colorScope && !colorScope.ok
     ? (colorScope.error instanceof Error ? colorScope.error.message : "Không lấy được Bề mặt/màu theo Nhóm hàng.")
     : null;
-  if (scopeOk && scopeOk.allowed_finishes.length === 0) {
+  // NOTE (vá 21/08/2026 theo phản hồi trực tiếp của chủ xưởng: "hàng thường k cần cái bề mặt
+  // và nhiều mặt hàng khác"): trước bản vá này, THIẾU Bề mặt là chặn cứng (gap COLOR_SCOPE_EMPTY
+  // được đẩy vào `blocking` ở cuối hàm ⇒ readiness.ready = false ⇒ client không chốt được dòng).
+  // Đo trên D1 ngày 21/08: 370/404 mã (91,6%) thuộc 13/17 nhóm bị chặn oan — Phụ kiện chung (106),
+  // Linh kiện motor (90), Ray và trục (33), Motor (32), Điều khiển & phụ kiện điện (16),
+  // Bình lưu điện (4)... Đó là hàng KHÔNG SƠN nên vốn không có Bề mặt.
+  // Cách chữa đúng bản chất là dùng cờ đã có sẵn `Measurement Profile.require_color`
+  // (Hàng thường / Ống trục / Tấm-Kính / Cuộn / Lô-Serial / Ray và trục đều = false),
+  // KHÔNG phải đi khai bừa Bề mặt cho Bình lưu điện — làm vậy chỉ giấu triệu chứng.
+  // Sau bản vá, số mã bị chặn còn 46 — đúng là hàng cần sơn mà nhóm chưa được Bề mặt nào khai.
+  if (scopeOk && scopeOk.allowed_finishes.length === 0 && truthy(profile?.require_color)) {
     gaps.push({
       code: "COLOR_SCOPE_EMPTY",
       label: `Nhóm hàng ${itemGroup || "(chưa khai)"} chưa Bề mặt nào khai áp dụng`,
@@ -1324,6 +1347,9 @@ export async function salesItemContext(call: SalesPlatformCall, args: Json): Pro
     inventory_mode: effectiveInventoryMode,
     measurement_profile: measurementProfile || null,
     min_area_sqm: Number(item.min_area_sqm ?? 0) || 0,
+    // Quyết định trực tiếp của chủ xưởng 22/08/2026: ngưỡng là 8 m², toán tử GT (> 8).
+    gift_rail_min_area_sqm: positive(item.gift_rail_min_area_sqm) ?? 8,
+    gift_rail_area_operator: normalizedText(item.gift_rail_area_operator).toUpperCase() === "GTE" ? "GTE" : "GT",
     purchase_kg_per_m2: positive(item.purchase_kg_per_m2),
     leaf_divisor_m: positive(item.leaf_divisor_m),
     default_color: normalizedText(item.default_color) || null,

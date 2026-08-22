@@ -170,6 +170,41 @@ export async function resolveCommercialLine(
   if (discountMinor > grossMinor) throw errors.validation("Line discount cannot exceed gross amount");
 
   const adjustmentMinor = sumSafe(policy.adjustments.map((row) => row.amount_minor), "line adjustments");
+
+  /**
+   * ── CHỐT CHẶN TRÙNG CHIẾT KHẤU (P0-1) ────────────────────────────────────────────────
+   *
+   * Một chính sách "giảm X" có thể được biểu diễn hai cách trong hệ này: `discount_percentage`
+   * (trừ ở vế `− discountMinor`) và Pricing Rule `ADJUSTMENT` rate ÂM (cộng ở vế
+   * `+ adjustmentMinor`). Cả hai cùng chảy vào `net = gross − discount + adjustment`, nên khi
+   * cùng một chính sách đi cả hai đường thì khách được trừ HAI LẦN — không ai ở tầng dưới
+   * phát hiện được, vì mỗi vế xét riêng đều hợp lệ.
+   *
+   * Chặn CỨNG chứ không chỉ cảnh báo: đây là phép tính TIỀN, và một cảnh báo chỉ có tác dụng
+   * nếu người bán chịu đọc. Dấu hiệu nhận biết chọn hẹp và chính xác — tổng khoản ADJUSTMENT
+   * ÂM có trị tuyệt đối BẰNG đúng khoản chiết khấu (sai số ≤ 1 đơn vị tiền do làm tròn). Đó
+   * đúng là chữ ký của lỗi đã đo: 1.850.850 / −1.850.850 ở đường xem trước, và
+   * 59.129.704.350 / −59.129.704.350 trên đơn `DH-2026-0068` đã lưu.
+   *
+   * Hẹp như vậy để KHÔNG chặn nhầm những khoản giảm hợp lệ khác cùng dòng — ví dụ luật
+   * "Giảm giá hàng thô không sơn — cửa Lưới" (−70.000 đ/m²), là khoản giảm riêng, không phải
+   * bản sao của chiết khấu đại lý, nên số tiền của nó gần như không bao giờ trùng khít.
+   */
+  const negativeAdjustmentMinor = sumSafe(
+    policy.adjustments.filter((row) => row.amount_minor < 0).map((row) => row.amount_minor),
+    "line negative adjustments",
+  );
+  if (discountMinor > 0 && Math.abs(Math.abs(negativeAdjustmentMinor) - discountMinor) <= 1) {
+    const duplicated = policy.adjustments
+      .filter((row) => row.amount_minor < 0)
+      .map((row) => row.rule_name)
+      .join(", ");
+    throw errors.validation(
+      `Dòng ${input.itemCode}: chiết khấu bị trừ hai lần cho cùng một chính sách — `
+      + `mức chiết khấu ${fromScaledInt(discountMinor, scale)} trùng khít với luật giá giảm `
+      + `"${duplicated}". Bỏ mức chiết khấu nhập tay, hoặc tắt luật giá; không được để cả hai.`,
+    );
+  }
   const taxableAdjustmentMinor = sumSafe(
     policy.adjustments.filter((row) => row.taxable).map((row) => row.amount_minor),
     "taxable line adjustments",

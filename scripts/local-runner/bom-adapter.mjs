@@ -79,6 +79,7 @@ export function buildImportable(root,runDir){
   if(Number(a.mutation_blocker_count)!==0)throw fail('DATA',`BOM mutation blockers=${a.mutation_blocker_count}`);
   if(Number(a.missing_component_count)!==0||Number(a.missing_item_count)!==0)throw fail('DATA',`BOM prerequisites unresolved components=${a.missing_component_count} items=${a.missing_item_count}`);
   if(Number(a.component_reference_count)!==Number(a.expected_component_count))throw fail('DATA',`BOM component coverage mismatch components=${a.component_reference_count} expected=${a.expected_component_count}`);
+  if(Number(a.pending_value_count)!==0)throw fail('DATA',`BOM source values still pending=${a.pending_value_count}`);
   console.log(`ALUMDOOR_BOM_DATA_READY items=${a.item_projection_count} source_refs=${a.source_reference_count} boms=${a.canonical_bom_count} components=${a.component_reference_count} pending_values=${a.pending_value_count} excluded=${a.excluded_reference_count}`);
   return{source,items,itemsAudit,payload,audit};
 }
@@ -183,7 +184,7 @@ export async function mainBom(){
       D1_ZERO_COMPONENT_BOM:Number(d1Second.bom_without_component),
       D1_MISSING_ITEM_REFERENCE:Number(d1Second.bom_missing_item_reference),
     };
-    if(finalReport.BOM_INCOMPLETE!==0||finalReport.MISSING_COMPONENTS!==0||finalReport.MISSING_ITEMS!==0)throw fail('VERIFY',`Definition of Done failed: ${JSON.stringify(finalReport)}`);
+    if(finalReport.BOM_INCOMPLETE!==0||finalReport.MISSING_COMPONENTS!==0||finalReport.MISSING_ITEMS!==0||finalReport.PENDING_VALUE_ROWS!==0)throw fail('VERIFY',`Definition of Done failed: ${JSON.stringify(finalReport)}`);
     writeFileSync(path.join(runDir,'adapter-status.json'),`${JSON.stringify({adapter:'bom',run_id:runId,repo_sha:repo.local,backup_path:backupPath,audit_path:prepared.audit,final_report:finalReport,item_pass1:itemFirst,item_pass2:itemSecond,bom_pass1:first,bom_pass2:second,template_pass1:templateFirst,template_pass2:templateSecond,d1_pass1:d1First,d1_pass2:d1Second},null,2)}\n`);
     console.log(`ALUMDOOR_LOCAL_BOM_IDEMPOTENCE_PASS bom_created_pass2=0 bom_updated_pass2=0 template_created_pass2=0 template_updated_pass2=0 pending_values=${audit.pending_value_count}`);
     for(const [key,value] of Object.entries(finalReport))console.log(`${key}=${value}`);

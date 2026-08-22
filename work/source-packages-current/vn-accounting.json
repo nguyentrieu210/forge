@@ -1,0 +1,4833 @@
+{
+  "id": "vn-accounting",
+  "name": "Kế toán Việt Nam",
+  "version": "1.6.1",
+  "worker": "cloudforge-app-vn-accounting",
+  "requires": [
+    {
+      "id": "hrm",
+      "version": ">=1.3.0"
+    }
+  ],
+  "externalDocTypes": [
+    {
+      "name": "Account",
+      "kind": "tree",
+      "app": "accounts"
+    },
+    {
+      "name": "Branch",
+      "kind": "master",
+      "app": "hrm"
+    },
+    {
+      "name": "Company",
+      "kind": "master",
+      "app": "accounts"
+    },
+    {
+      "name": "Cost Center",
+      "kind": "tree",
+      "app": "accounts"
+    },
+    {
+      "name": "Currency",
+      "kind": "master",
+      "app": "accounts"
+    },
+    {
+      "name": "Customer",
+      "kind": "master",
+      "app": "selling"
+    },
+    {
+      "name": "Department",
+      "kind": "tree",
+      "app": "hrm"
+    },
+    {
+      "name": "DocType",
+      "kind": "system",
+      "app": "core"
+    },
+    {
+      "name": "E-Invoice Submission",
+      "kind": "transaction",
+      "app": "erpnext"
+    },
+    {
+      "name": "Employee",
+      "kind": "master",
+      "app": "hrm"
+    },
+    {
+      "name": "Journal Entry",
+      "kind": "transaction",
+      "app": "accounts"
+    },
+    {
+      "name": "Payroll Entry",
+      "kind": "transaction",
+      "app": "hrm"
+    },
+    {
+      "name": "Purchase Receipt",
+      "kind": "transaction",
+      "app": "erpnext"
+    },
+    {
+      "name": "Stock Entry",
+      "kind": "transaction",
+      "app": "erpnext"
+    },
+    {
+      "name": "Supplier",
+      "kind": "master",
+      "app": "buying"
+    },
+    {
+      "name": "User",
+      "kind": "system",
+      "app": "core"
+    },
+    {
+      "name": "Warehouse",
+      "kind": "tree",
+      "app": "stock"
+    }
+  ],
+  "validators": [
+    {
+      "doctype": "VN Tax Ruleset",
+      "actions": [
+        "submit"
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "name": "tax-evaluate",
+      "label": "Tính thử ruleset thuế",
+      "icon": "calculator",
+      "group": "Thuế & tuân thủ",
+      "description": "Chạy ruleset đã duyệt bằng fixed-point minor units. Công ty được lấy từ ruleset, không nhập lại. Không ghi sổ hay nộp tờ khai.",
+      "fields": [
+        {
+          "fieldname": "ruleset",
+          "label": "Ruleset",
+          "fieldtype": "Link",
+          "options": "VN Tax Ruleset",
+          "required": true
+        },
+        {
+          "fieldname": "effective_at",
+          "label": "Ngày áp dụng",
+          "fieldtype": "Date",
+          "required": true
+        },
+        {
+          "fieldname": "input_json",
+          "label": "Đầu vào minor units (JSON)",
+          "fieldtype": "Small Text",
+          "required": true,
+          "default": "{}"
+        }
+      ],
+      "commit": {
+        "method": "vn_accounting.tax.evaluate",
+        "label": "Tính thử"
+      },
+      "permission_doctype": "VN Tax Ruleset",
+      "permission_action": "read"
+    },
+    {
+      "name": "vat-dataset",
+      "label": "Dữ liệu VAT",
+      "icon": "table-properties",
+      "group": "Thuế & tuân thủ",
+      "description": "Đối chiếu VAT đầu vào/đầu ra từ hóa đơn đã ghi nhận. Chỉ đọc; không tạo sổ thuế hay nộp tờ khai.",
+      "fields": [
+        {
+          "fieldname": "ruleset",
+          "label": "Ruleset VAT",
+          "fieldtype": "Link",
+          "options": "VN Tax Ruleset",
+          "required": true
+        },
+        {
+          "fieldname": "from_date",
+          "label": "Từ ngày",
+          "fieldtype": "Date",
+          "required": true
+        },
+        {
+          "fieldname": "to_date",
+          "label": "Đến ngày",
+          "fieldtype": "Date",
+          "required": true
+        },
+        {
+          "fieldname": "limit_per_type",
+          "label": "Giới hạn mỗi loại hóa đơn",
+          "fieldtype": "Int",
+          "default": "100"
+        }
+      ],
+      "commit": {
+        "method": "vn_accounting.vat.dataset",
+        "label": "Lập dữ liệu"
+      },
+      "permission_doctype": "VN Tax Ruleset",
+      "permission_action": "read"
+    }
+  ],
+  "nav": [
+    {
+      "key": "VN Accounting Policy",
+      "label": "Chính sách kế toán",
+      "kind": "doctype",
+      "icon": "landmark",
+      "group": "Thiết lập kế toán"
+    },
+    {
+      "key": "VN Legal Rule",
+      "label": "Văn bản & quy tắc",
+      "kind": "doctype",
+      "icon": "book-open-check",
+      "group": "Thiết lập kế toán"
+    },
+    {
+      "key": "VN Accounting Period",
+      "label": "Kỳ kế toán",
+      "kind": "doctype",
+      "icon": "calendar-lock",
+      "group": "Kiểm soát"
+    },
+    {
+      "key": "TT99 Account Map",
+      "label": "Mapping tài khoản TT99",
+      "kind": "doctype",
+      "icon": "git-compare-arrows",
+      "group": "TT99"
+    },
+    {
+      "key": "TT99 Voucher Form",
+      "label": "Mẫu chứng từ TT99",
+      "kind": "doctype",
+      "icon": "file-check-2",
+      "group": "TT99"
+    },
+    {
+      "key": "TT99 Book Form",
+      "label": "Mẫu sổ TT99",
+      "kind": "doctype",
+      "icon": "book-open-text",
+      "group": "TT99"
+    },
+    {
+      "key": "TT99 Financial Statement Template",
+      "label": "Mẫu BCTC TT99",
+      "kind": "doctype",
+      "icon": "file-chart-column",
+      "group": "TT99"
+    },
+    {
+      "key": "VN Tax Ruleset",
+      "label": "Ruleset thuế",
+      "kind": "doctype",
+      "icon": "badge-percent",
+      "group": "Thuế & tuân thủ"
+    },
+    {
+      "key": "tax-evaluate",
+      "label": "Tính thử ruleset thuế",
+      "kind": "route",
+      "route": "/x/action:tax-evaluate",
+      "icon": "calculator",
+      "group": "Thuế & tuân thủ",
+      "required_roles": [
+        "Tax Specialist",
+        "Chief Accountant",
+        "Accounts Manager",
+        "Internal Auditor",
+        "System Manager"
+      ]
+    },
+    {
+      "key": "vat-dataset",
+      "label": "Dữ liệu VAT",
+      "kind": "route",
+      "route": "/x/action:vat-dataset",
+      "icon": "table-properties",
+      "group": "Thuế & tuân thủ",
+      "required_roles": [
+        "Tax Specialist",
+        "Chief Accountant",
+        "Accounts Manager",
+        "Internal Auditor",
+        "System Manager"
+      ]
+    },
+    {
+      "key": "e-invoice-submission",
+      "label": "Hóa đơn điện tử",
+      "kind": "route",
+      "route": "/app/E-Invoice%20Submission",
+      "icon": "receipt",
+      "group": "Thuế & tuân thủ",
+      "required_roles": [
+        "Tax Specialist",
+        "Accounts Manager",
+        "System Manager"
+      ]
+    },
+    {
+      "key": "finance-budget",
+      "label": "Ngân sách",
+      "kind": "route",
+      "route": "/app/Finance%20Budget",
+      "icon": "wallet-cards",
+      "group": "Ngân sách & kiểm soát",
+      "required_roles": [
+        "Accounts User",
+        "Accounts Manager",
+        "Chief Accountant",
+        "Internal Auditor",
+        "System Manager"
+      ]
+    },
+    {
+      "key": "finance-budget-revision",
+      "label": "Điều chỉnh ngân sách",
+      "kind": "route",
+      "route": "/app/Finance%20Budget%20Revision",
+      "icon": "file-pen-line",
+      "group": "Ngân sách & kiểm soát",
+      "required_roles": [
+        "Accounts User",
+        "Accounts Manager",
+        "Chief Accountant",
+        "Internal Auditor",
+        "System Manager"
+      ]
+    },
+    {
+      "key": "finance-budget-commitment",
+      "label": "Cam kết ngân sách",
+      "kind": "route",
+      "route": "/app/Finance%20Budget%20Commitment",
+      "icon": "shield-check",
+      "group": "Ngân sách & kiểm soát",
+      "required_roles": [
+        "Accounts User",
+        "Accounts Manager",
+        "Chief Accountant",
+        "Purchase Manager",
+        "Internal Auditor",
+        "System Manager"
+      ]
+    },
+    {
+      "key": "Warehouse Cash Fund",
+      "label": "Quỹ tiền mặt theo kho",
+      "kind": "doctype",
+      "icon": "landmark",
+      "group": "Quỹ kho"
+    },
+    {
+      "key": "Warehouse Cash Voucher",
+      "label": "Phiếu thu chi kho",
+      "kind": "doctype",
+      "icon": "receipt-text",
+      "group": "Quỹ kho"
+    },
+    {
+      "key": "Warehouse Cash Transfer",
+      "label": "Chuyển quỹ",
+      "kind": "doctype",
+      "icon": "arrow-left-right",
+      "group": "Quỹ kho"
+    },
+    {
+      "key": "Warehouse Cash Count",
+      "label": "Kiểm quỹ & bàn giao",
+      "kind": "doctype",
+      "icon": "clipboard-check",
+      "group": "Quỹ kho"
+    },
+    {
+      "key": "Payroll Accounting Batch",
+      "label": "Hạch toán lương",
+      "kind": "doctype",
+      "icon": "badge-dollar-sign",
+      "group": "Kế toán lương"
+    },
+    {
+      "key": "chart-of-accounts",
+      "label": "Hệ thống tài khoản",
+      "kind": "route",
+      "route": "/app/Account",
+      "icon": "list-tree",
+      "group": "Sổ sách",
+      "required_roles": [
+        "Accounts User",
+        "Accounts Manager",
+        "System Manager"
+      ]
+    },
+    {
+      "key": "journal-entry",
+      "label": "Bút toán nhật ký",
+      "kind": "route",
+      "route": "/app/Journal%20Entry",
+      "icon": "notebook-tabs",
+      "group": "Sổ sách",
+      "required_roles": [
+        "Accounts User",
+        "Accounts Manager",
+        "System Manager"
+      ]
+    },
+    {
+      "key": "payment-entry",
+      "label": "Thu chi kế toán",
+      "kind": "route",
+      "route": "/app/Payment%20Entry",
+      "icon": "hand-coins",
+      "group": "Sổ sách",
+      "required_roles": [
+        "Accounts User",
+        "Accounts Manager",
+        "System Manager"
+      ]
+    },
+    {
+      "key": "general-ledger",
+      "label": "Sổ cái",
+      "kind": "route",
+      "route": "/app/query-report/General%20Ledger",
+      "icon": "book-open",
+      "group": "Báo cáo",
+      "required_roles": [
+        "Accounts User",
+        "Accounts Manager",
+        "System Manager"
+      ]
+    },
+    {
+      "key": "trial-balance",
+      "label": "Bảng cân đối số phát sinh",
+      "kind": "route",
+      "route": "/app/query-report/Trial%20Balance",
+      "icon": "scale",
+      "group": "Báo cáo",
+      "required_roles": [
+        "Accounts User",
+        "Accounts Manager",
+        "System Manager"
+      ]
+    },
+    {
+      "key": "profit-loss",
+      "label": "Kết quả kinh doanh",
+      "kind": "route",
+      "route": "/app/query-report/Profit%20and%20Loss",
+      "icon": "chart-no-axes-combined",
+      "group": "Báo cáo",
+      "required_roles": [
+        "Accounts User",
+        "Accounts Manager",
+        "System Manager"
+      ]
+    },
+    {
+      "key": "balance-sheet",
+      "label": "Bảng cân đối kế toán",
+      "kind": "route",
+      "route": "/app/query-report/Balance%20Sheet",
+      "icon": "table-2",
+      "group": "Báo cáo",
+      "required_roles": [
+        "Accounts User",
+        "Accounts Manager",
+        "System Manager"
+      ]
+    },
+    {
+      "key": "cash-flow",
+      "label": "Lưu chuyển tiền tệ",
+      "kind": "route",
+      "route": "/app/query-report/Cash%20Flow",
+      "icon": "waves",
+      "group": "Báo cáo",
+      "required_roles": [
+        "Accounts User",
+        "Accounts Manager",
+        "System Manager"
+      ]
+    }
+  ],
+  "hooks": [],
+  "client": {
+    "brand": "warm",
+    "domain": "accounts",
+    "home": {
+      "route": "/app/VN%20Accounting%20Period",
+      "doctype": "VN Accounting Period"
+    },
+    "dimensions": [
+      "company",
+      "branch",
+      "warehouse",
+      "fiscal_year"
+    ],
+    "catalog_mode": "hybrid"
+  },
+  "roles": [
+    {
+      "role": "Accounts User",
+      "desk_access": true
+    },
+    {
+      "role": "Accounts Manager",
+      "desk_access": true
+    },
+    {
+      "role": "General Accountant",
+      "desk_access": true
+    },
+    {
+      "role": "Chief Accountant",
+      "desk_access": true
+    },
+    {
+      "role": "Tax Specialist",
+      "desk_access": true
+    },
+    {
+      "role": "Internal Auditor",
+      "desk_access": true
+    },
+    {
+      "role": "Payroll Manager",
+      "desk_access": true
+    },
+    {
+      "role": "Warehouse Cash User",
+      "desk_access": true
+    },
+    {
+      "role": "Warehouse Cash Manager",
+      "desk_access": true
+    },
+    {
+      "role": "Thủ kho",
+      "desk_access": true
+    },
+    {
+      "role": "Chủ xưởng",
+      "desk_access": true
+    },
+    {
+      "role": "Kế toán trưởng",
+      "desk_access": true
+    }
+  ],
+  "doctypes": [
+    {
+      "name": "Payroll Accounting Batch",
+      "module": "Accounts",
+      "is_submittable": true,
+      "autoname": "HTL-.YYYY.-#####",
+      "title_field": "payroll_entry",
+      "sort_field": "posting_date",
+      "sort_order": "DESC",
+      "track_changes": true,
+      "fields": [
+        {
+          "fieldname": "payroll_entry",
+          "label": "Bảng lương nguồn",
+          "fieldtype": "Link",
+          "options": "Payroll Entry",
+          "required": true,
+          "unique": true,
+          "in_list_view": true,
+          "search_index": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "company",
+          "label": "Công ty",
+          "fieldtype": "Link",
+          "options": "Company",
+          "required": true,
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "branch",
+          "label": "Chi nhánh",
+          "fieldtype": "Link",
+          "options": "Branch",
+          "required": true,
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "department",
+          "label": "Phòng ban",
+          "fieldtype": "Link",
+          "options": "Department",
+          "in_standard_filter": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "posting_date",
+          "label": "Ngày hạch toán",
+          "fieldtype": "Date",
+          "required": true,
+          "in_list_view": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "expense_account",
+          "label": "Tài khoản chi phí lương",
+          "fieldtype": "Link",
+          "options": "Account",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "payable_account",
+          "label": "Tài khoản phải trả người lao động",
+          "fieldtype": "Link",
+          "options": "Account",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "pit_payable_account",
+          "label": "Tài khoản PIT phải nộp",
+          "fieldtype": "Link",
+          "options": "Account",
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "insurance_payable_account",
+          "label": "Tài khoản bảo hiểm phải nộp",
+          "fieldtype": "Link",
+          "options": "Account",
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "cost_center",
+          "label": "Trung tâm chi phí",
+          "fieldtype": "Link",
+          "options": "Cost Center",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "gross_amount",
+          "label": "Tổng thu nhập",
+          "fieldtype": "Currency",
+          "required": true,
+          "in_list_view": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "deduction_amount",
+          "label": "Tổng khấu trừ",
+          "fieldtype": "Currency",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "net_amount",
+          "label": "Thực lĩnh",
+          "fieldtype": "Currency",
+          "required": true,
+          "in_list_view": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "journal_entry",
+          "label": "Bút toán lương",
+          "fieldtype": "Link",
+          "options": "Journal Entry",
+          "read_only": true,
+          "in_list_view": true,
+          "valueSource": "formula",
+          "editMode": "readonly",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "source_document_id",
+          "label": "Định danh chứng từ nguồn",
+          "fieldtype": "Data",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "rule_trace_json",
+          "label": "Dấu vết quy tắc",
+          "fieldtype": "Code",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "approval_trace_json",
+          "label": "Dấu vết phê duyệt",
+          "fieldtype": "Code",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "adjusts_batch",
+          "label": "Điều chỉnh cho bảng",
+          "fieldtype": "Link",
+          "options": "Payroll Accounting Batch",
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        }
+      ],
+      "permissions": [
+        {
+          "role": "Payroll Manager",
+          "read": true,
+          "write": true,
+          "create": true,
+          "report": true
+        },
+        {
+          "role": "General Accountant",
+          "read": true,
+          "write": true,
+          "create": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "Chief Accountant",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "cancel": true,
+          "amend": true,
+          "report": true,
+          "export": true,
+          "share": true
+        },
+        {
+          "role": "Accounts Manager",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "cancel": true,
+          "amend": true,
+          "report": true,
+          "export": true,
+          "share": true
+        },
+        {
+          "role": "System Manager",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "cancel": true,
+          "amend": true,
+          "report": true,
+          "export": true,
+          "share": true
+        }
+      ],
+      "revision": 1,
+      "kind": "transaction",
+      "viewPolicy": {
+        "list": {
+          "enabled": true,
+          "columns": [
+            "payroll_entry",
+            "company",
+            "branch",
+            "posting_date",
+            "gross_amount",
+            "net_amount",
+            "journal_entry"
+          ]
+        },
+        "form": {
+          "enabled": true,
+          "fields": [
+            "payroll_entry",
+            "company",
+            "branch",
+            "department",
+            "posting_date",
+            "expense_account",
+            "payable_account",
+            "pit_payable_account",
+            "insurance_payable_account",
+            "cost_center",
+            "gross_amount",
+            "deduction_amount",
+            "net_amount",
+            "journal_entry",
+            "source_document_id",
+            "rule_trace_json",
+            "approval_trace_json",
+            "adjusts_batch"
+          ]
+        },
+        "quickEntry": {
+          "enabled": true,
+          "fields": [
+            "payroll_entry",
+            "company",
+            "branch",
+            "posting_date",
+            "expense_account",
+            "payable_account",
+            "cost_center",
+            "gross_amount",
+            "deduction_amount",
+            "net_amount",
+            "source_document_id",
+            "rule_trace_json",
+            "approval_trace_json"
+          ]
+        },
+        "kanban": {
+          "enabled": false
+        },
+        "calendar": {
+          "enabled": false
+        },
+        "gantt": {
+          "enabled": false
+        },
+        "chart": {
+          "enabled": false
+        },
+        "mobile": {}
+      }
+    },
+    {
+      "name": "TT99 Account Map",
+      "module": "Accounts",
+      "is_submittable": true,
+      "autoname": "MAP-TT99-.YYYY.-#####",
+      "title_field": "source_account",
+      "sort_field": "effective_from",
+      "sort_order": "DESC",
+      "track_changes": true,
+      "fields": [
+        {
+          "fieldname": "company",
+          "label": "Công ty",
+          "fieldtype": "Link",
+          "options": "Company",
+          "required": true,
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "source_account",
+          "label": "Tài khoản nguồn/lịch sử",
+          "fieldtype": "Link",
+          "options": "Account",
+          "required": true,
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "target_account",
+          "label": "Tài khoản TT99 đích",
+          "fieldtype": "Link",
+          "options": "Account",
+          "required": true,
+          "in_list_view": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "source_regime",
+          "label": "Chế độ nguồn",
+          "fieldtype": "Select",
+          "options": "TT200-legacy\nTT133\nTT132-legacy\nKhác",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "target_regime",
+          "label": "Chế độ đích",
+          "fieldtype": "Select",
+          "options": "TT99",
+          "required": true,
+          "default": "TT99",
+          "valueSource": "default",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "effective_from",
+          "label": "Hiệu lực từ",
+          "fieldtype": "Date",
+          "required": true,
+          "in_list_view": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "effective_to",
+          "label": "Hiệu lực đến",
+          "fieldtype": "Date",
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "legal_rule",
+          "label": "Căn cứ pháp lý",
+          "fieldtype": "Link",
+          "options": "VN Legal Rule",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "mapping_reason",
+          "label": "Cơ sở chuyển đổi",
+          "fieldtype": "Small Text",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "workflow_state",
+          "label": "Trạng thái",
+          "fieldtype": "Data",
+          "read_only": true,
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "valueSource": "workflow",
+          "editMode": "readonly",
+          "surface": "expanded",
+          "serverEnforced": true
+        }
+      ],
+      "permissions": [
+        {
+          "role": "Accounts User",
+          "read": true,
+          "report": true
+        },
+        {
+          "role": "General Accountant",
+          "read": true,
+          "write": true,
+          "create": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "Chief Accountant",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "report": true,
+          "export": true,
+          "share": true
+        },
+        {
+          "role": "Accounts Manager",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "report": true,
+          "export": true,
+          "share": true
+        },
+        {
+          "role": "Internal Auditor",
+          "read": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "System Manager",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "report": true,
+          "export": true,
+          "share": true
+        }
+      ],
+      "revision": 1,
+      "kind": "transaction",
+      "viewPolicy": {
+        "list": {
+          "enabled": true,
+          "columns": [
+            "company",
+            "source_account",
+            "target_account",
+            "effective_from",
+            "workflow_state"
+          ]
+        },
+        "form": {
+          "enabled": true,
+          "fields": [
+            "company",
+            "source_account",
+            "target_account",
+            "source_regime",
+            "target_regime",
+            "effective_from",
+            "effective_to",
+            "legal_rule",
+            "mapping_reason",
+            "workflow_state"
+          ]
+        },
+        "quickEntry": {
+          "enabled": true,
+          "fields": [
+            "company",
+            "source_account",
+            "target_account",
+            "source_regime",
+            "target_regime",
+            "effective_from",
+            "legal_rule",
+            "mapping_reason"
+          ]
+        },
+        "kanban": {
+          "enabled": false
+        },
+        "calendar": {
+          "enabled": false
+        },
+        "gantt": {
+          "enabled": false
+        },
+        "chart": {
+          "enabled": false
+        },
+        "mobile": {}
+      }
+    },
+    {
+      "name": "TT99 Book Form",
+      "module": "Accounts",
+      "is_submittable": true,
+      "autoname": "TT99-SO-.YYYY.-#####",
+      "title_field": "label",
+      "sort_field": "effective_from",
+      "sort_order": "DESC",
+      "track_changes": true,
+      "fields": [
+        {
+          "fieldname": "book_code",
+          "label": "Mã sổ",
+          "fieldtype": "Data",
+          "required": true,
+          "in_list_view": true,
+          "search_index": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "label",
+          "label": "Tên sổ",
+          "fieldtype": "Data",
+          "required": true,
+          "in_list_view": true,
+          "search_index": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "company",
+          "label": "Công ty (để trống = mẫu chuẩn)",
+          "fieldtype": "Link",
+          "options": "Company",
+          "in_standard_filter": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "legal_rule",
+          "label": "Căn cứ pháp lý",
+          "fieldtype": "Link",
+          "options": "VN Legal Rule",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "source_ledger",
+          "label": "Sổ nguồn",
+          "fieldtype": "Select",
+          "options": "GL\nAR\nAP\nBank\nCash\nStock\nAsset\nPayroll",
+          "required": true,
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "template_version",
+          "label": "Phiên bản mẫu",
+          "fieldtype": "Data",
+          "required": true,
+          "in_list_view": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "columns_json",
+          "label": "Cấu hình cột",
+          "fieldtype": "Code",
+          "required": true,
+          "default": "[]",
+          "valueSource": "default",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "grouping_json",
+          "label": "Nhóm và tổng",
+          "fieldtype": "Code",
+          "required": true,
+          "default": "{}",
+          "valueSource": "default",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "filter_schema_json",
+          "label": "Bộ lọc cho phép",
+          "fieldtype": "Code",
+          "required": true,
+          "default": "{}",
+          "valueSource": "default",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "effective_from",
+          "label": "Hiệu lực từ",
+          "fieldtype": "Date",
+          "required": true,
+          "in_list_view": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "effective_to",
+          "label": "Hiệu lực đến",
+          "fieldtype": "Date",
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "test_evidence_json",
+          "label": "Bằng chứng kiểm thử",
+          "fieldtype": "Code",
+          "required": true,
+          "default": "{}",
+          "valueSource": "default",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "approved_by",
+          "label": "Người phê duyệt",
+          "fieldtype": "Data",
+          "read_only": true,
+          "valueSource": "formula",
+          "editMode": "readonly",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "approved_at",
+          "label": "Thời điểm phê duyệt",
+          "fieldtype": "Datetime",
+          "read_only": true,
+          "valueSource": "formula",
+          "editMode": "readonly",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "workflow_state",
+          "label": "Trạng thái",
+          "fieldtype": "Data",
+          "read_only": true,
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "valueSource": "workflow",
+          "editMode": "readonly",
+          "surface": "expanded",
+          "serverEnforced": true
+        }
+      ],
+      "permissions": [
+        {
+          "role": "Accounts User",
+          "read": true,
+          "report": true
+        },
+        {
+          "role": "General Accountant",
+          "read": true,
+          "write": true,
+          "create": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "Chief Accountant",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "report": true,
+          "export": true,
+          "share": true
+        },
+        {
+          "role": "Accounts Manager",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "report": true,
+          "export": true,
+          "share": true
+        },
+        {
+          "role": "Internal Auditor",
+          "read": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "System Manager",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "report": true,
+          "export": true,
+          "share": true
+        }
+      ],
+      "revision": 2,
+      "kind": "transaction",
+      "viewPolicy": {
+        "list": {
+          "enabled": true,
+          "columns": [
+            "book_code",
+            "label",
+            "source_ledger",
+            "template_version",
+            "effective_from",
+            "workflow_state"
+          ]
+        },
+        "form": {
+          "enabled": true,
+          "fields": [
+            "book_code",
+            "label",
+            "company",
+            "legal_rule",
+            "source_ledger",
+            "template_version",
+            "columns_json",
+            "grouping_json",
+            "filter_schema_json",
+            "effective_from",
+            "effective_to",
+            "test_evidence_json",
+            "approved_by",
+            "approved_at",
+            "workflow_state"
+          ]
+        },
+        "quickEntry": {
+          "enabled": true,
+          "fields": [
+            "book_code",
+            "label",
+            "legal_rule",
+            "source_ledger",
+            "template_version",
+            "columns_json",
+            "grouping_json",
+            "filter_schema_json",
+            "effective_from",
+            "test_evidence_json"
+          ]
+        },
+        "kanban": {
+          "enabled": false
+        },
+        "calendar": {
+          "enabled": false
+        },
+        "gantt": {
+          "enabled": false
+        },
+        "chart": {
+          "enabled": false
+        },
+        "mobile": {}
+      }
+    },
+    {
+      "name": "TT99 Financial Statement Template",
+      "module": "Accounts",
+      "is_submittable": true,
+      "autoname": "TT99-BCTC-.YYYY.-#####",
+      "title_field": "label",
+      "sort_field": "effective_from",
+      "sort_order": "DESC",
+      "track_changes": true,
+      "fields": [
+        {
+          "fieldname": "statement_code",
+          "label": "Mã báo cáo",
+          "fieldtype": "Data",
+          "required": true,
+          "in_list_view": true,
+          "search_index": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "label",
+          "label": "Tên báo cáo",
+          "fieldtype": "Data",
+          "required": true,
+          "in_list_view": true,
+          "search_index": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "company",
+          "label": "Công ty (để trống = mẫu chuẩn)",
+          "fieldtype": "Link",
+          "options": "Company",
+          "in_standard_filter": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "legal_rule",
+          "label": "Căn cứ pháp lý",
+          "fieldtype": "Link",
+          "options": "VN Legal Rule",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "statement_type",
+          "label": "Loại BCTC",
+          "fieldtype": "Select",
+          "options": "Balance Sheet\nIncome Statement\nCash Flow\nNotes\nOther",
+          "required": true,
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "template_version",
+          "label": "Phiên bản mẫu",
+          "fieldtype": "Data",
+          "required": true,
+          "in_list_view": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "lines_json",
+          "label": "Chỉ tiêu và công thức",
+          "fieldtype": "Code",
+          "required": true,
+          "default": "[]",
+          "valueSource": "default",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "comparative_policy",
+          "label": "Chính sách số so sánh",
+          "fieldtype": "Select",
+          "options": "PriorPeriod\nPriorYear\nNone",
+          "required": true,
+          "default": "PriorYear",
+          "valueSource": "default",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "currency_policy",
+          "label": "Đơn vị tiền",
+          "fieldtype": "Select",
+          "options": "Company\nPresentation",
+          "required": true,
+          "default": "Company",
+          "valueSource": "default",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "rounding_digits",
+          "label": "Số chữ số làm tròn",
+          "fieldtype": "Int",
+          "required": true,
+          "default": 0,
+          "valueSource": "default",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "effective_from",
+          "label": "Hiệu lực từ",
+          "fieldtype": "Date",
+          "required": true,
+          "in_list_view": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "effective_to",
+          "label": "Hiệu lực đến",
+          "fieldtype": "Date",
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "test_evidence_json",
+          "label": "Bằng chứng kiểm thử",
+          "fieldtype": "Code",
+          "required": true,
+          "default": "{}",
+          "valueSource": "default",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "approved_by",
+          "label": "Người phê duyệt",
+          "fieldtype": "Data",
+          "read_only": true,
+          "valueSource": "formula",
+          "editMode": "readonly",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "approved_at",
+          "label": "Thời điểm phê duyệt",
+          "fieldtype": "Datetime",
+          "read_only": true,
+          "valueSource": "formula",
+          "editMode": "readonly",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "workflow_state",
+          "label": "Trạng thái",
+          "fieldtype": "Data",
+          "read_only": true,
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "valueSource": "workflow",
+          "editMode": "readonly",
+          "surface": "expanded",
+          "serverEnforced": true
+        }
+      ],
+      "permissions": [
+        {
+          "role": "Accounts User",
+          "read": true,
+          "report": true
+        },
+        {
+          "role": "General Accountant",
+          "read": true,
+          "write": true,
+          "create": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "Chief Accountant",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "report": true,
+          "export": true,
+          "share": true
+        },
+        {
+          "role": "Accounts Manager",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "report": true,
+          "export": true,
+          "share": true
+        },
+        {
+          "role": "Internal Auditor",
+          "read": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "System Manager",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "report": true,
+          "export": true,
+          "share": true
+        }
+      ],
+      "revision": 2,
+      "kind": "transaction",
+      "viewPolicy": {
+        "list": {
+          "enabled": true,
+          "columns": [
+            "statement_code",
+            "label",
+            "statement_type",
+            "template_version",
+            "effective_from",
+            "workflow_state"
+          ]
+        },
+        "form": {
+          "enabled": true,
+          "fields": [
+            "statement_code",
+            "label",
+            "company",
+            "legal_rule",
+            "statement_type",
+            "template_version",
+            "lines_json",
+            "comparative_policy",
+            "currency_policy",
+            "rounding_digits",
+            "effective_from",
+            "effective_to",
+            "test_evidence_json",
+            "approved_by",
+            "approved_at",
+            "workflow_state"
+          ]
+        },
+        "quickEntry": {
+          "enabled": true,
+          "fields": [
+            "statement_code",
+            "label",
+            "legal_rule",
+            "statement_type",
+            "template_version",
+            "lines_json",
+            "comparative_policy",
+            "currency_policy",
+            "rounding_digits",
+            "effective_from",
+            "test_evidence_json"
+          ]
+        },
+        "kanban": {
+          "enabled": false
+        },
+        "calendar": {
+          "enabled": false
+        },
+        "gantt": {
+          "enabled": false
+        },
+        "chart": {
+          "enabled": false
+        },
+        "mobile": {}
+      }
+    },
+    {
+      "name": "TT99 Voucher Form",
+      "module": "Accounts",
+      "is_submittable": true,
+      "autoname": "TT99-PHIEU-.YYYY.-#####",
+      "title_field": "label",
+      "sort_field": "effective_from",
+      "sort_order": "DESC",
+      "track_changes": true,
+      "fields": [
+        {
+          "fieldname": "form_code",
+          "label": "Mã mẫu",
+          "fieldtype": "Data",
+          "required": true,
+          "in_list_view": true,
+          "search_index": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "label",
+          "label": "Tên mẫu chứng từ",
+          "fieldtype": "Data",
+          "required": true,
+          "in_list_view": true,
+          "search_index": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "company",
+          "label": "Công ty (để trống = mẫu chuẩn)",
+          "fieldtype": "Link",
+          "options": "Company",
+          "in_standard_filter": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "legal_rule",
+          "label": "Căn cứ pháp lý",
+          "fieldtype": "Link",
+          "options": "VN Legal Rule",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "document_type",
+          "label": "Loại chứng từ",
+          "fieldtype": "Link",
+          "options": "DocType",
+          "required": true,
+          "in_list_view": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "template_version",
+          "label": "Phiên bản mẫu",
+          "fieldtype": "Data",
+          "required": true,
+          "in_list_view": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "template_json",
+          "label": "Schema/bố cục mẫu",
+          "fieldtype": "Code",
+          "required": true,
+          "default": "{}",
+          "valueSource": "default",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "required_fields_json",
+          "label": "Trường bắt buộc",
+          "fieldtype": "Code",
+          "required": true,
+          "default": "[]",
+          "valueSource": "default",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "effective_from",
+          "label": "Hiệu lực từ",
+          "fieldtype": "Date",
+          "required": true,
+          "in_list_view": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "effective_to",
+          "label": "Hiệu lực đến",
+          "fieldtype": "Date",
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "test_evidence_json",
+          "label": "Bằng chứng kiểm thử",
+          "fieldtype": "Code",
+          "required": true,
+          "default": "{}",
+          "valueSource": "default",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "approved_by",
+          "label": "Người phê duyệt",
+          "fieldtype": "Data",
+          "read_only": true,
+          "valueSource": "formula",
+          "editMode": "readonly",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "approved_at",
+          "label": "Thời điểm phê duyệt",
+          "fieldtype": "Datetime",
+          "read_only": true,
+          "valueSource": "formula",
+          "editMode": "readonly",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "workflow_state",
+          "label": "Trạng thái",
+          "fieldtype": "Data",
+          "read_only": true,
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "valueSource": "workflow",
+          "editMode": "readonly",
+          "surface": "expanded",
+          "serverEnforced": true
+        }
+      ],
+      "permissions": [
+        {
+          "role": "Accounts User",
+          "read": true,
+          "report": true
+        },
+        {
+          "role": "General Accountant",
+          "read": true,
+          "write": true,
+          "create": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "Chief Accountant",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "report": true,
+          "export": true,
+          "share": true
+        },
+        {
+          "role": "Accounts Manager",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "report": true,
+          "export": true,
+          "share": true
+        },
+        {
+          "role": "Internal Auditor",
+          "read": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "System Manager",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "report": true,
+          "export": true,
+          "share": true
+        }
+      ],
+      "revision": 2,
+      "kind": "transaction",
+      "viewPolicy": {
+        "list": {
+          "enabled": true,
+          "columns": [
+            "form_code",
+            "label",
+            "document_type",
+            "template_version",
+            "effective_from",
+            "workflow_state"
+          ]
+        },
+        "form": {
+          "enabled": true,
+          "fields": [
+            "form_code",
+            "label",
+            "company",
+            "legal_rule",
+            "document_type",
+            "template_version",
+            "template_json",
+            "required_fields_json",
+            "effective_from",
+            "effective_to",
+            "test_evidence_json",
+            "approved_by",
+            "approved_at",
+            "workflow_state"
+          ]
+        },
+        "quickEntry": {
+          "enabled": true,
+          "fields": [
+            "form_code",
+            "label",
+            "legal_rule",
+            "document_type",
+            "template_version",
+            "template_json",
+            "required_fields_json",
+            "effective_from",
+            "test_evidence_json"
+          ]
+        },
+        "kanban": {
+          "enabled": false
+        },
+        "calendar": {
+          "enabled": false
+        },
+        "gantt": {
+          "enabled": false
+        },
+        "chart": {
+          "enabled": false
+        },
+        "mobile": {}
+      }
+    },
+    {
+      "name": "VN Accounting Period",
+      "module": "Accounts",
+      "is_submittable": true,
+      "autoname": "KYKT-.YYYY.-#####",
+      "title_field": "period_name",
+      "sort_field": "start_date",
+      "sort_order": "DESC",
+      "track_changes": true,
+      "fields": [
+        {
+          "fieldname": "period_name",
+          "label": "Tên kỳ",
+          "fieldtype": "Data",
+          "required": true,
+          "in_list_view": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "company",
+          "label": "Công ty",
+          "fieldtype": "Link",
+          "options": "Company",
+          "required": true,
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "branch",
+          "label": "Chi nhánh (để trống = toàn công ty)",
+          "fieldtype": "Link",
+          "options": "Branch",
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "start_date",
+          "label": "Từ ngày",
+          "fieldtype": "Date",
+          "required": true,
+          "in_list_view": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "end_date",
+          "label": "Đến ngày",
+          "fieldtype": "Date",
+          "required": true,
+          "in_list_view": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "close_state",
+          "label": "Mức khóa",
+          "fieldtype": "Select",
+          "options": "Open\nSoft Closed\nHard Locked",
+          "required": true,
+          "default": "Open",
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "valueSource": "default",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "allow_approved_adjustments",
+          "label": "Cho phép điều chỉnh đã duyệt khi khóa mềm",
+          "fieldtype": "Check",
+          "default": 0,
+          "valueSource": "default",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "reason",
+          "label": "Lý do khóa/mở",
+          "fieldtype": "Small Text",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "approved_by",
+          "label": "Người phê duyệt",
+          "fieldtype": "Data",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "approved_at",
+          "label": "Thời điểm phê duyệt",
+          "fieldtype": "Datetime",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "workflow_state",
+          "label": "Trạng thái",
+          "fieldtype": "Data",
+          "read_only": true,
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "valueSource": "workflow",
+          "editMode": "readonly",
+          "surface": "expanded",
+          "serverEnforced": true
+        }
+      ],
+      "permissions": [
+        {
+          "role": "Accounts User",
+          "read": true,
+          "report": true
+        },
+        {
+          "role": "General Accountant",
+          "read": true,
+          "write": true,
+          "create": true,
+          "report": true
+        },
+        {
+          "role": "Chief Accountant",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "cancel": true,
+          "amend": true,
+          "report": true,
+          "export": true,
+          "share": true
+        },
+        {
+          "role": "Accounts Manager",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "cancel": true,
+          "amend": true,
+          "report": true,
+          "export": true,
+          "share": true
+        },
+        {
+          "role": "System Manager",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "cancel": true,
+          "amend": true,
+          "report": true,
+          "export": true,
+          "share": true
+        }
+      ],
+      "revision": 1,
+      "kind": "transaction",
+      "viewPolicy": {
+        "list": {
+          "enabled": true,
+          "columns": [
+            "period_name",
+            "company",
+            "branch",
+            "start_date",
+            "end_date",
+            "close_state",
+            "workflow_state"
+          ]
+        },
+        "form": {
+          "enabled": true,
+          "fields": [
+            "period_name",
+            "company",
+            "branch",
+            "start_date",
+            "end_date",
+            "close_state",
+            "allow_approved_adjustments",
+            "reason",
+            "approved_by",
+            "approved_at",
+            "workflow_state"
+          ]
+        },
+        "quickEntry": {
+          "enabled": true,
+          "fields": [
+            "period_name",
+            "company",
+            "start_date",
+            "end_date",
+            "close_state",
+            "reason",
+            "approved_by",
+            "approved_at"
+          ]
+        },
+        "kanban": {
+          "enabled": false
+        },
+        "calendar": {
+          "enabled": false
+        },
+        "gantt": {
+          "enabled": false
+        },
+        "chart": {
+          "enabled": false
+        },
+        "mobile": {}
+      }
+    },
+    {
+      "name": "VN Accounting Policy",
+      "module": "Accounts",
+      "is_submittable": true,
+      "autoname": "CSKT-.YYYY.-#####",
+      "title_field": "company",
+      "sort_field": "effective_from",
+      "sort_order": "DESC",
+      "track_changes": true,
+      "fields": [
+        {
+          "fieldname": "company",
+          "label": "Công ty",
+          "fieldtype": "Link",
+          "options": "Company",
+          "required": true,
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "set_only_once": true,
+          "valueSource": "user",
+          "editMode": "set_once",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "policy_version",
+          "label": "Phiên bản chính sách",
+          "fieldtype": "Data",
+          "required": true,
+          "in_list_view": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "regime_code",
+          "label": "Chế độ kế toán",
+          "fieldtype": "Select",
+          "options": "TT99\nTT133\nTT58\nTT132-legacy\nTT200-legacy\nChưa xác định",
+          "required": true,
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "legal_rule",
+          "label": "Quy tắc pháp lý",
+          "fieldtype": "Link",
+          "options": "VN Legal Rule",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "legal_document_no",
+          "label": "Văn bản áp dụng",
+          "fieldtype": "Data",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "fiscal_year_start",
+          "label": "Ngày bắt đầu năm tài chính",
+          "fieldtype": "Date",
+          "required": true,
+          "in_list_view": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "effective_from",
+          "label": "Hiệu lực từ",
+          "fieldtype": "Date",
+          "required": true,
+          "in_list_view": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "effective_to",
+          "label": "Hiệu lực đến",
+          "fieldtype": "Date",
+          "description": "Để trống khi đang còn hiệu lực. Bản đã duyệt chỉ được phép kết thúc hiệu lực một lần; các field khác bất biến.",
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "accounting_currency",
+          "label": "Đồng tiền kế toán",
+          "fieldtype": "Link",
+          "options": "Currency",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "legal_report_currency",
+          "label": "Đồng tiền báo cáo pháp lý",
+          "fieldtype": "Link",
+          "options": "Currency",
+          "required": true,
+          "default": "VND",
+          "valueSource": "default",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "inventory_account",
+          "label": "Tài khoản hàng tồn kho",
+          "fieldtype": "Link",
+          "options": "Account",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "cogs_account",
+          "label": "Tài khoản giá vốn",
+          "fieldtype": "Link",
+          "options": "Account",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "stock_adjustment_account",
+          "label": "Tài khoản điều chỉnh kho",
+          "fieldtype": "Link",
+          "options": "Account",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "stock_received_not_billed_account",
+          "label": "Hàng nhận chưa hóa đơn",
+          "fieldtype": "Link",
+          "options": "Account",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "retained_earnings_account",
+          "label": "Lợi nhuận sau thuế chưa phân phối",
+          "fieldtype": "Link",
+          "options": "Account",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "vat_method",
+          "label": "Phương pháp VAT",
+          "fieldtype": "Select",
+          "options": "Khấu trừ\nTrực tiếp\nChưa xác định",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "branch_accounting_model",
+          "label": "Mô hình hạch toán chi nhánh",
+          "fieldtype": "Select",
+          "options": "Phụ thuộc\nĐộc lập\nHỗn hợp",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "internal_regulation_file",
+          "label": "Quy chế kế toán nội bộ",
+          "fieldtype": "Attach",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "source_url",
+          "label": "Nguồn pháp lý chính thức",
+          "fieldtype": "Data",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "source_file_hash",
+          "label": "SHA-256 tài liệu nguồn",
+          "fieldtype": "Data",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "approved_by",
+          "label": "Người phê duyệt",
+          "fieldtype": "Data",
+          "read_only": true,
+          "valueSource": "formula",
+          "editMode": "readonly",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "approved_at",
+          "label": "Thời điểm phê duyệt",
+          "fieldtype": "Datetime",
+          "read_only": true,
+          "valueSource": "formula",
+          "editMode": "readonly",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "workflow_state",
+          "label": "Trạng thái",
+          "fieldtype": "Data",
+          "read_only": true,
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "valueSource": "workflow",
+          "editMode": "readonly",
+          "surface": "expanded",
+          "serverEnforced": true
+        }
+      ],
+      "permissions": [
+        {
+          "role": "Accounts User",
+          "read": true,
+          "report": true
+        },
+        {
+          "role": "General Accountant",
+          "read": true,
+          "write": true,
+          "create": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "Chief Accountant",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "report": true,
+          "export": true,
+          "share": true
+        },
+        {
+          "role": "Accounts Manager",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "report": true,
+          "export": true,
+          "share": true
+        },
+        {
+          "role": "Internal Auditor",
+          "read": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "System Manager",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "report": true,
+          "export": true,
+          "share": true
+        }
+      ],
+      "revision": 3,
+      "kind": "transaction",
+      "viewPolicy": {
+        "list": {
+          "enabled": true,
+          "columns": [
+            "company",
+            "policy_version",
+            "regime_code",
+            "fiscal_year_start",
+            "effective_from",
+            "workflow_state"
+          ]
+        },
+        "form": {
+          "enabled": true,
+          "fields": [
+            "company",
+            "policy_version",
+            "regime_code",
+            "legal_rule",
+            "legal_document_no",
+            "fiscal_year_start",
+            "effective_from",
+            "effective_to",
+            "accounting_currency",
+            "legal_report_currency",
+            "inventory_account",
+            "cogs_account",
+            "stock_adjustment_account",
+            "stock_received_not_billed_account",
+            "retained_earnings_account",
+            "vat_method",
+            "branch_accounting_model",
+            "internal_regulation_file",
+            "source_url",
+            "source_file_hash",
+            "approved_by",
+            "approved_at",
+            "workflow_state"
+          ]
+        },
+        "quickEntry": {
+          "enabled": true,
+          "fields": [
+            "company",
+            "policy_version",
+            "regime_code",
+            "legal_rule",
+            "legal_document_no",
+            "fiscal_year_start",
+            "effective_from",
+            "accounting_currency",
+            "legal_report_currency",
+            "inventory_account",
+            "cogs_account",
+            "stock_adjustment_account",
+            "stock_received_not_billed_account",
+            "retained_earnings_account",
+            "vat_method",
+            "branch_accounting_model",
+            "internal_regulation_file",
+            "source_url",
+            "source_file_hash"
+          ]
+        },
+        "kanban": {
+          "enabled": false
+        },
+        "calendar": {
+          "enabled": false
+        },
+        "gantt": {
+          "enabled": false
+        },
+        "chart": {
+          "enabled": false
+        },
+        "mobile": {}
+      }
+    },
+    {
+      "name": "VN Legal Rule",
+      "module": "Accounts",
+      "is_submittable": true,
+      "autoname": "field:rule_code",
+      "title_field": "rule_name",
+      "sort_field": "effective_from",
+      "sort_order": "DESC",
+      "track_changes": true,
+      "fields": [
+        {
+          "fieldname": "rule_code",
+          "label": "Mã phiên bản quy tắc",
+          "fieldtype": "Data",
+          "required": true,
+          "unique": true,
+          "in_list_view": true,
+          "search_index": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "rule_name",
+          "label": "Tên quy tắc",
+          "fieldtype": "Data",
+          "required": true,
+          "in_list_view": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "rule_version",
+          "label": "Phiên bản",
+          "fieldtype": "Data",
+          "required": true,
+          "in_list_view": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "rule_type",
+          "label": "Nhóm",
+          "fieldtype": "Select",
+          "options": "Accounting\nVAT\nCIT\nPIT\nInsurance\nE-Invoice\nXML\nPayroll",
+          "required": true,
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "document_no",
+          "label": "Số văn bản",
+          "fieldtype": "Data",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "regime_code",
+          "label": "Chế độ",
+          "fieldtype": "Select",
+          "options": "TT99\nTT133\nTT58\nTT132-legacy\nTT200-legacy\nTax-specific\nPayroll-specific",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "taxpayer_segment",
+          "label": "Đối tượng áp dụng",
+          "fieldtype": "Data",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "effective_from",
+          "label": "Hiệu lực từ",
+          "fieldtype": "Date",
+          "required": true,
+          "in_list_view": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "effective_to",
+          "label": "Hiệu lực đến",
+          "fieldtype": "Date",
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "form_version",
+          "label": "Phiên bản biểu mẫu",
+          "fieldtype": "Data",
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "xml_schema_version",
+          "label": "Phiên bản XML",
+          "fieldtype": "Data",
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "supersedes_rule_id",
+          "label": "Thay thế quy tắc",
+          "fieldtype": "Link",
+          "options": "VN Legal Rule",
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "source_url",
+          "label": "Nguồn chính thức",
+          "fieldtype": "Data",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "source_file_hash",
+          "label": "SHA-256 tài liệu nguồn",
+          "fieldtype": "Data",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "rule_json",
+          "label": "Nội dung máy đọc",
+          "fieldtype": "Code",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "approved_by",
+          "label": "Người phê duyệt",
+          "fieldtype": "Data",
+          "read_only": true,
+          "valueSource": "formula",
+          "editMode": "readonly",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "approved_at",
+          "label": "Thời điểm phê duyệt",
+          "fieldtype": "Datetime",
+          "read_only": true,
+          "valueSource": "formula",
+          "editMode": "readonly",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "workflow_state",
+          "label": "Trạng thái",
+          "fieldtype": "Data",
+          "read_only": true,
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "valueSource": "workflow",
+          "editMode": "readonly",
+          "surface": "expanded",
+          "serverEnforced": true
+        }
+      ],
+      "permissions": [
+        {
+          "role": "Accounts User",
+          "read": true,
+          "report": true
+        },
+        {
+          "role": "General Accountant",
+          "read": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "Tax Specialist",
+          "read": true,
+          "write": true,
+          "create": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "Chief Accountant",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "report": true,
+          "export": true,
+          "share": true
+        },
+        {
+          "role": "Accounts Manager",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "report": true,
+          "export": true,
+          "share": true
+        },
+        {
+          "role": "Internal Auditor",
+          "read": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "System Manager",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "report": true,
+          "export": true,
+          "share": true
+        }
+      ],
+      "revision": 3,
+      "kind": "transaction",
+      "viewPolicy": {
+        "list": {
+          "enabled": true,
+          "columns": [
+            "rule_code",
+            "rule_name",
+            "rule_version",
+            "rule_type",
+            "effective_from",
+            "workflow_state"
+          ]
+        },
+        "form": {
+          "enabled": true,
+          "fields": [
+            "rule_code",
+            "rule_name",
+            "rule_version",
+            "rule_type",
+            "document_no",
+            "regime_code",
+            "taxpayer_segment",
+            "effective_from",
+            "effective_to",
+            "form_version",
+            "xml_schema_version",
+            "supersedes_rule_id",
+            "source_url",
+            "source_file_hash",
+            "rule_json",
+            "approved_by",
+            "approved_at",
+            "workflow_state"
+          ]
+        },
+        "quickEntry": {
+          "enabled": true,
+          "fields": [
+            "rule_code",
+            "rule_name",
+            "rule_version",
+            "rule_type",
+            "document_no",
+            "regime_code",
+            "taxpayer_segment",
+            "effective_from",
+            "source_url",
+            "source_file_hash",
+            "rule_json"
+          ]
+        },
+        "kanban": {
+          "enabled": false
+        },
+        "calendar": {
+          "enabled": false
+        },
+        "gantt": {
+          "enabled": false
+        },
+        "chart": {
+          "enabled": false
+        },
+        "mobile": {}
+      }
+    },
+    {
+      "name": "VN Tax Ruleset",
+      "module": "Accounts",
+      "is_submittable": true,
+      "autoname": "field:ruleset_code",
+      "title_field": "rule_name",
+      "sort_field": "effective_from",
+      "sort_order": "DESC",
+      "track_changes": true,
+      "fields": [
+        {
+          "fieldname": "ruleset_code",
+          "label": "Mã ruleset",
+          "fieldtype": "Data",
+          "required": true,
+          "unique": true,
+          "in_list_view": true,
+          "search_index": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "rule_name",
+          "label": "Tên ruleset",
+          "fieldtype": "Data",
+          "required": true,
+          "in_list_view": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "company",
+          "label": "Công ty",
+          "fieldtype": "Link",
+          "options": "Company",
+          "required": true,
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "rule_type",
+          "label": "Loại quy tắc",
+          "fieldtype": "Select",
+          "options": "VAT\nCIT\nPIT\nInsurance\nE-Invoice\nXML",
+          "required": true,
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "taxpayer_segment",
+          "label": "Đối tượng áp dụng",
+          "fieldtype": "Data",
+          "required": true,
+          "in_standard_filter": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "schema_version",
+          "label": "Phiên bản DSL",
+          "fieldtype": "Int",
+          "required": true,
+          "default": 1,
+          "read_only": true,
+          "valueSource": "formula",
+          "editMode": "readonly",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "effective_from",
+          "label": "Hiệu lực từ",
+          "fieldtype": "Date",
+          "required": true,
+          "in_list_view": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "effective_to",
+          "label": "Hiệu lực đến",
+          "fieldtype": "Date",
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "expression_json",
+          "label": "Công thức máy đọc",
+          "fieldtype": "Code",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "test_vectors_json",
+          "label": "Bộ ca kiểm thử pháp lý",
+          "fieldtype": "Code",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "legal_rule",
+          "label": "Văn bản/quy tắc nguồn",
+          "fieldtype": "Link",
+          "options": "VN Legal Rule",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "source_hash",
+          "label": "SHA-256 ruleset",
+          "fieldtype": "Data",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "tax_accounts_json",
+          "label": "VAT Account Mapping",
+          "fieldtype": "Code",
+          "description": "For VAT rulesets: {\"input_vat\":[\"...\"],\"output_vat\":[\"...\"]}",
+          "default": "{}",
+          "valueSource": "default",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "workflow_state",
+          "label": "Trạng thái",
+          "fieldtype": "Data",
+          "read_only": true,
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "valueSource": "workflow",
+          "editMode": "readonly",
+          "surface": "expanded",
+          "serverEnforced": true
+        }
+      ],
+      "permissions": [
+        {
+          "role": "Accounts User",
+          "read": true,
+          "report": true
+        },
+        {
+          "role": "General Accountant",
+          "read": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "Tax Specialist",
+          "read": true,
+          "write": true,
+          "create": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "Chief Accountant",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "report": true,
+          "export": true,
+          "share": true
+        },
+        {
+          "role": "Accounts Manager",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "report": true,
+          "export": true,
+          "share": true
+        },
+        {
+          "role": "Internal Auditor",
+          "read": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "System Manager",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "report": true,
+          "export": true,
+          "share": true
+        }
+      ],
+      "revision": 4,
+      "kind": "transaction",
+      "viewPolicy": {
+        "list": {
+          "enabled": true,
+          "columns": [
+            "ruleset_code",
+            "rule_name",
+            "company",
+            "rule_type",
+            "effective_from",
+            "workflow_state"
+          ]
+        },
+        "form": {
+          "enabled": true,
+          "fields": [
+            "ruleset_code",
+            "rule_name",
+            "company",
+            "rule_type",
+            "taxpayer_segment",
+            "schema_version",
+            "effective_from",
+            "effective_to",
+            "expression_json",
+            "test_vectors_json",
+            "legal_rule",
+            "source_hash",
+            "tax_accounts_json",
+            "workflow_state"
+          ]
+        },
+        "quickEntry": {
+          "enabled": true,
+          "fields": [
+            "ruleset_code",
+            "rule_name",
+            "company",
+            "rule_type",
+            "taxpayer_segment",
+            "effective_from",
+            "expression_json",
+            "test_vectors_json",
+            "legal_rule",
+            "source_hash"
+          ]
+        },
+        "kanban": {
+          "enabled": false
+        },
+        "calendar": {
+          "enabled": false
+        },
+        "gantt": {
+          "enabled": false
+        },
+        "chart": {
+          "enabled": false
+        },
+        "mobile": {}
+      }
+    },
+    {
+      "name": "Warehouse Cash Count",
+      "module": "Accounts",
+      "is_submittable": true,
+      "autoname": "KKQ-.YYYY.-#####",
+      "title_field": "count_type",
+      "sort_field": "counted_at",
+      "sort_order": "DESC",
+      "track_changes": true,
+      "fields": [
+        {
+          "fieldname": "fund",
+          "label": "Quỹ kho",
+          "fieldtype": "Link",
+          "options": "Warehouse Cash Fund",
+          "required": true,
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "count_type",
+          "label": "Loại kiểm quỹ",
+          "fieldtype": "Select",
+          "options": "Chốt ngày\nBàn giao ca\nKiểm đột xuất",
+          "required": true,
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "counted_at",
+          "label": "Thời điểm kiểm",
+          "fieldtype": "Datetime",
+          "required": true,
+          "in_list_view": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "system_balance",
+          "label": "Số dư hệ thống",
+          "fieldtype": "Currency",
+          "read_only": true,
+          "in_list_view": true,
+          "valueSource": "formula",
+          "editMode": "readonly",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "counted_balance",
+          "label": "Tiền kiểm thực tế",
+          "fieldtype": "Currency",
+          "required": true,
+          "non_negative": true,
+          "in_list_view": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "variance",
+          "label": "Chênh lệch",
+          "fieldtype": "Currency",
+          "read_only": true,
+          "in_list_view": true,
+          "valueSource": "formula",
+          "editMode": "readonly",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "variance_reason",
+          "label": "Lý do chênh lệch",
+          "fieldtype": "Small Text",
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "handover_from",
+          "label": "Người giao quỹ",
+          "fieldtype": "Link",
+          "options": "User",
+          "depends_on": "eval:doc.count_type == 'Bàn giao ca'",
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "handover_to",
+          "label": "Người nhận quỹ",
+          "fieldtype": "Link",
+          "options": "User",
+          "depends_on": "eval:doc.count_type == 'Bàn giao ca'",
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "attachment",
+          "label": "Biên bản / ảnh kiểm quỹ",
+          "fieldtype": "Attach",
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "approved_by",
+          "label": "Người xác nhận",
+          "fieldtype": "Link",
+          "options": "User",
+          "read_only": true,
+          "valueSource": "formula",
+          "editMode": "readonly",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "approved_on",
+          "label": "Thời điểm xác nhận",
+          "fieldtype": "Datetime",
+          "read_only": true,
+          "valueSource": "formula",
+          "editMode": "readonly",
+          "surface": "expanded",
+          "serverEnforced": true
+        }
+      ],
+      "permissions": [
+        {
+          "role": "Warehouse Cash User",
+          "read": true,
+          "write": true,
+          "create": true,
+          "report": true
+        },
+        {
+          "role": "Thủ kho",
+          "read": true,
+          "write": true,
+          "create": true,
+          "report": true
+        },
+        {
+          "role": "Warehouse Cash Manager",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "cancel": true,
+          "amend": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "Chủ xưởng",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "cancel": true,
+          "amend": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "General Accountant",
+          "read": true,
+          "write": true,
+          "create": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "Chief Accountant",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "cancel": true,
+          "amend": true,
+          "report": true,
+          "export": true,
+          "share": true
+        },
+        {
+          "role": "Kế toán trưởng",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "cancel": true,
+          "amend": true,
+          "report": true,
+          "export": true,
+          "share": true
+        },
+        {
+          "role": "Accounts Manager",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "cancel": true,
+          "amend": true,
+          "report": true,
+          "export": true,
+          "share": true
+        },
+        {
+          "role": "System Manager",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "cancel": true,
+          "amend": true,
+          "report": true,
+          "export": true,
+          "share": true
+        }
+      ],
+      "revision": 2,
+      "kind": "transaction",
+      "viewPolicy": {
+        "list": {
+          "enabled": true,
+          "columns": [
+            "fund",
+            "count_type",
+            "counted_at",
+            "system_balance",
+            "counted_balance",
+            "variance"
+          ]
+        },
+        "form": {
+          "enabled": true,
+          "fields": [
+            "fund",
+            "count_type",
+            "counted_at",
+            "system_balance",
+            "counted_balance",
+            "variance",
+            "variance_reason",
+            "handover_from",
+            "handover_to",
+            "attachment",
+            "approved_by",
+            "approved_on"
+          ]
+        },
+        "quickEntry": {
+          "enabled": true,
+          "fields": [
+            "fund",
+            "count_type",
+            "counted_at",
+            "counted_balance"
+          ]
+        },
+        "kanban": {
+          "enabled": false
+        },
+        "calendar": {
+          "enabled": false
+        },
+        "gantt": {
+          "enabled": false
+        },
+        "chart": {
+          "enabled": false
+        },
+        "mobile": {}
+      }
+    },
+    {
+      "name": "Warehouse Cash Fund",
+      "module": "Accounts",
+      "autoname": "field:fund_code",
+      "title_field": "fund_name",
+      "sort_field": "fund_name",
+      "sort_order": "ASC",
+      "track_changes": true,
+      "fields": [
+        {
+          "fieldname": "fund_code",
+          "label": "Mã quỹ",
+          "fieldtype": "Data",
+          "required": true,
+          "unique": true,
+          "set_only_once": true,
+          "in_list_view": true,
+          "valueSource": "user",
+          "editMode": "set_once",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "fund_name",
+          "label": "Tên quỹ",
+          "fieldtype": "Data",
+          "required": true,
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "valueSource": "user",
+          "editMode": "editable",
+          "surface": "quick",
+          "serverEnforced": false
+        },
+        {
+          "fieldname": "company",
+          "label": "Công ty",
+          "fieldtype": "Link",
+          "options": "Company",
+          "required": true,
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "valueSource": "user",
+          "editMode": "editable",
+          "surface": "quick",
+          "serverEnforced": false
+        },
+        {
+          "fieldname": "warehouse",
+          "label": "Kho",
+          "fieldtype": "Link",
+          "options": "Warehouse",
+          "required": true,
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "valueSource": "user",
+          "editMode": "editable",
+          "surface": "quick",
+          "serverEnforced": false
+        },
+        {
+          "fieldname": "cash_account",
+          "label": "Tài khoản tiền mặt",
+          "fieldtype": "Link",
+          "options": "Account",
+          "required": true,
+          "in_list_view": true,
+          "valueSource": "user",
+          "editMode": "editable",
+          "surface": "quick",
+          "serverEnforced": false
+        },
+        {
+          "fieldname": "currency",
+          "label": "Tiền tệ",
+          "fieldtype": "Link",
+          "options": "Currency",
+          "required": true,
+          "default": "VND",
+          "valueSource": "default",
+          "editMode": "editable",
+          "surface": "quick",
+          "serverEnforced": false
+        },
+        {
+          "fieldname": "custodian_user",
+          "label": "Người giữ quỹ",
+          "fieldtype": "Link",
+          "options": "User",
+          "required": true,
+          "in_list_view": true,
+          "valueSource": "user",
+          "editMode": "editable",
+          "surface": "quick",
+          "serverEnforced": false
+        },
+        {
+          "fieldname": "cost_center",
+          "label": "Trung tâm chi phí",
+          "fieldtype": "Link",
+          "options": "Cost Center",
+          "valueSource": "user",
+          "editMode": "editable",
+          "surface": "expanded",
+          "serverEnforced": false
+        },
+        {
+          "fieldname": "daily_limit",
+          "label": "Hạn mức chi/ngày",
+          "fieldtype": "Currency",
+          "default": "0",
+          "non_negative": true,
+          "valueSource": "default",
+          "editMode": "editable",
+          "surface": "expanded",
+          "serverEnforced": false
+        },
+        {
+          "fieldname": "max_balance",
+          "label": "Số dư tối đa",
+          "fieldtype": "Currency",
+          "default": "0",
+          "non_negative": true,
+          "valueSource": "default",
+          "editMode": "editable",
+          "surface": "expanded",
+          "serverEnforced": false
+        },
+        {
+          "fieldname": "disabled",
+          "label": "Ngừng sử dụng",
+          "fieldtype": "Check",
+          "default": false,
+          "in_standard_filter": true,
+          "valueSource": "default",
+          "editMode": "editable",
+          "surface": "expanded",
+          "serverEnforced": false
+        },
+        {
+          "fieldname": "note",
+          "label": "Ghi chú",
+          "fieldtype": "Small Text",
+          "valueSource": "user",
+          "editMode": "editable",
+          "surface": "expanded",
+          "serverEnforced": false
+        }
+      ],
+      "permissions": [
+        {
+          "role": "Warehouse Cash User",
+          "read": true,
+          "report": true
+        },
+        {
+          "role": "Thủ kho",
+          "read": true,
+          "report": true
+        },
+        {
+          "role": "Warehouse Cash Manager",
+          "read": true,
+          "write": true,
+          "create": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "Chủ xưởng",
+          "read": true,
+          "write": true,
+          "create": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "General Accountant",
+          "read": true,
+          "write": true,
+          "create": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "Chief Accountant",
+          "read": true,
+          "write": true,
+          "create": true,
+          "report": true,
+          "export": true,
+          "share": true
+        },
+        {
+          "role": "Kế toán trưởng",
+          "read": true,
+          "write": true,
+          "create": true,
+          "report": true,
+          "export": true,
+          "share": true
+        },
+        {
+          "role": "Accounts Manager",
+          "read": true,
+          "write": true,
+          "create": true,
+          "report": true,
+          "export": true,
+          "share": true
+        },
+        {
+          "role": "System Manager",
+          "read": true,
+          "write": true,
+          "create": true,
+          "report": true,
+          "export": true,
+          "share": true
+        }
+      ],
+      "revision": 2,
+      "kind": "master",
+      "viewPolicy": {
+        "list": {
+          "enabled": true,
+          "columns": [
+            "fund_code",
+            "fund_name",
+            "company",
+            "warehouse",
+            "cash_account",
+            "custodian_user"
+          ]
+        },
+        "form": {
+          "enabled": true,
+          "fields": [
+            "fund_code",
+            "fund_name",
+            "company",
+            "warehouse",
+            "cash_account",
+            "currency",
+            "custodian_user",
+            "cost_center",
+            "daily_limit",
+            "max_balance",
+            "disabled",
+            "note"
+          ]
+        },
+        "quickEntry": {
+          "enabled": true,
+          "fields": [
+            "fund_code",
+            "fund_name",
+            "company",
+            "warehouse",
+            "cash_account",
+            "currency",
+            "custodian_user"
+          ]
+        },
+        "kanban": {
+          "enabled": false
+        },
+        "calendar": {
+          "enabled": false
+        },
+        "gantt": {
+          "enabled": false
+        },
+        "chart": {
+          "enabled": false
+        },
+        "mobile": {}
+      }
+    },
+    {
+      "name": "Warehouse Cash Transfer",
+      "module": "Accounts",
+      "is_submittable": true,
+      "autoname": "CQ-.YYYY.-#####",
+      "title_field": "purpose",
+      "sort_field": "posting_date",
+      "sort_order": "DESC",
+      "track_changes": true,
+      "fields": [
+        {
+          "fieldname": "posting_date",
+          "label": "Ngày",
+          "fieldtype": "Date",
+          "required": true,
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "from_fund",
+          "label": "Từ quỹ",
+          "fieldtype": "Link",
+          "options": "Warehouse Cash Fund",
+          "required": true,
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "to_fund",
+          "label": "Đến quỹ",
+          "fieldtype": "Link",
+          "options": "Warehouse Cash Fund",
+          "required": true,
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "amount",
+          "label": "Số tiền",
+          "fieldtype": "Currency",
+          "required": true,
+          "non_negative": true,
+          "in_list_view": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "purpose",
+          "label": "Nội dung chuyển",
+          "fieldtype": "Small Text",
+          "required": true,
+          "in_list_view": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "handover_by",
+          "label": "Người giao",
+          "fieldtype": "Link",
+          "options": "User",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "received_by",
+          "label": "Người nhận",
+          "fieldtype": "Link",
+          "options": "User",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "attachment",
+          "label": "Biên bản / ảnh bàn giao",
+          "fieldtype": "Attach",
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "approved_by",
+          "label": "Người duyệt",
+          "fieldtype": "Link",
+          "options": "User",
+          "read_only": true,
+          "valueSource": "formula",
+          "editMode": "readonly",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "approved_on",
+          "label": "Thời điểm duyệt",
+          "fieldtype": "Datetime",
+          "read_only": true,
+          "valueSource": "formula",
+          "editMode": "readonly",
+          "surface": "expanded",
+          "serverEnforced": true
+        }
+      ],
+      "permissions": [
+        {
+          "role": "Warehouse Cash User",
+          "read": true,
+          "write": true,
+          "create": true,
+          "report": true
+        },
+        {
+          "role": "Thủ kho",
+          "read": true,
+          "write": true,
+          "create": true,
+          "report": true
+        },
+        {
+          "role": "Warehouse Cash Manager",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "cancel": true,
+          "amend": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "Chủ xưởng",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "cancel": true,
+          "amend": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "General Accountant",
+          "read": true,
+          "write": true,
+          "create": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "Chief Accountant",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "cancel": true,
+          "amend": true,
+          "report": true,
+          "export": true,
+          "share": true
+        },
+        {
+          "role": "Kế toán trưởng",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "cancel": true,
+          "amend": true,
+          "report": true,
+          "export": true,
+          "share": true
+        },
+        {
+          "role": "Accounts Manager",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "cancel": true,
+          "amend": true,
+          "report": true,
+          "export": true,
+          "share": true
+        },
+        {
+          "role": "System Manager",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "cancel": true,
+          "amend": true,
+          "report": true,
+          "export": true,
+          "share": true
+        }
+      ],
+      "revision": 2,
+      "kind": "transaction",
+      "viewPolicy": {
+        "list": {
+          "enabled": true,
+          "columns": [
+            "posting_date",
+            "from_fund",
+            "to_fund",
+            "amount",
+            "purpose"
+          ]
+        },
+        "form": {
+          "enabled": true,
+          "fields": [
+            "posting_date",
+            "from_fund",
+            "to_fund",
+            "amount",
+            "purpose",
+            "handover_by",
+            "received_by",
+            "attachment",
+            "approved_by",
+            "approved_on"
+          ]
+        },
+        "quickEntry": {
+          "enabled": true,
+          "fields": [
+            "posting_date",
+            "from_fund",
+            "to_fund",
+            "amount",
+            "purpose",
+            "handover_by",
+            "received_by"
+          ]
+        },
+        "kanban": {
+          "enabled": false
+        },
+        "calendar": {
+          "enabled": false
+        },
+        "gantt": {
+          "enabled": false
+        },
+        "chart": {
+          "enabled": false
+        },
+        "mobile": {}
+      }
+    },
+    {
+      "name": "Warehouse Cash Voucher",
+      "module": "Accounts",
+      "is_submittable": true,
+      "autoname": "QK-.YYYY.-#####",
+      "title_field": "purpose",
+      "sort_field": "posting_date",
+      "sort_order": "DESC",
+      "track_changes": true,
+      "fields": [
+        {
+          "fieldname": "fund",
+          "label": "Quỹ kho",
+          "fieldtype": "Link",
+          "options": "Warehouse Cash Fund",
+          "required": true,
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "posting_date",
+          "label": "Ngày",
+          "fieldtype": "Date",
+          "required": true,
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "voucher_type",
+          "label": "Loại phiếu",
+          "fieldtype": "Select",
+          "options": "Thu\nChi\nNạp quỹ\nHoàn quỹ\nTạm ứng\nHoàn ứng\nĐiều chỉnh tăng\nĐiều chỉnh giảm",
+          "required": true,
+          "in_list_view": true,
+          "in_standard_filter": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "amount",
+          "label": "Số tiền",
+          "fieldtype": "Currency",
+          "required": true,
+          "non_negative": true,
+          "in_list_view": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "purpose",
+          "label": "Nội dung",
+          "fieldtype": "Small Text",
+          "required": true,
+          "in_list_view": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "counter_account",
+          "label": "Tài khoản đối ứng",
+          "fieldtype": "Link",
+          "options": "Account",
+          "required": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "counterparty_type",
+          "label": "Đối tượng",
+          "fieldtype": "Select",
+          "options": "Nhân viên\nNhà cung cấp\nKhách hàng\nĐơn vị vận chuyển\nKhác",
+          "required": true,
+          "in_standard_filter": true,
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "quick",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "employee",
+          "label": "Nhân viên",
+          "fieldtype": "Link",
+          "options": "Employee",
+          "depends_on": "eval:doc.counterparty_type == 'Nhân viên'",
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "supplier",
+          "label": "Nhà cung cấp",
+          "fieldtype": "Link",
+          "options": "Supplier",
+          "depends_on": "eval:doc.counterparty_type == 'Nhà cung cấp'",
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "customer",
+          "label": "Khách hàng",
+          "fieldtype": "Link",
+          "options": "Customer",
+          "depends_on": "eval:doc.counterparty_type == 'Khách hàng'",
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "counterparty_name",
+          "label": "Tên đối tượng",
+          "fieldtype": "Data",
+          "depends_on": "eval:doc.counterparty_type == 'Đơn vị vận chuyển' || doc.counterparty_type == 'Khác'",
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "source_doctype",
+          "label": "Loại chứng từ nguồn",
+          "fieldtype": "Link",
+          "options": "DocType",
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "source_name",
+          "label": "Chứng từ nguồn",
+          "fieldtype": "Dynamic Link",
+          "options": "source_doctype",
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "purchase_receipt",
+          "label": "Phiếu nhập liên quan",
+          "fieldtype": "Link",
+          "options": "Purchase Receipt",
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "stock_entry",
+          "label": "Phiếu kho liên quan",
+          "fieldtype": "Link",
+          "options": "Stock Entry",
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "cash_count",
+          "label": "Biên bản kiểm quỹ",
+          "fieldtype": "Link",
+          "options": "Warehouse Cash Count",
+          "depends_on": "eval:doc.voucher_type == 'Điều chỉnh tăng' || doc.voucher_type == 'Điều chỉnh giảm'",
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "correction_reason",
+          "label": "Lý do điều chỉnh",
+          "fieldtype": "Small Text",
+          "depends_on": "eval:doc.voucher_type == 'Điều chỉnh tăng' || doc.voucher_type == 'Điều chỉnh giảm'",
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "receipt_attachment",
+          "label": "Ảnh hóa đơn / chứng từ",
+          "fieldtype": "Attach",
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "approved_by",
+          "label": "Người duyệt",
+          "fieldtype": "Link",
+          "options": "User",
+          "read_only": true,
+          "valueSource": "formula",
+          "editMode": "readonly",
+          "surface": "expanded",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "approved_on",
+          "label": "Thời điểm duyệt",
+          "fieldtype": "Datetime",
+          "read_only": true,
+          "valueSource": "formula",
+          "editMode": "readonly",
+          "surface": "expanded",
+          "serverEnforced": true
+        }
+      ],
+      "permissions": [
+        {
+          "role": "Warehouse Cash User",
+          "read": true,
+          "write": true,
+          "create": true,
+          "report": true
+        },
+        {
+          "role": "Thủ kho",
+          "read": true,
+          "write": true,
+          "create": true,
+          "report": true
+        },
+        {
+          "role": "Warehouse Cash Manager",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "cancel": true,
+          "amend": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "Chủ xưởng",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "cancel": true,
+          "amend": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "General Accountant",
+          "read": true,
+          "write": true,
+          "create": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "Chief Accountant",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "cancel": true,
+          "amend": true,
+          "report": true,
+          "export": true,
+          "share": true
+        },
+        {
+          "role": "Kế toán trưởng",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "cancel": true,
+          "amend": true,
+          "report": true,
+          "export": true,
+          "share": true
+        },
+        {
+          "role": "Accounts Manager",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "cancel": true,
+          "amend": true,
+          "report": true,
+          "export": true,
+          "share": true
+        },
+        {
+          "role": "System Manager",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "cancel": true,
+          "amend": true,
+          "report": true,
+          "export": true,
+          "share": true
+        }
+      ],
+      "revision": 2,
+      "kind": "transaction",
+      "viewPolicy": {
+        "list": {
+          "enabled": true,
+          "columns": [
+            "fund",
+            "posting_date",
+            "voucher_type",
+            "amount",
+            "purpose"
+          ]
+        },
+        "form": {
+          "enabled": true,
+          "fields": [
+            "fund",
+            "posting_date",
+            "voucher_type",
+            "amount",
+            "purpose",
+            "counter_account",
+            "counterparty_type",
+            "employee",
+            "supplier",
+            "customer",
+            "counterparty_name",
+            "source_doctype",
+            "source_name",
+            "purchase_receipt",
+            "stock_entry",
+            "cash_count",
+            "correction_reason",
+            "receipt_attachment",
+            "approved_by",
+            "approved_on"
+          ]
+        },
+        "quickEntry": {
+          "enabled": true,
+          "fields": [
+            "fund",
+            "posting_date",
+            "voucher_type",
+            "amount",
+            "purpose",
+            "counter_account",
+            "counterparty_type"
+          ]
+        },
+        "kanban": {
+          "enabled": false
+        },
+        "calendar": {
+          "enabled": false
+        },
+        "gantt": {
+          "enabled": false
+        },
+        "chart": {
+          "enabled": false
+        },
+        "mobile": {}
+      }
+    }
+  ],
+  "workflows": [
+    {
+      "name": "Duyệt ánh xạ tài khoản TT99",
+      "document_type": "TT99 Account Map",
+      "state_field": "workflow_state",
+      "is_active": true,
+      "states": [
+        {
+          "state": "Nháp",
+          "docstatus": 0,
+          "allow_edit": "General Accountant"
+        },
+        {
+          "state": "Chờ duyệt",
+          "docstatus": 0,
+          "allow_edit": "Chief Accountant"
+        },
+        {
+          "state": "Đã phê duyệt",
+          "docstatus": 1,
+          "allow_edit": "Chief Accountant"
+        },
+        {
+          "state": "Từ chối",
+          "docstatus": 2,
+          "allow_edit": "Chief Accountant"
+        }
+      ],
+      "transitions": [
+        {
+          "state": "Nháp",
+          "action": "Gửi duyệt",
+          "next_state": "Chờ duyệt",
+          "allowed_role": "General Accountant"
+        },
+        {
+          "state": "Chờ duyệt",
+          "action": "Phê duyệt",
+          "next_state": "Đã phê duyệt",
+          "allowed_role": "Chief Accountant",
+          "allow_self_approval": false
+        },
+        {
+          "state": "Chờ duyệt",
+          "action": "Từ chối",
+          "next_state": "Từ chối",
+          "allowed_role": "Chief Accountant"
+        }
+      ],
+      "revision": 1
+    },
+    {
+      "name": "Duyệt mẫu sổ TT99",
+      "document_type": "TT99 Book Form",
+      "state_field": "workflow_state",
+      "is_active": true,
+      "states": [
+        {
+          "state": "Nháp",
+          "docstatus": 0,
+          "allow_edit": "General Accountant"
+        },
+        {
+          "state": "Chờ duyệt",
+          "docstatus": 0,
+          "allow_edit": "Chief Accountant"
+        },
+        {
+          "state": "Đã phê duyệt",
+          "docstatus": 1,
+          "allow_edit": "Chief Accountant"
+        },
+        {
+          "state": "Từ chối",
+          "docstatus": 2,
+          "allow_edit": "Chief Accountant"
+        }
+      ],
+      "transitions": [
+        {
+          "state": "Nháp",
+          "action": "Gửi duyệt",
+          "next_state": "Chờ duyệt",
+          "allowed_role": "General Accountant"
+        },
+        {
+          "state": "Chờ duyệt",
+          "action": "Phê duyệt",
+          "next_state": "Đã phê duyệt",
+          "allowed_role": "Chief Accountant",
+          "allow_self_approval": false
+        },
+        {
+          "state": "Chờ duyệt",
+          "action": "Từ chối",
+          "next_state": "Từ chối",
+          "allowed_role": "Chief Accountant"
+        }
+      ],
+      "revision": 1
+    },
+    {
+      "name": "Duyệt mẫu BCTC TT99",
+      "document_type": "TT99 Financial Statement Template",
+      "state_field": "workflow_state",
+      "is_active": true,
+      "states": [
+        {
+          "state": "Nháp",
+          "docstatus": 0,
+          "allow_edit": "General Accountant"
+        },
+        {
+          "state": "Chờ duyệt",
+          "docstatus": 0,
+          "allow_edit": "Chief Accountant"
+        },
+        {
+          "state": "Đã phê duyệt",
+          "docstatus": 1,
+          "allow_edit": "Chief Accountant"
+        },
+        {
+          "state": "Từ chối",
+          "docstatus": 2,
+          "allow_edit": "Chief Accountant"
+        }
+      ],
+      "transitions": [
+        {
+          "state": "Nháp",
+          "action": "Gửi duyệt",
+          "next_state": "Chờ duyệt",
+          "allowed_role": "General Accountant"
+        },
+        {
+          "state": "Chờ duyệt",
+          "action": "Phê duyệt",
+          "next_state": "Đã phê duyệt",
+          "allowed_role": "Chief Accountant",
+          "allow_self_approval": false
+        },
+        {
+          "state": "Chờ duyệt",
+          "action": "Từ chối",
+          "next_state": "Từ chối",
+          "allowed_role": "Chief Accountant"
+        }
+      ],
+      "revision": 1
+    },
+    {
+      "name": "Duyệt mẫu chứng từ TT99",
+      "document_type": "TT99 Voucher Form",
+      "state_field": "workflow_state",
+      "is_active": true,
+      "states": [
+        {
+          "state": "Nháp",
+          "docstatus": 0,
+          "allow_edit": "General Accountant"
+        },
+        {
+          "state": "Chờ duyệt",
+          "docstatus": 0,
+          "allow_edit": "Chief Accountant"
+        },
+        {
+          "state": "Đã phê duyệt",
+          "docstatus": 1,
+          "allow_edit": "Chief Accountant"
+        },
+        {
+          "state": "Từ chối",
+          "docstatus": 2,
+          "allow_edit": "Chief Accountant"
+        }
+      ],
+      "transitions": [
+        {
+          "state": "Nháp",
+          "action": "Gửi duyệt",
+          "next_state": "Chờ duyệt",
+          "allowed_role": "General Accountant"
+        },
+        {
+          "state": "Chờ duyệt",
+          "action": "Phê duyệt",
+          "next_state": "Đã phê duyệt",
+          "allowed_role": "Chief Accountant",
+          "allow_self_approval": false
+        },
+        {
+          "state": "Chờ duyệt",
+          "action": "Từ chối",
+          "next_state": "Từ chối",
+          "allowed_role": "Chief Accountant"
+        }
+      ],
+      "revision": 1
+    },
+    {
+      "name": "Duyệt chính sách kế toán Việt Nam",
+      "document_type": "VN Accounting Policy",
+      "state_field": "workflow_state",
+      "is_active": true,
+      "states": [
+        {
+          "state": "Nháp",
+          "docstatus": 0,
+          "allow_edit": "General Accountant"
+        },
+        {
+          "state": "Chờ duyệt",
+          "docstatus": 0,
+          "allow_edit": "Chief Accountant"
+        },
+        {
+          "state": "Đã phê duyệt",
+          "docstatus": 1,
+          "allow_edit": "Chief Accountant"
+        },
+        {
+          "state": "Hết hiệu lực",
+          "docstatus": 1,
+          "allow_edit": "Chief Accountant"
+        },
+        {
+          "state": "Đã hủy",
+          "docstatus": 2,
+          "allow_edit": "Chief Accountant"
+        }
+      ],
+      "transitions": [
+        {
+          "state": "Nháp",
+          "action": "Gửi duyệt",
+          "next_state": "Chờ duyệt",
+          "allowed_role": "General Accountant"
+        },
+        {
+          "state": "Chờ duyệt",
+          "action": "Phê duyệt",
+          "next_state": "Đã phê duyệt",
+          "allowed_role": "Chief Accountant",
+          "allow_self_approval": false
+        },
+        {
+          "state": "Chờ duyệt",
+          "action": "Từ chối",
+          "next_state": "Đã hủy",
+          "allowed_role": "Chief Accountant"
+        },
+        {
+          "state": "Đã phê duyệt",
+          "action": "Kết thúc hiệu lực",
+          "next_state": "Hết hiệu lực",
+          "allowed_role": "Chief Accountant",
+          "allow_self_approval": false
+        }
+      ],
+      "revision": 2
+    },
+    {
+      "name": "Duyệt quy tắc pháp lý Việt Nam",
+      "document_type": "VN Legal Rule",
+      "state_field": "workflow_state",
+      "is_active": true,
+      "states": [
+        {
+          "state": "Nháp",
+          "docstatus": 0,
+          "allow_edit": "Tax Specialist"
+        },
+        {
+          "state": "Chờ duyệt",
+          "docstatus": 0,
+          "allow_edit": "Chief Accountant"
+        },
+        {
+          "state": "Đã phê duyệt",
+          "docstatus": 1,
+          "allow_edit": "Chief Accountant"
+        },
+        {
+          "state": "Từ chối",
+          "docstatus": 2,
+          "allow_edit": "Chief Accountant"
+        }
+      ],
+      "transitions": [
+        {
+          "state": "Nháp",
+          "action": "Gửi duyệt",
+          "next_state": "Chờ duyệt",
+          "allowed_role": "Tax Specialist"
+        },
+        {
+          "state": "Chờ duyệt",
+          "action": "Phê duyệt",
+          "next_state": "Đã phê duyệt",
+          "allowed_role": "Chief Accountant",
+          "allow_self_approval": false
+        },
+        {
+          "state": "Chờ duyệt",
+          "action": "Từ chối",
+          "next_state": "Từ chối",
+          "allowed_role": "Chief Accountant"
+        }
+      ],
+      "revision": 1
+    },
+    {
+      "name": "Duyệt ruleset thuế Việt Nam",
+      "document_type": "VN Tax Ruleset",
+      "state_field": "workflow_state",
+      "is_active": true,
+      "states": [
+        {
+          "state": "Nháp",
+          "docstatus": 0,
+          "allow_edit": "Tax Specialist"
+        },
+        {
+          "state": "Chờ duyệt",
+          "docstatus": 0,
+          "allow_edit": "Chief Accountant"
+        },
+        {
+          "state": "Đã phê duyệt",
+          "docstatus": 1,
+          "allow_edit": "Chief Accountant"
+        },
+        {
+          "state": "Từ chối",
+          "docstatus": 2,
+          "allow_edit": "Chief Accountant"
+        }
+      ],
+      "transitions": [
+        {
+          "state": "Nháp",
+          "action": "Gửi duyệt",
+          "next_state": "Chờ duyệt",
+          "allowed_role": "Tax Specialist"
+        },
+        {
+          "state": "Chờ duyệt",
+          "action": "Phê duyệt",
+          "next_state": "Đã phê duyệt",
+          "allowed_role": "Chief Accountant",
+          "allow_self_approval": false
+        },
+        {
+          "state": "Chờ duyệt",
+          "action": "Từ chối",
+          "next_state": "Từ chối",
+          "allowed_role": "Chief Accountant"
+        }
+      ],
+      "revision": 1
+    }
+  ],
+  "print_formats": [],
+  "fixtures": [],
+  "metaContractVersion": 1
+}

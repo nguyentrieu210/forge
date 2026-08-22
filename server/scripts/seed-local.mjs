@@ -5,6 +5,7 @@
  *
  *   npm run dev:seed -- [--user dev@example.com] [--password local-dev-password-1]
  *   node scripts/seed-local.mjs --auth-only --user qa@example.test --password ...
+ *     --config apps/tenant-worker/wrangler.alumdoor-local.jsonc --persist-to <isolated-state>
  *
  * `--auth-only` creates only the System Manager account. It exists for CI flows
  * that must log in before installing an authoritative app; pre-seeding demo
@@ -49,6 +50,8 @@ if (authOnly && remote) {
 const user = argOf("user", "dev@example.com");
 const password = argOf("password", "local-dev-password-1");
 const tenant = argOf("tenant", "demo");
+const config = argOf("config", "apps/tenant-worker/wrangler.jsonc");
+const persistTo = argOf("persist-to");
 const now = new Date().toISOString();
 
 const quote = (value) => String(value).replace(/'/g, "''");
@@ -121,7 +124,12 @@ const wranglerEntry = path.join(
 );
 const result = spawnSync(
   process.execPath,
-  [wranglerEntry, "d1", "execute", "cloudforge-demo", remote ? "--remote" : "--local", "--config", "apps/tenant-worker/wrangler.jsonc", "--file", "seed-local.sql"],
+  [
+    wranglerEntry, "d1", "execute", "cloudforge-demo", remote ? "--remote" : "--local",
+    "--config", config,
+    ...(persistTo ? ["--persist-to", path.resolve(persistTo)] : []),
+    "--file", "seed-local.sql",
+  ],
   { stdio: ["ignore", "pipe", "pipe"], encoding: "utf8" },
 );
 
@@ -137,7 +145,7 @@ if (result.status !== 0) {
 
 const target = remote ? "REMOTE" : "local";
 const mode = authOnly ? "auth-only" : "demo-metadata";
-console.log(`SEED_PASS target=${target} mode=${mode} tenant=${tenant}${authOnly ? "" : ' doctype="Field Visit"'}${withUser ? ` user=${user} password=${password}` : " (metadata only, no account)"}`);
+console.log(`SEED_PASS target=${target} mode=${mode} tenant=${tenant}${authOnly ? "" : ' doctype="Field Visit"'}${withUser ? ` user=${user} credentials=provided` : " (metadata only, no account)"}`);
 if (!remote) {
   console.log("next: npx wrangler dev --config apps/tenant-worker/wrangler.jsonc --port 8799 --local");
   console.log("then: npm run smoke:http");

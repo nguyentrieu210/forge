@@ -20,6 +20,8 @@ function platformFetcher(records = {}) {
 
 const masters = {
   "Item Group:Nguyên vật liệu": { item_group_name: "Nguyên vật liệu", is_group: 0 },
+  "UOM:Cây": { uom_name: "Cây", disabled: 0 },
+  "UOM:Kg": { uom_name: "Kg", disabled: 0 },
   "Measurement Profile:Nhôm cây/lá": {
     profile_name: "Nhôm cây/lá",
     inventory_mode: "Nhôm cây/lá",
@@ -88,6 +90,8 @@ test("canonical catch-weight aluminum may buy in Kg without a static Kg-to-piece
 test("canonical override never bypasses earlier Measurement Profile validation", async () => {
   const response = await validate(canonicalItem(), {
     "Item Group:Nguyên vật liệu": masters["Item Group:Nguyên vật liệu"],
+    "UOM:Cây": masters["UOM:Cây"],
+    "UOM:Kg": masters["UOM:Kg"],
   });
   assert.equal(response.status, 422);
   assert.match(await message(response), /Bộ quy cách Nhôm cây\/lá không tồn tại/i);

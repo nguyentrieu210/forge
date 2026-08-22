@@ -598,6 +598,17 @@ function routerHarness(seed = []) {
       async getDocument(_t, doctype, name) { return doctype === "Item Price" ? documents.get(name) ?? null : null; },
       async getMasterRecordData(_t, doctype, name) {
         if (doctype === "Item Price") return documents.get(name)?.data ?? null;
+        if (doctype === "Price List" && name === "ALUMDOOR-SELLING") {
+          return { price_list_name: name, currency: "VND", selling: 1, disabled: 0 };
+        }
+        if (doctype === "Item" && ["JG_BODK", "TP-CUADL6D"].includes(name)) {
+          return { item_code: name, stock_uom: name === "JG_BODK" ? "Cái" : "m2", disabled: 0 };
+        }
+        if (doctype === "UOM" && ["Cái", "m2"].includes(name)) return { uom_name: name, disabled: 0 };
+        if (doctype === "Currency" && name === "VND") return { currency_name: "Vietnamese Dong", disabled: 0 };
+        if (doctype === "Bậc diện tích" && name === ALL_AREA_TIER) {
+          return { tier_code: ALL_AREA_TIER, tier_name: "Mọi diện tích", disabled: 0 };
+        }
         return TIERS[`${doctype}:${name}`] ?? null;
       },
       async listMasterRecordData(_t, doctype) {

@@ -569,6 +569,20 @@ export function AlumdoorDeliveryNoteWorkbench(props: AlumdoorDeliveryNoteCreateP
 
   const submitDelivery = useCallback(() => run("submit", async () => {
     if (!savedName) throw new Error("Phải lưu phiếu nháp trước khi ghi sổ.");
+    const loadingNow = linesRef.current.filter((line) => text(line.item_code) && line._loading).length;
+    if (loadingNow > 0) {
+      throw new Error(`Còn ${loadingNow} dòng đang đọc tồn/giữ chỗ — hãy chờ xong rồi ghi sổ.`);
+    }
+    /**
+     * Chặn phòng thủ song song với việc khoá nút (xem `disabled` của nút Ghi sổ) — đọc thẳng
+     * `linesRef.current` để tránh đóng gói giá trị `blockedLines` cũ của lượt render trước.
+     * Trước đây hàm này gọi thẳng `adapter.submit(doc)`, badge "X dòng đang có cảnh báo chặn"
+     * hiện đúng màu đỏ nhưng không có gì cản người dùng bấm Ghi sổ (audit #9).
+     */
+    const blockedNow = linesRef.current.filter((line) => text(line.item_code)).filter(lineBlocked).length;
+    if (blockedNow > 0) {
+      throw new Error(`Còn ${blockedNow} dòng đang có cảnh báo chặn — xử lý xong mới ghi sổ được.`);
+    }
     const { doc } = await adapter.getDoc("Delivery Note", savedName);
     const submitted = await adapter.submit(doc);
     setDocstatus(Number(submitted.docstatus) || 1);
@@ -740,6 +754,7 @@ export function AlumdoorDeliveryNoteWorkbench(props: AlumdoorDeliveryNoteCreateP
 
   const activeLines = lines.filter((line) => text(line.item_code));
   const blockedLines = activeLines.filter(lineBlocked).length;
+  const loadingContextLines = activeLines.filter((line) => line._loading).length;
   const edited = anyLineEdited(lines);
   const working = Boolean(busy);
   /**
@@ -1134,7 +1149,17 @@ export function AlumdoorDeliveryNoteWorkbench(props: AlumdoorDeliveryNoteCreateP
               </Button>
             ) : null}
             {docstatus === 0 && savedName && caps.submit ? (
-              <Button type="button" size="sm" disabled={working} onClick={submitDelivery}>
+              <Button
+                type="button"
+                size="sm"
+                disabled={working || loadingContextLines > 0 || blockedLines > 0}
+                title={loadingContextLines > 0
+                  ? `Còn ${loadingContextLines} dòng đang đọc tồn/giữ chỗ — hãy chờ xong.`
+                  : blockedLines > 0
+                    ? `Còn ${blockedLines} dòng đang có cảnh báo chặn — xử lý xong mới ghi sổ được.`
+                    : undefined}
+                onClick={submitDelivery}
+              >
                 {busy === "submit" ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />} Ghi sổ phiếu
               </Button>
             ) : null}

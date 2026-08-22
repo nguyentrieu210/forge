@@ -36,3 +36,14 @@ server/docs/spec/source-exact/runtime/
 # Ảnh chụp mốc thị giác do `pnpm --filter e2e-forge capture:ui` sinh ra: bằng chứng của một
 # lần rà soát, không phải nguồn. Trước đây 5 ảnh loại này đã lỡ được commit vào e2e-forge.
 client/e2e-forge/shots*/
+
+# Bản sao D1 cục bộ: ~1,6 GB nhị phân, sinh lại được bất cứ lúc nào bằng cách chép file
+# .sqlite của miniflare. Commit vào là phình repo VĨNH VIỄN — xoá ở commit sau cũng không
+# lấy lại được dung lượng. Bản sao muốn giữ lâu thì để ngoài cây làm việc
+# (C:\_BACKUP_ALUMDOOR_*), đừng để trong repo.
+work/_backup/
+work/_d1tmp/
+work/tmp-bom/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm

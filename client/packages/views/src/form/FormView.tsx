@@ -395,6 +395,28 @@ export function FormView(props: FormViewProps) {
       if (firstField) focusField(firstField);
       return;
     }
+    /**
+     * F4 (audit `ALUMDOOR-DANH-MUC-MAN-HINH-GAP-20260821.md`, 21/08): 25/26 field của Pricing
+     * Rule không `required` — lưu được một "chính sách giá" không trường phạm vi nào
+     * (`price_list`/`item_code`/`party`/`customer_group`/`item_group`/`pricing_scope`) VÀ không
+     * trường tác động nào (`rate`/`discount_percentage`/`adjustment_rate`), tức chắc chắn không
+     * match ai và không đổi giá gì — không một cảnh báo.
+     *
+     * Cảnh báo MỀM, KHÔNG chặn lưu — cố ý, theo đúng mẫu hình đã có sẵn và được audit xác nhận
+     * ĐÚNG trong chính brief này (`Measurement Profile.weight_tolerance_pct`: "cảnh báo lúc nhập,
+     * không chặn ghi sổ"). Chặn CỨNG là quyết định sản phẩm chưa có câu trả lời: rule cố ý áp
+     * dụng RỘNG (không giới hạn phạm vi) là một mẫu hợp lệ đã tồn tại, nên không thể tự ý bắt
+     * buộc riêng trường phạm vi. Chỉ cảnh báo ở ca chắc-chắn-vô-nghĩa: CẢ scope lẫn effect cùng
+     * rỗng — ca một trong hai rỗng (rule rộng có tác động, hoặc rule đang nháp chưa chốt số) có
+     * thể là chủ đích, không cảnh báo để khỏi làm phiền oan.
+     */
+    if (meta.name === "Pricing Rule") {
+      const scopeEmpty = !vals.price_list && !vals.item_code && !vals.party && !vals.customer_group && !vals.item_group && !vals.pricing_scope;
+      const effectEmpty = !Number(vals.rate ?? 0) && !Number(vals.discount_percentage ?? 0) && !Number(vals.adjustment_rate ?? 0);
+      if (scopeEmpty && effectEmpty) {
+        toast.info("Chính sách giá này chưa chọn phạm vi áp dụng (mặt hàng/nhóm hàng/khách/nhóm khách) và chưa có tác động giá (giá cố định/% giảm/mức điều chỉnh) — lưu xong sẽ không match ai và không đổi giá gì. Vẫn lưu bình thường, kiểm tra lại nếu đây không phải chủ đích.");
+      }
+    }
     const dirty = form.formState.dirtyFields;
     /**
      * Ô CHỈ-ĐỌC không bao giờ được gửi lên, kể cả khi form coi nó là đã đổi.
@@ -714,12 +736,23 @@ function Field({ id, rf, width, form, registry, services, docName, parentDoctype
         // trông như một field bị lỗi và chiếm gấp chiều cao cần thiết.
         const isCheck = field.fieldtype === "Check";
         const choiceOptions = field.fieldtype === "Select" && field.form_control_style === "choice_list" ? String(field.options ?? "").split("\n").map((option) => option.trim()).filter(Boolean) : [];
+        /**
+         * F3 (audit `ALUMDOOR-DANH-MUC-MAN-HINH-GAP-20260821.md`, 21/08): `field.description` đã
+         * chảy hết đường từ brief → `meta-shape.ts:59` → client (`DocField` có index signature
+         * nên field lạ không mất), nhưng CHƯA TỪNG được render — 0 chỗ đọc trong toàn FormView cũ.
+         * Hàng chục field trong brief đã viết `description` (Vietnamese, cho người khai) mà không
+         * ai từng thấy nó trên form; lý do nghiệp vụ (vd `area_tier` bắt buộc vì sao) chỉ nằm
+         * trong `"//"` — chú thích cho người đọc mã nguồn, không tới được người dùng.
+         * Thêm 1 dòng chữ dưới control, KHÔNG đổi validate/required — thuần hiển thị.
+         */
+        const description = typeof field.description === "string" && field.description.trim() ? field.description : undefined;
+        const descriptionId = description ? `${id}-desc` : undefined;
         const control = choiceOptions.length ? (
           <div className="mf-choice-list space-y-1" role="radiogroup" aria-label={displayLabel}>
             {choiceOptions.map((option) => <label key={option} className="flex min-h-8 cursor-pointer items-center gap-2 text-sm"><Checkbox checked={f.value === option} disabled={rf.readOnly} onCheckedChange={(checked) => { if (checked === true) { f.onChange(option); if (fieldState.error) form.clearErrors(field.fieldname); } }} aria-label={field.optionLabels?.[option] ?? option} /><span>{field.optionLabels?.[option] ?? option}</span></label>)}
           </div>
         ) : (
-          <Control field={field} id={id} value={f.value} onChange={(v) => { f.onChange(v); if (fieldState.error) form.clearErrors(field.fieldname); }} setFieldValue={(fieldname, value) => form.setValue(fieldname, value, { shouldDirty: true, shouldTouch: true, shouldValidate: true })} readOnly={rf.readOnly} masked={rf.masked} error={fieldState.error?.message} describedBy={fieldState.error ? `${id}-error` : undefined} required={rf.required} label={displayLabel} services={services} docname={docName} linkTarget={linkTarget} parentDoctype={parentDoctype} docValues={controlValues} roles={roles} />
+          <Control field={field} id={id} value={f.value} onChange={(v) => { f.onChange(v); if (fieldState.error) form.clearErrors(field.fieldname); }} setFieldValue={(fieldname, value) => form.setValue(fieldname, value, { shouldDirty: true, shouldTouch: true, shouldValidate: true })} readOnly={rf.readOnly} masked={rf.masked} error={fieldState.error?.message} describedBy={[descriptionId, fieldState.error ? `${id}-error` : null].filter(Boolean).join(" ") || undefined} required={rf.required} label={displayLabel} services={services} docname={docName} linkTarget={linkTarget} parentDoctype={parentDoctype} docValues={controlValues} roles={roles} />
         );
         /**
          * Dấu bắt buộc đặt TRƯỚC nhãn, theo vben (`form-render/form-label.vue`: `mr-0.5
@@ -747,7 +780,7 @@ function Field({ id, rf, width, form, registry, services, docName, parentDoctype
            */
           "min-w-0",
           isCheck && "mf-field-check",
-          `mf-field-width-${width}`,
+          !isCheck && `mf-field-width-${width}`,
           field.form_control_width === "compact" && "mf-field-control-compact",
           rf.state && `mf-state-${rf.state}`,
           rf.readOnly && "mf-field-readonly",
@@ -763,6 +796,7 @@ function Field({ id, rf, width, form, registry, services, docName, parentDoctype
                   <label htmlFor={id} className="block cursor-pointer text-[13px] font-medium leading-5 text-foreground">{label}</label>
                 </div>
               </div>
+              {description ? <span id={descriptionId} className="mt-1 block text-xs text-muted-foreground">{description}</span> : null}
               {fieldState.error ? <span id={`${id}-error`} className="mt-1 block text-xs text-destructive" role="alert">{fieldState.error.message}</span> : null}
             </div>
           );
@@ -778,6 +812,9 @@ function Field({ id, rf, width, form, registry, services, docName, parentDoctype
             */}
             <label htmlFor={id} className="text-[13px] font-medium leading-tight text-foreground">{label}</label>
             {control}
+            {/* F3: description là chữ NGHIỆP VỤ cho người khai (vd vì sao bậc diện tích bắt
+                buộc) — luôn hiện, không chỉ khi lỗi, nên đặt ngay dưới control. */}
+            {description ? <span id={descriptionId} className="text-xs text-muted-foreground">{description}</span> : null}
             {fieldState.error ? <span id={`${id}-error`} className="text-xs text-destructive" role="alert">{fieldState.error.message}</span> : null}
           </div>
         );

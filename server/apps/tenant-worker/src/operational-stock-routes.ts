@@ -11,19 +11,40 @@ import {
   isPhysicalStockFrappePath,
   routePhysicalStockApi,
 } from "./physical-stock-api.js";
+import {
+  isInventoryScanApiPath,
+  isInventoryScanFrappePath,
+  routeInventoryScanApi,
+} from "./inventory-scan-api.js";
+import {
+  isWmsPlanningApiPath,
+  isWmsPlanningFrappePath,
+  routeWmsPlanningApi,
+} from "./wms-planning-api.js";
 import type { TenantEnv } from "./env.js";
 
-export type StockOperationalRoute = "physical-stock" | "daily-ledger" | "migration";
+export type StockOperationalRoute = "physical-stock" | "inventory-scan" | "wms-planning" | "daily-ledger" | "migration";
 
+/**
+ * `inventory-scan` nối vào đây (audit ALUMDOOR-KHO-SAU-VONG2-20260821.md, S3): route
+ * `routeInventoryScanApi` đã viết xong (`inventory-scan-api.ts`) nhưng trước đây KHÔNG dispatcher
+ * nào trong tenant-worker gọi tới — không chỉ thiếu UI, còn thiếu cả wiring server. Đăng ký cùng
+ * chỗ với `physical-stock` vì cùng nhóm "route kho vận hành" và dùng chung shape context.
+ */
 export function matchStockOperationalRoute(pathname: string): StockOperationalRoute | null {
   if (isPhysicalStockApiPath(pathname)) return "physical-stock";
+  if (isInventoryScanApiPath(pathname)) return "inventory-scan";
+  if (isWmsPlanningApiPath(pathname)) return "wms-planning";
   if (isDailyLedgerApiPath(pathname)) return "daily-ledger";
   if (isMigrationApiPath(pathname)) return "migration";
   return null;
 }
 
 export function isStockOperationalFrappePath(pathname: string): boolean {
-  return isPhysicalStockFrappePath(pathname) || isDailyLedgerFrappePath(pathname);
+  return isPhysicalStockFrappePath(pathname)
+    || isInventoryScanFrappePath(pathname)
+    || isWmsPlanningFrappePath(pathname)
+    || isDailyLedgerFrappePath(pathname);
 }
 
 interface StockOperationalRequest {
@@ -60,6 +81,21 @@ export async function routeStockOperationalRequest(input: StockOperationalReques
       permissions,
       traceId,
     });
+  }
+  if (route === "inventory-scan") {
+    const metadata = new D1MetadataStore(requestDb);
+    const access = new D1DocumentAccessStore(requestDb);
+    const permissions = new MetadataPermissionService(metadata, undefined, access);
+    return routeInventoryScanApi(request, url, {
+      db: requestDb,
+      tenantId,
+      actor,
+      permissions,
+      traceId,
+    });
+  }
+  if (route === "wms-planning") {
+    return routeWmsPlanningApi(request, url, { traceId });
   }
   return routeDailyLedgerApi(request, url, { db: requestDb, tenantId, actor, traceId });
 }

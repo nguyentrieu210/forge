@@ -16,6 +16,11 @@ import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
+throw new Error(
+  "ĐÃ KHÓA nhap-qua-api.mjs: các JSON staged cũ có mã retire/alias chưa cascade và hệ số tạm. "
+  + "Chỉ dùng local runner sau khi cổng import hợp nhất trả GO.",
+);
+
 const THU_MUC = dirname(fileURLToPath(import.meta.url));
 const GOC = process.env.ALUMDOOR_API || "http://127.0.0.1:8799";
 const NGUOI = process.env.FORGE_ADMIN_USER || "dev@example.com";

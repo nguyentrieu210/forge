@@ -11,6 +11,7 @@ const appsSrc = path.join(here, "..", "apps-src");
 const vietnameseMarks = /[ăâđêôơưáàảãạấầẩẫậắằẳẵặéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ]/i;
 const acceptedInternationalTerms = new Set([
   "api", "bom", "email", "erp", "gps", "hr", "hrm", "id", "ip", "json", "otp", "qr", "sku", "sql", "uom", "url", "uuid", "vat", "vnd", "website",
+  "ca", "cao", "chi", "ghim", "kho", "nam", "thu", "km", "mi",
 ]);
 
 async function walk(dir) {
@@ -25,8 +26,13 @@ async function walk(dir) {
 
 function isTechnicalCode(text) {
   if (/^(?:https?:\/\/|eval:|field:)/i.test(text)) return true;
+  if (/^[A-Z](?:\d+)?$/.test(text)) return true;
+  if (/^[A-Z]{2,}(?:\/[A-Z]{2,})*$/.test(text)) return true;
+  if (/^[A-Z]{2,}\d+(?:-[a-z]+)?$/.test(text)) return true;
   if (/^[A-Z0-9]+(?:_[A-Z0-9]+){2,}$/.test(text)) return true;
   if (/^[A-Z]{2,}[0-9][A-Z0-9_-]*$/.test(text)) return true;
+  if (/^[a-z][a-z0-9]*(?:_[a-z0-9]+)+$/.test(text)) return true;
+  if (/^[a-z]+\d+$/.test(text)) return true;
   return false;
 }
 

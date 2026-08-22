@@ -13,7 +13,7 @@ import { errors } from "../../core/src/index.js";
 import type { ControllerContext, DocumentController, O2CStatusMetrics } from "../../document-kernel/src/index.js";
 import { deriveDeliveryNoteStatus, deriveO2CStatus, nextDocStatus } from "../../document-kernel/src/index.js";
 import { reverseGl, reversePayment, reverseStock } from "../../ledger/src/index.js";
-import { addMinor, fromScaledInt, multiplyScaled, negateMinor, toScaledInt } from "../../money/src/index.js";
+import { addMinor, assertNonNegativeMinor, fromScaledInt, multiplyScaled, negateMinor, toScaledInt } from "../../money/src/index.js";
 import { domainEvent } from "../../outbox/src/index.js";
 import { buildTrackedStockLines, deriveOutgoingValuation } from "../../clouderp-stock/src/index.js";
 import { areaTierBasisSqm, resolveServerPrice } from "../../clouderp-pricing/src/index.js";
@@ -150,6 +150,26 @@ export function withStableRowIds<T extends JsonObject>(items: readonly T[]): T[]
   });
 }
 
+const ALUMDOOR_PRICE_GROUPS = new Set(["Đại lý", "Lẻ"]);
+
+/**
+ * Detect the AlumDoor commercial contract from canonical business data, not from a
+ * tenant-wide switch.  A tenant may use its real legal Company name, while shared O2C
+ * controllers also serve apps which do not own AlumDoor's price-group authority.
+ */
+export async function isAlumdoorCommercialContext(
+  context: ControllerContext<SalesOrderData>,
+  input: SalesOrderData,
+): Promise<boolean> {
+  if (input.company === "ALUMDOOR") return true;
+  if (!input.customer) return false;
+  const customer = await context.reader.getMasterRecordData(context.command.tenant_id, "Customer", input.customer);
+  const group = typeof customer?.price_group === "string" && customer.price_group.trim()
+    ? customer.price_group.trim()
+    : typeof customer?.customer_group === "string" ? customer.customer_group.trim() : "";
+  return ALUMDOOR_PRICE_GROUPS.has(group);
+}
+
 export class SalesOrderController extends BaseController<SalesOrderData> {
   readonly doctype = "Sales Order";
 
@@ -158,20 +178,10 @@ export class SalesOrderController extends BaseController<SalesOrderData> {
     if (!input.customer) throw errors.validation("Customer is required");
     if (!input.company) throw errors.validation("Company is required");
     if (!input.currency) throw errors.validation("Currency is required");
-    // Chính sách thương mại đã duyệt: mọi Đơn bán phải được định giá từ danh mục.
-    //
-    // Trước đây chốt này chỉ bật khi `input.company === "ALUMDOOR"` — tên công ty DEMO
-    // gieo sẵn trong master_records, không phải công ty thật đang giao dịch. Đo trên D1
-    // ngày 21/08/2026: 61 Đơn bán dùng công ty thật, 16/61 KHÔNG có bảng giá — chính sách
-    // chưa từng có hiệu lực trên một đơn hàng thật nào. Thực nghiệm xác nhận: gửi chiết
-    // khấu 40% với công ty thật → tạo 201, chốt sổ 200, không ai duyệt.
-    //
-    // Chốt chủ dự án 21/08/2026: bật LUÔN, không điều kiện theo tên công ty. Đây là
-    // `SalesOrderController` DÙNG CHUNG — cùng lớp này được `createO2CControllerRegistry()`
-    // đăng ký cho luồng social-commerce (control-plane-worker, social-ingress-worker), có
-    // thể phục vụ khách hàng khác ngoài Alumdoor. Bật không điều kiện áp chính sách này lên
-    // CẢ những đơn social-commerce đó — rủi ro đã nêu và được chấp nhận, không phải bỏ sót.
-    const locksOrderPricing = true;
+    // AlumDoor khóa giá theo danh mục; O2C dùng chung của app khác giữ hợp đồng riêng.
+    // Nhận diện bằng Company kỹ thuật cũ hoặc Nhóm giá canonical trên Customer, nên công
+    // ty thật không cần mang tên "ALUMDOOR" và social-commerce khác không bị khóa nhầm.
+    const locksOrderPricing = await isAlumdoorCommercialContext(context, input);
     if (locksOrderPricing && !input.selling_price_list) throw errors.validation("Bảng giá áp dụng là bắt buộc");
     const orderDiscountPercentage = input.additional_discount_percentage ?? 0;
     const orderDiscountMicros = toScaledInt(orderDiscountPercentage, 6, "additional_discount_percentage");
@@ -180,7 +190,7 @@ export class SalesOrderController extends BaseController<SalesOrderData> {
     const itemSnapshots = await applyUomConversion(context as unknown as ControllerContext<JsonObject>, withStableRowIds(input.items), { transactionKind: "sales" });
     const pricedItems = await applySellingPricing(context, itemSnapshots, input.selling_price_list, input.currency, input.transaction_date, input.customer, input.customer_group);
     const discountPolicy = locksOrderPricing
-      ? await applyAlumdoorDiscountPolicy(context, pricedItems)
+      ? await applyAlumdoorDiscountPolicy(context, pricedItems, input.customer_group)
       : { items: pricedItems, requiresApproval: false };
     const pricingRequiresApproval = discountPolicy.requiresApproval
       || orderDiscountMicros !== 0
@@ -326,8 +336,22 @@ export function alumdoorOrderTotals(input: {
   };
 }
 
-/** Chỉ mã cửa mặc định 15%; ray/trục và các phụ kiện mặc định 0%. */
-export function defaultAlumdoorDiscountPercent(item: Record<string, unknown>): number {
+/** Nhóm giá KHÔNG được hưởng chiết khấu đại lý. Giá trị đúng như dữ liệu máy: 251 KH "Đại lý", 5 KH "Lẻ". */
+const ALUMDOOR_RETAIL_PRICE_GROUPS = new Set(["lẻ"]);
+
+/**
+ * Chỉ mã cửa mặc định 15%; ray/trục và các phụ kiện mặc định 0%.
+ *
+ * P0-2: hàm này trước đây KHÔNG nhận nhóm giá, nên khách "Lẻ" cũng được giảm 15% —
+ * xem trước sống `customer_group: "Lẻ"` ra `net 10.488.150` thay vì giá niêm yết `12.339.000`.
+ * Nay nhóm bán lẻ trả về 0. Nhóm để trống vẫn giữ nguyên hành vi cũ (fail-open) vì
+ * `authoritativeCustomerGroup()` đã chặn đơn không có nhóm giá ở tầng trên.
+ */
+export function defaultAlumdoorDiscountPercent(
+  item: Record<string, unknown>,
+  customerGroup?: unknown,
+): number {
+  if (ALUMDOOR_RETAIL_PRICE_GROUPS.has(normalizedAlumdoorText(customerGroup))) return 0;
   if (isAlumdoorLinearItem(item)) return 0;
   if (ALUMDOOR_GERMAN_DOOR_TYPES.has(normalizedAlumdoorText(item.door_type))) return 15;
   const measurementMode = normalizedAlumdoorText(item.inventory_mode || item.measurement_profile);
@@ -345,15 +369,65 @@ export interface AlumdoorBenefitItem extends JsonObject {
 }
 
 const ALUMDOOR_GERMAN_DISCOUNT_RULE = "ALUMDOOR-PR:DUC-DISCOUNT-15";
-const ALUMDOOR_GERMAN_GIFT_RAIL_RULE = "ALUMDOOR-PR:DUC-GIFT-RAIL-8M2";
+const ALUMDOOR_GERMAN_GIFT_RAIL_RULE = "ALUMDOOR-PR:DUC-GIFT-RAIL-GT8M2";
 
-/** Preserve an auditable policy snapshot when the tenant has not received the equivalent rule yet. */
+/**
+ * NGƯỠNG TẶNG RAY — đọc từ Item, fallback theo quyết định trực tiếp của chủ xưởng.
+ *
+ * Quyết định chủ xưởng ngày 22/08/2026: "8m2 chứ ko phải 10". Quyết định trực tiếp này có
+ * thẩm quyền cao hơn ô workbook cũ ghi trên 10 m². Toán tử không bị đổi trong quyết định mới,
+ * nên giữ `GT`: đúng 8,00 m² chưa tặng; chỉ diện tích một bộ lớn hơn 8 m² mới đủ điều kiện.
+ * `gift_rail_min_area_sqm` và `gift_rail_area_operator` vẫn cho phép lưu ảnh chụp chính sách
+ * trên Item khi danh mục được hoàn thiện, nhưng dữ liệu cũ đang để trống phải rơi về mốc 8.
+ *
+ * CÒN THIẾU: một chỗ chứa trong DANH MỤC để chủ xưởng tự sửa mà không cần lập trình viên.
+ * Hàm `alumdoorGiftRailThresholdSqm()` dưới đây đã mở sẵn đường đọc từ dữ liệu: nếu bản ghi
+ * Mặc định là `GT`: đúng 8,00 m² chưa được tặng. Nếu có quyết định chủ xưởng mới hơn,
+ * cập nhật hai field trên Item cùng ngày hiệu lực và bằng chứng, không sửa hằng số rải rác.
+ */
+const ALUMDOOR_GIFT_RAIL_MIN_AREA_SQM = 8;
+const ALUMDOOR_GIFT_RAIL_AREA_OPERATOR = "GT";
+
+/**
+ * Ngưỡng diện tích (m²) để một mã cửa được tặng ray. Đọc từ danh mục nếu có, không thì
+ * dùng hằng số đã chốt ở trên. Đây là hàm DUY NHẤT được phép trả ra con số ngưỡng —
+ * cả đường lưu, đường xem trước và client đều lấy từ đây.
+ */
+export function alumdoorGiftRailThresholdSqm(item?: Record<string, unknown>): number {
+  const declared = Number(item?.gift_rail_min_area_sqm);
+  return Number.isFinite(declared) && declared > 0 ? declared : ALUMDOOR_GIFT_RAIL_MIN_AREA_SQM;
+}
+
+export function alumdoorGiftRailAreaOperator(item?: Record<string, unknown>): "GT" | "GTE" {
+  return normalizedAlumdoorText(item?.gift_rail_area_operator) === "gte" ? "GTE" : ALUMDOOR_GIFT_RAIL_AREA_OPERATOR;
+}
+
+export function alumdoorGiftRailEligible(item: Record<string, unknown>, areaSqm: unknown): boolean {
+  const area = Number(areaSqm);
+  if (!Number.isFinite(area)) return false;
+  const threshold = alumdoorGiftRailThresholdSqm(item);
+  return alumdoorGiftRailAreaOperator(item) === "GTE" ? area >= threshold : area > threshold;
+}
+
+/**
+ * Preserve an auditable policy snapshot when the tenant has not received the equivalent rule yet.
+ *
+ * P0-1: điều kiện cũ chỉ nhìn `DISCOUNT_PERCENT`, nên khi danh mục đã có luật chiết khấu
+ * khai dưới dạng ADJUSTMENT rate ÂM (15 luật "Chiết khấu đại lý 15% — …" trên D1), hàm này
+ * vẫn dán thêm một snapshot 15% thứ hai. Kết quả là bản kê chính sách của dòng nói "giảm 15%"
+ * hai lần cho cùng một chính sách. Nay có bất kỳ khoản giảm nào — phần trăm, số tuyệt đối,
+ * hay ADJUSTMENT âm — thì KHÔNG dán thêm.
+ */
 export function withAlumdoorDefaultDiscountSnapshot(
   snapshots: PricingRuleSnapshot[],
   item: Record<string, unknown>,
+  customerGroup?: unknown,
+  appliedDiscountPercentage?: unknown,
 ): PricingRuleSnapshot[] {
-  const expected = defaultAlumdoorDiscountPercent(item);
-  if (expected <= 0 || snapshots.some((snapshot) => snapshot.effect_type === "DISCOUNT_PERCENT")) return snapshots;
+  const expected = defaultAlumdoorDiscountPercent(item, customerGroup);
+  if (expected <= 0 || snapshots.some(hasAlumdoorDiscountEffect)) return snapshots;
+  const applied = appliedDiscountPercentage === undefined ? expected : Number(appliedDiscountPercentage);
+  if (!Number.isFinite(applied) || Math.abs(applied - expected) > 1e-9) return snapshots;
   return [...snapshots, {
     rule_name: ALUMDOOR_GERMAN_DISCOUNT_RULE,
     effect_type: "DISCOUNT_PERCENT",
@@ -362,23 +436,82 @@ export function withAlumdoorDefaultDiscountSnapshot(
   }];
 }
 
+/** Một dòng chính sách được coi là "đã có khoản giảm" nếu nó giảm phần trăm, giảm số tuyệt đối,
+ *  hoặc là ADJUSTMENT mang số tiền ÂM (dạng khai của 15 luật chiết khấu đại lý trên D1). */
+export function hasAlumdoorDiscountEffect(snapshot: PricingRuleSnapshot): boolean {
+  if (snapshot.effect_type === "DISCOUNT_PERCENT" || snapshot.effect_type === "DISCOUNT_AMOUNT") return true;
+  return snapshot.effect_type === "ADJUSTMENT" && Number(snapshot.amount_minor ?? 0) < 0;
+}
+
 /**
  * Non-monetary entitlement from the stamped 31/07/2026 price sheet. This is not a
  * BOM component and never participates in the line total. The exact rail SKU and
  * cutting length remain fulfilment data, because the price sheet does not specify them.
+ *
+ * P0-3: trước đây hàm chỉ xét diện tích, nên bán theo `ĐƠN GIÁ CHỈ LÁ` (rẻ hơn 75.000 đ/m²)
+ * vẫn được tặng ray — cho không cả bộ ray. File quy cách của chủ xưởng (mục 4.1, ô `C4`) buộc
+ * dòng ray chỉ tự sinh "khi chọn đơn giá tặng ray". Nay chỉ biến thể `TANG_RAY` mới có quyền lợi này.
  */
 export function alumdoorCommercialBenefits(
   item: Record<string, unknown>,
   areaSqm: unknown,
+  priceVariant?: unknown,
 ): AlumdoorBenefitItem[] {
   const area = Number(areaSqm);
-  if (defaultAlumdoorDiscountPercent(item) !== 15 || !Number.isFinite(area) || area < 8) return [];
+  const threshold = alumdoorGiftRailThresholdSqm(item);
+  if (normalizedAlumdoorText(priceVariant) !== "tang_ray") return [];
+  if (defaultAlumdoorDiscountPercent(item) !== 15 || !alumdoorGiftRailEligible(item, area)) return [];
   return [{
-    label: "Tặng ray cửa Đức từ 8 m²",
+    label: `Tặng ray cửa Đức ${alumdoorGiftRailAreaOperator(item) === "GTE" ? "từ" : "trên"} ${threshold} m²`,
     qty: 1,
     uom: "Bộ",
     source_rule: ALUMDOOR_GERMAN_GIFT_RAIL_RULE,
+    /**
+     * Dòng quà tặng không mang tiền: `benefit_items` là mảng thuần mô tả, không có ô
+     * tiền nào, và không nơi nào cộng nó vào `net_amount`/tổng đơn (đã soát toàn bộ tham chiếu
+     * `benefit_items` trong `server/` và `client/` ngày 21/08/2026 — chỉ có nơi SINH ra và nơi
+     * HIỂN THỊ). Nên đây KHÔNG phải vá lỗi tính tiền, mà là NÓI THÀNH LỜI cái đang ngầm hiểu:
+     * người bán và người đọc bản in phải thấy con số 0, không phải một ô trống để tự đoán.
+     */
+    rate: "0",
+    amount: "0",
+    is_free: true,
   }];
+}
+
+/**
+ * Chặn CỨNG: dưới ngưỡng mà chọn `TANG_RAY` thì không bán được.
+ *
+ * Cửa dưới/ngay biên ngưỡng mà chọn tặng ray phải bị chặn: nếu không, dòng vẫn lấy giá
+ * `TANG_RAY` nhưng không sinh quyền lợi. Trước bản vá này, dòng như vậy vẫn lưu được: nó chỉ
+ * lặng lẽ không sinh quyền lợi (`alumdoorCommercialBenefits` trả mảng rỗng), trong khi giá
+ * đã lấy theo bảng `TANG_RAY` — tức khách trả thêm 75.000 đ/m² cho bộ ray không bao giờ tới.
+ *
+ * CHẶN CỨNG AN TOÀN — đã đo trên D1 ngày 21/08/2026: 15/15 mã có dòng giá `TANG_RAY` đều
+ * có SẴN dòng `CHI_LA` tương ứng; KHÔNG mã nào chỉ có `TANG_RAY`. Nên không mã nào bị khoá
+ * khỏi việc bán dưới ngưỡng — người bán chỉ cần bỏ tick, dòng rơi về `CHI_LA`.
+ *
+ * Chỉ xét những mã THỰC SỰ nằm trong chính sách tặng ray (cửa Đức, mức 15%). Mã ngoài phạm vi
+ * mà lỡ mang biến thể `TANG_RAY` thì không phải việc của luật này — không chặn oan.
+ */
+export function assertAlumdoorGiftRailAllowed(
+  item: Record<string, unknown>,
+  areaSqm: unknown,
+  priceVariant: unknown,
+  itemCode?: unknown,
+): void {
+  if (normalizedAlumdoorText(priceVariant) !== "tang_ray") return;
+  if (defaultAlumdoorDiscountPercent(item) !== 15) return;
+  const area = Number(areaSqm);
+  const threshold = alumdoorGiftRailThresholdSqm(item);
+  if (!Number.isFinite(area) || alumdoorGiftRailEligible(item, area)) return;
+  const boundary = alumdoorGiftRailAreaOperator(item) === "GTE" ? `từ ${threshold}` : `trên ${threshold}`;
+  const code = typeof itemCode === "string" && itemCode.trim() ? ` (${itemCode.trim()})` : "";
+  throw errors.validation(
+    `Cửa${code} có diện tích tính tiền ${area} m², chưa đạt ngưỡng tặng ray ${boundary} m² `
+    + `nên không được chọn đơn giá TẶNG RAY. Bỏ tick "tặng ray" để bán theo đơn giá CHỈ LÁ, `
+    + `hoặc tăng kích thước cho đủ ${threshold} m².`,
+  );
 }
 
 /**
@@ -389,14 +522,16 @@ export function alumdoorCommercialBenefits(
 async function applyAlumdoorDiscountPolicy(
   context: ControllerContext<SalesOrderData>,
   items: SalesItem[],
+  customerGroup?: unknown,
 ): Promise<{ items: SalesItem[]; requiresApproval: boolean }> {
   let requiresApproval = false;
   const normalized = await Promise.all(items.map(async (item) => {
     const master = await context.reader.getMasterRecordData(context.command.tenant_id, "Item", item.item_code);
+    // P0-2: nhóm giá phải đi cùng — khách "Lẻ" không có chiết khấu đại lý.
     const expectedMicros = defaultAlumdoorDiscountPercent({
       ...master,
       item_code: item.item_code,
-    }) * 1_000_000;
+    }, customerGroup) * 1_000_000;
     const requestedMicros = item.discount_percentage === undefined || item.discount_percentage === null || item.discount_percentage === ""
       ? expectedMicros
       : toScaledInt(item.discount_percentage, 6, "discount_percentage");
@@ -721,6 +856,12 @@ export class SalesInvoiceController extends BaseController<SalesInvoiceData> {
     const companyCurrency = data.company_currency ?? data.currency;
     const rateMicros = data.conversion_rate_micros ?? 1_000_000;
     const grandMinor = data.grand_total_minor ?? toScaledInt(data.grand_total ?? "0", transactionScale);
+    // Vá 21/08/2026 (docs/audits/ALUMDOOR-KE-TOAN-SAU-VONG2-20260821.md §1 S1): `assertNonNegativeMinor`
+    // trước đây là luật ngủ — export mà 0 nơi gọi. Đây là điểm ghi tiền đúng nghĩa: `grandMinor`/`netMinor`
+    // đi thẳng vào `debit_minor`/`credit_minor` của bút toán RECEIVABLE/INCOME bên dưới mà không qua bước
+    // lật dấu nào. Một lỗi logic chiết khấu/thuế phía trên tạo ra tổng âm sẽ bị CHẶN Ở ĐÂY thay vì chảy
+    // tiếp thành một bút toán ghi ngược mà `assertBalancedGl` (chỉ so debit=credit) không phát hiện được.
+    assertNonNegativeMinor(grandMinor, "grand_total_minor");
     if (context.command.action === "cancel") {
       const outstanding = await context.reader.getOutstandingMinor(context.command.tenant_id, "Sales Invoice", context.command.aggregate.name);
       if (outstanding !== grandMinor) {
@@ -731,6 +872,7 @@ export class SalesInvoiceController extends BaseController<SalesInvoiceData> {
       }
     }
     const netMinor = data.net_total_minor ?? toScaledInt(data.net_total ?? "0", transactionScale);
+    assertNonNegativeMinor(netMinor, "net_total_minor");
     const baseGrand = data.base_grand_total_minor ?? convertMinor(grandMinor, transactionScale, rateMicros, companyScale, "base grand total");
     const baseNet = data.base_net_total_minor ?? convertMinor(netMinor, transactionScale, rateMicros, companyScale, "base net total");
     const normal: GeneralLedgerEntry[] = [
@@ -899,6 +1041,12 @@ export class PaymentEntryController extends BaseController<PaymentEntryData> {
     const baseParty = data.base_party_amount_minor ?? data.base_receivable_amount_minor ?? data.base_payable_amount_minor
       ?? addMinor(data.references.map((reference) => reference.base_allocated_amount_minor ?? 0), "base party amount");
     const bank = data.received_amount_minor ?? toScaledInt(data.received_amount, companyScale);
+    // Vá 21/08/2026 (docs/audits/ALUMDOOR-KE-TOAN-SAU-VONG2-20260821.md §1 S1) — cùng luật ngủ đã nối ở
+    // `SalesInvoiceController.ledger()`. `baseParty`/`bank` đi thẳng vào `debit_minor`/`credit_minor`
+    // của bút toán BANK/RECEIVABLE-PAYABLE ngay dưới; `difference` KHÔNG bị chặn ở đây vì âm/dương của
+    // nó là tín hiệu hợp lệ để chọn nhánh lãi/lỗ tỷ giá, không phải một số tiền ghi thẳng.
+    assertNonNegativeMinor(baseParty, "base_party_amount_minor");
+    assertNonNegativeMinor(bank, "received_amount_minor");
     const difference = data.difference_amount_minor ?? (receive ? baseParty - bank : bank - baseParty);
     const partyAccount = receive ? data.paid_from : data.paid_to;
     const bankAccount = receive ? data.paid_to : data.paid_from;

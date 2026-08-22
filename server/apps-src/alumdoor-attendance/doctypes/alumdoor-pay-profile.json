@@ -36,8 +36,8 @@
       "fields": ["profile_code", "employee", "company", "branch", "pay_mode", "base_salary_vnd", "overtime_multiplier_bp", "fixed_allowance_vnd", "effective_from", "effective_to", "status", "approved_by", "approved_at"]
     },
     "quickEntry": {
-      "enabled": true,
-      "fields": ["employee", "company", "branch", "pay_mode", "base_salary_vnd", "overtime_multiplier_bp", "fixed_allowance_vnd", "effective_from", "status"]
+      "enabled": false,
+      "fields": []
     }
   },
   "permissions": [

@@ -17,8 +17,13 @@ import {
 import type { TrustedIdentityKey } from "../../../packages/auth/src/index.js";
 import type { Actor, CanonicalDocument, DomainEvent, JsonObject, MutationCommand, MutationReceipt } from "../../../packages/contracts/src/index.js";
 import { parseMutationCommandInput } from "../../../packages/contracts/src/index.js";
-import { previewPurchaseReceiptSubmission } from "../../../packages/clouderp-core/src/index.js";
+import {
+  buildSupplierPriceHistory, buildSupplierSpendSummary, planProcurementLandedCost,
+  previewPurchaseReceiptSubmission,
+  type ProcurementLandedCostBasis, type PurchaseOrderData, type PurchaseReceiptData,
+} from "../../../packages/clouderp-core/src/index.js";
 import { previewDeliveryNoteSubmission } from "../../../packages/clouderp-selling/src/index.js";
+import { toScaledInt } from "../../../packages/money/src/index.js";
 import { D1CommercialReconciliationService, D1DocumentListStore, D1MutationStore, D1PurchaseAllocationTimelineService, D1RolloutPurchaseAllocationDomainStore, DocumentListService } from "../../../packages/document-kernel/src/index.js";
 import { asCloudForgeError, commandPayloadHash, errorResponse, errors, jsonResponse, randomId, readJson } from "../../../packages/core/src/index.js";
 import {
@@ -30,10 +35,17 @@ import { AggregateCoordinator } from "./aggregate-do.js";
 import { askAssistant, readReceiptImage } from "./ai-assistant.js";
 import { publishPendingOutbox } from "../../../packages/outbox/src/index.js";
 import { AppReportService, D1ReportService } from "../../../packages/query/src/index.js";
-import { FinanceQueryCompiler } from "../../../packages/query/src/finance-aging.js";
+import { FinanceClosureQueryCompiler } from "../../../packages/query/src/finance-closure.js";
 import { D1OrganizationSecurityGuard } from "../../../packages/organization-security/src/index.js";
 import type { TenantEnv } from "./env.js";
 import { routeAuthenticatedSocialRequest, routeInternalSocialRequest } from "./social-routes.js";
+import { readableSubmittedSupplierOrders } from "./supplier-price-history-access.js";
+import type {
+  AlumDoorAttendanceStationLiteInput,
+  AlumDoorEmployeeLiteInput,
+  AlumDoorHrLiteSettingsInput,
+  AlumDoorPayProfileLiteInput,
+} from "./employee-lite-coordinator.js";
 
 export { AggregateCoordinator };
 
@@ -62,6 +74,10 @@ interface AggregateStub extends DurableObjectStub {
     tenantId: string; actor: Actor; request: string; action: "approve" | "reject"; note?: string;
   }): Promise<JsonObject>;
   approveAlumDoorPayroll(input: { tenantId: string; actor: Actor; payrollEntry: string }): Promise<JsonObject>;
+  commitAlumDoorEmployeeLite(input: AlumDoorEmployeeLiteInput): Promise<JsonObject>;
+  commitAlumDoorHrLiteSettings(input: AlumDoorHrLiteSettingsInput): Promise<JsonObject>;
+  commitAlumDoorPayProfileLite(input: AlumDoorPayProfileLiteInput): Promise<JsonObject>;
+  commitAlumDoorAttendanceStationLite(input: AlumDoorAttendanceStationLiteInput): Promise<JsonObject>;
 }
 
 const PUBLIC_ATTENDANCE_METHOD_PATHS = new Set([
@@ -840,17 +856,33 @@ export async function runAlumdoorMaintenance(
                ON line.tenant_id=receipt.tenant_id
               AND line.parent_key=receipt.doc_key
               AND line.child_doctype='Purchase Receipt Item'
+             LEFT JOIN documents profile_doc
+               ON profile_doc.tenant_id=receipt.tenant_id
+              AND profile_doc.doctype='Measurement Profile'
+              AND profile_doc.name=json_extract(line.payload_json,'$.measurement_profile')
+              AND profile_doc.docstatus<>2
+              AND COALESCE(CAST(json_extract(profile_doc.payload_json,'$.disabled') AS INTEGER),0)=0
              LEFT JOIN master_records profile
                ON profile.tenant_id=receipt.tenant_id
               AND profile.record_type='Measurement Profile'
               AND profile.name=json_extract(line.payload_json,'$.measurement_profile')
               AND profile.disabled=0
+              AND NOT EXISTS (
+                SELECT 1 FROM documents profile_tombstone
+                WHERE profile_tombstone.tenant_id=receipt.tenant_id
+                  AND profile_tombstone.doctype='Measurement Profile'
+                  AND profile_tombstone.name=json_extract(line.payload_json,'$.measurement_profile')
+              )
              WHERE receipt.tenant_id=?1
                AND receipt.doctype='Purchase Receipt'
                AND receipt.docstatus=1
                AND substr(COALESCE(json_extract(receipt.payload_json,'$.posting_at'),receipt.modified_at),1,10)=?2
                AND ABS(CAST(json_extract(line.payload_json,'$.weight_variance_pct') AS REAL))
-                   > COALESCE(CAST(json_extract(profile.data_json,'$.weight_tolerance_pct') AS REAL),13)
+                   > COALESCE(
+                       CAST(json_extract(profile_doc.payload_json,'$.weight_tolerance_pct') AS REAL),
+                       CAST(json_extract(profile.data_json,'$.weight_tolerance_pct') AS REAL),
+                       13
+                     )
            ) AS weight_warnings
          FROM stock_ledger_entries
          WHERE tenant_id=?1 AND substr(posting_at,1,10)=?2`,
@@ -1174,6 +1206,73 @@ async function serveFrappeApiInner(
     return jsonResponse({ message: preview });
   }
 
+  /**
+   * Phân bổ cước vận chuyển / thuế nhập khẩu về từng dòng của MỘT Phiếu nhập mua đã ghi sổ.
+   *
+   * Chỉ tính và trả về bảng phân bổ — KHÔNG ghi lại giá vốn tồn kho hay bút toán sổ cái.
+   * `planProcurementLandedCost` tự giới hạn phạm vi này (xem docstring của hàm): việc áp
+   * dụng vào giá trị tồn kho chính thức cần cơ chế repost/valuation riêng, chưa có trong
+   * app này. Dùng số này để đối chiếu / nhập tay vào phiếu điều chỉnh khi cần.
+   */
+  if (request.method === "POST" && url.pathname === "/api/method/metaforge.api.preview_landed_cost") {
+    const body = await readJson<JsonObject>(request, 4_000);
+    const doctype = "Purchase Receipt";
+    const name = requireShortText(body.purchase_receipt, "purchase_receipt", 320);
+    const basisInput = requireShortText(body.basis, "basis", 20);
+    if (basisInput !== "amount" && basisInput !== "quantity" && basisInput !== "weight") {
+      throw errors.validation("basis phải là amount, quantity hoặc weight");
+    }
+    const basis = basisInput as ProcurementLandedCostBasis;
+    const totalCostInput = body.total_cost;
+    if (typeof totalCostInput !== "string" && typeof totalCostInput !== "number") {
+      throw errors.validation("total_cost is required");
+    }
+
+    const document = await documents.getDocument(tenantId, doctype, name);
+    if (!document) throw errors.notFound(`${doctype} ${name} was not found`);
+    await permissions.assert({
+      actor,
+      tenantId,
+      doctype,
+      name,
+      owner: document.owner,
+      data: document.data,
+      action: "read",
+    });
+    if (document.docstatus !== 1) {
+      throw errors.lifecycle("Chỉ phân bổ cước/thuế cho Phiếu nhập mua ĐÃ GHI SỔ");
+    }
+    const receiptData = document.data as PurchaseReceiptData;
+    const scale = typeof receiptData.currency_scale === "number" ? receiptData.currency_scale : 2;
+    const totalCostMinor = toScaledInt(totalCostInput, scale, "total_cost");
+    const plan = planProcurementLandedCost(
+      totalCostMinor,
+      basis,
+      [document as CanonicalDocument<PurchaseReceiptData>],
+    );
+    return jsonResponse({ message: plan });
+  }
+
+  /**
+   * Lịch sử giá + tổng chi theo NCC, dựng từ chính các Đơn mua đã ghi sổ (không phải bảng giá
+   * tĩnh). `latest_change_bps` trả lời câu hỏi mở của lượt audit trước: giá kỳ này lệch bao
+   * nhiêu so với lần mua liền trước, quy đổi cùng đơn vị + tiền tệ công ty.
+   */
+  if (request.method === "POST" && url.pathname === "/api/method/metaforge.api.supplier_price_history") {
+    const body = await readJson<JsonObject>(request, 4_000);
+    const supplier = requireShortText(body.supplier, "supplier", 160);
+    await permissions.assert({ actor, tenantId, doctype: "Purchase Order", action: "read" });
+    const rows = await documents.listDocumentsByDoctype<PurchaseOrderData>(tenantId, "Purchase Order");
+    const orders = await readableSubmittedSupplierOrders(
+      rows,
+      supplier,
+      (row) => permissions.canReadDocument(actor, tenantId, row),
+    );
+    const priceHistory = buildSupplierPriceHistory(orders);
+    const spendSummary = buildSupplierSpendSummary(orders);
+    return jsonResponse({ message: { price_history: priceHistory, spend_summary: spendSummary } });
+  }
+
   if (request.method === "GET" && url.pathname === "/api/method/metaforge.api.get_purchase_allocation_timeline") {
     const requestedDoctype = requireShortText(url.searchParams.get("doctype"), "doctype", 160);
     const name = requireShortText(url.searchParams.get("name"), "name", 320);
@@ -1263,9 +1362,16 @@ async function serveFrappeApiInner(
     search: new D1SearchStore(requestDb),
     // Trình biên dịch mặc định không biết các báo cáo tài chính, nên tuổi nợ chết bằng
     // `Unknown report: Accounts Receivable Aging` dù SQL và view đã có đủ.
-    // FinanceQueryCompiler xử lý nhóm tài chính rồi mới `super.compile()` phần còn lại,
-    // nên đây là tập cha — thay vào không mất báo cáo nào đang chạy.
-    reports: new D1ReportService(requestDb, new FinanceQueryCompiler()),
+    // FinanceClosureQueryCompiler extends AccountsPayableQueryCompiler extends
+    // FinanceQueryCompiler extends QueryCompiler — dùng LỚP CON CUỐI CÙNG của chuỗi (không
+    // phải FinanceQueryCompiler như trước) để cả 3 tầng report tài chính đều được compile,
+    // rồi mới `super.compile()` phần còn lại. Trước bản vá này, Daily Detailed Ledger /
+    // Finance Reconciliation Diagnostics / Supplier Statement / Supplier Reconciliation đều
+    // trả "Unknown report" dù SQL, cột và RBAC đã có đủ (xem docs/audits/
+    // ALUMDOOR-CONG-NO-DANH-MUC-GAP-20260821.md §1 S1/S2) — dùng lớp con cuối cùng không
+    // làm mất báo cáo nào đang chạy vì mỗi lớp chỉ compile() thêm report của mình rồi mới
+    // gọi super.compile() cho phần còn lại.
+    reports: new D1ReportService(requestDb, new FinanceClosureQueryCompiler()),
     appReports: new AppReportService(requestDb),
     deskViews: new D1DeskViewStore(requestDb),
     organizationSecurity,
@@ -1337,6 +1443,22 @@ async function serveFrappeApiInner(
     async approveAlumdoorPayroll(input: { payrollEntry: string }): Promise<JsonObject> {
       const stub = env.AGGREGATES.getByName(`payroll:${tenantId}:${encodeURIComponent(input.payrollEntry)}`) as AggregateStub;
       return stub.approveAlumDoorPayroll({ tenantId, actor, payrollEntry: input.payrollEntry });
+    },
+    async commitAlumdoorEmployeeLite(input: Omit<AlumDoorEmployeeLiteInput, "tenantId" | "actor">): Promise<JsonObject> {
+      const stub = env.AGGREGATES.getByName(`hr-lite:${tenantId}`) as AggregateStub;
+      return stub.commitAlumDoorEmployeeLite({ tenantId, actor, ...input });
+    },
+    async commitAlumdoorHrLiteSettings(input: Omit<AlumDoorHrLiteSettingsInput, "tenantId" | "actor">): Promise<JsonObject> {
+      const stub = env.AGGREGATES.getByName(`hr-lite:${tenantId}`) as AggregateStub;
+      return stub.commitAlumDoorHrLiteSettings({ tenantId, actor, ...input });
+    },
+    async commitAlumdoorPayProfileLite(input: Omit<AlumDoorPayProfileLiteInput, "tenantId" | "actor">): Promise<JsonObject> {
+      const stub = env.AGGREGATES.getByName(`hr-lite:${tenantId}`) as AggregateStub;
+      return stub.commitAlumDoorPayProfileLite({ tenantId, actor, ...input });
+    },
+    async commitAlumdoorAttendanceStationLite(input: Omit<AlumDoorAttendanceStationLiteInput, "tenantId" | "actor">): Promise<JsonObject> {
+      const stub = env.AGGREGATES.getByName(`hr-lite:${tenantId}`) as AggregateStub;
+      return stub.commitAlumDoorAttendanceStationLite({ tenantId, actor, ...input });
     },
     now,
     csrfToken,

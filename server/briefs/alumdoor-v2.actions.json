@@ -1,5 +1,5 @@
 {
-  "version": "2.2.2",
+  "version": "2.2.3",
   "//": "Bulk Transaction v1, đối soát giao hàng và override reviewable cho action đã có trong builder; integration sidecar giữ final package version.",
   "actions": [
     {
@@ -39,6 +39,23 @@
       "commit": "alumdoor.purchase.supplier_delivery_settlement | Ghi đối soát | Xác nhận ghi đối soát cho kỳ giao hàng này?"
     },
     {
+      "name": "bao-gia-ncc-sang-don-mua",
+      "label": "Báo giá NCC → Đơn mua",
+      "menu": true,
+      "icon": "file-output",
+      "group": "Mua hàng",
+      "description": "Chuyển một Báo giá NCC đã ghi sổ thành Đơn mua, giữ nguyên dòng/giá đã chốt — không gõ lại. Bấm lại nhiều lần vẫn chỉ ra đúng một đơn (đã có đơn thì trả về đơn cũ).",
+      "permission": "Purchase Order",
+      "fields": [
+        "supplier_quotation:Link(Supplier Quotation)! Báo giá NCC",
+        "warehouse:Link(Warehouse) Kho nhận",
+        "schedule_date:Date Ngày giao dự kiến"
+      ],
+      "preview": "alumdoor.purchase.preview_order | Xem trước đơn mua",
+      "commit": "alumdoor.purchase.order_from_quotation | Tạo đơn mua | Chuyển báo giá này thành đơn mua?",
+      "resultTable": "items"
+    },
+    {
       "replace": true,
       "name": "nha-giu-cho",
       "label": "Nhả giữ chỗ",
@@ -51,6 +68,66 @@
         "released_reason:Link(Lý do huỷ)! Lý do nhả"
       ],
       "commit": "alumdoor.reserve.release | Nhả"
+    },
+    {
+      "name": "lap-ke-hoach-lay-hang-fifo",
+      "label": "Lập kế hoạch lấy hàng FIFO",
+      "menu": true,
+      "icon": "list-ordered",
+      "group": "Kho",
+      "description": "Đọc tồn thật theo lô hoặc serial và đề xuất thứ tự lấy hàng FIFO. Thao tác này chỉ lập kế hoạch, không tự ghi giảm tồn.",
+      "permission": "Stock Entry",
+      "fields": [
+        "item_code:Link(Item)! Mã hàng",
+        "warehouse:Link(Warehouse) Kho cần lấy",
+        "qty:Float! Số lượng cần lấy"
+      ],
+      "commit": "alumdoor.wms.plan_picking | Lập kế hoạch",
+      "resultTable": "allocations"
+    },
+    {
+      "name": "kiem-tra-dong-goi-wms",
+      "label": "Kiểm tra đóng gói",
+      "menu": true,
+      "icon": "package-check",
+      "group": "Kho",
+      "description": "Đối chiếu từng kiện với hàng đã lấy; chặn đóng thừa, sai lô hoặc sai serial.",
+      "permission": "Delivery Note",
+      "fields": [
+        "picked:Text(BulkTransaction:{\"columns\":[{\"fieldname\":\"item_code\",\"label\":\"Mã hàng\",\"fieldtype\":\"Link\",\"options\":\"Item\",\"required\":true},{\"fieldname\":\"warehouse\",\"label\":\"Kho\",\"fieldtype\":\"Link\",\"options\":\"Warehouse\",\"required\":true},{\"fieldname\":\"batch_no\",\"label\":\"Lô\",\"fieldtype\":\"Data\"},{\"fieldname\":\"serial_no\",\"label\":\"Serial\",\"fieldtype\":\"Data\"},{\"fieldname\":\"picked_qty\",\"label\":\"Đã lấy\",\"fieldtype\":\"Float\",\"required\":true}],\"minRows\":1,\"maxRows\":500,\"allowPaste\":true})! Hàng đã lấy",
+        "package_rows:Text(BulkTransaction:{\"columns\":[{\"fieldname\":\"package_id\",\"label\":\"Mã kiện\",\"fieldtype\":\"Data\",\"required\":true},{\"fieldname\":\"item_code\",\"label\":\"Mã hàng\",\"fieldtype\":\"Link\",\"options\":\"Item\",\"required\":true},{\"fieldname\":\"warehouse\",\"label\":\"Kho\",\"fieldtype\":\"Link\",\"options\":\"Warehouse\",\"required\":true},{\"fieldname\":\"batch_no\",\"label\":\"Lô\",\"fieldtype\":\"Data\"},{\"fieldname\":\"serial_no\",\"label\":\"Serial\",\"fieldtype\":\"Data\"},{\"fieldname\":\"packed_qty\",\"label\":\"Đóng gói\",\"fieldtype\":\"Float\",\"required\":true}],\"minRows\":1,\"maxRows\":500,\"allowPaste\":true})! Chi tiết các kiện"
+      ],
+      "commit": "alumdoor.wms.validate_packing | Kiểm tra"
+    },
+    {
+      "name": "lap-ke-hoach-cat-hang",
+      "label": "Lập kế hoạch cất hàng",
+      "menu": true,
+      "icon": "warehouse",
+      "group": "Kho",
+      "description": "Phân bổ hàng vào các kho theo ưu tiên và sức chứa do thủ kho khai. Chỉ lập kế hoạch, không tự ghi tăng tồn.",
+      "permission": "Stock Entry",
+      "fields": [
+        "qty:Float! Số lượng cần cất",
+        "candidates:Text(BulkTransaction:{\"columns\":[{\"fieldname\":\"warehouse\",\"label\":\"Kho\",\"fieldtype\":\"Link\",\"options\":\"Warehouse\",\"required\":true},{\"fieldname\":\"priority\",\"label\":\"Ưu tiên\",\"fieldtype\":\"Int\",\"required\":true},{\"fieldname\":\"capacity_qty\",\"label\":\"Sức chứa\",\"fieldtype\":\"Float\",\"required\":true},{\"fieldname\":\"current_qty\",\"label\":\"Đang có\",\"fieldtype\":\"Float\",\"required\":true}],\"minRows\":1,\"maxRows\":200,\"allowPaste\":true})! Kho ứng viên"
+      ],
+      "commit": "alumdoor.wms.plan_putaway | Lập kế hoạch",
+      "resultTable": "allocations"
+    },
+    {
+      "name": "gom-song-lay-hang",
+      "label": "Gom sóng lấy hàng",
+      "menu": true,
+      "icon": "waves",
+      "group": "Kho",
+      "description": "Gom các dòng cần lấy theo khu vực/nhóm và giới hạn số dòng mỗi lượt.",
+      "permission": "Delivery Note",
+      "fields": [
+        "max_lines_per_wave:Int! Số dòng tối đa mỗi sóng",
+        "lines:Text(BulkTransaction:{\"columns\":[{\"fieldname\":\"line_id\",\"label\":\"Mã dòng\",\"fieldtype\":\"Data\",\"required\":true},{\"fieldname\":\"group_key\",\"label\":\"Khu vực/nhóm\",\"fieldtype\":\"Data\",\"required\":true},{\"fieldname\":\"sequence\",\"label\":\"Thứ tự\",\"fieldtype\":\"Int\",\"required\":true},{\"fieldname\":\"qty\",\"label\":\"Số lượng\",\"fieldtype\":\"Float\",\"required\":true}],\"minRows\":1,\"maxRows\":500,\"allowPaste\":true})! Dòng cần lấy"
+      ],
+      "commit": "alumdoor.wms.build_pick_waves | Gom sóng",
+      "resultTable": "waves"
     }
   ]
 }

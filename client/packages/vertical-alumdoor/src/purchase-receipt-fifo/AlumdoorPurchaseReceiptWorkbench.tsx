@@ -170,6 +170,22 @@ export function AlumdoorPurchaseReceiptCreate(props: AlumdoorPurchaseReceiptCrea
   const [submitAllowed, setSubmitAllowed] = useState(false);
   const [dirty, setDirty] = useState(false);
 
+  /**
+   * Phân bổ cước vận chuyển / thuế nhập khẩu vào các dòng của phiếu ĐÃ GHI SỔ.
+   *
+   * Nối `planProcurementLandedCost` (`clouderp-core`) qua route
+   * `metaforge.api.preview_landed_cost` (`index-core-base.ts`) — trước đây hàm này có đủ
+   * công thức nhưng 0 route/UI nào gọi tới (audit vòng 3, ca S1). Chỉ TÍNH VÀ HIỂN THỊ bảng
+   * phân bổ, không ghi lại giá vốn tồn kho hay bút toán sổ cái — dùng để đối chiếu / nhập
+   * tay vào phiếu điều chỉnh khi cần (xem docstring server).
+   */
+  const [landedCostOpen, setLandedCostOpen] = useState(false);
+  const [landedCostBasis, setLandedCostBasis] = useState<"amount" | "quantity" | "weight">("amount");
+  const [landedCostTotal, setLandedCostTotal] = useState("");
+  const [landedCostLoading, setLandedCostLoading] = useState(false);
+  const [landedCostError, setLandedCostError] = useState("");
+  const [landedCostPlan, setLandedCostPlan] = useState<Json | null>(null);
+
   const closeSeen = useRef(props.closeRequest ?? 0);
   const intelCache = useRef(new Map<string, ItemIntel>());
   const rowPreviewSeq = useRef(new Map<string, number>());
@@ -800,6 +816,26 @@ export function AlumdoorPurchaseReceiptCreate(props: AlumdoorPurchaseReceiptCrea
     }
   }, [adapter]);
 
+  const runLandedCostPreview = useCallback(async () => {
+    if (!workingName || docstatus !== 1) return;
+    if (!positiveNumber(Number(landedCostTotal))) { setLandedCostError("Nhập tổng cước/thuế cần phân bổ (lớn hơn 0)."); return; }
+    setLandedCostLoading(true);
+    setLandedCostError("");
+    try {
+      const result = await adapter.callPost<Json>("metaforge.api.preview_landed_cost", {
+        purchase_receipt: workingName,
+        basis: landedCostBasis,
+        total_cost: landedCostTotal,
+      });
+      setLandedCostPlan(result);
+    } catch (error) {
+      setLandedCostError(mapError(error).message);
+      setLandedCostPlan(null);
+    } finally {
+      setLandedCostLoading(false);
+    }
+  }, [adapter, docstatus, landedCostBasis, landedCostTotal, workingName]);
+
   /* ---------------------------------------------------------------------- */
   /* Lưu / ghi sổ                                                            */
   /* ---------------------------------------------------------------------- */
@@ -815,6 +851,15 @@ export function AlumdoorPurchaseReceiptCreate(props: AlumdoorPurchaseReceiptCrea
   );
   const totalActualKg = useMemo(
     () => activeRows.reduce((sum, row) => sum + (numberValue(row.actual_weight_kg) ?? 0), 0),
+    [activeRows],
+  );
+  /**
+   * Tổng SL quy về ĐVT tồn kho — cùng nghĩa với `Purchase Receipt.total_qty` server tính khi
+   * lưu (brief `alumdoor-v2.json`). Tính lại phía client ở đây để thủ kho đối chiếu NGAY
+   * trong lúc gõ, trước khi bấm lưu — con số cuối cùng vẫn do server chốt.
+   */
+  const totalQty = useMemo(
+    () => activeRows.reduce((sum, row) => sum + (numberValue(row.stock_qty) ?? numberValue(row.qty) ?? 0), 0),
     [activeRows],
   );
 
@@ -1127,8 +1172,9 @@ export function AlumdoorPurchaseReceiptCreate(props: AlumdoorPurchaseReceiptCrea
               />
 
               <section className="rounded-lg border bg-card" data-section="purchase-receipt-summary">
-                <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-4">
+                <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-3 xl:grid-cols-5">
                   <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Dòng hàng</div><div className="mt-0.5 font-semibold tabular-nums">{activeRows.length}</div></div>
+                  <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Tổng SL (ĐVT tồn)</div><div className="mt-0.5 font-semibold tabular-nums">{quantity(totalQty)}</div></div>
                   <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Cây/lá thực đếm</div><div className="mt-0.5 font-semibold tabular-nums">{quantity(totalBars, 0)}</div></div>
                   <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Kg thực cân</div><div className="mt-0.5 font-semibold tabular-nums">{quantity(totalActualKg)} kg</div></div>
                   <div className="bg-card px-3 py-2"><div className="text-[10px] font-semibold text-muted-foreground">Tạm tính</div><div className="mt-0.5 text-lg font-bold tabular-nums text-primary">{money(totalAmount)} ₫</div></div>
@@ -1248,6 +1294,91 @@ export function AlumdoorPurchaseReceiptCreate(props: AlumdoorPurchaseReceiptCrea
               <FifoDebtPanel insight={insight} payable={payable} />
               <FifoHistoryPanel insight={insight} />
             </div>
+          ) : null}
+
+          {docstatus === 1 ? (
+            <section className="rounded-lg border bg-card" data-section="purchase-receipt-landed-cost">
+              <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2 text-xs font-semibold">
+                <span>Phân bổ cước/thuế nhập</span>
+                <span className="text-[10px] font-normal text-muted-foreground">
+                  Chỉ tính và hiện bảng phân bổ — KHÔNG tự ghi vào giá vốn tồn kho hay sổ cái.
+                </span>
+                <Button type="button" size="sm" variant="outline" className="ml-auto h-7" onClick={() => setLandedCostOpen((current) => !current)}>
+                  {landedCostOpen ? "Ẩn" : "Tính phân bổ"}
+                </Button>
+              </div>
+              {landedCostOpen ? (
+                <div className="space-y-2 px-3 py-2">
+                  <div className="flex flex-wrap items-end gap-2">
+                    <label className="flex flex-col gap-1 text-[11px]">
+                      <span className="text-muted-foreground">Tổng cước/thuế (VNĐ)</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={landedCostTotal}
+                        onChange={(event) => setLandedCostTotal(event.target.value)}
+                        className="h-8 w-40 rounded-md border bg-background px-2 text-[11px]"
+                        placeholder="vd: 1500000"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1 text-[11px]">
+                      <span className="text-muted-foreground">Cơ sở phân bổ</span>
+                      <select
+                        value={landedCostBasis}
+                        onChange={(event) => setLandedCostBasis(event.target.value as typeof landedCostBasis)}
+                        className="h-8 w-48 rounded-md border bg-background px-2 text-[11px]"
+                      >
+                        <option value="amount">Theo tiền hàng của dòng</option>
+                        <option value="quantity">Theo số lượng (ĐVT tồn)</option>
+                        <option value="weight">Theo kg thực cân</option>
+                      </select>
+                    </label>
+                    <Button type="button" size="sm" disabled={landedCostLoading} onClick={() => void runLandedCostPreview()}>
+                      {landedCostLoading ? <Loader2 className="size-3.5 animate-spin" /> : null} Tính
+                    </Button>
+                  </div>
+                  {landedCostError ? <div className="text-[11px] text-destructive">{landedCostError}</div> : null}
+                  {landedCostPlan && Array.isArray(landedCostPlan.allocations) ? (
+                    <div className="overflow-x-auto">
+                      <Table unwrapped className="w-full border-collapse">
+                        <thead className="bg-muted/40">
+                          <tr>
+                            <th className="px-2 py-1 text-left text-[10px] font-semibold uppercase text-muted-foreground">Dòng</th>
+                            <th className="px-2 py-1 text-left text-[10px] font-semibold uppercase text-muted-foreground">Mã hàng</th>
+                            <th className="px-2 py-1 text-left text-[10px] font-semibold uppercase text-muted-foreground">Kho</th>
+                            <th className="px-2 py-1 text-right text-[10px] font-semibold uppercase text-muted-foreground">Cơ sở</th>
+                            <th className="px-2 py-1 text-right text-[10px] font-semibold uppercase text-muted-foreground">Cước/thuế phân bổ</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {(landedCostPlan.allocations as Json[]).map((row, index) => {
+                            const scale = numberValue(landedCostPlan.currency_scale) ?? 0;
+                            const allocatedMajor = (numberValue(row.allocated_cost_minor) ?? 0) / (10 ** scale);
+                            const basisUnits = numberValue(row.basis_units) ?? 0;
+                            const basisDisplay = text(landedCostPlan.basis) === "amount"
+                              ? `${money(basisUnits / (10 ** scale))} ${text(landedCostPlan.currency)}`
+                              : `${quantity(basisUnits / 1_000_000)} ${text(landedCostPlan.basis) === "weight" ? "kg" : "ĐVT tồn"}`;
+                            return (
+                              <tr key={String(row.line_key ?? index)}>
+                                <td className="px-2 py-1 text-[11px]">{text(row.row_id)}</td>
+                                <td className="px-2 py-1 text-[11px]">{text(row.item_code)}</td>
+                                <td className="px-2 py-1 text-[11px]">{text(row.warehouse)}</td>
+                                <td className="px-2 py-1 text-right text-[11px] tabular-nums">{basisDisplay}</td>
+                                <td className="px-2 py-1 text-right text-[11px] font-semibold tabular-nums">{money(allocatedMajor)} ₫</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </Table>
+                      <p className="px-2 py-2 text-[10px] leading-relaxed text-muted-foreground">
+                        Dùng bảng này để đối chiếu / nhập tay vào phiếu điều chỉnh giá vốn khi cần — hệ thống
+                        chưa tự ghi số này vào giá trị tồn kho hay bút toán sổ cái.
+                      </p>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </section>
           ) : null}
         </div>
       </div>

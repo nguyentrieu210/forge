@@ -178,6 +178,49 @@ export class D1MutationStore implements MutationStore {
     return document;
   }
 
+  /**
+   * Read-side document authority: operator/imported documents override app fixtures.
+   *
+   * `getDocument` intentionally remains documents-only because the command kernel uses
+   * absence there to create a first operator overlay.  The Frappe GET surface calls this
+   * method instead, so an active fixture can be opened with the same canonical shape as a
+   * document without pretending it has already been persisted in `documents`.
+   */
+  async getReadableDocument<T extends JsonObject>(
+    tenantId: string,
+    doctype: string,
+    name: string,
+  ): Promise<CanonicalDocument<T> | null> {
+    const document = await this.getDocument<T>(tenantId, doctype, name);
+    if (document) return document;
+    const row = await this.writer.prepare(
+      `SELECT data_json,modified_at FROM master_records
+        WHERE tenant_id=?1 AND record_type=?2 AND name=?3 AND disabled=0`,
+    ).bind(tenantId, doctype, name).first<{ data_json: string; modified_at: string }>();
+    if (!row) return null;
+    let data: T;
+    try {
+      const parsed = JSON.parse(row.data_json) as unknown;
+      data = (parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {}) as T;
+    } catch {
+      throw errors.database("Master record data is invalid JSON");
+    }
+    return {
+      tenant_id: tenantId,
+      doctype,
+      name,
+      owner: "Administrator",
+      docstatus: 0,
+      status: "Draft",
+      version: 1,
+      created_at: row.modified_at,
+      modified_at: row.modified_at,
+      modified_by: "app",
+      data,
+      children: [],
+    };
+  }
+
   async listDocumentsByDoctype<T extends JsonObject>(
     tenantId: string,
     doctype: string,
@@ -738,10 +781,13 @@ export class D1MutationStore implements MutationStore {
 
   async hasMasterRecord(tenantId: string, recordType: string, name: string): Promise<boolean> {
     const row = await this.writer.prepare(
-      `SELECT 1 AS found FROM master_records WHERE tenant_id=?1 AND record_type=?2 AND name=?3 AND disabled=0
-       UNION ALL
-       SELECT 1 AS found FROM documents WHERE tenant_id=?1 AND doctype=?2 AND name=?3
+      `SELECT 1 AS found FROM documents WHERE tenant_id=?1 AND doctype=?2 AND name=?3
          AND docstatus<>2 AND COALESCE(CAST(json_extract(payload_json,'$.disabled') AS INTEGER),0)=0
+       UNION ALL
+       SELECT 1 AS found FROM master_records WHERE tenant_id=?1 AND record_type=?2 AND name=?3 AND disabled=0
+         AND NOT EXISTS (
+           SELECT 1 FROM documents WHERE tenant_id=?1 AND doctype=?2 AND name=?3
+         )
        UNION ALL SELECT 1 AS found FROM roles WHERE ?2='Role' AND tenant_id=?1 AND role=?3 AND disabled=0
        UNION ALL SELECT 1 AS found FROM users WHERE ?2='User' AND tenant_id=?1 AND user_id=?3 AND enabled=1
        UNION ALL SELECT 1 AS found FROM doctype_definitions WHERE ?2='DocType' AND tenant_id=?1 AND doctype=?3 AND disabled=0
@@ -785,6 +831,10 @@ export class D1MutationStore implements MutationStore {
            UNION ALL
            SELECT name, data_json, 1 AS source_rank FROM master_records
              WHERE tenant_id=?1 AND record_type=?2 AND disabled=0
+               AND NOT EXISTS (
+                 SELECT 1 FROM documents d
+                 WHERE d.tenant_id=?1 AND d.doctype=?2 AND d.name=master_records.name
+               )
            UNION ALL
            SELECT role AS name,json_object('role',role,'label',role) AS data_json,0 AS source_rank
              FROM roles WHERE ?2='Role' AND tenant_id=?1 AND disabled=0
@@ -814,10 +864,13 @@ export class D1MutationStore implements MutationStore {
 
   async getMasterRecordData(tenantId: string, recordType: string, name: string): Promise<JsonObject | null> {
     const row = await this.writer.prepare(
-      `SELECT data_json FROM master_records WHERE tenant_id=?1 AND record_type=?2 AND name=?3 AND disabled=0
-       UNION ALL
-       SELECT payload_json AS data_json FROM documents WHERE tenant_id=?1 AND doctype=?2 AND name=?3
+      `SELECT payload_json AS data_json FROM documents WHERE tenant_id=?1 AND doctype=?2 AND name=?3
          AND docstatus<>2 AND COALESCE(CAST(json_extract(payload_json,'$.disabled') AS INTEGER),0)=0
+       UNION ALL
+       SELECT data_json FROM master_records WHERE tenant_id=?1 AND record_type=?2 AND name=?3 AND disabled=0
+         AND NOT EXISTS (
+           SELECT 1 FROM documents WHERE tenant_id=?1 AND doctype=?2 AND name=?3
+         )
        UNION ALL SELECT json_object('role',role,'label',role) AS data_json FROM roles
          WHERE ?2='Role' AND tenant_id=?1 AND role=?3 AND disabled=0
        UNION ALL SELECT json_object('user_id',user_id,'full_name',full_name,'email',email) AS data_json FROM users
@@ -838,20 +891,30 @@ export class D1MutationStore implements MutationStore {
 
   async listMasterRecordData(tenantId: string, recordType: string): Promise<Array<{ name: string; data: JsonObject }>> {
     const rows = await this.writer.prepare(
-      `SELECT name,data_json FROM master_records WHERE tenant_id=?1 AND record_type=?2 AND disabled=0
-       UNION ALL
-       SELECT name,payload_json AS data_json FROM documents WHERE tenant_id=?1 AND doctype=?2 AND docstatus<>2
-        AND COALESCE(CAST(json_extract(payload_json,'$.disabled') AS INTEGER),0)=0
-       UNION ALL SELECT role AS name,json_object('role',role,'label',role) AS data_json FROM roles
-         WHERE ?2='Role' AND tenant_id=?1 AND disabled=0
-       UNION ALL SELECT user_id AS name,json_object('user_id',user_id,'full_name',full_name,'email',email) AS data_json FROM users
-         WHERE ?2='User' AND tenant_id=?1 AND enabled=1
-       UNION ALL SELECT doctype AS name,metadata_json AS data_json FROM doctype_definitions
-         WHERE ?2='DocType' AND tenant_id=?1 AND disabled=0`,
+      `SELECT name,data_json FROM (
+         SELECT name,data_json,
+                ROW_NUMBER() OVER (PARTITION BY name ORDER BY source_rank) AS row_rank
+         FROM (
+           SELECT name,payload_json AS data_json,0 AS source_rank FROM documents
+             WHERE tenant_id=?1 AND doctype=?2 AND docstatus<>2
+               AND COALESCE(CAST(json_extract(payload_json,'$.disabled') AS INTEGER),0)=0
+           UNION ALL
+           SELECT name,data_json,1 AS source_rank FROM master_records
+             WHERE tenant_id=?1 AND record_type=?2 AND disabled=0
+               AND NOT EXISTS (
+                 SELECT 1 FROM documents d
+                 WHERE d.tenant_id=?1 AND d.doctype=?2 AND d.name=master_records.name
+               )
+           UNION ALL SELECT role AS name,json_object('role',role,'label',role) AS data_json,0 AS source_rank FROM roles
+             WHERE ?2='Role' AND tenant_id=?1 AND disabled=0
+           UNION ALL SELECT user_id AS name,json_object('user_id',user_id,'full_name',full_name,'email',email) AS data_json,0 AS source_rank FROM users
+             WHERE ?2='User' AND tenant_id=?1 AND enabled=1
+           UNION ALL SELECT doctype AS name,metadata_json AS data_json,0 AS source_rank FROM doctype_definitions
+             WHERE ?2='DocType' AND tenant_id=?1 AND disabled=0
+         )
+       ) WHERE row_rank=1 ORDER BY name`,
     ).bind(tenantId,recordType).all<{name:string;data_json:string}>();
-    const result=new Map<string,JsonObject>();
-    for(const row of rows.results??[]){try{const parsed=JSON.parse(row.data_json) as unknown;result.set(row.name,parsed&&typeof parsed==="object"&&!Array.isArray(parsed)?parsed as JsonObject:{});}catch{throw errors.database("Master record data is invalid JSON");}}
-    return [...result.entries()].map(([name,data])=>({name,data}));
+    return (rows.results??[]).map((row)=>{try{const parsed=JSON.parse(row.data_json) as unknown;return{name:row.name,data:parsed&&typeof parsed==="object"&&!Array.isArray(parsed)?parsed as JsonObject:{}};}catch{throw errors.database("Master record data is invalid JSON");}});
   }
   async getPeriodLockDate(tenantId: string, company: string): Promise<string | null> {
     const row = await this.writer.prepare(

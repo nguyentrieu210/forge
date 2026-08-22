@@ -39,6 +39,10 @@ import {
   Badge,
   Button,
   Checkbox,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
   Input,
   Label,
   Skeleton,
@@ -59,12 +63,16 @@ import { AlumdoorDebtField } from "./AlumdoorDebtField.js";
 import {
   applyLedgerOutstanding,
   groupLedgerByParty,
+  loadAdvanceBalance,
   loadAging,
+  loadCreditLimits,
   loadCreditNotes,
+  loadDebtSummary,
   loadInvoices,
   loadJournalAdjustments,
   loadLedgerRows,
   loadMovements,
+  loadPartyStatement,
   loadPayments,
   loadReceivableParties,
   loadSupplierDashboard,
@@ -89,12 +97,16 @@ import {
   text,
   toCsv,
   todayIso,
+  type AdvanceBalanceRow,
   type AgingState,
   type DebtFilterState,
   type DebtSide,
   type DebtSideConfig,
+  type DebtSummaryRow,
+  type DebtSummaryState,
   type LedgerRow,
   type PartyRow,
+  type PartyStatementRow,
   type SourceDocumentGroup,
   type SourceDocumentRow,
 } from "./model.js";
@@ -107,6 +119,8 @@ interface SideState {
   sourceErrors: string[];
   parties: PartyRow[];
   aging: AgingState;
+  /** Tổng hợp theo tài khoản-tiền tệ (báo cáo `Debt Summary`) — độc lập với `aging`, một khối hỏng không kéo khối kia. */
+  debtSummary: DebtSummaryState;
   loadedAt: string;
 }
 
@@ -118,6 +132,9 @@ interface DetailState {
   groups: SourceDocumentGroup[];
   dashboard: SupplierDashboard | null;
   dashboardError: string;
+  /** Tạm ứng chưa phân bổ hết của đối tác này (báo cáo `Advance Balance`). */
+  advances: AdvanceBalanceRow[];
+  advancesError: string;
 }
 
 const EMPTY_SIDE: SideState = {
@@ -126,6 +143,7 @@ const EMPTY_SIDE: SideState = {
   sourceErrors: [],
   parties: [],
   aging: { status: "idle" },
+  debtSummary: { status: "idle" },
   loadedAt: "",
 };
 
@@ -159,6 +177,10 @@ export function AlumdoorDebtWorkbench(props: { onNavigate?: (path: string) => vo
   const [settlement, setSettlement] = useState<{ queueKey: string; material: string; operation: "Close" | "Reverse" } | null>(null);
   const [settlementReason, setSettlementReason] = useState("");
   const [settlementBusy, setSettlementBusy] = useState(false);
+  const [statementTarget, setStatementTarget] = useState<DebtSummaryRow | null>(null);
+  const [statementRows, setStatementRows] = useState<PartyStatementRow[]>([]);
+  const [statementLoading, setStatementLoading] = useState(false);
+  const [statementError, setStatementError] = useState("");
 
   const config = sideConfig(side);
   const current = sides[side];
@@ -179,7 +201,13 @@ export function AlumdoorDebtWorkbench(props: { onNavigate?: (path: string) => vo
   // ── Nạp bảng đối tác ──────────────────────────────────────────────────────
   const loadSide = useCallback(async (target: DebtSide, state: DebtFilterState) => {
     const targetConfig = sideConfig(target);
-    patchSide(target, { loading: true, error: "", sourceErrors: [], aging: { status: "loading" } });
+    patchSide(target, {
+      loading: true,
+      error: "",
+      sourceErrors: [],
+      aging: { status: "loading" },
+      debtSummary: { status: "loading" },
+    });
     const sourceErrors: string[] = [];
     try {
       const ledgerResult = await Promise.allSettled([
@@ -208,6 +236,22 @@ export function AlumdoorDebtWorkbench(props: { onNavigate?: (path: string) => vo
         parties = ledgerParties;
       }
 
+      // K2 (docs/audits/ALUMDOOR-SAN-XUAT-KE-TOAN-DANH-MUC-GAP-20260821.md §K2): `Customer.credit_limit`
+      // đã có sẵn trên danh mục nhưng trước bản vá này không màn nào trong `cong-no/` đọc lại. Chỉ gắn
+      // cho mặt PHẢI THU — `Supplier` không có field tương đương (xác nhận riêng trong tài liệu trên).
+      // Hỏng khối này KHÔNG được kéo sập bảng đối tác: bắt lỗi tại chỗ, ghi vào `sourceErrors` như mọi
+      // nguồn phụ khác, giữ nguyên `parties` không có `creditLimit`.
+      if (target === "receivable" && parties.length) {
+        try {
+          const creditLimits = await loadCreditLimits(server, parties.map((row) => row.party));
+          parties = parties.map((row) => (
+            creditLimits.has(row.party) ? { ...row, creditLimit: creditLimits.get(row.party) ?? null } : row
+          ));
+        } catch (caught) {
+          sourceErrors.push(`Hạn mức công nợ (Customer.credit_limit): ${errorText(caught)}`);
+        }
+      }
+
       if (!parties.length && ledgerResult[0].status === "rejected") {
         patchSide(target, {
           loading: false,
@@ -228,20 +272,30 @@ export function AlumdoorDebtWorkbench(props: { onNavigate?: (path: string) => vo
         loadedAt: new Date().toISOString(),
       });
 
-      // Tuổi nợ nạp SAU và tách bạch: nó có thể bị nền tảng từ chối mà bảng chính
-      // vẫn đúng. Không được để một khối phụ kéo sập cả màn.
+      // Tuổi nợ + tổng hợp theo tài khoản nạp SAU và tách bạch: mỗi khối có thể bị nền
+      // tảng từ chối mà bảng chính vẫn đúng. Không được để một khối phụ kéo sập cả màn.
+      const asOfDate = state.toDate || todayIso();
       try {
-        const rows = await loadAging(server, targetConfig, {
-          asOfDate: state.toDate || todayIso(),
-          party: state.party,
-        });
+        const rows = await loadAging(server, targetConfig, { asOfDate, party: state.party });
         patchSide(target, { aging: { status: "ready", rows } });
       } catch (caught) {
         patchSide(target, { aging: { status: "unavailable", message: errorText(caught) } });
       }
+      try {
+        const rows = await loadDebtSummary(server, targetConfig, { asOfDate, party: state.party });
+        patchSide(target, { debtSummary: { status: "ready", rows } });
+      } catch (caught) {
+        patchSide(target, { debtSummary: { status: "unavailable", message: errorText(caught) } });
+      }
     } catch (caught) {
       const message = errorText(caught);
-      patchSide(target, { loading: false, error: message, sourceErrors, aging: { status: "idle" } });
+      patchSide(target, {
+        loading: false,
+        error: message,
+        sourceErrors,
+        aging: { status: "idle" },
+        debtSummary: { status: "idle" },
+      });
       toast.error(message);
     }
   }, [patchSide, server]);
@@ -269,10 +323,20 @@ export function AlumdoorDebtWorkbench(props: { onNavigate?: (path: string) => vo
     const state = filters;
     setDetails((previous) => ({
       ...previous,
-      [side]: { party, loading: true, ledger: [], ledgerError: "", groups: [], dashboard: null, dashboardError: "" },
+      [side]: {
+        party,
+        loading: true,
+        ledger: [],
+        ledgerError: "",
+        groups: [],
+        dashboard: null,
+        dashboardError: "",
+        advances: [],
+        advancesError: "",
+      },
     }));
     const input = { party, fromDate: state.fromDate, toDate: state.toDate };
-    const [ledger, invoices, payments, credits, movements, journals, dashboard] = await Promise.allSettled([
+    const [ledger, invoices, payments, credits, movements, journals, dashboard, advances] = await Promise.allSettled([
       loadLedgerRows(server, targetConfig, party),
       loadInvoices(server, targetConfig, input),
       loadPayments(server, targetConfig, input),
@@ -282,6 +346,7 @@ export function AlumdoorDebtWorkbench(props: { onNavigate?: (path: string) => vo
       targetConfig.side === "payable"
         ? loadSupplierDashboard(server, party)
         : Promise.resolve(null as SupplierDashboard | null),
+      loadAdvanceBalance(server, targetConfig, { asOfDate: state.toDate || todayIso(), party }),
     ]);
 
     /**
@@ -321,6 +386,8 @@ export function AlumdoorDebtWorkbench(props: { onNavigate?: (path: string) => vo
         ledgerError: ledger.status === "rejected" ? errorText(ledger.reason) : "",
         dashboard: dashboard.status === "fulfilled" ? dashboard.value : null,
         dashboardError: dashboard.status === "rejected" ? errorText(dashboard.reason) : "",
+        advances: advances.status === "fulfilled" ? advances.value : [],
+        advancesError: advances.status === "rejected" ? errorText(advances.reason) : "",
         groups: [
           group(
             "invoices",
@@ -403,6 +470,30 @@ export function AlumdoorDebtWorkbench(props: { onNavigate?: (path: string) => vo
     }
   }, [detail, openParty, server, settlement, settlementReason]);
 
+  // ── Sao kê đối tác (Party Statement), mở theo đúng tài khoản-tiền tệ của một dòng
+  // Debt Summary — báo cáo này KHÔNG nhận "để trống = tất cả" (xem `loadPartyStatement`),
+  // nên màn không tự đoán tài khoản mà lấy nguyên `account`/`currency` từ dòng đã bấm.
+  const openStatement = useCallback(async (row: DebtSummaryRow) => {
+    setStatementTarget(row);
+    setStatementLoading(true);
+    setStatementError("");
+    setStatementRows([]);
+    try {
+      const rows = await loadPartyStatement(server, config, {
+        party: row.party,
+        account: row.account,
+        currency: row.currency,
+        fromDate: filters.fromDate,
+        toDate: filters.toDate,
+      });
+      setStatementRows(rows);
+    } catch (caught) {
+      setStatementError(errorText(caught));
+    } finally {
+      setStatementLoading(false);
+    }
+  }, [config, filters.fromDate, filters.toDate, server]);
+
   // ── Dữ liệu đang hiện ─────────────────────────────────────────────────────
   const visibleParties = useMemo(() => applyOpenOnly(current.parties, filters), [current.parties, filters]);
 
@@ -415,6 +506,7 @@ export function AlumdoorDebtWorkbench(props: { onNavigate?: (path: string) => vo
       "Số chứng từ còn dư",
       "Ghi trên hoá đơn — gồm nháp, KHÔNG phải số còn phải đòi",
       "Tiền tệ",
+      ...(config.partyDoctype === "Customer" ? ["Hạn mức công nợ (Customer.credit_limit)"] : []),
     ];
     const rows = visibleParties.map((row) => [
       row.party,
@@ -424,6 +516,9 @@ export function AlumdoorDebtWorkbench(props: { onNavigate?: (path: string) => vo
       row.ledgerVoucherCount,
       row.outstandingByInvoice ?? "",
       row.currencies.join(" "),
+      ...(config.partyDoctype === "Customer"
+        ? [row.creditLimit === undefined ? "" : row.creditLimit === null ? "chưa khai" : row.creditLimit]
+        : []),
     ]);
     downloadCsv(`cong-no-${side}-${todayIso()}.csv`, toCsv(headers, rows));
   }, [config.partyLabel, side, visibleParties]);
@@ -505,6 +600,13 @@ export function AlumdoorDebtWorkbench(props: { onNavigate?: (path: string) => vo
 
         <AgingPanel config={config} state={current.aging} asOfDate={filters.toDate || todayIso()} />
 
+        <DebtSummaryPanel
+          config={config}
+          state={current.debtSummary}
+          asOfDate={filters.toDate || todayIso()}
+          onOpenStatement={(row) => void openStatement(row)}
+        />
+
         <PartyTable
           config={config}
           loading={current.loading}
@@ -536,6 +638,15 @@ export function AlumdoorDebtWorkbench(props: { onNavigate?: (path: string) => vo
           </div>
         )}
       </div>
+
+      <PartyStatementDialog
+        target={statementTarget}
+        rows={statementRows}
+        loading={statementLoading}
+        error={statementError}
+        onNavigate={navigate}
+        onClose={() => setStatementTarget(null)}
+      />
     </div>
   );
 }
@@ -612,13 +723,12 @@ function AgingPanel(props: { config: DebtSideConfig; state: AgingState; asOfDate
         <div className="flex items-start gap-2">
           <Info className="mt-0.5 size-4 shrink-0" />
           <div className="space-y-1">
-            <p className="font-medium">Chưa có tuổi nợ chia khoảng từ server — màn KHÔNG tự tính thay.</p>
+            <p className="font-medium">Server từ chối yêu cầu tuổi nợ — màn KHÔNG tự tính thay.</p>
             <p>
-              Báo cáo <code className="font-mono text-xs">{props.config.agingReport}</code> đã được viết đủ 5 khoảng
-              (Chưa đến hạn · 1–30 · 31–60 · 61–90 · Trên 90) ở
-              <code className="ml-1 font-mono text-xs">server/packages/query/src/finance-aging.ts</code>, nhưng tuyến
-              chạy báo cáo hiện tại chưa nối compiler đó. Tự chia khoảng ở client là dựng nguồn sự thật thứ hai cho
-              ngày đáo hạn, nên màn từ chối làm việc đó.
+              Báo cáo <code className="font-mono text-xs">{props.config.agingReport}</code> chạy được bình thường
+              (5 khoảng: Chưa đến hạn · 1–30 · 31–60 · 61–90 · Trên 90) — lỗi dưới đây đến từ một nguyên nhân khác
+              (bộ lọc, quyền, hoặc dữ liệu). Tự chia khoảng ở client là dựng nguồn sự thật thứ hai cho ngày đáo hạn,
+              nên màn từ chối làm việc đó dù server từ chối vì lý do gì.
             </p>
             <p className="text-xs opacity-90">Server trả về: {props.state.message}</p>
           </div>
@@ -667,6 +777,170 @@ function AgingPanel(props: { config: DebtSideConfig; state: AgingState; asOfDate
   );
 }
 
+// ── Tổng hợp công nợ theo tài khoản-tiền tệ (Debt Summary) ───────────────────
+
+/**
+ * Bảng "Debt Summary" — cùng khuôn với `AgingPanel` (tách bạch trạng thái, hiện nguyên
+ * văn lỗi server), nhưng KHÔNG gộp theo đối tác như `PartyTable` mà TÁCH theo từng
+ * tài khoản-tiền tệ, vì đó là đơn vị mà "Party Statement" (sao kê luỹ kế) cần.
+ *
+ * Nút "Sao kê" trên mỗi dòng là đường DUY NHẤT màn gọi tới "Party Statement": báo cáo
+ * đó bắt buộc đúng một `account` + một `currency` (xem `data.ts::loadPartyStatement`),
+ * nên màn không tự đoán mà lấy nguyên hai trường đó từ chính dòng Debt Summary đã tải.
+ */
+function DebtSummaryPanel(props: {
+  config: DebtSideConfig;
+  state: DebtSummaryState;
+  asOfDate: string;
+  onOpenStatement: (row: DebtSummaryRow) => void;
+}) {
+  if (props.state.status === "idle") return null;
+  if (props.state.status === "loading") {
+    return <div className="rounded-xl border bg-card p-4"><Skeleton className="h-16 w-full" /></div>;
+  }
+  if (props.state.status === "unavailable") {
+    return (
+      <section className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning-text">
+        <div className="flex items-start gap-2">
+          <Info className="mt-0.5 size-4 shrink-0" />
+          <div className="space-y-1">
+            <p className="font-medium">Chưa tải được tổng hợp công nợ theo tài khoản-tiền tệ.</p>
+            <p className="text-xs opacity-90">Server trả về: {props.state.message}</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  const rows = props.state.rows;
+  if (!rows.length) return null;
+  return (
+    <section className="rounded-xl border bg-card">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
+        <h2 className="flex items-center gap-2 font-semibold">
+          <BookOpenCheck className="size-4 text-primary" /> Tổng hợp theo tài khoản · {rows.length} dòng
+        </h2>
+        <span className="max-w-2xl text-xs text-muted-foreground">
+          Báo cáo nền tảng "Debt Summary" tại ngày {props.asOfDate}, gộp theo {props.config.partyLabel.toLocaleLowerCase("vi")}-tài
+          khoản-tiền tệ — khác bảng dưới (gộp theo từng đối tác, mọi tài khoản/tiền tệ chung một dòng).
+        </span>
+      </div>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{props.config.partyLabel}</TableHead>
+              <TableHead>Tài khoản</TableHead>
+              <TableHead>Tiền tệ</TableHead>
+              <TableHead className="text-right">Còn nợ</TableHead>
+              <TableHead className="text-right">Đến hạn</TableHead>
+              <TableHead className="text-right">Quá hạn</TableHead>
+              <TableHead className="text-right">Tạm ứng</TableHead>
+              <TableHead className="text-right">Ròng phải thu/trả</TableHead>
+              <TableHead />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((row, index) => (
+              <TableRow key={`${row.party}:${row.account}:${row.currency}:${index}`}>
+                <TableCell className="font-medium">{row.party}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">{row.account}</TableCell>
+                <TableCell>{row.currency}</TableCell>
+                <TableCell className="text-right tabular-nums">{moneyOrDash(row.totalOutstanding)}</TableCell>
+                <TableCell className="text-right tabular-nums">{moneyOrDash(row.due)}</TableCell>
+                <TableCell className="text-right tabular-nums">{moneyOrDash(row.overdue)}</TableCell>
+                <TableCell className="text-right tabular-nums">{moneyOrDash(row.advance)}</TableCell>
+                <TableCell className="text-right font-medium tabular-nums">{moneyOrDash(row.netExposure)}</TableCell>
+                <TableCell className="text-right">
+                  <Button type="button" size="sm" variant="outline" onClick={() => props.onOpenStatement(row)}>
+                    Sao kê
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Hộp thoại sao kê luỹ kế của một đối tác trên đúng một tài khoản-tiền tệ — báo cáo
+ * "Party Statement". Mở từ nút "Sao kê" của `DebtSummaryPanel`, KHÔNG có đường mở nào khác
+ * vì báo cáo bắt buộc `account`/`currency` mà chỉ dòng Debt Summary mới có sẵn.
+ */
+function PartyStatementDialog(props: {
+  target: DebtSummaryRow | null;
+  rows: PartyStatementRow[];
+  loading: boolean;
+  error: string;
+  onNavigate: (path: string) => void;
+  onClose: () => void;
+}) {
+  const { target } = props;
+  return (
+    <Dialog open={target !== null} onOpenChange={(next) => { if (!next && !props.loading) props.onClose(); }}>
+      <DialogContent className="flex max-h-[90vh] w-[min(96vw,1040px)] max-w-none flex-col overflow-hidden p-0">
+        <DialogHeader className="shrink-0 border-b px-5 py-4">
+          <DialogTitle>Sao kê đối tác{target ? ` · ${target.party}` : ""}</DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            {target
+              ? `Tài khoản ${target.account} · ${target.currency} — báo cáo nền tảng "Party Statement", số dư luỹ kế theo từng chứng từ.`
+              : "Báo cáo nền tảng \"Party Statement\"."}
+          </p>
+        </DialogHeader>
+        <div className="min-h-0 flex-1 overflow-auto px-5 py-4">
+          {props.loading ? (
+            <div className="grid min-h-40 place-items-center text-sm text-muted-foreground">Đang tải sao kê…</div>
+          ) : props.error ? (
+            <ErrorNote message={props.error} />
+          ) : !props.rows.length ? (
+            <p className="p-4 text-sm text-muted-foreground">Không có phát sinh nào trong kỳ đang lọc.</p>
+          ) : (
+            <div className="overflow-x-auto rounded-lg border">
+              <Table unwrapped className="w-full text-sm">
+                <TableHeader className="bg-muted/60 text-muted-foreground">
+                  <TableRow>
+                    <TableHead className="px-3 py-2 text-left font-medium">Ngày</TableHead>
+                    <TableHead className="px-3 py-2 text-left font-medium">Loại</TableHead>
+                    <TableHead className="px-3 py-2 text-left font-medium">Chứng từ</TableHead>
+                    <TableHead className="px-3 py-2 text-right font-medium">Nợ</TableHead>
+                    <TableHead className="px-3 py-2 text-right font-medium">Có</TableHead>
+                    <TableHead className="px-3 py-2 text-right font-medium">Số dư luỹ kế</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {props.rows.map((row, index) => {
+                    const clickable = row.voucherType !== "Opening" && Boolean(row.voucherNo);
+                    return (
+                      <TableRow
+                        key={`${row.voucherType}:${row.voucherNo}:${index}`}
+                        className={clickable ? "cursor-pointer" : undefined}
+                        onClick={() => clickable && props.onNavigate(documentPath(row.voucherType, row.voucherNo))}
+                      >
+                        <TableCell className="px-3 py-2">{row.postingAt || "—"}</TableCell>
+                        <TableCell className="px-3 py-2">{row.entryType || "—"}</TableCell>
+                        <TableCell className="px-3 py-2 font-medium">{row.voucherNo || "—"}</TableCell>
+                        <TableCell className="whitespace-nowrap px-3 py-2 text-right tabular-nums">{moneyOrDash(row.debit)}</TableCell>
+                        <TableCell className="whitespace-nowrap px-3 py-2 text-right tabular-nums">{moneyOrDash(row.credit)}</TableCell>
+                        <TableCell className="whitespace-nowrap px-3 py-2 text-right font-medium tabular-nums">{moneyOrDash(row.runningBalance)}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </div>
+        <div className="flex shrink-0 justify-end border-t px-5 py-3">
+          <Button type="button" variant="outline" disabled={props.loading} onClick={props.onClose}>Đóng</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ── Bảng đối tác ─────────────────────────────────────────────────────────────
 
 function PartyTable(props: {
@@ -695,6 +969,9 @@ function PartyTable(props: {
   const totalBilled = displaySubtotal(props.rows.map((row) => row.totalBilled));
   const totalInvoiceOutstanding = displaySubtotal(props.rows.map((row) => row.outstandingByInvoice));
   const totalLedgerOutstanding = displaySubtotal(props.rows.map((row) => row.outstandingByLedger));
+  // K2 — chỉ mặt PHẢI THU có cột này (`Supplier` không có `credit_limit` tương đương).
+  const showCreditLimit = props.config.partyDoctype === "Customer";
+  const totalCreditLimit = displaySubtotal(props.rows.map((row) => row.creditLimit ?? null));
 
   return (
     <section className="rounded-xl border bg-card">
@@ -705,6 +982,9 @@ function PartyTable(props: {
           tới hiện tại (báo cáo {props.config.ledgerReport} không nhận lọc theo ngày). Cột “Ghi trên hoá đơn”
           là `sum(outstanding_amount)` của báo cáo app: nó CÓ tính hoá đơn nháp và đọc giá trị đông cứng
           lúc ghi sổ, nên KHÔNG phải số còn phải đòi.
+          {showCreditLimit
+            ? " Cột “Hạn mức công nợ” đọc thẳng Customer.credit_limit; “Chưa khai” nghĩa là trường đó đang trống, KHÔNG phải hạn mức bằng 0."
+            : ""}
         </span>
       </div>
       <div className="overflow-x-auto">
@@ -716,6 +996,7 @@ function PartyTable(props: {
               <TableHead className="text-right">Tổng phát sinh</TableHead>
               <TableHead className="text-right">Số dư theo sổ</TableHead>
               <TableHead className="text-right">Ghi trên hoá đơn (gồm nháp)</TableHead>
+              {showCreditLimit ? <TableHead className="text-right">Hạn mức công nợ</TableHead> : null}
               <TableHead className="text-center">Đối chiếu</TableHead>
             </TableRow>
           </TableHeader>
@@ -737,6 +1018,27 @@ function PartyTable(props: {
                   <div className="text-xs text-muted-foreground">{row.ledgerVoucherCount || 0} chứng từ còn dư</div>
                 </TableCell>
                 <TableCell className="text-right tabular-nums text-muted-foreground">{moneyOrDash(row.outstandingByInvoice)}</TableCell>
+                {showCreditLimit ? (
+                  <TableCell className="text-right tabular-nums">
+                    {row.creditLimit === undefined ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : row.creditLimit === null ? (
+                      <span
+                        className="text-xs text-muted-foreground"
+                        title="Customer.credit_limit chưa từng được nhập cho khách hàng này (khác hạn mức bằng 0)."
+                      >
+                        Chưa khai
+                      </span>
+                    ) : (
+                      <>
+                        {moneyOrDash(row.creditLimit)}
+                        {row.creditLimit > 0 && (row.outstandingByLedger ?? 0) > row.creditLimit ? (
+                          <div className="text-[10px] font-medium text-destructive">Vượt hạn mức</div>
+                        ) : null}
+                      </>
+                    )}
+                  </TableCell>
+                ) : null}
                 <TableCell className="text-center">
                   {partySourcesDisagree(row)
                     ? <Badge variant="destructive" title="Thường là do hoá đơn nháp, hoặc do hoá đơn đã thu một phần nhưng trường trên chứng từ chưa cập nhật. Mở chi tiết để soát từng chứng từ.">Hai nguồn lệch</Badge>
@@ -750,6 +1052,7 @@ function PartyTable(props: {
               <TableCell className="text-right tabular-nums">{moneyOrDash(totalBilled)}</TableCell>
               <TableCell className="text-right tabular-nums">{moneyOrDash(totalLedgerOutstanding)}</TableCell>
               <TableCell className="text-right tabular-nums text-muted-foreground">{moneyOrDash(totalInvoiceOutstanding)}</TableCell>
+              {showCreditLimit ? <TableCell className="text-right tabular-nums">{moneyOrDash(totalCreditLimit)}</TableCell> : null}
               <TableCell />
             </TableRow>
           </TableBody>
@@ -853,6 +1156,12 @@ function PartyDetail(props: {
         <DocumentGroupTable key={group.key} group={group} onNavigate={props.onNavigate} />
       ))}
 
+      <AdvanceBalancePanel
+        rows={detail.advances}
+        error={detail.advancesError}
+        onNavigate={props.onNavigate}
+      />
+
       {props.config.side === "payable" ? (
         <SupplierDeliveryPanel
           dashboard={detail.dashboard}
@@ -943,6 +1252,63 @@ function DocumentGroupTable(props: { group: SourceDocumentGroup; onNavigate: (pa
         </div>
       ) : !group.error ? (
         <p className="p-4 text-sm text-muted-foreground">Không có chứng từ nào trong kỳ đang lọc.</p>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Tạm ứng chưa phân bổ hết của đối tác đang mở — báo cáo nền tảng "Advance Balance".
+ *
+ * Đây là phần bù của cột "Tạm ứng" trên `DebtSummaryPanel`: ở đó chỉ thấy TỔNG theo
+ * tài khoản-tiền tệ, ở đây thấy được TỪNG Payment Entry gốc còn dư — bấm để mở thẳng
+ * phiếu thu/chi đó. Ẩn hẳn khối này khi không có dòng nào và không có lỗi, để không
+ * chiếm chỗ màn với một bảng luôn rỗng cho đối tác chưa từng ứng trước.
+ */
+function AdvanceBalancePanel(props: {
+  rows: AdvanceBalanceRow[];
+  error: string;
+  onNavigate: (path: string) => void;
+}) {
+  if (!props.rows.length && !props.error) return null;
+  return (
+    <div className="rounded-xl border bg-card">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
+        <h3 className="font-medium">Tạm ứng chưa phân bổ hết</h3>
+        <span className="text-xs text-muted-foreground">Nguồn: báo cáo nền tảng "Advance Balance"</span>
+      </div>
+      {props.error ? <ErrorNote message={props.error} className="m-3" /> : null}
+      {props.rows.length ? (
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{"Phiếu thu/chi"}</TableHead>
+                <TableHead>Ngày</TableHead>
+                <TableHead>Tiền tệ</TableHead>
+                <TableHead className="text-right">Tạm ứng gốc</TableHead>
+                <TableHead className="text-right">Đã phân bổ</TableHead>
+                <TableHead className="text-right">Còn lại</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {props.rows.map((row) => (
+                <TableRow
+                  key={row.sourcePaymentEntry}
+                  className="cursor-pointer"
+                  onClick={() => props.onNavigate(documentPath("Payment Entry", row.sourcePaymentEntry))}
+                >
+                  <TableCell className="font-medium">{row.sourcePaymentEntry || "—"}</TableCell>
+                  <TableCell>{row.sourcePostingAt || "—"}</TableCell>
+                  <TableCell>{row.currency || "—"}</TableCell>
+                  <TableCell className="text-right tabular-nums">{moneyOrDash(row.originalAdvance)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{moneyOrDash(row.allocatedAmount)}</TableCell>
+                  <TableCell className="text-right font-medium tabular-nums">{moneyOrDash(row.remainingAdvance)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       ) : null}
     </div>
   );

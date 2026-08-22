@@ -80,6 +80,7 @@ import {
 import { AlumdoorWorkOrderBomPanel } from "./AlumdoorWorkOrderBomPanel.js";
 import { AlumdoorWorkOrderCapacityPanel } from "./AlumdoorWorkOrderCapacityPanel.js";
 import { AlumdoorWorkOrderComponentTable } from "./AlumdoorWorkOrderComponentTable.js";
+import { AlumdoorWorkOrderCostGenealogyPanel } from "./AlumdoorWorkOrderCostGenealogyPanel.js";
 import { AlumdoorWorkOrderCutPanel } from "./AlumdoorWorkOrderCutPanel.js";
 import {
   AlumdoorWorkOrderField,
@@ -691,6 +692,19 @@ export function AlumdoorWorkOrderWorkbench({ name, onNavigate }: AlumdoorWorkOrd
                 <AlertTriangle className="mr-1 inline size-3.5 align-[-2px]" />{snapshot.parseError}
               </div>
             ) : null}
+            {/*
+              S5 (docs/audits/ALUMDOOR-SAN-XUAT-KE-TOAN-DANH-MUC-GAP-20260821.md): `schedule_warning`
+              được server dựng lúc lập lệnh (từ `Production Standard`) và nay được ghi vào
+              `formula_snapshot` (xem sales-production-core.ts) — trước đây bị vứt ngay sau khi tạo
+              lệnh, không lệnh nào có cách đọc lại. Lệnh tạo TRƯỚC bản vá này sẽ không có field này
+              trong snapshot cũ, khối dưới đây chỉ hiện khi có.
+            */}
+            {text(snapshot.snapshot?.schedule_warning) ? (
+              <div className="rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs">
+                <AlertTriangle className="mr-1 inline size-3.5 align-[-2px]" />
+                <span className="font-medium">Cảnh báo tải xưởng lúc lập lệnh:</span> {text(snapshot.snapshot?.schedule_warning)}
+              </div>
+            ) : null}
 
             {/* ── Đầu phiếu ────────────────────────────────────────────────────────────── */}
             <section className="rounded-lg border bg-card p-2.5" data-section="work-order-v2-header">
@@ -727,6 +741,31 @@ export function AlumdoorWorkOrderWorkbench({ name, onNavigate }: AlumdoorWorkOrd
                   hint={text(header.formula_version) ? `phiên bản ${text(header.formula_version)}` : ""}
                 />
               </div>
+              {/*
+                S2 (docs/audits/ALUMDOOR-SAN-XUAT-KE-TOAN-DANH-MUC-GAP-20260821.md): `width_basis` +
+                `leaf.explanation`/`leaf_formula`/`leaf_variant` đã có sẵn trong `formula_snapshot` từ
+                lúc lập lệnh (sales-production-core.ts:881) nhưng trước bản vá này 0 điểm render — người
+                cắt thấy SỐ (rộng cắt, số lá) mà không thấy VÌ SAO. Khối này chỉ đọc lại, không tính gì.
+              */}
+              {(text(snapshot.snapshot?.width_basis)
+                || text(snapshot.snapshot?.leaf?.explanation)
+                || text(snapshot.snapshot?.leaf?.leaf_formula)) ? (
+                <div className="mt-2 grid gap-2 border-t pt-2 md:grid-cols-3">
+                  <WorkOrderReadonlyField label="Cơ sở tính rộng" value={snapshot.snapshot?.width_basis} />
+                  <div className="min-w-0 md:col-span-2">
+                    <div className="mb-1 text-[11px] font-medium leading-tight text-muted-foreground">Vì sao ra số lá này</div>
+                    <div className="text-sm text-foreground">{text(snapshot.snapshot?.leaf?.explanation) || "—"}</div>
+                    {text(snapshot.snapshot?.leaf?.leaf_formula) ? (
+                      <div className="mt-0.5 font-mono text-[10px] text-muted-foreground">
+                        {text(snapshot.snapshot?.leaf?.leaf_formula)}
+                        {text(snapshot.snapshot?.leaf?.leaf_variant)
+                          ? ` · biến thể ${text(snapshot.snapshot?.leaf?.leaf_variant)}`
+                          : ""}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
             </section>
 
             {/* ── Tiến độ ──────────────────────────────────────────────────────────────── */}
@@ -778,6 +817,7 @@ export function AlumdoorWorkOrderWorkbench({ name, onNavigate }: AlumdoorWorkOrd
                 <TabsTrigger value="vat-tu">Cấp vật tư · nhập thành phẩm</TabsTrigger>
                 <TabsTrigger value="cat">Cắt nhôm</TabsTrigger>
                 <TabsTrigger value="nang-luc">Năng lực xưởng</TabsTrigger>
+                <TabsTrigger value="gia-von">Giá vốn &amp; truy vết</TabsTrigger>
               </TabsList>
 
               <TabsContent value="dinh-muc" className="space-y-3">
@@ -935,6 +975,10 @@ export function AlumdoorWorkOrderWorkbench({ name, onNavigate }: AlumdoorWorkOrd
                   quantityHints={quantityHints}
                   estimatedMinutes={numberValue(header.estimated_minutes)}
                 />
+              </TabsContent>
+
+              <TabsContent value="gia-von">
+                <AlumdoorWorkOrderCostGenealogyPanel workOrder={name} submitted={docstatus === 1} />
               </TabsContent>
             </Tabs>
           </div>

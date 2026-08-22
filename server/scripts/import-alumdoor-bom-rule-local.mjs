@@ -15,6 +15,18 @@ const source = JSON.parse(readFileSync(payloadPath, 'utf8'));
 if (source?.format !== 'alumdoor-bom-rules/v1' || !Array.isArray(source.rules) || !Array.isArray(source.component_mappings)) {
   throw new Error('Expected alumdoor-bom-rules/v1');
 }
+if (!Number.isInteger(Number(source.source_component_count))) {
+  throw new Error('BOM Rule payload must declare source_component_count; regenerate it with the current builder');
+}
+if (Number(source.pending_count) !== 0) {
+  throw new Error(`BOM Rule pending_count must be zero before local mutation; got ${source.pending_count}`);
+}
+if (Number(source.unverified_owner_override_count) !== 0) {
+  throw new Error(`BOM Rule unverified_owner_override_count must be zero; got ${source.unverified_owner_override_count}`);
+}
+if (Number(source.component_mapping_count) !== Number(source.source_component_count)) {
+  throw new Error(`BOM Rule coverage must be complete: mappings=${source.component_mapping_count} source_components=${source.source_component_count}`);
+}
 if (!Array.isArray(source.conversion_suggestions)) source.conversion_suggestions = [];
 
 const clean = (value) => String(value ?? '').normalize('NFC').trim();

@@ -11,6 +11,11 @@ const response = (value, status = 200) => new Response(JSON.stringify(value), {
   headers: { "content-type": "application/json" },
 });
 
+const preview = (call, args) => previewDraftSalesBomRequirements(
+  (path, init) => path.startsWith("resource/BOM%20Rule?") ? response({ data: [] }) : call(path, init),
+  args,
+);
+
 test("Sales BOM is eligible only for an Item code marked TRONBO", () => {
   assert.equal(isFullSetSalesItemCode("TP-CUADL1LY XN-VK_TRONBO_4-5m²"), true);
   assert.equal(isFullSetSalesItemCode("TP-LUOI-MV-STD - TRỌN BỘ"), true);
@@ -30,13 +35,13 @@ test("non-full-set sales Item returns a clean not-applicable preview without rea
     throw new Error(`unexpected BOM read: ${path}`);
   };
 
-  const result = await previewDraftSalesBomRequirements(call, {
+  const result = await preview(call, {
     item_code: "TP-TD-AL595 THÔ",
     customer_group: "Đại lý",
     width_m: 4,
     height_m: 2,
   });
-  assert.equal(result.status, 200);
+  assert.equal(result.status, 200, await result.clone().text());
   const body = await result.json();
   assert.equal(body.bom_applicable, false);
   assert.deepEqual(body.components, []);
@@ -70,7 +75,7 @@ test("full-set static BOM derives child sales fields from the parent and ignores
     throw new Error(`unexpected ${path}`);
   };
 
-  const result = await previewDraftSalesBomRequirements(call, {
+  const result = await preview(call, {
     item_code: "TP-DOOR-TRONBO",
     customer_group: "Đại lý",
     width_pb_nhua_m: 3,
@@ -78,7 +83,7 @@ test("full-set static BOM derives child sales fields from the parent and ignores
     height_m: 2,
     set_count: 2,
   });
-  assert.equal(result.status, 200);
+  assert.equal(result.status, 200, await result.clone().text());
   const body = await result.json();
   assert.equal(body.static_bom, true);
   assert.equal(body.components.length, 1);
@@ -120,10 +125,10 @@ test("full-set static BOM returns its composition before dimensions are entered"
     throw new Error(`unexpected ${path}`);
   };
 
-  const result = await previewDraftSalesBomRequirements(call, {
+  const result = await preview(call, {
     item_code: "TP-DOOR-TRONBO",
   });
-  assert.equal(result.status, 200);
+  assert.equal(result.status, 200, await result.clone().text());
   const body = await result.json();
   assert.equal(body.static_bom, true);
   assert.equal(body.bom_no, "BOM-IMMEDIATE");
@@ -178,7 +183,7 @@ test("full-set child rows use parent sets and geometry with each child Item sale
     throw new Error(`unexpected ${path}`);
   };
 
-  const result = await previewDraftSalesBomRequirements(call, {
+  const result = await preview(call, {
     item_code: "TP-DOOR-TRONBO",
     customer_group: "Đại lý",
     width_pb_nhua_m: 3,
@@ -187,7 +192,7 @@ test("full-set child rows use parent sets and geometry with each child Item sale
     cut_width_m: 2.97,
     set_count: 2,
   });
-  assert.equal(result.status, 200);
+  assert.equal(result.status, 200, await result.clone().text());
   const body = await result.json();
   assert.deepEqual(body.components.map((row) => ({
     item_code: row.item_code,
@@ -203,7 +208,14 @@ test("full-set child rows use parent sets and geometry with each child Item sale
   ]);
 });
 
-test("sales composition hides only the first intermediate TP LA leaf while preserving real components", async () => {
+/**
+ * Trước đây dòng ĐẦU TIÊN thuộc nhóm "Nan/lá cửa" bị giấu đi, coi là bán thành phẩm không bán rời.
+ * Đem ra dữ liệu thật thì luật đó phản tác dụng: cả 4 BOM có lá đều để lá ở dòng đầu nên mất lá
+ * 4/4, và BOM lá bán rời `DM-2026-0092` chỉ có đúng dòng lá nên xổ ra rỗng. Lá là vật tư chính
+ * của bộ cửa, phải thấy. Giấu hay hiện cũng không đụng tiền: giá nằm ở mặt hàng cha, các dòng này
+ * chỉ để xem vật tư/sản xuất.
+ */
+test("sales composition keeps the TP LA leaf — it is the door's main material", async () => {
   const call = async (path) => {
     if (path === "resource/Item/TP-DOOR-TRONBO") return response({ data: {
       item_code: "TP-DOOR-TRONBO",
@@ -237,17 +249,17 @@ test("sales composition hides only the first intermediate TP LA leaf while prese
     throw new Error(`unexpected ${path}`);
   };
 
-  const result = await previewDraftSalesBomRequirements(call, {
+  const result = await preview(call, {
     item_code: "TP-DOOR-TRONBO",
     customer_group: "Đại lý",
     width_pb_nhua_m: 3,
     width_m: 3,
     height_m: 2,
   });
-  assert.equal(result.status, 200);
+  assert.equal(result.status, 200, await result.clone().text());
   const body = await result.json();
-  assert.deepEqual(body.components.map((row) => row.item_code), ["NVL-RAY"]);
-  assert.equal(body.components[0].qty, 2);
+  assert.deepEqual(body.components.map((row) => row.item_code), ["NVL-LEAF", "NVL-RAY"]);
+  assert.equal(body.components[1].qty, 2);
 });
 
 test("legacy full-set rows project normalized width into the correct customer PB field", async () => {
@@ -263,14 +275,14 @@ test("legacy full-set rows project normalized width into the correct customer PB
     throw new Error(`unexpected ${path}`);
   };
 
-  const result = await previewDraftSalesBomRequirements(call, {
+  const result = await preview(call, {
     item_code: "TP-DOOR-TRONBO",
     customer_group: "Đại lý",
     width_m: 3,
     height_m: 2,
     set_count: 1,
   });
-  assert.equal(result.status, 200);
+  assert.equal(result.status, 200, await result.clone().text());
   const body = await result.json();
   assert.equal(body.components[0].width_pb_nhua_m, 3);
   assert.equal("width_pb_ray_m" in body.components[0], false);
@@ -318,7 +330,7 @@ test("full-set preview prefers the BOM whose Item code matches exactly over a no
     throw new Error(`unexpected ${path}`);
   };
 
-  const result = await previewDraftSalesBomRequirements(call, {
+  const result = await preview(call, {
     item_code: itemCode,
     customer_group: "Đại lý",
     color: "XANH NGỌC - VÀNG KEM",
@@ -327,11 +339,14 @@ test("full-set preview prefers the BOM whose Item code matches exactly over a no
     height_m: 1.2,
   });
 
-  assert.equal(result.status, 200);
+  assert.equal(result.status, 200, await result.clone().text());
   const body = await result.json();
   assert.equal(body.bom_no, "DM-EXACT");
   assert.equal(body.components[0].item_code, "NVL-EXACT");
-  for (const field of ["docstatus", "bom_status", "revision", "effective_from", "effective_to", "generated_by_configurator"]) {
+  for (const field of ["name", "item", "color", "docstatus", "is_active", "generated_by_configurator"]) {
     assert.ok(requestedFields.includes(field), `BOM list must request ${field}`);
+  }
+  for (const field of ["bom_status", "revision", "effective_from", "effective_to"]) {
+    assert.equal(requestedFields.includes(field), false, `BOM list must hydrate payload-only field ${field}`);
   }
 });

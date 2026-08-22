@@ -29,7 +29,9 @@ test("list always binds the SERVER tenant as ?1 and doctype as ?2 (body tenant i
   const compiled = compileList({ doctype: "Sales Order", tenant_id: "attacker", actor: "root" });
   assert.equal(compiled.params[0], "demo");
   assert.equal(compiled.params[1], "Sales Order");
-  assert.match(compiled.sql, /FROM documents WHERE tenant_id=\?1 AND doctype=\?2/);
+  assert.match(compiled.sql, /FROM documents\s+WHERE tenant_id=\?1 AND doctype=\?2/);
+  assert.match(compiled.sql, /FROM master_records AS master\s+WHERE master\.tenant_id=\?1 AND master\.record_type=\?2/);
+  assert.match(compiled.sql, /FROM catalog_documents AS documents WHERE tenant_id=\?1 AND doctype=\?2/);
 });
 
 test("unsupported doctype is rejected", () => {
@@ -89,7 +91,8 @@ test("like is allowed on text fields only, and never widens the whitelist", () =
 });
 
 test("limit and filter budgets are enforced", () => {
-  assert.throws(() => parse({ doctype: "Sales Order", limit: 1000 }), (e) => e.code === "VALIDATION_ERROR");
+  assert.equal(parse({ doctype: "Sales Order", limit: 2000 }).limit, 2000);
+  assert.throws(() => parse({ doctype: "Sales Order", limit: 2001 }), (e) => e.code === "VALIDATION_ERROR");
   assert.throws(() => parse({ doctype: "Sales Order", limit: 0 }), (e) => e.code === "VALIDATION_ERROR");
   const tooMany = Array.from({ length: 21 }, () => ({ field: "docstatus", operator: "eq", value: 1 }));
   assert.throws(() => parse({ doctype: "Sales Order", filters: tooMany }), (e) => e.code === "VALIDATION_ERROR");
@@ -168,7 +171,7 @@ test("count uses the same selection predicate as list, without cursor/order/limi
   const body = { doctype: "Sales Order", filters: [{ field: "docstatus", operator: "eq", value: 1 }], search: "AC" };
   const req = parse(body);
   const count = compiler.compileCount("demo", req, soDef);
-  assert.match(count.sql, /^SELECT COUNT\(\*\) AS count FROM documents WHERE tenant_id=\?1 AND doctype=\?2/);
+  assert.match(count.sql, /SELECT COUNT\(\*\) AS count FROM catalog_documents AS documents WHERE tenant_id=\?1 AND doctype=\?2/);
   assert.doesNotMatch(count.sql, /ORDER BY|LIMIT/);
   assert.match(count.sql, /"docstatus" = \?\d+/);
   assert.match(count.sql, / LIKE \?\d+ ESCAPE/);

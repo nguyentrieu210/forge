@@ -89,6 +89,12 @@ function makeContext(document, existing = baseData(), { tenantId = "tenant-a" } 
           if (type === "Warehouse") return { company: "ALU", stock_role: "Kho chính" };
           if (type === "Company") return { default_currency: "VND" };
           if (type === "Currency") return { currency_scale: 0 };
+          if (type === "Nguyên nhân chênh lệch" && name === "SAI_SO_DEM") {
+            return { reason_code: "SAI_SO_DEM", reason_name: "Sai số đếm", variance_kind: "Cả hai", disabled: 0 };
+          }
+          if (type === "Nguyên nhân chênh lệch" && name === "KHAC") {
+            return { reason_code: "KHAC", reason_name: "Khác", variance_kind: "Cả hai", disabled: 0 };
+          }
           if (type === "Item") {
             return {
               item_code: name,
@@ -130,9 +136,9 @@ function counted(itemCode, batchNo, qty, reason = "") {
 test("batch mapper preserves frozen snapshot identity/order and ignores caller book-state fields", () => {
   const draft = baseData();
   const mapped = buildStockReconciliationBatchDocument(draft, [
-    { ...counted("AL72", "B2", 19, "Sai số đếm"), book_qty_micros: 123 },
+    { ...counted("AL72", "B2", 19, "SAI_SO_DEM"), book_qty_micros: 123 },
     { ...counted("AL71", "B1", 10), variance_qty_micros: 456 },
-    { ...counted("AL73", "", 2, "Khác"), variance_note: "Tìm thấy hàng ngoài snapshot", valuation_rate: 100000 },
+    { ...counted("AL73", "", 2, "KHAC"), variance_note: "Tìm thấy hàng ngoài snapshot", valuation_rate: 100000 },
   ]);
 
   assert.deepEqual(mapped.items.map((row) => [row.row_id, row.item_code, row.batch_no ?? ""]), [
@@ -161,7 +167,7 @@ test("batch mapper fails closed on missing, duplicate, ambiguous and oversized r
   );
   assert.throws(
     () => buildStockReconciliationBatchDocument(draft, [
-      counted("AL71", "B1", 10), counted("AL72", "B2", 20), counted("AL71", "", 1, "Sai số đếm"),
+      counted("AL71", "B1", 10), counted("AL72", "B2", 20), counted("AL71", "", 1, "SAI_SO_DEM"),
     ]),
     /cannot mix aggregate and batch-specific rows/i,
   );
@@ -178,7 +184,7 @@ test("mapped batch preview uses canonical controller calculations and produces z
   const existing = baseData();
   const mapped = buildStockReconciliationBatchDocument(existing, [
     counted("AL72", "B2", 20),
-    counted("AL71", "B1", 9, "Sai số đếm"),
+    counted("AL71", "B1", 9, "SAI_SO_DEM"),
   ]);
   const controller = new StockReconciliationIntegrityController();
   const { context, reads } = makeContext(mapped, existing);
@@ -207,7 +213,7 @@ test("extra physical rows are left to canonical Stock Reconciliation scope valid
   };
   const mapped = buildStockReconciliationBatchDocument(existing, [
     counted("AL71", "B1", 10),
-    counted("AL99", "B9", 1, "Khác"),
+    counted("AL99", "B9", 1, "KHAC"),
   ]);
   const controller = new StockReconciliationIntegrityController();
   await assert.rejects(
@@ -218,9 +224,9 @@ test("extra physical rows are left to canonical Stock Reconciliation scope valid
 
 test("domain replay comparison is deterministic but does not replace shared executor idempotency", () => {
   const firstRows = [
-    counted("AL71", "B1", "9.000000", "Sai số đếm"),
+    counted("AL71", "B1", "9.000000", "SAI_SO_DEM"),
     counted("AL72", "B2", 20),
-    { ...counted("AL73", "", 2, "Khác"), variance_note: "Ngoài snapshot", valuation_rate: "100000.000000" },
+    { ...counted("AL73", "", 2, "KHAC"), variance_note: "Ngoài snapshot", valuation_rate: "100000.000000" },
   ];
   const canonical = buildStockReconciliationBatchDocument(baseData(), firstRows);
   canonical.items[0].book_qty_micros = 10_000_000;
@@ -229,13 +235,13 @@ test("domain replay comparison is deterministic but does not replace shared exec
   canonical.items[2].variance_qty_micros = 2_000_000;
 
   assert.equal(stockReconciliationBatchValuesMatch(canonical, [
-    counted("AL71", "B1", 9, "Sai số đếm"),
+    counted("AL71", "B1", 9, "SAI_SO_DEM"),
     counted("AL72", "B2", "20.000000"),
-    { ...counted("AL73", "", "2.000000", "Khác"), variance_note: "Ngoài snapshot", valuation_rate: 100000 },
+    { ...counted("AL73", "", "2.000000", "KHAC"), variance_note: "Ngoài snapshot", valuation_rate: 100000 },
   ]), true);
   assert.equal(stockReconciliationBatchValuesMatch(canonical, [
-    counted("AL71", "B1", 8, "Sai số đếm"),
+    counted("AL71", "B1", 8, "SAI_SO_DEM"),
     counted("AL72", "B2", 20),
-    { ...counted("AL73", "", 2, "Khác"), variance_note: "Ngoài snapshot", valuation_rate: 100000 },
+    { ...counted("AL73", "", 2, "KHAC"), variance_note: "Ngoài snapshot", valuation_rate: 100000 },
   ]), false);
 });

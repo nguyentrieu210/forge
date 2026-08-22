@@ -143,6 +143,10 @@ function ownerOverrideFor(line) {
   const sourceSheet = clean(line.source_sheet || 'ĐM');
   const sourceFormula = fold(line.source_formula_text);
   return ownerAuthority.overrides.find((entry) => {
+    const evidence = entry?.evidence;
+    const verified = evidence && typeof evidence === 'object' && !Array.isArray(evidence)
+      && clean(evidence.id) && clean(evidence.artifact) && /^[a-f0-9]{64}$/i.test(clean(evidence.sha256));
+    if (!verified) return false;
     if (clean(entry.component_item) !== componentItem) return false;
     const match = entry.match ?? {};
     if (clean(match.source_sheet) && clean(match.source_sheet) !== sourceSheet) return false;
@@ -423,6 +427,13 @@ const payload = {
   rule_count: rules.length,
   applicability_count: rules.reduce((sum, rule) => sum + rule.applicability.length, 0),
   component_mapping_count: mappings.length,
+  source_component_count: componentRows,
+  pending_count: pending.length,
+  unverified_owner_override_count: ownerAuthority.overrides.filter((entry) => {
+    const evidence = entry?.evidence;
+    return !(evidence && typeof evidence === 'object' && !Array.isArray(evidence)
+      && clean(evidence.id) && clean(evidence.artifact) && /^[a-f0-9]{64}$/i.test(clean(evidence.sha256)));
+  }).length,
   rules,
   component_mappings: mappings,
   conversion_suggestions: [...conversionSuggestions.values()],
@@ -433,6 +444,7 @@ const audit = {
   source_payload: bomPath,
   owner_override_source: overridePath,
   owner_override_records: ownerAuthority.overrides.length,
+  unverified_owner_override_records: payload.unverified_owner_override_count,
   owner_override_matches: ownerOverrideMatches,
   component_rows: componentRows,
   source_runtime_formula_rows: sourceRuntimeFormulaRows,

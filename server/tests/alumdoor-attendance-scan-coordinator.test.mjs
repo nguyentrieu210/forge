@@ -48,6 +48,12 @@ function setup() {
     secret_version: 1,
     is_active: 1,
   });
+  store.seedMaster("Shift Type", "DAY", "demo", {
+    start_time: "07:00", end_time: "17:00", working_minutes: 480, disabled: 0,
+  });
+  store.seedDocument("Shift Assignment", "SHIFT-EMP-1", "demo", {
+    employee: "EMP-1", company: "Demo", branch: "BR-A", shift_type: "DAY", start_date: "2026-01-01",
+  }, 1);
   const registry = registerErpNextCoreControllers(
     registerStockControllers(registerErpCoreControllers(createO2CControllerRegistry())),
   );

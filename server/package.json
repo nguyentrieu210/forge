@@ -31,6 +31,7 @@
     "tenant:backup:verify": "node scripts/verify-tenant-backup.mjs",
     "tenant:migrate": "node scripts/migrate-tenant.mjs",
     "tenant:restore-drill": "node scripts/restore-tenant-drill.mjs",
+    "local-d1:verify-backup": "node scripts/verify-local-d1-backup.mjs",
     "tenant:pitr": "node scripts/d1-pitr.mjs",
     "tenant:deploy": "node scripts/deploy-tenant.mjs",
     "worker:rollback": "node scripts/rollback-worker.mjs",

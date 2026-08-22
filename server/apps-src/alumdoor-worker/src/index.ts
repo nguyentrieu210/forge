@@ -71,6 +71,7 @@ import {
   attendanceResolveStation,
   attendanceRotateStationQr,
   attendanceScan,
+  attendanceStationLiteCreate,
   attendanceStationQr,
 } from "./attendance-routes.js";
 import {
@@ -81,6 +82,9 @@ import {
   payrollApprovePeriod, payrollCalculatePeriod, payrollCreatePeriod, payrollMarkPaid,
   payrollMySlips, payrollPeriodList, payrollPeriodSlips, payrollSubmitPeriod,
 } from "./payroll-routes.js";
+import {
+  employeeLiteCreate, payProfileLiteSave, payrollLiteSettingsGet, payrollLiteSettingsSave,
+} from "./hr-payroll-lite-routes.js";
 
 interface Env {
   INTERNAL_AUTH_SECRET?: string;
@@ -97,6 +101,7 @@ import type { PlatformCall } from "./platform-call.js";
 import { accept, answer, forbidden, refuse } from "./responses.js";
 import { motorLoadKg, suggestMotor, suggestUps, type MotorThresholdRow } from "./motor-selection.js";
 import { catalogReadiness } from "./catalog-readiness.js";
+import { reorderAlerts, supplierItemTerms } from "./reorder-alerts.js";
 import {
   checked, nearlyEqual, normalizedUom, positive, readDoorPolicies, readMaster, readSlatCatalog, validateDocumentColors, validateItemMaster, validatePurchaseMeasurement, validateTransactionLines, validationDocument, warmMasters,
   type ValidatorSubject,
@@ -1149,8 +1154,8 @@ async function returnCut(call: PlatformCall, args: Record<string, unknown>): Pro
 
 /** Dòng hàng chép từ báo giá sang đơn. Field nào nhân O2C đọc thì phải qua nguyên vẹn. */
 const QUOTE_LINE_FIELDS = [
-  "item_code", "item_name", "inventory_mode", "measurement_profile", "min_area_sqm",
-  "width_m", "height_m", "mesh_height_m", "set_count", "sales_mode", "has_butterfly_bracket",
+  "item_code", "item_name", "inventory_mode", "measurement_profile", "min_area_sqm", "gift_rail_min_area_sqm", "gift_rail_area_operator",
+  "width_pb_ray_m", "width_pb_nhua_m", "width_m", "height_m", "mesh_height_m", "set_count", "sales_mode", "has_butterfly_bracket",
   "formula_policy", "width_basis", "cut_width_m", "billable_area_sqm", "length_m", "qty_bar",
   "qty", "uom", "conversion_factor", "stock_uom", "stock_qty", "rate", "amount",
   "color", "motor_model", "accessories", "note",
@@ -1641,6 +1646,20 @@ async function listSubmittedPurchaseDocuments(
   }))).filter((doc): doc is PurchaseDoc => Boolean(doc));
 }
 
+/**
+ * KHÔNG DÙNG trong vận hành thật — xem `entry.ts`.
+ *
+ * `entry.ts` (điểm vào thật, xem `wrangler.*.jsonc`) chặn SỚM HƠN đúng 4 method
+ * `alumdoor.purchase.{preview_,}{,bulk_}fifo_receipt` (dòng ~54-57) và trả kết quả từ
+ * `aluminum-purchase-closure.ts:handleTrackedPurchaseFifoRequest` — request KHÔNG BAO GIỜ rơi
+ * xuống `baseWorker.fetch` để tới đăng ký dispatch của hàm này (dòng ~2769-2772 dưới). Bản này
+ * yếu hơn bản đang chạy thật: không tạo `Batch`/`Serial and Batch Bundle`
+ * (`handleTrackedPurchaseFifoRequest` có `provisionReceiptTracking`, tạo Batch+Bundle rồi mới
+ * trả về). RỦI RO: nếu có lần dọn dẹp/refactor gộp `entry.ts` vào `index.ts` mà chọn nhầm nhánh
+ * (rất dễ nhầm vì cả hai cùng khớp tên method), hệ thống âm thầm mất Batch — vỡ đúng vào đường
+ * `proposeCutV2` đang đọc. Xoá hẳn hàm này khi dọn dẹp, đừng sửa/tái dùng.
+ * (audit ALUMDOOR-KHO-DANH-MUC-GAP-20260821.md, #8)
+ */
 async function fifoReceiptDraft(
   call: PlatformCall,
   args: Record<string, unknown>,
@@ -2681,6 +2700,19 @@ export default {
          * một bề mặt rộng hơn hẳn thứ màn cần.
          */
         if (method === "alumdoor.catalog.readiness") return await catalogReadiness(call);
+        /**
+         * D2 (audit `ALUMDOOR-DANH-MUC-SERVER-NGU-20260821.md`) — cảnh báo "cần đặt hàng lại"
+         * khi tồn hiện tại chạm `Item.reorder_levels[].reorder_level`. ĐỌC-CHỈ; xem
+         * `reorder-alerts.ts` cho giới hạn quét (trần 200 mã, hạn 8 giây, `incomplete:true`
+         * khi chưa quét hết — không bao giờ báo "không có cảnh báo" khi thực ra chưa đo xong).
+         */
+        if (method === "alumdoor.inventory.reorder_alerts") return await reorderAlerts(call, args);
+        /**
+         * D3 (cùng audit) — `Supplier Item.minimum_order_qty` cho một nhà cung cấp + danh sách
+         * mã hàng, để lập Purchase Order/Material Request biết đúng số lượng tối thiểu nhà
+         * cung cấp đó chấp nhận. ĐỌC-CHỈ, tra thẳng theo tên dựng sẵn `{supplier}:{item_code}`.
+         */
+        if (method === "alumdoor.purchase.supplier_item_terms") return await supplierItemTerms(call, args);
         if (method === "alumdoor.slats.compute") {
           try {
             const kind = args.australian_kind ? String(args.australian_kind) as AustralianDoor : null;
@@ -2693,6 +2725,7 @@ export default {
         }
 
         if (method === "alumdoor.attendance.challenge") return await attendanceChallenge();
+        if (method === "alumdoor.attendance.station_create_lite") return await attendanceStationLiteCreate({ request, call, args });
         if (method === "alumdoor.attendance.station_qr") return await attendanceStationQr({ request, call, env, args });
         if (method === "alumdoor.attendance.rotate_station_qr") return await attendanceRotateStationQr({ request, call, env, args });
         if (method === "alumdoor.attendance.resolve_station") return await attendanceResolveStation({ request, call, env, args });
@@ -2703,6 +2736,10 @@ export default {
         if (method === "alumdoor.attendance.correction_requests") return await attendanceCorrectionRequests({ call });
         if (method === "alumdoor.attendance.submit_correction") return await attendanceSubmitCorrection({ call, args });
         if (method === "alumdoor.attendance.review_correction") return await attendanceReviewCorrection({ call, args });
+        if (method === "alumdoor.hr.employee_lite_create") return await employeeLiteCreate({ call, args });
+        if (method === "alumdoor.hr.pay_profile_lite_save") return await payProfileLiteSave({ call, args });
+        if (method === "alumdoor.hr.payroll_lite_settings_get") return await payrollLiteSettingsGet({ call, args });
+        if (method === "alumdoor.hr.payroll_lite_settings_save") return await payrollLiteSettingsSave({ call, args });
         if (method === "alumdoor.payroll.period_list") return await payrollPeriodList({ call, args });
         if (method === "alumdoor.payroll.create_period") return await payrollCreatePeriod({ call, args });
         if (method === "alumdoor.payroll.calculate_period") return await payrollCalculatePeriod({ call, args });
@@ -2795,6 +2832,14 @@ export default {
         if (!aggregate) return new Response(null, { status: 204 });
         const call = platformCaller(request, env);
         const direction = type.endsWith(".cancelled") ? -1 : 1;
+        // KHÔNG DÙNG trong vận hành thật — xem entry.ts. `entry.ts:/hooks/event` chặn SỚM HƠN
+        // đúng `event_type` bắt đầu bằng "purchase_receipt." và trả thẳng
+        // `{skipped_legacy_aluminium_lot_sync: true, authority: "Batch + Stock Ledger"}` — nhánh
+        // dưới đây (ghi doctype "Aluminium Lot" CŨ) không bao giờ chạy tới trong vận hành thật.
+        // Đội đã chủ động khai tử Aluminium Lot ("V2 chỉ đọc Batch + sổ kho", xem comment ở dòng
+        // ~550). RỦI RO: gộp/refactor entry.ts vào index.ts nhầm nhánh sẽ âm thầm ghi lại
+        // Aluminium Lot song song sổ kho thật. Xoá hẳn khi dọn dẹp, đừng sửa/tái dùng.
+        // (audit ALUMDOOR-KHO-DANH-MUC-GAP-20260821.md, #8)
         if (type.startsWith("purchase_receipt.")) {
           const result = await syncLotsFromReceipt(call, aggregate, direction);
           const status = result.failed.length ? 500 : 200;

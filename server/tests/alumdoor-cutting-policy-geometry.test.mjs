@@ -107,6 +107,41 @@ test("equal top rules are rejected instead of guessed", () => {
   }), /Hệ thống không đoán/);
 });
 
+test("legacy hyphen geometry aliases evaluate into canonical underscore fields", () => {
+  const result = evaluateGeometryRules({
+    policy_name: "Legacy alias",
+    geometry_profile: "GP-LEGACY",
+    profile_fields: [
+      { geometry_field: "PB_CAO", role: "INPUT" },
+      { geometry_field: "PB_RAY_RONG", role: "INPUT" },
+      { geometry_field: "CAT_LA_RONG", role: "CALCULATED" },
+    ],
+    rules: [{
+      rule_code: "LEGACY-RCL",
+      target_field: "RONG-CAT-LA",
+      source_field: "RONG-PB-RAY",
+      operator: "SUBTRACT",
+      operand_m: 0.03,
+    }],
+    inputs: { "CAO-PB": 3, "RONG-PB-RAY": 4 },
+    required_targets: ["RONG-CAT-LA"],
+  });
+  assert.equal(result.values.PB_CAO, 3);
+  assert.equal(result.values.PB_RAY_RONG, 4);
+  assert.equal(result.values.CAT_LA_RONG, 3.97);
+  assert.equal(result.applied_rules[0].target_field, "CAT_LA_RONG");
+});
+
+test("conflicting values carried by two geometry aliases fail closed", () => {
+  assert.throws(() => evaluateGeometryRules({
+    policy_name: "Alias conflict",
+    geometry_profile: "GP-CONFLICT",
+    profile_fields: [{ geometry_field: "PB_CAO", role: "INPUT" }],
+    rules: [],
+    inputs: { PB_CAO: 3, "CAO-PB": 3.1 },
+  }), /hai alias.*giá trị khác nhau/);
+});
+
 test("Cutting Policy does not contain BOM quantity or pricing formulas", () => {
   const serialized = JSON.stringify(CUTTING_POLICIES).toLocaleLowerCase("vi");
   for (const forbidden of ["đơn giá", "giá bán", "xốp", "ron đáy", "kg/m2", "quantity"]) {

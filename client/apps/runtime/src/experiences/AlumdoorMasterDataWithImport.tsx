@@ -31,8 +31,27 @@ interface Props {
   items: AlumdoorMasterItem[];
   onNavigate: (route: string) => void;
   readiness?: AlumdoorMasterReadiness;
+  readinessStatus?: "idle" | "loading" | "success" | "error";
+  readinessError?: string;
+  onRetryReadiness?: () => void;
 }
 
-export function AlumdoorMasterDataWithImport({ items, onNavigate, readiness }: Props) {
-  return <AlumdoorMasterDataScreen items={items} onNavigate={onNavigate} readiness={readiness} />;
+export function AlumdoorMasterDataWithImport({
+  items,
+  onNavigate,
+  readiness,
+  readinessStatus,
+  readinessError,
+  onRetryReadiness,
+}: Props) {
+  return (
+    <AlumdoorMasterDataScreen
+      items={items}
+      onNavigate={onNavigate}
+      readiness={readiness}
+      readinessStatus={readinessStatus}
+      readinessError={readinessError}
+      onRetryReadiness={onRetryReadiness}
+    />
+  );
 }

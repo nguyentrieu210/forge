@@ -1,7 +1,7 @@
 {
   "id": "alumdoor",
-  "baseVersion": "2.2.3",
-  "version": "2.2.5",
+  "baseVersion": "2.26.0",
+  "version": "2.26.0",
   "groupOrder": [
     "Bán hàng",
     "Mua hàng",
@@ -14,19 +14,119 @@
     "Danh mục"
   ],
   "groups": {
-    "Bán hàng": ["Quotation", "Sales Order", "Delivery Note", "action:giao-hang-theo-ngay", "Sales Invoice"],
-    "Mua hàng": ["Material Request", "Purchase Order", "Purchase Receipt", "Purchase Invoice", "action:nhap-nhom-fifo"],
-    "Kho": ["Stock Entry", "Cut Order", "action:de-xuat-lo-cat", "action:cat-nhom", "Stock Reservation", "action:giu-cho", "action:nha-giu-cho", "Stock Reconciliation", "action:chot-so-so-kiem-ke", "action:duyet-kiem-ke", "action:hoan-cat", "action:tra-hang"],
-    "Sản xuất": ["Production Request", "Work Order", "Bill of Materials", "Production Standard", "action:lap-tai-san-xuat", "Paint Job"],
-    "Nhân sự & Tiền lương": ["alumdoor-attendance:kiosk", "alumdoor-attendance:today", "alumdoor-attendance:month", "alumdoor-attendance:exceptions", "alumdoor-attendance:employees-lite", "alumdoor-attendance:payroll-lite", "alumdoor-attendance:my-slips-lite", "alumdoor-attendance:hr-payroll-settings-lite"],
-    "Công nợ / Kế toán": ["Payment Entry"],
-    "Bảo hành / Dịch vụ": ["Warranty Claim", "action:mo-ho-so-bao-hanh", "action:xac-nhan-bu-tru-bao-hanh"],
-    "Báo cáo": ["report:Tồn nhôm theo khổ", "report:Đơn hàng theo khách", "report:Báo giá theo khách", "report:Mua hàng theo nhà cung cấp", "report:Đơn mua chưa nhận đủ", "report:Stock Balance", "report:Stock Ledger", "report:Lệnh sản xuất theo mặt hàng", "report:Work Order Progress", "report:Công nợ theo khách hàng", "report:Accounts Receivable", "report:Accounts Payable", "report:General Ledger", "report:Trial Balance", "report:Profit and Loss", "report:Balance Sheet", "report:Lắp đặt theo đội"],
-    "Danh mục": ["Item", "Item Group", "UOM", "Warehouse", "Customer", "Supplier", "Sales Option", "Sales Package", "Price List", "Item Price", "Pricing Rule", "Cutting Policy", "Measurement Profile", "Item Color", "Material Grade", "Material Specification", "Item Attribute", "Supplier Item", "Brand", "Manufacturer", "Lý do huỷ", "Nguyên nhân chênh lệch"]
+    "Bán hàng": [
+      "Quotation",
+      "action:bao-gia-thanh-don",
+      "Sales Order",
+      "action:don-ban-thanh-phieu-xuat",
+      "Delivery Note",
+      "action:giao-nhieu-don-fifo"
+    ],
+    "Mua hàng": [
+      "Material Request",
+      "Purchase Order",
+      "Purchase Receipt",
+      "Purchase Invoice",
+      "action:nhap-nhom-fifo"
+    ],
+    "Kho": [
+      "Stock Entry",
+      "Cut Order",
+      "action:de-xuat-lo-cat",
+      "action:cat-nhom",
+      "Stock Reservation",
+      "action:giu-cho",
+      "action:nha-giu-cho",
+      "Stock Reconciliation",
+      "action:chot-so-so-kiem-ke",
+      "action:duyet-kiem-ke",
+      "action:hoan-cat",
+      "action:tra-hang"
+    ],
+    "Sản xuất": [
+      "Production Request",
+      "Work Order",
+      "Bill of Materials",
+      "Production Standard",
+      "action:lap-tai-san-xuat",
+      "Paint Job"
+    ],
+    "Nhân sự & Tiền lương": [
+      "alumdoor-attendance:kiosk",
+      "alumdoor-attendance:today",
+      "alumdoor-attendance:month",
+      "alumdoor-attendance:exceptions",
+      "alumdoor-attendance:employees-lite",
+      "alumdoor-attendance:payroll-lite",
+      "alumdoor-attendance:my-slips-lite",
+      "alumdoor-attendance:hr-payroll-settings-lite"
+    ],
+    "Công nợ / Kế toán": [
+      "action:don-ban-thanh-hoa-don",
+      "Sales Invoice",
+      "Credit Note",
+      "Payment Entry"
+    ],
+    "Bảo hành / Dịch vụ": [
+      "Warranty Claim",
+      "action:mo-ho-so-bao-hanh",
+      "action:xac-nhan-bu-tru-bao-hanh"
+    ],
+    "Báo cáo": [
+      "report:Tồn nhôm theo khổ",
+      "report:Đơn hàng theo khách",
+      "report:Báo giá theo khách",
+      "report:Mua hàng theo nhà cung cấp",
+      "report:Đơn mua chưa nhận đủ",
+      "report:Stock Balance",
+      "report:Stock Ledger",
+      "report:Lệnh sản xuất theo mặt hàng",
+      "report:Work Order Progress",
+      "report:Công nợ theo khách hàng",
+      "report:Accounts Receivable",
+      "report:Accounts Payable",
+      "report:General Ledger",
+      "report:Trial Balance",
+      "report:Profit and Loss",
+      "report:Balance Sheet",
+      "report:Lắp đặt theo đội"
+    ],
+    "Danh mục": [
+      "Item",
+      "Item Group",
+      "UOM",
+      "Warehouse",
+      "Customer",
+      "Supplier",
+      "Price List",
+      "Item Price",
+      "Pricing Rule",
+      "Cutting Policy",
+      "Measurement Profile",
+      "Item Color",
+      "Material Grade",
+      "Material Specification",
+      "Item Attribute",
+      "Supplier Item",
+      "Brand",
+      "Manufacturer",
+      "Surface Finish",
+      "Geometry Field",
+      "Geometry Profile",
+      "Pricing Scope",
+      "BOM Rule",
+      "Quy cách cửa",
+      "Bậc diện tích",
+      "Ngưỡng chọn Motor",
+      "Lý do huỷ",
+      "Nguyên nhân chênh lệch"
+    ]
   },
-  "migrationMasters": {
-    "Sales Option": {"label": "Phương án bán", "icon": "sliders-horizontal", "permission_doctype": "Sales Option"},
-    "Sales Package": {"label": "Gói bán hàng", "icon": "package-check", "permission_doctype": "Sales Package"}
-  },
-  "excludedKeys": ["Aluminium Lot", "Aluminium Cut", "Sales Package Item"]
+  "excludedKeys": [
+    "Aluminium Lot",
+    "Aluminium Cut",
+    "Sales Option",
+    "Sales Package",
+    "Sales Package Item"
+  ]
 }

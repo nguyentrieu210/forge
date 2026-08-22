@@ -12,10 +12,10 @@ function storeFixture() {
         { row_id: "1", salary_slip: "SAL-1" }, { row_id: "2", salary_slip: "SAL-2" },
       ],
     }, 0, 4)],
-    ["Salary Slip:SAL-1", doc("SAL-1", { company: "ALUMDOOR", employee: "EMP-1", start_date: "2026-08-01", end_date: "2026-08-31", alu_payroll_entry: "PAY-1", alu_input_hash: "a".repeat(64), alu_state: "pending_approval" }, 0, 3)],
-    ["Salary Slip:SAL-2", doc("SAL-2", { company: "ALUMDOOR", employee: "EMP-2", start_date: "2026-08-01", end_date: "2026-08-31", alu_payroll_entry: "PAY-1", alu_input_hash: "b".repeat(64), alu_state: "pending_approval" }, 0, 2)],
-    ["AlumDoor Attendance Day:AAD-1", doc("AAD-1", { employee: "EMP-1", work_date: "2026-08-01", state: "complete", segments: [] }, 0, 5)],
-    ["AlumDoor Attendance Day:AAD-2", doc("AAD-2", { employee: "EMP-2", work_date: "2026-08-01", state: "approved", segments: [] }, 0, 6)],
+    ["Salary Slip:SAL-1", doc("SAL-1", { company: "ALUMDOOR", employee: "EMP-1", start_date: "2026-08-01", end_date: "2026-08-31", alu_payroll_entry: "PAY-1", alu_input_hash: "a".repeat(64), alu_state: "pending_approval", alu_formula_trace_json: JSON.stringify({ attendance: [{ name: "AAD-1", work_date: "2026-08-01", raw_overtime_minutes: 0 }], overtime_requests: [], paid_leave: [] }) }, 0, 3)],
+    ["Salary Slip:SAL-2", doc("SAL-2", { company: "ALUMDOOR", employee: "EMP-2", start_date: "2026-08-01", end_date: "2026-08-31", alu_payroll_entry: "PAY-1", alu_input_hash: "b".repeat(64), alu_state: "pending_approval", alu_formula_trace_json: JSON.stringify({ attendance: [{ name: "AAD-2", work_date: "2026-08-01", raw_overtime_minutes: 0 }], overtime_requests: [], paid_leave: [] }) }, 0, 2)],
+    ["AlumDoor Attendance Day:AAD-1", doc("AAD-1", { employee: "EMP-1", work_date: "2026-08-01", state: "complete", raw_overtime_minutes: 0, segments: [] }, 0, 5)],
+    ["AlumDoor Attendance Day:AAD-2", doc("AAD-2", { employee: "EMP-2", work_date: "2026-08-01", state: "approved", raw_overtime_minutes: 0, segments: [] }, 0, 6)],
   ]);
   return {
     async getDocument(_tenant, doctype, name) { return docs.get(`${doctype}:${name}`) ?? null; },

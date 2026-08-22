@@ -25,7 +25,7 @@ import {
 import { readFrappeArgs, type FrappeArgs } from "./args.js";
 import { VERTICAL_METHODS } from "./vertical-methods.js";
 import {
-  assertDocumentAction, isPlatformAdmin, loadReadable, loadWritable, workflowTransitionAccess,
+  assertDocumentAction, getReadableStoredDocument, isPlatformAdmin, loadReadable, loadWritable, workflowTransitionAccess,
 } from "./document-access.js";
 import {
   CONTEXT_DIMENSIONS, OVERVIEW_MAX_DOCTYPES, clampPageLength, contextFilters, dedupe, permittedNav,
@@ -676,8 +676,8 @@ async function resolveFetchFrom(
    * Vì sao phải phân biệt: `createDocument` áp `default` TRƯỚC khi gọi hàm này, nên một ô vừa có
    * `default` vừa có `fetch_from` luôn "đã có giá trị" khi tới đây và nhánh suy ra không bao giờ
    * chạy. Đo trên 8810 ngày 21/08/2026: `Purchase Receipt` tạo từ `against_purchase_order`
-   * (Đơn mua thuộc "CÔNG TY TNHH INTERNATIONAL ALUMINUM APPLICATION") ra `company = "ALUMDOOR"`
-   * — giá trị `default` của brief, mà "ALUMDOOR" KHÔNG phải một Company nào có thật trong dữ
+   * (Đơn mua thuộc một pháp nhân thật) lại ra mã công ty kỹ thuật lấy từ `default` của brief
+   * — mã mặc định đó KHÔNG phải một Company nào có thật trong dữ
    * liệu. Bốn ô rơi vào đúng bẫy này: `Delivery Note.company`, `Delivery Note.currency`,
    * `Purchase Receipt.company`, `Purchase Receipt.currency` — `fetch_from` của chúng là mã chết.
    *
@@ -930,7 +930,13 @@ async function renameDocument(args: FrappeArgs, context: FrappeRouterContext): P
 async function saveDocument(doctype: string, name: string, args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
   const submitted = documentArgument(args);
   const meta = await requireMeta(doctype, context);
-  const current = await loadWritable(doctype, name, context);
+  const stored = await context.documents.getDocument(context.tenantId, doctype, name);
+  const current = stored ?? await getReadableStoredDocument(doctype, name, context);
+  if (!current) throw errors.notFound();
+  await context.permissions.assert({
+    actor: context.actor, tenantId: context.tenantId, doctype, name,
+    owner: current.owner, data: current.data, action: "save",
+  });
   // A write must be against the version the client last read. `assertModifiedMatches`
   // rejects a missing value too, so a client that forgets to echo `modified`
   // cannot overwrite a concurrent edit.
@@ -947,7 +953,12 @@ async function saveDocument(doctype: string, name: string, args: FrappeArgs, con
   await assertNoAmbiguousItemPrice(doctype, payload, name, context);
   await context.runCommand(await buildCommand({
     tenantId: context.tenantId, actor: context.actor, doctype, name,
-    action: "save", expectedVersion: current.version, document: payload,
+    // The first edit of an app fixture creates an ordinary document overlay.  From then
+    // on all saves use normal version concurrency, and the app fixture remains an intact
+    // fallback/audit source underneath it.
+    action: stored ? "save" : "create",
+    expectedVersion: stored ? current.version : null,
+    document: payload,
   }));
   await syncCustomerAsSupplier(doctype, name, payload, context);
   return toFrappeDoc(await loadReadable(doctype, name, context));
@@ -3413,7 +3424,7 @@ async function assertNoAmbiguousItemPrice(
  *   · `rate: -5000` — đơn giá âm, cộng vào đơn hàng thành trừ tiền;
  *   · `uom: "Lít"` trên một mã tồn Kg / bán Mét — dòng giá KHÔNG BAO GIỜ khớp, và vì engine
  *     giá fail-closed nên người bán chỉ thấy "không tìm thấy Item Price", không thấy rằng giá
- *     đã khai rồi nhưng khai sai đơn vị. Đo trên dữ liệu thật: `Alumdoor 2026:PKC_GIAT:Bộ` —
+ *     đã khai rồi nhưng khai sai đơn vị. Đo trên dữ liệu thật: một dòng giá phụ kiện theo Bộ —
  *     mặt hàng bán theo *Cặp*, dòng giá ghi theo *Bộ*.
  *
  * Đơn vị hợp lệ lấy đúng bộ mà `applyUomConversion` chấp nhận (ĐVT tồn/mua/bán + bảng quy đổi),

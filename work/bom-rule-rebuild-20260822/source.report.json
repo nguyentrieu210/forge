@@ -1,0 +1,175 @@
+{
+  "source_authority": {
+    "sellable": "apps/alumdoor/docs/nguon/ms-lien/ĐM.md numbered rows",
+    "stock": "apps/alumdoor/docs/nguon/ms-lien/Trang-tính29.md",
+    "bom_reference": "apps/alumdoor/docs/nguon/ms-lien/ĐM.md component rows bound by unique parent source row",
+    "bom_item_promotion_evidence": "apps/alumdoor/docs/nguon/ms-lien/ĐM.md detached allowlisted evidence rows promoted through the explicit item identity contract"
+  },
+  "dm_row_count": 2115,
+  "stock_row_count": 243,
+  "source_record_count": 2149,
+  "sellable_count": 362,
+  "stock_count": 242,
+  "bom_reference_count": 1544,
+  "bom_evidence_only_count": 1,
+  "unresolved_group_count": 9,
+  "group_counts": {
+    "Phụ kiện CN Đức": 31,
+    "Ray và trục": 48,
+    "Cửa CN Đức": 42,
+    "Nan/lá cửa": 102,
+    "Phụ kiện chung": 107,
+    "Motor": 25,
+    "Linh kiện motor": 80,
+    "Điều khiển & phụ kiện điện": 22,
+    "Cửa Đài Loan": 97,
+    "Cửa Siêu Trường": 2,
+    "Cửa Đài Loan Inox": 1,
+    "Bình lưu điện": 4,
+    "Cửa tấm liền Úc": 20,
+    "Cửa Lưới": 12,
+    "Cửa kéo Đài Loan": 1,
+    "Phụ kiện cần sơn tĩnh điện": 2
+  },
+  "unresolved_group_samples": [
+    {
+      "source_sheet": "ĐM",
+      "source_row": 1230,
+      "source_index": 235,
+      "source_category": "",
+      "item_code": "PHUTHU-DUC<8m²",
+      "item_name": "PHỤ THU_CỬA ĐỨC < 8m²",
+      "source_uom": "CHUYẾN"
+    },
+    {
+      "source_sheet": "ĐM",
+      "source_row": 1231,
+      "source_index": 236,
+      "source_category": "",
+      "item_code": "PHUTHU-DUC-PK<5tr",
+      "item_name": "PHỤ THU_PHỤ KIỆN ĐỨC < 5tr",
+      "source_uom": "CHUYẾN"
+    },
+    {
+      "source_sheet": "ĐM",
+      "source_row": 1232,
+      "source_index": 237,
+      "source_category": "",
+      "item_code": "PHUTHU-UC<7m²",
+      "item_name": "PHỤ THU_CỬA ÚC < 7m²",
+      "source_uom": "BỘ"
+    },
+    {
+      "source_sheet": "ĐM",
+      "source_row": 1233,
+      "source_index": 238,
+      "source_category": "",
+      "item_code": "PHUTHU-UC-PK<5tr",
+      "item_name": "PHỤ THU_PHỤ KIỆN ÚC < 5tr",
+      "source_uom": "CHUYẾN"
+    },
+    {
+      "source_sheet": "ĐM",
+      "source_row": 1234,
+      "source_index": 239,
+      "source_category": "",
+      "item_code": "PHUTHU-DAILOAN<8m²",
+      "item_name": "PHỤ THU_CỬA ĐÀI LOAN< 8m²",
+      "source_uom": "CHUYẾN"
+    },
+    {
+      "source_sheet": "ĐM",
+      "source_row": 1235,
+      "source_index": 240,
+      "source_category": "",
+      "item_code": "PHUTHU-DAILOAN-PK<3tr",
+      "item_name": "PHỤ THU_PHỤ KIỆN ĐÀI LOAN< 8m²",
+      "source_uom": "CHUYẾN"
+    },
+    {
+      "source_sheet": "ĐM",
+      "source_row": 1236,
+      "source_index": 241,
+      "source_category": "",
+      "item_code": "PHUTHU-CUALUOI<8m²",
+      "item_name": "PHỤ THU_CỬA LƯỚI< 8m²",
+      "source_uom": "CHUYẾN"
+    },
+    {
+      "source_sheet": "ĐM",
+      "source_row": 1237,
+      "source_index": 242,
+      "source_category": "",
+      "item_code": "PHUTHU-CUALUOI<3tr",
+      "item_name": "PHỤ THU_CỬA LƯỚI <3tr",
+      "source_uom": "CHUYẾN"
+    },
+    {
+      "source_sheet": "ĐM",
+      "source_row": 1238,
+      "source_index": 243,
+      "source_category": "",
+      "item_code": "PHUTHU-SVG-LADUC",
+      "item_name": "PHỤ THU_SƠN VÂN GỖ_LÁ ĐỨC",
+      "source_uom": "M2"
+    }
+  ],
+  "sellable_dual_unit_evidence": [
+    {
+      "source_row": 19,
+      "source_index": 8,
+      "item_code": "TRỤC 114_1.8LY",
+      "item_name": "TRỤC 114_1.8LY",
+      "source_uom": "KG/M",
+      "conversion_factor": 4.4
+    },
+    {
+      "source_row": 20,
+      "source_index": 9,
+      "item_code": "TRỤC 114_2.1LY",
+      "item_name": "TRỤC 114_2.1LY",
+      "source_uom": "KG/M",
+      "conversion_factor": 4.7
+    },
+    {
+      "source_row": 21,
+      "source_index": 10,
+      "item_code": "TP-RAYHOP",
+      "item_name": "RAY HỘP TD U76",
+      "source_uom": "KG/M",
+      "conversion_factor": 1.083
+    },
+    {
+      "source_row": 25,
+      "source_index": 11,
+      "item_code": "TP-TD87A1 GS",
+      "item_name": "RAY ĐƠN TD U76",
+      "source_uom": "KG/M",
+      "conversion_factor": 0.6
+    },
+    {
+      "source_row": 29,
+      "source_index": 12,
+      "item_code": "TP-RAY HỘP TD U100",
+      "item_name": "RAY HỘP TD U100",
+      "source_uom": "KG/M",
+      "conversion_factor": 1.419
+    },
+    {
+      "source_row": 729,
+      "source_index": 183,
+      "item_code": "NVL-TIINOX",
+      "item_name": "TI KHÓA NGANG",
+      "source_uom": "KG/M",
+      "conversion_factor": 0.11
+    },
+    {
+      "source_row": 1901,
+      "source_index": 350,
+      "item_code": "NVL-LAMAU-PHE",
+      "item_name": "LÁ MẪU ĐỨC",
+      "source_uom": "KG/THÙNG",
+      "conversion_factor": 1.4
+    }
+  ]
+}

@@ -85,7 +85,7 @@ test("title_field is always searchable for Link pickers", () => {
     revision: 1,
   });
   const definition = metadataToListDefinition(parsed);
-  assert.deepEqual(definition.searchFields, ["name", "class_name"]);
+  assert.deepEqual(definition.searchFields, ["name", "class_name", "code"]);
 });
 
 // ---- DocField properties the server enforces --------------------------------

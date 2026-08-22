@@ -134,7 +134,8 @@ function isRenderableExperience(item: AppManifest["nav"][number], manifest: AppM
   if (separator < 1 || separator === item.key.length - 1) return false;
   const kind = item.key.slice(0, separator);
   const argument = item.key.slice(separator + 1);
-  if (kind === "approval" || kind === "calendar" || kind === "social-commerce" || kind === "alumdoor-attendance" || kind === "alumdoor-debt") return true;
+  if (kind === "approval" || kind === "calendar" || kind === "social-commerce" || kind === "alumdoor-attendance"
+    || kind === "alumdoor-debt" || kind === "daily-ledger" || kind === "alumdoor-operations") return true;
   if (kind === "action") return (manifest.actions ?? []).some((action) => action.name === argument);
   if (kind === "screen") return (manifest.screens ?? []).some((screen) => screen.name === argument);
   return false;
@@ -733,11 +734,14 @@ function ExperienceScreen({ manifest, boot, logout, nav }: ScreenProps) {
         </Shell>
       );
     }
-    const operationsMode = mode === "today" ? "today"
+    const operationsMode = mode === "kiosk" ? "kiosk"
+      : mode === "today" ? "today"
       : mode === "month" ? "month"
       : mode === "exceptions" ? "exceptions"
-      : mode === "payroll-run" ? "payroll-run"
-      : mode === "payroll-my-slips" ? "payroll-my-slips"
+      : mode === "employees-lite" ? "employees-lite"
+      : mode === "payroll-lite" || mode === "payroll-run" ? "payroll-run"
+      : mode === "my-slips-lite" || mode === "payroll-my-slips" ? "payroll-my-slips"
+      : mode === "hr-payroll-settings-lite" ? "hr-settings"
       : null;
     if (operationsMode) {
       return (
@@ -931,6 +935,18 @@ function groupedIndexItems(items: RuntimeNav[], kind: "reports" | "masters") {
     .map(([label, entries], index) => ({ id: `index-group-${index}`, label, entries }));
 }
 
+// React StrictMode mounts effects twice in development. Share only the in-flight request:
+// the second mount reuses it, while a later visit still performs a fresh measurement.
+let alumdoorReadinessFlight: Promise<AlumdoorMasterReadiness> | undefined;
+
+function loadAlumdoorReadiness(): Promise<AlumdoorMasterReadiness> {
+  if (!alumdoorReadinessFlight) {
+    alumdoorReadinessFlight = adapter.callPost<AlumdoorMasterReadiness>("alumdoor.catalog.readiness", {})
+      .finally(() => { alumdoorReadinessFlight = undefined; });
+  }
+  return alumdoorReadinessFlight;
+}
+
 function MetaIndexScreen(props: ScreenProps & { kind: "reports" | "masters" }) {
   const navigate = useNavigate();
   const [selectedReportGroup, setSelectedReportGroup] = useState<string | null>(null);
@@ -950,39 +966,65 @@ function MetaIndexScreen(props: ScreenProps & { kind: "reports" | "masters" }) {
   /**
    * Số đo tình trạng danh mục — nguồn duy nhất là `alumdoor.catalog.readiness` (worker của app).
    *
-   * `undefined` là trạng thái BAN ĐẦU và cũng là trạng thái KHI HỎNG, cố ý cùng một giá trị:
-   * màn đọc `readiness === undefined` là "chưa đo" và nói thẳng ra. Không có `{}` ở đây —
+   * `undefined` chỉ mang nghĩa chưa có một phép đo dùng được. Trạng thái `loading`/`error` được
+   * chuyển riêng xuống màn để người vận hành biết đang chờ hay API đã hỏng và có thể thử lại.
+   * Không có `{}` ở đây —
    * `readiness={}` cho ra blocked=0, partial=0 và màn tuyên bố cả chuỗi đã thông sau 0 phép đo
    * (xem `MasterChainSummary.unknown` bên màn). Cũng không có số dựng sẵn: một con số hợp lý mà
    * sai thì không ai nghi để đi kiểm.
    *
    * Theo đúng lối nạp của file này (`ManifestBoundary`, `Runtime`): `useEffect` + cờ `alive`
-   * huỷ setState sau khi rời màn, và lỗi bị nuốt tại chỗ vì đây là số PHỤ — hỏng thì màn vẫn
-   * dẫn đường được, chỉ mất phần tô màu.
+   * huỷ setState sau khi rời màn. Lỗi không chặn đường dẫn danh mục, nhưng phải hiện rõ thay vì
+   * bị nuốt và biến thành một bảng số 0 có vẻ hợp lệ.
    *
    * Gọi khi `isAlumdoorMasterData` mới đúng: đây là method của app Alumdoor, gọi ở app khác chỉ
    * tốn một lượt 404. Điều kiện nằm TRONG effect chứ không bọc ngoài hook — thứ tự hook phải
    * bất biến giữa các lần render.
    */
   const [readiness, setReadiness] = useState<AlumdoorMasterReadiness>();
+  const [readinessStatus, setReadinessStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [readinessError, setReadinessError] = useState<string>();
+  const [readinessRetry, setReadinessRetry] = useState(0);
   useEffect(() => {
-    if (!isAlumdoorMasterData) return;
+    if (!isAlumdoorMasterData) {
+      setReadinessStatus("idle");
+      return;
+    }
     let alive = true;
-    adapter.callPost<AlumdoorMasterReadiness>("alumdoor.catalog.readiness", {})
+    setReadinessStatus("loading");
+    setReadinessError(undefined);
+    loadAlumdoorReadiness()
       .then((value) => {
         // Chỉ nhận đúng hình dạng bản đồ. Một thân trả về khác (mảng, chuỗi lỗi) mà cứ nhận thì
         // màn coi như ĐÃ ĐO và mọi mục thành "chưa ai đếm" — sai kiểu khó thấy hơn hẳn lỗi mạng.
-        if (alive && value && typeof value === "object" && !Array.isArray(value)) setReadiness(value);
+        if (!alive) return;
+        if (!value || typeof value !== "object" || Array.isArray(value)) {
+          throw new Error("Máy chủ trả về số đo không hợp lệ.");
+        }
+        setReadiness(value);
+        setReadinessStatus("success");
       })
-      .catch(() => { /* chưa cài worker, mất mạng, hoặc không đủ quyền đọc: để "chưa đo" */ });
+      .catch((error) => {
+        if (!alive) return;
+        setReadiness(undefined);
+        setReadinessStatus("error");
+        setReadinessError(adapter.mapError(error).message);
+      });
     return () => { alive = false; };
-  }, [isAlumdoorMasterData, props.manifest.id]);
+  }, [isAlumdoorMasterData, props.manifest.id, readinessRetry]);
 
   return (
     <Shell {...props} active={active} breadcrumbs={[{ label: "Quay lại", onClick: () => navigateBack(navigate, backFallback) }, { label: title }]}>
       <div className="h-full overflow-auto bg-muted/20 p-3 md:p-4">
         {isAlumdoorMasterData ? (
-          <AlumdoorMasterDataScreen items={items} onNavigate={navigate} readiness={readiness} />
+          <AlumdoorMasterDataScreen
+            items={items}
+            onNavigate={navigate}
+            readiness={readiness}
+            readinessStatus={readinessStatus}
+            readinessError={readinessError}
+            onRetryReadiness={() => setReadinessRetry((value) => value + 1)}
+          />
         ) : (
           <section className="w-full overflow-hidden rounded-lg border bg-card shadow-sm">
           <div className="border-b px-5 py-4">

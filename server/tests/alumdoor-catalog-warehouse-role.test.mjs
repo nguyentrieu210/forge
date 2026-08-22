@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { planAlumdoorCatalogAudit } from "../scripts/alumdoor-catalog-audit-planner.mjs";
+import { alumdoorBriefVersion } from "./helpers.mjs";
 
 function records() {
   return [
@@ -32,7 +33,7 @@ function records() {
 }
 
 test("Vietnamese stock_role values map to canonical production roles", () => {
-  const report = planAlumdoorCatalogAudit({ metadataVersion: "2.10.0", records: records() });
+  const report = planAlumdoorCatalogAudit({ metadataVersion: alumdoorBriefVersion(), records: records() });
   assert.deepEqual(report.counts.warehouse_roles, {
     FINISHED_GOODS: 1,
     GENERAL: 1,

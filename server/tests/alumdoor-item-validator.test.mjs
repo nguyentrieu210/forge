@@ -43,7 +43,11 @@ async function validateItem(payload, {
   );
 }
 
-const leafGroup = { "Item Group:Nguyên vật liệu": { item_group_name: "Nguyên vật liệu", is_group: 0 } };
+const leafGroup = {
+  "Item Group:Nguyên vật liệu": { item_group_name: "Nguyên vật liệu", is_group: 0 },
+  "UOM:Kg": { uom_name: "Kg", disabled: 0 },
+  "UOM:Cây": { uom_name: "Cây", disabled: 0 },
+};
 
 function validRawItem() {
   return {
@@ -146,6 +150,9 @@ test("Item validator requires manufacturing eligibility for produced items", asy
   }, {
     masters: {
       "Item Group:Thành phẩm": { item_group_name: "Thành phẩm", is_group: 0 },
+      "Measurement Profile:Thành phẩm theo m2": { profile_name: "Thành phẩm theo m2", disabled: 0 },
+      "UOM:Bộ": { uom_name: "Bộ", disabled: 0 },
+      "UOM:m2": { uom_name: "m2", disabled: 0 },
     },
   });
   assert.equal(response.status, 422);
@@ -182,14 +189,13 @@ test("Item validator requires an active Measurement Profile for dimensioned stoc
   assert.match(await message(response), /Bộ quy cách Nhôm cây\/lá không tồn tại/i);
 });
 
-test("Item validator rejects missing transaction UOM conversion", async () => {
+test("Item catalog permits a missing transaction UOM conversion so readiness can report and complete it", async () => {
   const response = await validateItem({
     ...validRawItem(),
     default_purchase_uom: "Cây",
     uom_conversions: [],
   }, { masters: leafGroup });
-  assert.equal(response.status, 422);
-  assert.match(await message(response), /chưa có hệ số quy đổi/i);
+  assert.equal(response.status, 200, await message(response));
 });
 
 test("Item validator rejects a disabled Item Group", async () => {
@@ -280,6 +286,9 @@ test("Item validator accepts canonical finished-door m2 sales UOM without static
   const response = await validateItem(canonicalFinishedDoor(), {
     masters: {
       "Item Group:Thành phẩm": { item_group_name: "Thành phẩm", is_group: 0 },
+      "Measurement Profile:Thành phẩm theo m2": { profile_name: "Thành phẩm theo m2", disabled: 0 },
+      "UOM:Bộ": { uom_name: "Bộ", disabled: 0 },
+      "UOM:m2": { uom_name: "m2", disabled: 0 },
     },
   });
   assert.equal(response.status, 200, await message(response));

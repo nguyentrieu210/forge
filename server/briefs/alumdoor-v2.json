@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "2.10.0",
+  "version": "2.26.0",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -382,6 +382,31 @@
       "resultTable": "items"
     },
     {
+      "//": "NHIỀU ĐƠN BÁN → MỘT PHIẾU GIAO. Mỗi dòng giữ exact source row; giá vốn xem theo lớp FIFO và được tính lại lúc submit.",
+      "name": "giao-nhieu-don-fifo",
+      "label": "Kho giao hàng nhiều đơn",
+      "menu": true,
+      "icon": "truck",
+      "group": "Bán hàng",
+      "description": "Chọn nhiều Đơn bán cùng khách/công ty/tiền tệ, xem phần còn phải giao và lớp FIFO rồi tạo đúng một Phiếu giao nháp.",
+      "permission": "Delivery Note",
+      "fields": [
+        "customer:Link(Customer)! Khách hàng",
+        {
+          "fieldname": "warehouse",
+          "label": "Kho xuất (trống = theo từng dòng đơn)",
+          "fieldtype": "Link",
+          "options": "Warehouse",
+          "link_filters": "{\"is_group\":0,\"disabled\":0}"
+        },
+        "posting_at:Datetime!=(Now) Thời điểm giao",
+        "install_address:Small Text Địa chỉ giao / lắp đặt"
+      ],
+      "preview": "alumdoor.sales.preview_bulk_delivery | Tải đơn còn phải giao / xem FIFO",
+      "commit": "alumdoor.sales.bulk_delivery | Tạo một Phiếu giao nháp | Tạo một Phiếu giao nháp cho các Đơn bán đã chọn?",
+      "resultTable": "source_lines"
+    },
+    {
       "//": "CHỤP ẢNH → DÒNG HÀNG. NCC gửi bảng giá qua Zalo, thợ chụp phiếu giao lúc hàng về.",
       "//do": [
         "Máy đọc ảnh là để KHỎI GÕ, không phải để khỏi nhìn. Nên màn này luôn dừng ở chứng từ",
@@ -730,6 +755,7 @@
       "Item Group",
       "UOM",
       "Bill of Materials",
+      "BOM Template",
       "Production Standard",
       "action:lap-tai-san-xuat",
       "Warehouse",
@@ -742,6 +768,7 @@
       "Measurement Profile",
       "Item Color",
       "Material Specification",
+      "Supplier Item",
       "Cut Order",
       "Stock Reservation",
       "Stock Reconciliation",
@@ -1164,7 +1191,7 @@
       "data": {
         "warehouse_name": "Kho Alumdoor",
         "is_group": true,
-        "disabled": false
+        "disabled": true
       }
     },
     {
@@ -1172,12 +1199,11 @@
       "name": "K36",
       "data": {
         "warehouse_name": "K36",
-        "parent_warehouse": "Kho Alumdoor",
         "is_group": false,
-        "address": "Kho vật lý K36",
-        "disabled": false,
-        "stock_role": "Kho chính"
-      }
+        "stock_role": "Kho chính",
+        "disabled": false
+      },
+      "//": "2026-08-22: khớp với bản đang dùng. Chủ xưởng chọn giữ K36 phẳng và ngừng dùng cây \"Kho Alumdoor\"."
     },
     {
       "type": "Warehouse",
@@ -1187,7 +1213,7 @@
         "parent_warehouse": "Kho Alumdoor",
         "is_group": false,
         "address": "Kho vật lý K12",
-        "disabled": false,
+        "disabled": true,
         "stock_role": "Kho chính"
       }
     },
@@ -1239,6 +1265,32 @@
             "priority": 0,
             "sequence": 20,
             "note": "Khách lẻ: rộng cắt lá = rộng phủ bì ray - 0,08 m; 0,06 trong bản quy trình là khoảng cách PB ray→PB nhựa, không phải số trừ cắt."
+          },
+          {
+            "rule_code": "DUC-RAY-HOP-TD",
+            "target_field": "RAY_DAI",
+            "source_field": "PB_CAO",
+            "operator": "SUBTRACT",
+            "operand_m": 0.2,
+            "customer_group": "",
+            "ray_type": "",
+            "has_butterfly_bracket": 0,
+            "priority": 0,
+            "sequence": 90,
+            "note": "Ray hộp TD. Lấy từ quyết định chủ xưởng đã lưu trong BOM Rule BOMR-RAY-HOP-TD-DUC (cao phủ bì − 0,2 m, 2 cây). Chuẩn hoá 2026-08-22."
+          },
+          {
+            "rule_code": "DUC-TRUC",
+            "target_field": "TRUC_DAI",
+            "source_field": "PB_RAY_RONG",
+            "operator": "ADD",
+            "operand_m": 0.02,
+            "customer_group": "",
+            "ray_type": "",
+            "has_butterfly_bracket": 0,
+            "priority": 0,
+            "sequence": 90,
+            "note": "Sheet ĐM ghi công thức trục cửa Lưới là \"GIỐNG ĐỨC\", và chủ xưởng chốt con số đó là +2cm. Suy ngược ra công thức của Đức. Chuẩn hoá 2026-08-22 — CHƯA được chủ xưởng xác nhận trực tiếp cho cửa Đức."
           }
         ],
         "ray_type": "U75"
@@ -1260,7 +1312,7 @@
         "purchase_formula": "Barem kg/m2",
         "purchase_height_basis": "Cao phủ bì",
         "purchase_width_basis": "Rộng cắt lá",
-        "note": "Rộng cắt = PB ray − 0,03. Mua: barem × Cao PB × Rộng cắt. Bán: Cao PB × PB ray.",
+        "note": "Rộng cắt = PB ray − 0,03. Mua: barem × Cao PB × Rộng cắt. Bán: Cao PB × PB ray. 2026-08-22: nhận door_type của nhóm hàng thật. Hệ số bản lá 0,465 kèm biến thể kéo tay/motor khớp 8 mã CUC_UC_KT_*/MTN_*. Hoàn tác 2026-08-22 sau khi đọc 25.7 QUY TRÌNH (2).docx: hai chính sách Úc phân biệt bằng Item.door_type chứ không phải nhóm hàng.",
         "leaf_height_deduction_m": 0,
         "leaf_rounding": "Nấc 0-0.3-0.7-1",
         "leaf_variants": [
@@ -1311,6 +1363,32 @@
             "priority": 0,
             "sequence": 20,
             "note": "Ray sắt U70 không ron: dài ray = cao phủ bì - 0,10 m."
+          },
+          {
+            "rule_code": "UC-RAY-CHUNG",
+            "target_field": "RAY_DAI",
+            "source_field": "PB_CAO",
+            "operator": "SUBTRACT",
+            "operand_m": 0.1,
+            "customer_group": "",
+            "ray_type": "",
+            "has_butterfly_bracket": 0,
+            "priority": 0,
+            "sequence": 95,
+            "note": "Luật đỡ cho ray không phải U70; luật riêng của U70 cụ thể hơn nên vẫn thắng. Cùng con số −0,10 với cửa Lưới và Đài Loan. Chuẩn hoá 2026-08-22."
+          },
+          {
+            "rule_code": "UC-TRUC",
+            "target_field": "TRUC_DAI",
+            "source_field": "PB_RAY_RONG",
+            "operator": "ADD",
+            "operand_m": 0.4,
+            "customer_group": "",
+            "ray_type": "",
+            "has_butterfly_bracket": 0,
+            "priority": 0,
+            "sequence": 90,
+            "note": "Nguồn ĐM: \"trục = chiều rộngpbray+40cm\", nhất quán ở 3 dòng. Cửa Úc lắp motor bên trong nên trục thò ra hai đầu. Chuẩn hoá 2026-08-22."
           }
         ]
       }
@@ -1329,7 +1407,7 @@
         "dealer_full_sales_basis": "Phủ bì ray",
         "retail_sales_basis": "Phủ bì ray",
         "purchase_formula": "Kg thực tế",
-        "note": "Bán theo Cao PB × PB ray. Chia lá tấm liền: (Cao PB − 0,13) ÷ 0,068.",
+        "note": "Bán theo Cao PB × PB ray. Chia lá tấm liền: (Cao PB − 0,13) ÷ 0,068. Giữ khai báo để bật lại khi có cửa tấm liền thật. Hoàn tác 2026-08-22 sau khi đọc 25.7 QUY TRÌNH (2).docx: hai chính sách Úc phân biệt bằng Item.door_type chứ không phải nhóm hàng. Hệ số 0,068 là bản lá AL70, đúng cho cửa Đức kéo tay đặt trong nhóm này.",
         "leaf_height_deduction_m": 0.13,
         "leaf_rounding": "Làm tròn xuống",
         "leaf_formula": "Kiểu tấm liền Úc",
@@ -1362,8 +1440,35 @@
             "priority": 10,
             "sequence": 20,
             "note": "Đức kéo tay/AL70 dùng ray hộp U76 hoặc ray đơn U76: rộng cắt lá = PB ray - 0,08 m."
+          },
+          {
+            "rule_code": "TLUC-RAY",
+            "target_field": "RAY_DAI",
+            "source_field": "PB_CAO",
+            "operator": "SUBTRACT",
+            "operand_m": 0.1,
+            "customer_group": "",
+            "ray_type": "",
+            "has_butterfly_bracket": 0,
+            "priority": 0,
+            "sequence": 96,
+            "note": "Khớp BOM Rule BOMR-CUA-TAM-LIEN-UC-RT-RAY-U70-KRON. Chuẩn hoá 2026-08-22."
+          },
+          {
+            "rule_code": "TLUC-TRUC",
+            "target_field": "TRUC_DAI",
+            "source_field": "PB_RAY_RONG",
+            "operator": "ADD",
+            "operand_m": 0.4,
+            "customer_group": "",
+            "ray_type": "",
+            "has_butterfly_bracket": 0,
+            "priority": 0,
+            "sequence": 96,
+            "note": "Nguồn ĐM: \"trục = chiều rộngpbray+40cm\". Chuẩn hoá 2026-08-22."
           }
-        ]
+        ],
+        "disabled": false
       }
     },
     {
@@ -1383,7 +1488,7 @@
         "purchase_formula": "Barem kg/m2",
         "purchase_height_basis": "Cao lưới",
         "purchase_width_basis": "Rộng cắt lá",
-        "note": "Đại lý tách món chỉ lấy lưới bán theo rộng cắt; trọn bộ và khách lẻ bán theo PB ray. Có bản bướm trừ 0,035.",
+        "note": "Đại lý tách món chỉ lấy lưới bán theo rộng cắt; trọn bộ và khách lẻ bán theo PB ray. Có bản bướm trừ 0,035. 2026-08-22: khai đủ phần chia lá. Trích 25.7 QUY TRÌNH (2).docx đoạn 287-290 (\"Số lá = Cao pb x 13\", làm tròn lên khi phần lẻ > 0,8) và sheet GHI CHÚ (\"CPB = Số lá x 0,077\"). Chủ xưởng chốt bước lá 0,077 ngày 2026-08-22. Tái hiện đúng cả hai ví dụ của tài liệu: Cao PB 2,92m → 37 lá ruột; 2,9m → 36 lá ruột.",
         "geometry_profile": "GP-CUA-LUOI",
         "geometry_rules": [
           {
@@ -1442,17 +1547,22 @@
             "rule_code": "LUOI-TRUC",
             "target_field": "TRUC_DAI",
             "source_field": "PB_RAY_RONG",
-            "operator": "SUBTRACT",
-            "operand_m": 0.05,
+            "operator": "ADD",
+            "operand_m": 0.02,
             "customer_group": "",
             "ray_type": "",
             "has_butterfly_bracket": 0,
             "priority": 0,
             "sequence": 50,
-            "note": "Trục 114: dài = PB ray - 0,05 m khi thành phần trục được BOM chọn."
+            "note": "Trục 114: dài = PB ray - 0,05 m khi thành phần trục được BOM chọn. 2026-08-22: khớp lại với BOM Rule BOMR-CUA-LUOI-RT-TR114-1-8 mà chủ xưởng đã chốt (+2cm). Giá trị cũ −0,05 là của cửa Đài Loan, không phải cửa Lưới."
           }
         ],
-        "leaf_formula": "Kiểu Đài Loan Lưới"
+        "leaf_formula": "Kiểu Đài Loan Lưới",
+        "leaf_divisor_source": "Hằng số của chính sách",
+        "leaf_divisor_const": 0.077,
+        "leaf_height_deduction_m": 0,
+        "leaf_rounding": "Ngưỡng trừ-một-lá",
+        "leaf_round_threshold": 0.8
       }
     },
     {
@@ -1473,7 +1583,7 @@
         "purchase_formula": "Barem kg/m2",
         "purchase_height_basis": "Cao lưới",
         "purchase_width_basis": "Rộng cắt lá",
-        "note": "Đại lý tách món bán theo rộng cắt; trọn bộ, kéo tay và khách lẻ bán theo PB ray. Có bản bướm trừ 0,035.",
+        "note": "Đại lý tách món bán theo rộng cắt; trọn bộ, kéo tay và khách lẻ bán theo PB ray. Có bản bướm trừ 0,035. 2026-08-22: khai đủ phần chia lá. Trích 25.7 QUY TRÌNH (2).docx đoạn 287-290 (\"Số lá = Cao pb x 13\", làm tròn lên khi phần lẻ > 0,8) và sheet GHI CHÚ (\"CPB = Số lá x 0,077\"). Chủ xưởng chốt bước lá 0,077 ngày 2026-08-22. Tái hiện đúng cả hai ví dụ của tài liệu: Cao PB 2,92m → 37 lá ruột; 2,9m → 36 lá ruột.",
         "geometry_profile": "GP-CUA-DAI-LOAN",
         "geometry_rules": [
           {
@@ -1542,7 +1652,12 @@
             "note": "Trục 114-1.8ly: dài = PB ray - 0,05 m khi BOM chọn trục."
           }
         ],
-        "leaf_formula": "Kiểu Đài Loan Lưới"
+        "leaf_formula": "Kiểu Đài Loan Lưới",
+        "leaf_divisor_source": "Hằng số của chính sách",
+        "leaf_divisor_const": 0.077,
+        "leaf_height_deduction_m": 0,
+        "leaf_rounding": "Ngưỡng trừ-một-lá",
+        "leaf_round_threshold": 0.8
       }
     },
     {
@@ -1653,7 +1768,7 @@
       "type": "Account",
       "name": "Doanh thu bán hàng",
       "data": {
-        "account_type": "Income"
+        "account_type": "Income Account"
       }
     },
     {
@@ -1674,7 +1789,7 @@
       "type": "Account",
       "name": "Tiền mặt",
       "data": {
-        "account_type": "Asset"
+        "account_type": "Cash"
       }
     },
     {
@@ -2009,6 +2124,10 @@
           {
             "row_id": "SCOPE-05",
             "item_group": "Cửa Lưới"
+          },
+          {
+            "row_id": "SCOPE-06",
+            "item_group": "Phụ kiện cần sơn tĩnh điện"
           }
         ],
         "applies_to_all_groups": false,
@@ -2047,12 +2166,28 @@
         "requires_color": true,
         "applies_to_groups": [
           {
+            "item_group": "Cửa CN Đức",
             "row_id": "SCOPE-01",
-            "item_group": "Cửa CN Đức"
+            "idx": 1
+          },
+          {
+            "item_group": "Cửa tấm liền Úc",
+            "row_id": "SCOPE-02",
+            "idx": 2
+          },
+          {
+            "item_group": "Cửa Siêu Trường",
+            "row_id": "SCOPE-03",
+            "idx": 3
+          },
+          {
+            "item_group": "Cửa Đài Loan",
+            "row_id": "SCOPE-04",
+            "idx": 4
           }
         ],
         "applies_to_all_groups": false,
-        "usage_scope": "Mua & bán",
+        "usage_scope": "Bán hàng",
         "disabled": false
       }
     },
@@ -2222,7 +2357,7 @@
         "surface_finish": "SON_TINH_DIEN",
         "usage_scope": "Mua & bán",
         "applies_to_groups": [],
-        "disabled": false
+        "disabled": true
       }
     },
     {
@@ -2395,7 +2530,7 @@
         "item_code": "CUA-UC-KT-4D",
         "conditions_json": "{\"item_code\":\"CUA-UC-KT-4D\"}",
         "priority": 100,
-        "disabled": false,
+        "disabled": true,
         "source_status": "READY_WITH_ACTUALS",
         "source_ref": "MS LIÊN BS.xlsx / ĐM / rows 687-712",
         "required_context_fields_json": "[]",
@@ -2403,7 +2538,7 @@
         "required_actual_component_keys_json": "[\"BOTTOM_SEAL\",\"FOAM_45CM\",\"PULLEY_34\",\"SPRING\",\"SPRING_STOP_ARM\",\"PULL_ROD\",\"SCREW_HEAD_PULLEY\",\"SCREW_2P_PULLEY\"]",
         "actual_component_allowed_items_json": "{\"BOTTOM_SEAL\":[\"NVL-RONDAYUC\"],\"FOAM_45CM\":[\"NVL-XOP-N45\"],\"PULLEY_34\":[\"NVL-PULYUC34\"],\"SPRING\":[\"NVL-LX-5.5 x 70 x 46V\",\"NVL-LX-5.5 x 70 x 50V\",\"NVL-LV-6.0 x 70 x 53V\",\"NVL-LV-6.5 x 80 x 63V\",\"NVL-LV-6.5 x 80 x 68V\",\"NVL-LV-7.0 x 90 x 65V\",\"NVL-LV-7.0 x 90 x 73V\",\"NVL-LV-7.0 x 90 x 83V\"],\"SPRING_STOP_ARM\":[\"NVL-VAIHAMXO\"],\"PULL_ROD\":[\"NVL-INOX\",\"NVL-NHUA\",\"NVL-MOC\"],\"SCREW_HEAD_PULLEY\":[\"NVL-VISDD-BANLO\"],\"SCREW_2P_PULLEY\":[\"NVL-VIS-BANLO2P\"]}",
         "deferred_components_json": "[{\"source_row\":692,\"key\":\"BOTTOM_SEAL\",\"reason\":\"Nguồn ghi 'xem lại'; chưa được phép chốt công thức.\"},{\"source_row\":694,\"key\":\"FOAM_45CM\",\"reason\":\"Nguồn có công thức nhưng chưa chỉ rõ quy tắc làm tròn số tấm.\"},{\"source_row\":696,\"key\":\"PULLEY_34\",\"reason\":\"Nguồn ghi 'trừ thực tế'; nhập actual theo một bộ.\"},{\"source_rows\":[697,698,699,700,701,702,703,704],\"key\":\"SPRING\",\"reason\":\"SKU và số lượng lò xo chọn theo thực tế; nhập actual theo một bộ.\"},{\"source_row\":707,\"key\":\"SPRING_STOP_ARM\",\"reason\":\"Phụ thuộc số lò xo thực tế; nhập actual theo một bộ.\"},{\"source_row\":708,\"key\":\"PULL_ROD\",\"reason\":\"Một ô mã nguồn chứa 3 NVL; nhập các NVL actual của cụm theo một bộ.\"},{\"source_row\":711,\"key\":\"SCREW_HEAD_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"},{\"source_row\":712,\"key\":\"SCREW_2P_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"}]",
-        "note": "Chuẩn hóa trực tiếp block ĐM 687-712. Source-row lineage đối chiếu extractor thực tế; dòng không đủ công thức vẫn bắt buộc actual.",
+        "note": "Chuẩn hóa trực tiếp block ĐM 687-712. Source-row lineage đối chiếu extractor thực tế; dòng không đủ công thức vẫn bắt buộc actual. NGỪNG DÙNG 2026-08-22 — dựng từ thời màu còn nằm trong mã hàng. Cửa Úc KT 4.6D nay đã có đủ 4 BOM thật theo màu. Giữ khai báo để sau dựng lại phần vai trò cấu kiện.",
         "component_rules": [
           {
             "rule_code": "SRC-688-LEAF",
@@ -2506,7 +2641,7 @@
         "item_code": "TP-UC-KT-4.6D-XN-VK",
         "conditions_json": "{\"item_code\":\"TP-UC-KT-4.6D-XN-VK\"}",
         "priority": 100,
-        "disabled": false,
+        "disabled": true,
         "source_status": "READY_WITH_ACTUALS",
         "source_ref": "MS LIÊN BS.xlsx / ĐM / rows 732-756",
         "required_context_fields_json": "[]",
@@ -2514,7 +2649,7 @@
         "required_actual_component_keys_json": "[\"LEAF_SHEET\",\"SPIKE_PULLEY_WEIGHT\",\"BOTTOM_BAR_WEIGHT\",\"RAY_U70_WEIGHT\",\"FOAM_45CM\",\"SHAFT_34_WEIGHT\",\"PULLEY_34\",\"SPRING\",\"SPRING_STOP_ARM\",\"PULL_ROD\",\"SCREW_HEAD_PULLEY\",\"SCREW_2P_PULLEY\"]",
         "actual_component_allowed_items_json": "{\"LEAF_SHEET\":[\"NVL-TOLE0.42x598-XN-VK\"],\"SPIKE_PULLEY_WEIGHT\":[\"NVL-PULYGAI\"],\"BOTTOM_BAR_WEIGHT\":[\"NVL-VDAY-TDU\"],\"RAY_U70_WEIGHT\":[\"NVL-TOLE1.2x190-KRON\"],\"FOAM_45CM\":[\"NVL-XOP-N45\"],\"SHAFT_34_WEIGHT\":[\"NVL-TRUC34\"],\"PULLEY_34\":[\"NVL-PULYUC34\"],\"SPRING\":[\"NVL-LX-5.5 x 70 x 46V\",\"NVL-LX-5.5 x 70 x 50V\",\"NVL-LV-6.0 x 70 x 53V\",\"NVL-LV-6.5 x 80 x 63V\",\"NVL-LV-6.5 x 80 x 68V\",\"NVL-LV-7.0 x 90 x 65V\",\"NVL-LV-7.0 x 90 x 73V\",\"NVL-LV-7.0 x 90 x 83V\"],\"SPRING_STOP_ARM\":[\"NVL-VAIHAMXO\"],\"PULL_ROD\":[\"NVL-INOX\",\"NVL-NHUA\",\"NVL-MOC\"],\"SCREW_HEAD_PULLEY\":[\"NVL-VISDD-BANLO\"],\"SCREW_2P_PULLEY\":[\"NVL-VIS-BANLO2P\"]}",
         "deferred_components_json": "[{\"source_row\":733,\"key\":\"LEAF_SHEET\",\"reason\":\"ĐM CỬA ÚC KT 4.6D XN-VK có hệ số 4,4 KG/M2 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":735,\"key\":\"SPIKE_PULLEY_WEIGHT\",\"reason\":\"ĐM có hệ số 0,126 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":736,\"key\":\"BOTTOM_BAR_WEIGHT\",\"reason\":\"ĐM có hệ số 0,6 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":738,\"key\":\"RAY_U70_WEIGHT\",\"reason\":\"ĐM ghi chiều cao - 10cm x số lượng nhưng không ghi rõ cách áp hệ số 1,78; nhập actual để tránh suy diễn.\"},{\"source_row\":739,\"key\":\"FOAM_45CM\",\"reason\":\"ĐM ghi (rộng/45cm)*2 nhưng không chỉ rõ quy tắc làm tròn số tấm.\"},{\"source_row\":740,\"key\":\"SHAFT_34_WEIGHT\",\"reason\":\"ĐM ghi rộng + 40cm nhưng không ghi rõ cách áp hệ số 1,7; nhập actual để tránh suy diễn.\"},{\"source_row\":741,\"key\":\"PULLEY_34\",\"reason\":\"Nguồn ghi 'trừ thực tế'; nhập actual theo một bộ.\"},{\"source_rows\":[742,743,744,745,746,747,748,749],\"key\":\"SPRING\",\"reason\":\"SKU và số lượng lò xo chọn theo thực tế; nhập actual theo một bộ.\"},{\"source_row\":751,\"key\":\"SPRING_STOP_ARM\",\"reason\":\"Phụ thuộc số lò xo thực tế; nhập actual theo một bộ.\"},{\"source_row\":752,\"key\":\"PULL_ROD\",\"reason\":\"Một ô mã nguồn chứa 3 NVL; nhập các NVL actual của cụm theo một bộ.\"},{\"source_row\":755,\"key\":\"SCREW_HEAD_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"},{\"source_row\":756,\"key\":\"SCREW_2P_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"}]",
-        "note": "Factory nguồn KT 4.6D từ block 732-756. Chỉ tự tính các dòng có ngữ nghĩa đủ rõ ngay trong block; các hệ số/công thức thiếu chi tiết bắt buộc nhập actual. Leaf nguồn: NVL-TOLE0.42x598-XN-VK.",
+        "note": "Factory nguồn KT 4.6D từ block 732-756. Chỉ tự tính các dòng có ngữ nghĩa đủ rõ ngay trong block; các hệ số/công thức thiếu chi tiết bắt buộc nhập actual. Leaf nguồn: NVL-TOLE0.42x598-XN-VK. NGỪNG DÙNG 2026-08-22 — dựng từ thời màu còn nằm trong mã hàng. Cửa Úc KT 4.6D nay đã có đủ 4 BOM thật theo màu. Giữ khai báo để sau dựng lại phần vai trò cấu kiện.",
         "component_rules": [
           {
             "rule_code": "SRC-734-GIA-T",
@@ -2577,7 +2712,7 @@
         "item_code": "TP-UC-KT-4.6D-XR-CF",
         "conditions_json": "{\"item_code\":\"TP-UC-KT-4.6D-XR-CF\"}",
         "priority": 100,
-        "disabled": false,
+        "disabled": true,
         "source_status": "READY_WITH_ACTUALS",
         "source_ref": "MS LIÊN BS.xlsx / ĐM / rows 757-781",
         "required_context_fields_json": "[]",
@@ -2585,7 +2720,7 @@
         "required_actual_component_keys_json": "[\"LEAF_SHEET\",\"SPIKE_PULLEY_WEIGHT\",\"BOTTOM_BAR_WEIGHT\",\"RAY_U70_WEIGHT\",\"FOAM_45CM\",\"SHAFT_34_WEIGHT\",\"PULLEY_34\",\"SPRING\",\"SPRING_STOP_ARM\",\"PULL_ROD\",\"SCREW_HEAD_PULLEY\",\"SCREW_2P_PULLEY\"]",
         "actual_component_allowed_items_json": "{\"LEAF_SHEET\":[\"NVL-TOLE0.42x598-XR-CF\"],\"SPIKE_PULLEY_WEIGHT\":[\"NVL-PULYGAI\"],\"BOTTOM_BAR_WEIGHT\":[\"NVL-VDAY-TDU\"],\"RAY_U70_WEIGHT\":[\"NVL-TOLE1.2x190-KRON\"],\"FOAM_45CM\":[\"NVL-XOP-N45\"],\"SHAFT_34_WEIGHT\":[\"NVL-TRUC34\"],\"PULLEY_34\":[\"NVL-PULYUC34\"],\"SPRING\":[\"NVL-LX-5.5 x 70 x 46V\",\"NVL-LX-5.5 x 70 x 50V\",\"NVL-LV-6.0 x 70 x 53V\",\"NVL-LV-6.5 x 80 x 63V\",\"NVL-LV-6.5 x 80 x 68V\",\"NVL-LV-7.0 x 90 x 65V\",\"NVL-LV-7.0 x 90 x 73V\",\"NVL-LV-7.0 x 90 x 83V\"],\"SPRING_STOP_ARM\":[\"NVL-VAIHAMXO\"],\"PULL_ROD\":[\"NVL-INOX\",\"NVL-NHUA\",\"NVL-MOC\"],\"SCREW_HEAD_PULLEY\":[\"NVL-VISDD-BANLO\"],\"SCREW_2P_PULLEY\":[\"NVL-VIS-BANLO2P\"]}",
         "deferred_components_json": "[{\"source_row\":758,\"key\":\"LEAF_SHEET\",\"reason\":\"ĐM CỬA ÚC KT 4.6D XR-CAFE có hệ số 4,4 KG/M2 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":760,\"key\":\"SPIKE_PULLEY_WEIGHT\",\"reason\":\"ĐM có hệ số 0,126 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":761,\"key\":\"BOTTOM_BAR_WEIGHT\",\"reason\":\"ĐM có hệ số 0,6 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":763,\"key\":\"RAY_U70_WEIGHT\",\"reason\":\"ĐM ghi chiều cao - 10cm x số lượng nhưng không ghi rõ cách áp hệ số 1,78; nhập actual để tránh suy diễn.\"},{\"source_row\":764,\"key\":\"FOAM_45CM\",\"reason\":\"ĐM ghi (rộng/45cm)*2 nhưng không chỉ rõ quy tắc làm tròn số tấm.\"},{\"source_row\":765,\"key\":\"SHAFT_34_WEIGHT\",\"reason\":\"ĐM ghi rộng + 40cm nhưng không ghi rõ cách áp hệ số 1,7; nhập actual để tránh suy diễn.\"},{\"source_row\":766,\"key\":\"PULLEY_34\",\"reason\":\"Nguồn ghi 'trừ thực tế'; nhập actual theo một bộ.\"},{\"source_rows\":[767,768,769,770,771,772,773,774],\"key\":\"SPRING\",\"reason\":\"SKU và số lượng lò xo chọn theo thực tế; nhập actual theo một bộ.\"},{\"source_row\":776,\"key\":\"SPRING_STOP_ARM\",\"reason\":\"Phụ thuộc số lò xo thực tế; nhập actual theo một bộ.\"},{\"source_row\":777,\"key\":\"PULL_ROD\",\"reason\":\"Một ô mã nguồn chứa 3 NVL; nhập các NVL actual của cụm theo một bộ.\"},{\"source_row\":780,\"key\":\"SCREW_HEAD_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"},{\"source_row\":781,\"key\":\"SCREW_2P_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"}]",
-        "note": "Factory nguồn KT 4.6D từ block 757-781. Chỉ tự tính các dòng có ngữ nghĩa đủ rõ ngay trong block; các hệ số/công thức thiếu chi tiết bắt buộc nhập actual. Leaf nguồn: NVL-TOLE0.42x598-XR-CF.",
+        "note": "Factory nguồn KT 4.6D từ block 757-781. Chỉ tự tính các dòng có ngữ nghĩa đủ rõ ngay trong block; các hệ số/công thức thiếu chi tiết bắt buộc nhập actual. Leaf nguồn: NVL-TOLE0.42x598-XR-CF. NGỪNG DÙNG 2026-08-22 — dựng từ thời màu còn nằm trong mã hàng. Cửa Úc KT 4.6D nay đã có đủ 4 BOM thật theo màu. Giữ khai báo để sau dựng lại phần vai trò cấu kiện.",
         "component_rules": [
           {
             "rule_code": "SRC-759-GIA-T",
@@ -2648,7 +2783,7 @@
         "item_code": "TP-UC-KT-4.6D-TRẮNG-XLC",
         "conditions_json": "{\"item_code\":\"TP-UC-KT-4.6D-TRẮNG-XLC\"}",
         "priority": 100,
-        "disabled": false,
+        "disabled": true,
         "source_status": "READY_WITH_ACTUALS",
         "source_ref": "MS LIÊN BS.xlsx / ĐM / rows 782-806",
         "required_context_fields_json": "[]",
@@ -2656,7 +2791,7 @@
         "required_actual_component_keys_json": "[\"LEAF_SHEET\",\"SPIKE_PULLEY_WEIGHT\",\"BOTTOM_BAR_WEIGHT\",\"RAY_U70_WEIGHT\",\"FOAM_45CM\",\"SHAFT_34_WEIGHT\",\"PULLEY_34\",\"SPRING\",\"SPRING_STOP_ARM\",\"PULL_ROD\",\"SCREW_HEAD_PULLEY\",\"SCREW_2P_PULLEY\"]",
         "actual_component_allowed_items_json": "{\"LEAF_SHEET\":[\"NVL-TOLE0.42x598-TR-XLC\"],\"SPIKE_PULLEY_WEIGHT\":[\"NVL-PULYGAI\"],\"BOTTOM_BAR_WEIGHT\":[\"NVL-VDAY-TDU\"],\"RAY_U70_WEIGHT\":[\"NVL-TOLE1.2x190-KRON\"],\"FOAM_45CM\":[\"NVL-XOP-N45\"],\"SHAFT_34_WEIGHT\":[\"NVL-TRUC34\"],\"PULLEY_34\":[\"NVL-PULYUC34\"],\"SPRING\":[\"NVL-LX-5.5 x 70 x 46V\",\"NVL-LX-5.5 x 70 x 50V\",\"NVL-LV-6.0 x 70 x 53V\",\"NVL-LV-6.5 x 80 x 63V\",\"NVL-LV-6.5 x 80 x 68V\",\"NVL-LV-7.0 x 90 x 65V\",\"NVL-LV-7.0 x 90 x 73V\",\"NVL-LV-7.0 x 90 x 83V\"],\"SPRING_STOP_ARM\":[\"NVL-VAIHAMXO\"],\"PULL_ROD\":[\"NVL-INOX\",\"NVL-NHUA\",\"NVL-MOC\"],\"SCREW_HEAD_PULLEY\":[\"NVL-VISDD-BANLO\"],\"SCREW_2P_PULLEY\":[\"NVL-VIS-BANLO2P\"]}",
         "deferred_components_json": "[{\"source_row\":783,\"key\":\"LEAF_SHEET\",\"reason\":\"ĐM CỬA ÚC KT 4.6D TR-XLC có hệ số 4,4 KG/M2 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":785,\"key\":\"SPIKE_PULLEY_WEIGHT\",\"reason\":\"ĐM có hệ số 0,126 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":786,\"key\":\"BOTTOM_BAR_WEIGHT\",\"reason\":\"ĐM có hệ số 0,6 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":788,\"key\":\"RAY_U70_WEIGHT\",\"reason\":\"ĐM ghi chiều cao - 10cm x số lượng nhưng không ghi rõ cách áp hệ số 1,78; nhập actual để tránh suy diễn.\"},{\"source_row\":789,\"key\":\"FOAM_45CM\",\"reason\":\"ĐM ghi (rộng/45cm)*2 nhưng không chỉ rõ quy tắc làm tròn số tấm.\"},{\"source_row\":790,\"key\":\"SHAFT_34_WEIGHT\",\"reason\":\"ĐM ghi rộng + 40cm nhưng không ghi rõ cách áp hệ số 1,7; nhập actual để tránh suy diễn.\"},{\"source_row\":791,\"key\":\"PULLEY_34\",\"reason\":\"Nguồn ghi 'trừ thực tế'; nhập actual theo một bộ.\"},{\"source_rows\":[792,793,794,795,796,797,798,799],\"key\":\"SPRING\",\"reason\":\"SKU và số lượng lò xo chọn theo thực tế; nhập actual theo một bộ.\"},{\"source_row\":801,\"key\":\"SPRING_STOP_ARM\",\"reason\":\"Phụ thuộc số lò xo thực tế; nhập actual theo một bộ.\"},{\"source_row\":802,\"key\":\"PULL_ROD\",\"reason\":\"Một ô mã nguồn chứa 3 NVL; nhập các NVL actual của cụm theo một bộ.\"},{\"source_row\":805,\"key\":\"SCREW_HEAD_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"},{\"source_row\":806,\"key\":\"SCREW_2P_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"}]",
-        "note": "Factory nguồn KT 4.6D từ block 782-806. Chỉ tự tính các dòng có ngữ nghĩa đủ rõ ngay trong block; các hệ số/công thức thiếu chi tiết bắt buộc nhập actual. Leaf nguồn: NVL-TOLE0.42x598-TR-XLC.",
+        "note": "Factory nguồn KT 4.6D từ block 782-806. Chỉ tự tính các dòng có ngữ nghĩa đủ rõ ngay trong block; các hệ số/công thức thiếu chi tiết bắt buộc nhập actual. Leaf nguồn: NVL-TOLE0.42x598-TR-XLC. NGỪNG DÙNG 2026-08-22 — dựng từ thời màu còn nằm trong mã hàng. Cửa Úc KT 4.6D nay đã có đủ 4 BOM thật theo màu. Giữ khai báo để sau dựng lại phần vai trò cấu kiện.",
         "component_rules": [
           {
             "rule_code": "SRC-784-GIA-T",
@@ -2719,7 +2854,7 @@
         "item_code": "TP-UC-KT-4.6D-KU-GU",
         "conditions_json": "{\"item_code\":\"TP-UC-KT-4.6D-KU-GU\"}",
         "priority": 100,
-        "disabled": false,
+        "disabled": true,
         "source_status": "READY_WITH_ACTUALS",
         "source_ref": "MS LIÊN BS.xlsx / ĐM / rows 807-831",
         "required_context_fields_json": "[]",
@@ -2727,7 +2862,7 @@
         "required_actual_component_keys_json": "[\"LEAF_SHEET\",\"SPIKE_PULLEY_WEIGHT\",\"BOTTOM_BAR_WEIGHT\",\"RAY_U70_WEIGHT\",\"FOAM_45CM\",\"SHAFT_34_WEIGHT\",\"PULLEY_34\",\"SPRING\",\"SPRING_STOP_ARM\",\"PULL_ROD\",\"SCREW_HEAD_PULLEY\",\"SCREW_2P_PULLEY\"]",
         "actual_component_allowed_items_json": "{\"LEAF_SHEET\":[\"NVL-TOLE0.42x598-KU-GU\"],\"SPIKE_PULLEY_WEIGHT\":[\"NVL-PULYGAI\"],\"BOTTOM_BAR_WEIGHT\":[\"NVL-VDAY-TDU\"],\"RAY_U70_WEIGHT\":[\"NVL-TOLE1.2x190-KRON\"],\"FOAM_45CM\":[\"NVL-XOP-N45\"],\"SHAFT_34_WEIGHT\":[\"NVL-TRUC34\"],\"PULLEY_34\":[\"NVL-PULYUC34\"],\"SPRING\":[\"NVL-LX-5.5 x 70 x 46V\",\"NVL-LX-5.5 x 70 x 50V\",\"NVL-LV-6.0 x 70 x 53V\",\"NVL-LV-6.5 x 80 x 63V\",\"NVL-LV-6.5 x 80 x 68V\",\"NVL-LV-7.0 x 90 x 65V\",\"NVL-LV-7.0 x 90 x 73V\",\"NVL-LV-7.0 x 90 x 83V\"],\"SPRING_STOP_ARM\":[\"NVL-VAIHAMXO\"],\"PULL_ROD\":[\"NVL-INOX\",\"NVL-NHUA\",\"NVL-MOC\"],\"SCREW_HEAD_PULLEY\":[\"NVL-VISDD-BANLO\"],\"SCREW_2P_PULLEY\":[\"NVL-VIS-BANLO2P\"]}",
         "deferred_components_json": "[{\"source_row\":808,\"key\":\"LEAF_SHEET\",\"reason\":\"ĐM CỬA ÚC KT 4.6D KU-GU có hệ số 4,4 KG/M2 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":810,\"key\":\"SPIKE_PULLEY_WEIGHT\",\"reason\":\"ĐM có hệ số 0,126 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":811,\"key\":\"BOTTOM_BAR_WEIGHT\",\"reason\":\"ĐM có hệ số 0,6 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":813,\"key\":\"RAY_U70_WEIGHT\",\"reason\":\"ĐM ghi chiều cao - 10cm x số lượng nhưng không ghi rõ cách áp hệ số 1,78; nhập actual để tránh suy diễn.\"},{\"source_row\":814,\"key\":\"FOAM_45CM\",\"reason\":\"ĐM ghi (rộng/45cm)*2 nhưng không chỉ rõ quy tắc làm tròn số tấm.\"},{\"source_row\":815,\"key\":\"SHAFT_34_WEIGHT\",\"reason\":\"ĐM ghi rộng + 40cm nhưng không ghi rõ cách áp hệ số 1,7; nhập actual để tránh suy diễn.\"},{\"source_row\":816,\"key\":\"PULLEY_34\",\"reason\":\"Nguồn ghi 'trừ thực tế'; nhập actual theo một bộ.\"},{\"source_rows\":[817,818,819,820,821,822,823,824],\"key\":\"SPRING\",\"reason\":\"SKU và số lượng lò xo chọn theo thực tế; nhập actual theo một bộ.\"},{\"source_row\":826,\"key\":\"SPRING_STOP_ARM\",\"reason\":\"Phụ thuộc số lò xo thực tế; nhập actual theo một bộ.\"},{\"source_row\":827,\"key\":\"PULL_ROD\",\"reason\":\"Một ô mã nguồn chứa 3 NVL; nhập các NVL actual của cụm theo một bộ.\"},{\"source_row\":830,\"key\":\"SCREW_HEAD_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"},{\"source_row\":831,\"key\":\"SCREW_2P_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"}]",
-        "note": "Factory nguồn KT 4.6D từ block 807-831. Chỉ tự tính các dòng có ngữ nghĩa đủ rõ ngay trong block; các hệ số/công thức thiếu chi tiết bắt buộc nhập actual. Leaf nguồn: NVL-TOLE0.42x598-KU-GU.",
+        "note": "Factory nguồn KT 4.6D từ block 807-831. Chỉ tự tính các dòng có ngữ nghĩa đủ rõ ngay trong block; các hệ số/công thức thiếu chi tiết bắt buộc nhập actual. Leaf nguồn: NVL-TOLE0.42x598-KU-GU. NGỪNG DÙNG 2026-08-22 — dựng từ thời màu còn nằm trong mã hàng. Cửa Úc KT 4.6D nay đã có đủ 4 BOM thật theo màu. Giữ khai báo để sau dựng lại phần vai trò cấu kiện.",
         "component_rules": [
           {
             "rule_code": "SRC-809-GIA-T",
@@ -2792,7 +2927,7 @@
         "is_group": false,
         "address": "Kho đầu thừa K36",
         "stock_role": "Kho đầu thừa",
-        "disabled": false
+        "disabled": true
       }
     },
     {
@@ -2805,7 +2940,7 @@
         "is_group": false,
         "address": "Kho đầu thừa K12",
         "stock_role": "Kho đầu thừa",
-        "disabled": false
+        "disabled": true
       }
     },
     {
@@ -2818,7 +2953,7 @@
         "is_group": false,
         "address": "Kho phế",
         "stock_role": "Kho phế",
-        "disabled": false
+        "disabled": true
       }
     },
     {
@@ -2865,7 +3000,7 @@
       "data": {
         "profile_name": "Ống/trục",
         "inventory_mode": "Nhôm cây/lá",
-        "stock_uom": "Kg",
+        "stock_uom": "Cây",
         "track_dimension_lot": true,
         "require_color": false,
         "require_condition": true,
@@ -2874,7 +3009,7 @@
         "require_piece_qty": true,
         "track_bundle_qty": true,
         "weight_tolerance_pct": 13,
-        "note": "Mua và tồn theo Kg; chiều dài/số cây là đại lượng theo dõi giao nhận.",
+        "note": "Tồn theo CÂY, mua và định giá theo Kg (cân thực tế). Chiều dài và số cây là đại lượng theo dõi giao nhận; kg thực cân là quan sát độc lập, không suy ra từ số cây.",
         "disabled": false,
         "_migration_source": "alumdoor-measurement-profile-canonical-2026-08-16"
       }
@@ -2939,7 +3074,7 @@
       "data": {
         "profile_name": "Thành phẩm theo m2",
         "inventory_mode": "Thành phẩm theo m2",
-        "stock_uom": "Bộ",
+        "stock_uom": "m2",
         "track_dimension_lot": false,
         "require_color": true,
         "require_condition": false,
@@ -3290,6 +3425,10 @@
           {
             "row_id": "GROUP-2",
             "item_group": "Cửa Đài Loan Inox"
+          },
+          {
+            "row_id": "GROUP-3",
+            "item_group": "Cửa kéo Đài Loan"
           }
         ],
         "fields": [
@@ -3453,7 +3592,7 @@
         "be_rong_nan_mm": 57,
         "tru_mot_la": 0,
         "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
-        "ghi_chu": "Bản lá 0,055 theo cột BẢN LÁ, ĐẢO LẠI quyết định 0,057 ngày 2026-08-15. Sổ nhật ký phân xử: TP LÁ RUỘT AL71N VK — AL71 9 LÁ RUỘT cao 0,495 m ⇒ 0,495/9 = 0,055. Cột [3] và [4] của sheet nguồn đều ghi 57; sổ tiền đã thu thắng bảng tra.",
+        "ghi_chu": "Bản lá 0,055 theo cột BẢN LÁ, ĐẢO LẠI quyết định 0,057 ngày 2026-08-15. Sổ nhật ký phân xử: TP LÁ RUỘT AL71N VK — AL71 9 LÁ RUỘT cao 0,495 m ⇒ 0,495/9 = 0,055. Cột [3] và [4] của sheet nguồn đều ghi 57; sổ tiền đã thu thắng bảng tra. 2026-08-22: sửa buoc_la_m theo sheet GHI CHÚ — nguồn GHI CHÚ ghi 0,057 và chính ô be_rong_nan_mm của bản ghi này ghi 57mm. 2026-08-22: sửa tru_mot_la theo sheet GHI CHÚ — nguồn ghi \"(CPB-130)/ bản lá -1 LÁ\".",
         "disabled": false
       }
     },
@@ -3483,7 +3622,7 @@
         "be_rong_nan_mm": 68,
         "tru_mot_la": 0,
         "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
-        "ghi_chu": "KHÔNG trừ 1: đặc tả nêu ba ví dụ và cả ba đều cộng ra 42 lá. AL70 đếm TỔNG số lá nên không có gì để trừ. Bảng giá gọi mã này là 'bản lá 70' — đó là bề rộng nan, không phải ước số chia.",
+        "ghi_chu": "KHÔNG trừ 1: đặc tả nêu ba ví dụ và cả ba đều cộng ra 42 lá. AL70 đếm TỔNG số lá nên không có gì để trừ. Bảng giá gọi mã này là 'bản lá 70' — đó là bề rộng nan, không phải ước số chia. 2026-08-22: sửa tru_mot_la theo sheet GHI CHÚ — nguồn ghi \"-1 LÁ\" cho AL70.",
         "disabled": false
       }
     },
@@ -3498,7 +3637,7 @@
         "be_rong_nan_mm": 68,
         "tru_mot_la": 0,
         "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
-        "ghi_chu": "Cùng bản lá với bản 2 lớp; khác nhau ở cấu tạo lá, không ở ước số chia.",
+        "ghi_chu": "Cùng bản lá với bản 2 lớp; khác nhau ở cấu tạo lá, không ở ước số chia. 2026-08-22: sửa tru_mot_la theo sheet GHI CHÚ — nguồn ghi \"-1 LÁ\" cho AL70.",
         "disabled": false
       }
     },
@@ -3627,8 +3766,9 @@
         "buoc_la_m": 0.057,
         "tru_mot_la": 1,
         "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
-        "ghi_chu": "CHỜ CHỦ XƯỞNG CHỐT: sheet nguồn ghi AL552C = 0,05 và AL552N = 0,057, nhưng bảng đang thi hành gắn 0,057 cho đời CŨ và không có đời MỚI. Giữ nguyên giá trị đang tính tiền cho tới khi có xác nhận.",
-        "disabled": false
+        "ghi_chu": "CHỜ CHỦ XƯỞNG CHỐT: sheet nguồn ghi AL552C = 0,05 và AL552N = 0,057, nhưng bảng đang thi hành gắn 0,057 cho đời CŨ và không có đời MỚI. Giữ nguyên giá trị đang tính tiền cho tới khi có xác nhận. 2026-08-22: sửa be_rong_nan_mm theo sheet GHI CHÚ — bỏ trống; bước lá 0,057 suy ra 57mm.",
+        "disabled": false,
+        "be_rong_nan_mm": 57
       }
     },
     {
@@ -3861,8 +4001,8 @@
         "min_area_sqm": 3,
         "max_area_sqm": 4,
         "sort_order": 10,
-        "note": "Nguồn: bậc trong mã hàng Đài Loan trọn bộ đang chạy + BRD §4.11 (cận trên đóng, cận dưới mở).",
-        "disabled": false
+        "note": "Nguồn: bậc trong mã hàng Đài Loan trọn bộ đang chạy + BRD §4.11 (cận trên đóng, cận dưới mở). NGỪNG DÙNG 2026-08-22 — không bảng giá nào trỏ tới; bộ đang dùng là DT-*.",
+        "disabled": true
       }
     },
     {
@@ -3874,8 +4014,8 @@
         "min_area_sqm": 4,
         "max_area_sqm": 5,
         "sort_order": 20,
-        "note": "Nguồn: bậc trong mã hàng Đài Loan trọn bộ đang chạy + BRD §4.11 (cận trên đóng, cận dưới mở).",
-        "disabled": false
+        "note": "Nguồn: bậc trong mã hàng Đài Loan trọn bộ đang chạy + BRD §4.11 (cận trên đóng, cận dưới mở). NGỪNG DÙNG 2026-08-22 — không bảng giá nào trỏ tới; bộ đang dùng là DT-*.",
+        "disabled": true
       }
     },
     {
@@ -3887,8 +4027,8 @@
         "min_area_sqm": 5,
         "max_area_sqm": 6,
         "sort_order": 30,
-        "note": "Nguồn: bậc trong mã hàng Đài Loan trọn bộ đang chạy + BRD §4.11 (cận trên đóng, cận dưới mở).",
-        "disabled": false
+        "note": "Nguồn: bậc trong mã hàng Đài Loan trọn bộ đang chạy + BRD §4.11 (cận trên đóng, cận dưới mở). NGỪNG DÙNG 2026-08-22 — không bảng giá nào trỏ tới; bộ đang dùng là DT-*.",
+        "disabled": true
       }
     },
     {
@@ -3900,8 +4040,8 @@
         "min_area_sqm": 6,
         "max_area_sqm": 7,
         "sort_order": 40,
-        "note": "Nguồn: bậc trong mã hàng Đài Loan trọn bộ đang chạy + BRD §4.11 (cận trên đóng, cận dưới mở).",
-        "disabled": false
+        "note": "Nguồn: bậc trong mã hàng Đài Loan trọn bộ đang chạy + BRD §4.11 (cận trên đóng, cận dưới mở). NGỪNG DÙNG 2026-08-22 — không bảng giá nào trỏ tới; bộ đang dùng là DT-*.",
+        "disabled": true
       }
     },
     {
@@ -3913,8 +4053,8 @@
         "min_area_sqm": 7,
         "max_area_sqm": 8,
         "sort_order": 50,
-        "note": "Nguồn: bậc trong mã hàng Đài Loan trọn bộ đang chạy + BRD §4.11 (cận trên đóng, cận dưới mở).",
-        "disabled": false
+        "note": "Nguồn: bậc trong mã hàng Đài Loan trọn bộ đang chạy + BRD §4.11 (cận trên đóng, cận dưới mở). NGỪNG DÙNG 2026-08-22 — không bảng giá nào trỏ tới; bộ đang dùng là DT-*.",
+        "disabled": true
       }
     },
     {
@@ -3926,8 +4066,8 @@
         "min_area_sqm": 8,
         "max_area_sqm": 9,
         "sort_order": 60,
-        "note": "Nguồn: bậc trong mã hàng Đài Loan trọn bộ đang chạy + BRD §4.11 (cận trên đóng, cận dưới mở).",
-        "disabled": false
+        "note": "Nguồn: bậc trong mã hàng Đài Loan trọn bộ đang chạy + BRD §4.11 (cận trên đóng, cận dưới mở). NGỪNG DÙNG 2026-08-22 — không bảng giá nào trỏ tới; bộ đang dùng là DT-*.",
+        "disabled": true
       }
     },
     {
@@ -3939,8 +4079,8 @@
         "min_area_sqm": 9,
         "max_area_sqm": 10,
         "sort_order": 70,
-        "note": "Nguồn: bậc trong mã hàng Đài Loan trọn bộ đang chạy + BRD §4.11 (cận trên đóng, cận dưới mở).",
-        "disabled": false
+        "note": "Nguồn: bậc trong mã hàng Đài Loan trọn bộ đang chạy + BRD §4.11 (cận trên đóng, cận dưới mở). NGỪNG DÙNG 2026-08-22 — không bảng giá nào trỏ tới; bộ đang dùng là DT-*.",
+        "disabled": true
       }
     },
     {
@@ -3951,8 +4091,8 @@
         "tier_name": "Trên 10m²",
         "min_area_sqm": 10,
         "sort_order": 80,
-        "note": "Nguồn: bậc trong mã hàng Đài Loan trọn bộ đang chạy + BRD §4.11 (cận trên đóng, cận dưới mở).",
-        "disabled": false
+        "note": "Nguồn: bậc trong mã hàng Đài Loan trọn bộ đang chạy + BRD §4.11 (cận trên đóng, cận dưới mở). NGỪNG DÙNG 2026-08-22 — không bảng giá nào trỏ tới; bộ đang dùng là DT-*.",
+        "disabled": true
       }
     },
     {
@@ -3960,7 +4100,7 @@
       "name": "MOTO-TANKER-400",
       "data": {
         "rule_code": "MOTO-TANKER-400",
-        "item_code": "MOTO-TANKER400",
+        "item_code": "MT_TANKER400KG",
         "selection_basis": "Diện tích cửa",
         "max_area_sqm": 15,
         "includes": "Motor + Lắc 32 + Bộ ĐK",
@@ -3974,7 +4114,7 @@
       "name": "MOTO-TANKER-600",
       "data": {
         "rule_code": "MOTO-TANKER-600",
-        "item_code": "MOTO-TANKER600",
+        "item_code": "MT_TANKER600KG",
         "selection_basis": "Diện tích cửa",
         "max_area_sqm": 18,
         "includes": "Motor + Lắc 32 + Bộ ĐK",
@@ -3988,7 +4128,7 @@
       "name": "MOTO-TANKER-800",
       "data": {
         "rule_code": "MOTO-TANKER-800",
-        "item_code": "MOTO-TANKE800",
+        "item_code": "MT_TANKE800KG",
         "selection_basis": "Diện tích cửa",
         "max_area_sqm": 27,
         "includes": "Motor + Lắc 38 + Bộ ĐK",
@@ -4002,7 +4142,7 @@
       "name": "MOTO-ALUMAX-400",
       "data": {
         "rule_code": "MOTO-ALUMAX-400",
-        "item_code": "MOTO-ALUMAX400",
+        "item_code": "MT_ALUMAX400KG",
         "selection_basis": "Diện tích cửa",
         "max_area_sqm": 15,
         "includes": "Motor + Lắc 32 + Bộ ĐK",
@@ -4016,7 +4156,7 @@
       "name": "MOTO-ALUMAX-600",
       "data": {
         "rule_code": "MOTO-ALUMAX-600",
-        "item_code": "MOTO-ALUMAX600",
+        "item_code": "MT_ALUMAX600KG",
         "selection_basis": "Diện tích cửa",
         "max_area_sqm": 25,
         "includes": "Motor + Lắc 32 + Bộ ĐK",
@@ -4030,7 +4170,7 @@
       "name": "MOTO-JG-300",
       "data": {
         "rule_code": "MOTO-JG-300",
-        "item_code": "MOTO-JG300",
+        "item_code": "MT_JG300KG",
         "selection_basis": "Diện tích cửa",
         "max_area_sqm": 18,
         "includes": "Motor + Lắc 33 + Bộ ĐK",
@@ -4044,7 +4184,7 @@
       "name": "MOTO-JG-400",
       "data": {
         "rule_code": "MOTO-JG-400",
-        "item_code": "MOTO-JG400",
+        "item_code": "MT_JG400KG",
         "selection_basis": "Diện tích cửa",
         "max_area_sqm": 28,
         "includes": "Motor + Lắc 33 + Bộ ĐK",
@@ -4058,7 +4198,7 @@
       "name": "MOTO-JG-600",
       "data": {
         "rule_code": "MOTO-JG-600",
-        "item_code": "MOTO-JG600",
+        "item_code": "MT_JG600KG",
         "selection_basis": "Diện tích cửa",
         "max_area_sqm": 36,
         "includes": "Motor + Lắc 36 + Bộ ĐK",
@@ -4072,7 +4212,7 @@
       "name": "MOTO-JG-800",
       "data": {
         "rule_code": "MOTO-JG-800",
-        "item_code": "MOTO-JG800",
+        "item_code": "MT_JG800KG",
         "selection_basis": "Diện tích cửa",
         "max_area_sqm": 42,
         "includes": "Motor + Lắc 38 + Bộ ĐK",
@@ -4086,7 +4226,7 @@
       "name": "MOTO-JG-1000",
       "data": {
         "rule_code": "MOTO-JG-1000",
-        "item_code": "MOTO-JG1000",
+        "item_code": "MT_JG1000KG",
         "selection_basis": "Diện tích cửa",
         "max_area_sqm": 48,
         "includes": "Motor + Lắc 40 + Bộ ĐK",
@@ -4100,7 +4240,7 @@
       "name": "MOTO-JG-1500",
       "data": {
         "rule_code": "MOTO-JG-1500",
-        "item_code": "MOTO-JG1500",
+        "item_code": "MT_JG1500KG",
         "selection_basis": "Diện tích cửa",
         "max_area_sqm": 55,
         "includes": "Motor + Lắc 40 + Bộ ĐK",
@@ -4114,7 +4254,7 @@
       "name": "MOTO-YHLD-300",
       "data": {
         "rule_code": "MOTO-YHLD-300",
-        "item_code": "MOTO-YHLD300",
+        "item_code": "MT_YHLD300KG",
         "selection_basis": "Diện tích cửa",
         "max_area_sqm": 15,
         "includes": "Motor + Lắc 36 + Bộ ĐK",
@@ -4128,7 +4268,7 @@
       "name": "MOTO-YHLD-500",
       "data": {
         "rule_code": "MOTO-YHLD-500",
-        "item_code": "MOTO-YHLD500",
+        "item_code": "MT_YHLD500KG",
         "selection_basis": "Diện tích cửa",
         "max_area_sqm": 15,
         "includes": "Motor + Lắc 36 + Bộ ĐK",
@@ -4142,7 +4282,7 @@
       "name": "MOTO-YHLD-800",
       "data": {
         "rule_code": "MOTO-YHLD-800",
-        "item_code": "MOTO-YHLD800",
+        "item_code": "MT_YHLD800KG",
         "selection_basis": "Diện tích cửa",
         "max_area_sqm": 25,
         "includes": "Motor + Lắc 40 + Bộ ĐK",
@@ -4156,7 +4296,7 @@
       "name": "MOTO-YHLD-1000",
       "data": {
         "rule_code": "MOTO-YHLD-1000",
-        "item_code": "MOTO-YHLD1000",
+        "item_code": "MT_YHLD1000KG",
         "selection_basis": "Diện tích cửa",
         "max_area_sqm": 35,
         "includes": "Motor + Lắc 40 + Bộ ĐK",
@@ -4170,7 +4310,7 @@
       "name": "PIN-E800",
       "data": {
         "rule_code": "PIN-E800",
-        "item_code": "PIN-UPS-E800I",
+        "item_code": "BLD_UPS_E800I",
         "selection_basis": "Tải motor",
         "max_motor_kg": 600,
         "includes": "9 AH",
@@ -4184,7 +4324,7 @@
       "name": "PIN-E1000",
       "data": {
         "rule_code": "PIN-E1000",
-        "item_code": "PIN-UPS-E1000I",
+        "item_code": "BLD_UPS_E1000I",
         "selection_basis": "Tải motor",
         "max_motor_kg": 1000,
         "includes": "12 AH",
@@ -4200,7 +4340,1266 @@
         "tier_code": "MOI-DIEN-TICH",
         "tier_name": "Mọi diện tích",
         "sort_order": 0,
-        "note": "Sentinel của khoá đặt tên Item Price, KHÔNG phải bậc thật. Đừng gán cận trên/dưới, đừng ngừng dùng: ngừng dùng nó là chặn tạo mọi dòng giá không theo bậc (558/558 dòng đang chạy).",
+        "note": "Bậc MỞ: dòng giá gắn bậc này áp cho mọi diện tích. Đây là cách bảng giá ở thưa — 211/267 dòng nằm ở đây. Dòng gắn bậc cụ thể thắng dòng gắn bậc này.",
+        "disabled": false,
+        "min_area_sqm": null,
+        "max_area_sqm": null
+      }
+    },
+    {
+      "//": "Dòng phụ kiện tự sinh — QUY TẮC BOM trích nguyên văn từ workbook nguồn; mã thành phần đã đối chiếu Item canonical.",
+      "type": "BOM Rule",
+      "name": "BOMR-RAY-HOP-TD-DUC",
+      "data": {
+        "rule_version": 1,
+        "authority_type": "OWNER_DECISION",
+        "source_sheet": "ĐƠN GIÁ TRỌN BỘ",
+        "source_note": "Quyết định trực tiếp của chủ xưởng ngày 22/08/2026: ngưỡng tặng ray là 8 m², không phải 10 m²; giữ toán tử GT (> 8 m²).",
+        "rule_code": "BOMR-RAY-HOP-TD-DUC",
+        "rule_name": "Ray hộp TD — cửa Đức tặng ray",
+        "description": "Chọn ĐƠN GIÁ TẶNG RAY thì nhảy 1 dòng ray hộp TD dài = Cao phủ bì trừ 0,20 m, 2 cây, khóa cột đơn giá.",
+        "result_kind": "LENGTH",
+        "result_uom": "Mét",
+        "operator": "SUBTRACT",
+        "qty_per_set": 2,
+        "source_formula_code": "C4",
+        "source_formula_text": "Chọn đơn giá tặng ray thì sinh ray hộp TD = cao phủ bì - 0,2 m, số lượng 2 cây; chỉ áp dụng khi diện tích một bộ > 8 m².",
+        "note": "Quyết định chủ xưởng 22/08/2026 thay mốc 10 m² trong workbook cũ: biến thể TANG_RAY và diện tích một bộ > 8 m²; không áp cho CHI_LA.",
+        "disabled": false,
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa Đức",
+            "component_item": "RT_RAYHOP",
+            "priority": 100,
+            "effective_from": "2026-08-22",
+            "note": "Chỉ áp cho dòng phụ kiện tự sinh của loại cửa này.",
+            "price_variant": "TANG_RAY",
+            "min_area_sqm": 8,
+            "min_area_operator": "GT"
+          }
+        ],
+        "source_field": "PB_CAO",
+        "operand": 0.2,
+        "formula_display": "PB_CAO - 0,2"
+      }
+    },
+    {
+      "//": "Dòng phụ kiện tự sinh — QUY TẮC BOM trích nguyên văn từ workbook nguồn; mã thành phần đã đối chiếu Item canonical.",
+      "type": "BOM Rule",
+      "name": "BOMR-RAY-U70-KRON-UC",
+      "data": {
+        "rule_version": 1,
+        "authority_type": "SOURCE",
+        "source_sheet": "ĐƠN GIÁ TRỌN BỘ",
+        "source_note": "QUY CÁCH  (3).xlsx / ĐƠN GIÁ TRỌN BỘ — trích tại docs/ALUMDOOR-QUY-CACH-BOM-RULE-20260821.md §4 Hoàn tác 2026-08-22 sau khi đọc 25.7 QUY TRÌNH (2).docx: hai chính sách Úc phân biệt bằng Item.door_type chứ không phải nhóm hàng.",
+        "rule_code": "BOMR-RAY-U70-KRON-UC",
+        "rule_name": "Ray sắt U70 không ron — cửa Úc trọn bộ",
+        "description": "Chọn ĐƠN GIÁ TRỌN BỘ cửa Úc thì nhảy dòng ray sắt U70 (không ron) dài = Cao phủ bì trừ 0,10 m, 2 cây, khóa cột đơn giá.",
+        "result_kind": "LENGTH",
+        "result_uom": "Mét",
+        "operator": "SUBTRACT",
+        "qty_per_set": 2,
+        "source_formula_code": "C5",
+        "source_formula_text": "Khi chọn cửa úc sễ nhảy ra các dòng sau: ... ray sắt U70 (không ron) = cao phủ bì - 0,1 x 2 cây",
+        "note": "Item RT_RAY_U70_KRON có quy đổi 1 Mét = 1,78 Kg (khớp hệ số RAY_U70_WEIGHT 1,78 trong brief) nên Mét đổi sang Kg tồn được.",
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa Úc",
+            "component_item": "RT_RAY_U70_KRON",
+            "priority": 100,
+            "effective_from": "2026-08-21",
+            "note": "Chỉ áp cho dòng phụ kiện tự sinh của loại cửa này.",
+            "price_variant": "TRON_BO"
+          }
+        ],
+        "source_field": "PB_CAO",
+        "operand": 0.1,
+        "formula_display": "PB_CAO - 0,1"
+      }
+    },
+    {
+      "//": "Dòng phụ kiện tự sinh — QUY TẮC BOM trích nguyên văn từ workbook nguồn; mã thành phần đã đối chiếu Item canonical.",
+      "type": "BOM Rule",
+      "name": "BOMR-GIA-T-UC",
+      "data": {
+        "rule_version": 1,
+        "authority_type": "SOURCE",
+        "source_sheet": "ĐƠN GIÁ TRỌN BỘ",
+        "source_note": "QUY CÁCH  (3).xlsx / ĐƠN GIÁ TRỌN BỘ — trích tại docs/ALUMDOOR-QUY-CACH-BOM-RULE-20260821.md §4 2026-08-22: đổi door_type \"Cửa Úc\" → \"Cửa tấm liền Úc\" cho khớp nhóm hàng thật. Hoàn tác 2026-08-22 sau khi đọc 25.7 QUY TRÌNH (2).docx: hai chính sách Úc phân biệt bằng Item.door_type chứ không phải nhóm hàng.",
+        "rule_code": "BOMR-GIA-T-UC",
+        "rule_name": "Giá T — cửa Úc trọn bộ",
+        "description": "Chọn ĐƠN GIÁ TRỌN BỘ cửa Úc thì nhảy dòng Giá T, 1 cặp, khóa cột đơn giá. Không phụ thuộc kích thước.",
+        "result_kind": "COUNT",
+        "result_uom": "Cặp",
+        "operator": "CONSTANT",
+        "qty_per_set": 1,
+        "source_formula_code": "C5",
+        "source_formula_text": "Khi chọn cửa úc sễ nhảy ra các dòng sau: ... giá T x 1 cặp",
+        "note": "ĐVT tồn của PKC_GIAT đúng bằng Cặp nên không cần quy đổi.",
+        "disabled": false,
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa Úc",
+            "component_item": "PKC_GIAT",
+            "priority": 100,
+            "effective_from": "2026-08-21",
+            "note": "Chỉ áp cho dòng phụ kiện tự sinh của loại cửa này.",
+            "price_variant": "TRON_BO"
+          }
+        ],
+        "operand": 1,
+        "formula_display": "1"
+      }
+    },
+    {
+      "//": "Dòng phụ kiện tự sinh — QUY TẮC BOM trích nguyên văn từ workbook nguồn; mã thành phần đã đối chiếu Item canonical.",
+      "type": "BOM Rule",
+      "name": "BOMR-RAY-U70-RON-DL",
+      "data": {
+        "rule_version": 1,
+        "authority_type": "SOURCE",
+        "source_sheet": "ĐƠN GIÁ TRỌN BỘ",
+        "source_note": "QUY CÁCH  (3).xlsx / ĐƠN GIÁ TRỌN BỘ — trích tại docs/ALUMDOOR-QUY-CACH-BOM-RULE-20260821.md §4",
+        "rule_code": "BOMR-RAY-U70-RON-DL",
+        "rule_name": "Ray sắt U70 có ron — cửa Đài Loan trọn bộ",
+        "description": "Chọn ĐƠN GIÁ TRỌN BỘ cửa Đài Loan thì nhảy dòng ray sắt U70 (có ron) dài = Cao phủ bì trừ 0,10 m, khóa cột đơn giá.",
+        "result_kind": "LENGTH",
+        "result_uom": "Mét",
+        "operator": "SUBTRACT",
+        "qty_per_set": 1,
+        "source_formula_code": "C6",
+        "source_formula_text": "khi chọn đơn giá trọn bộ thì sẽ nhảy ra các dòng sau: ... ray sắt U70 có ron = cao phủ bì - 0,1",
+        "note": "File KHÔNG ghi số cây cho cửa Đài Loan (khác cửa Úc ghi rõ 2 cây) — đang để 1. Cần chủ xưởng xác nhận 1 hay 2 cây.",
+        "disabled": true,
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa Đài Loan",
+            "component_item": "RT_RAY_U70_RON",
+            "priority": 100,
+            "effective_from": "2026-08-21",
+            "note": "Chỉ áp cho dòng phụ kiện tự sinh của loại cửa này."
+          }
+        ],
+        "source_field": "PB_CAO",
+        "operand": 0.1,
+        "formula_display": "PB_CAO - 0,1"
+      }
+    },
+    {
+      "//": "Dòng phụ kiện tự sinh — QUY TẮC BOM trích nguyên văn từ workbook nguồn; mã thành phần đã đối chiếu Item canonical.",
+      "type": "BOM Rule",
+      "name": "BOMR-RAY-U70-RON-LUOI",
+      "data": {
+        "rule_version": 1,
+        "authority_type": "SOURCE",
+        "source_sheet": "ĐƠN GIÁ TRỌN BỘ",
+        "source_note": "QUY CÁCH  (3).xlsx / ĐƠN GIÁ TRỌN BỘ — trích tại docs/ALUMDOOR-QUY-CACH-BOM-RULE-20260821.md §4",
+        "rule_code": "BOMR-RAY-U70-RON-LUOI",
+        "rule_name": "Ray sắt U70 có ron — cửa Lưới trọn bộ",
+        "description": "Chọn ĐƠN GIÁ CHỈ LÁ (TRỌN BỘ) cửa Lưới thì nhảy dòng ray sắt U70 (có ron) dài = Cao phủ bì trừ 0,10 m, khóa cột đơn giá.",
+        "result_kind": "LENGTH",
+        "result_uom": "Mét",
+        "operator": "SUBTRACT",
+        "qty_per_set": 1,
+        "source_formula_code": "C9",
+        "source_formula_text": "khi chọn đơn giá trọn bộ thì sẽ nhảy ra các dòng sau: ... ray sắt U70 có ron = cao phủ bì - 0,1",
+        "note": "File KHÔNG ghi số cây cho cửa Lưới — đang để 1. Cần chủ xưởng xác nhận 1 hay 2 cây.",
+        "disabled": true,
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa Lưới",
+            "component_item": "RT_RAY_U70_RON",
+            "priority": 100,
+            "effective_from": "2026-08-21",
+            "note": "Chỉ áp cho dòng phụ kiện tự sinh của loại cửa này."
+          }
+        ],
+        "source_field": "PB_CAO",
+        "operand": 0.1,
+        "formula_display": "PB_CAO - 0,1"
+      }
+    },
+    {
+      "//": "Sinh từ cột I sheet ĐM ngày 22/08/2026; gom các dòng nguồn cùng công thức. Chưa qua chủ xưởng duyệt từng dòng.",
+      "type": "BOM Rule",
+      "name": "BOMR-CUA-DAI-LOAN-PKC-V4-KEM",
+      "data": {
+        "rule_code": "BOMR-CUA-DAI-LOAN-PKC-V4-KEM",
+        "rule_name": "PKC_V4_KEM — Cửa Đài Loan",
+        "result_kind": "LENGTH",
+        "rule_version": 1,
+        "authority_type": "SOURCE",
+        "source_sheet": "ĐM",
+        "source_row": 1265,
+        "source_formula_text": "(rpbray-30)x2xTL",
+        "source_note": "Máy dịch từ cột I sheet ĐM ngày 2026-08-22; gom từ 1 dòng nguồn giống nhau. · bỏ bản khác: Rộng pbray -50 (1 dòng)",
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa Đài Loan",
+            "component_item": "PKC_V4_KEM",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Sinh từ định mức xưởng; chưa qua chủ xưởng duyệt từng dòng."
+          }
+        ],
+        "result_uom": "Mét",
+        "source_field": "PB_RAY_RONG",
+        "operator": "SUBTRACT",
+        "operand": 0.03,
+        "qty_per_set": 2,
+        "formula_display": "PB_RAY_RONG - 0,03"
+      }
+    },
+    {
+      "//": "Sinh từ cột I sheet ĐM ngày 22/08/2026; gom các dòng nguồn cùng công thức. Chưa qua chủ xưởng duyệt từng dòng.",
+      "type": "BOM Rule",
+      "name": "BOMR-CUA-DAI-LOAN-PKC-V4-STD",
+      "data": {
+        "rule_code": "BOMR-CUA-DAI-LOAN-PKC-V4-STD",
+        "rule_name": "PKC_V4_STD — Cửa Đài Loan",
+        "result_kind": "LENGTH",
+        "rule_version": 1,
+        "authority_type": "SOURCE",
+        "source_sheet": "ĐM",
+        "source_row": 1361,
+        "source_formula_text": "(rpbray-30)x2xTL",
+        "source_note": "Máy dịch từ cột I sheet ĐM ngày 2026-08-22; gom từ 7 dòng nguồn giống nhau. · bỏ bản khác: Rộng pbray -50 (1 dòng)",
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa Đài Loan",
+            "component_item": "PKC_V4_STD",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Sinh từ định mức xưởng; chưa qua chủ xưởng duyệt từng dòng."
+          }
+        ],
+        "result_uom": "Mét",
+        "source_field": "PB_RAY_RONG",
+        "operator": "SUBTRACT",
+        "operand": 0.03,
+        "qty_per_set": 2,
+        "formula_display": "PB_RAY_RONG - 0,03"
+      }
+    },
+    {
+      "//": "Sinh từ cột I sheet ĐM ngày 22/08/2026; gom các dòng nguồn cùng công thức. Chưa qua chủ xưởng duyệt từng dòng.",
+      "type": "BOM Rule",
+      "name": "BOMR-CUA-DAI-LOAN-RT-RAY-U70-RON",
+      "data": {
+        "rule_code": "BOMR-CUA-DAI-LOAN-RT-RAY-U70-RON",
+        "rule_name": "RT_RAY_U70_RON — Cửa Đài Loan",
+        "result_kind": "LENGTH",
+        "rule_version": 1,
+        "authority_type": "SOURCE",
+        "source_sheet": "ĐM",
+        "source_row": 1264,
+        "source_formula_text": "(CAO PB - 10CM)x2",
+        "source_note": "Máy dịch từ cột I sheet ĐM ngày 2026-08-22; gom từ 8 dòng nguồn giống nhau.",
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa Đài Loan",
+            "component_item": "RT_RAY_U70_RON",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Sinh từ định mức xưởng; chưa qua chủ xưởng duyệt từng dòng."
+          }
+        ],
+        "result_uom": "Mét",
+        "source_field": "PB_CAO",
+        "operator": "SUBTRACT",
+        "operand": 0.1,
+        "qty_per_set": 2,
+        "formula_display": "PB_CAO - 0,1"
+      }
+    },
+    {
+      "//": "Sinh từ cột I sheet ĐM ngày 22/08/2026; gom các dòng nguồn cùng công thức. Chưa qua chủ xưởng duyệt từng dòng.",
+      "type": "BOM Rule",
+      "name": "BOMR-CUA-DAI-LOAN-RT-TR114-1-8",
+      "data": {
+        "rule_code": "BOMR-CUA-DAI-LOAN-RT-TR114-1-8",
+        "rule_name": "RT_TR114_1.8 — Cửa Đài Loan",
+        "result_kind": "LENGTH",
+        "rule_version": 1,
+        "authority_type": "SOURCE",
+        "source_sheet": "ĐM",
+        "source_row": 1266,
+        "source_formula_text": "Rộng pbray -50",
+        "source_note": "Máy dịch từ cột I sheet ĐM ngày 2026-08-22; gom từ 8 dòng nguồn giống nhau.",
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa Đài Loan",
+            "component_item": "RT_TR114_1.8",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Sinh từ định mức xưởng; chưa qua chủ xưởng duyệt từng dòng."
+          }
+        ],
+        "result_uom": "Mét",
+        "source_field": "PB_RAY_RONG",
+        "operator": "SUBTRACT",
+        "operand": 0.05,
+        "qty_per_set": 1,
+        "formula_display": "PB_RAY_RONG - 0,05"
+      }
+    },
+    {
+      "//": "Sinh từ cột I sheet ĐM ngày 22/08/2026; gom các dòng nguồn cùng công thức. Chưa qua chủ xưởng duyệt từng dòng.",
+      "type": "BOM Rule",
+      "name": "BOMR-CUA-DAI-LOAN-TON-DLM-1LY-K124",
+      "data": {
+        "rule_code": "BOMR-CUA-DAI-LOAN-TON-DLM-1LY-K124",
+        "rule_name": "TON_DLM_1LY_K124 — Cửa Đài Loan",
+        "result_kind": "AREA",
+        "rule_version": 1,
+        "authority_type": "SOURCE",
+        "source_sheet": "ĐM",
+        "source_row": 1551,
+        "source_formula_text": "C*(R-0,03)*SL* 6,32kg/m2",
+        "source_note": "Máy dịch từ cột I sheet ĐM ngày 2026-08-22; gom từ 2 dòng nguồn giống nhau.",
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa Đài Loan",
+            "component_item": "TON_DLM_1LY_K124",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Sinh từ định mức xưởng; chưa qua chủ xưởng duyệt từng dòng."
+          }
+        ],
+        "result_uom": "m2",
+        "operator": "PRODUCT",
+        "source_field": "PB_CAO",
+        "source_field_2": "PB_RAY_RONG",
+        "source_field_2_offset": -0.03,
+        "qty_per_set": 1,
+        "formula_display": "PB_CAO × (PB_RAY_RONG - 0,03)"
+      }
+    },
+    {
+      "//": "Sinh từ cột I sheet ĐM ngày 22/08/2026; gom các dòng nguồn cùng công thức. Chưa qua chủ xưởng duyệt từng dòng.",
+      "type": "BOM Rule",
+      "name": "BOMR-CUA-DAI-LOAN-TON-DLM-6D-K124",
+      "data": {
+        "rule_code": "BOMR-CUA-DAI-LOAN-TON-DLM-6D-K124",
+        "rule_name": "TON_DLM_6D_K124 — Cửa Đài Loan",
+        "result_kind": "AREA",
+        "rule_version": 1,
+        "authority_type": "SOURCE",
+        "source_sheet": "ĐM",
+        "source_row": 1263,
+        "source_formula_text": "C*(R-0,03)*SL* 6,32kg/m2",
+        "source_note": "Máy dịch từ cột I sheet ĐM ngày 2026-08-22; gom từ 2 dòng nguồn giống nhau.",
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa Đài Loan",
+            "component_item": "TON_DLM_6D_K124",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Sinh từ định mức xưởng; chưa qua chủ xưởng duyệt từng dòng."
+          }
+        ],
+        "result_uom": "m2",
+        "operator": "PRODUCT",
+        "source_field": "PB_CAO",
+        "source_field_2": "PB_RAY_RONG",
+        "source_field_2_offset": -0.03,
+        "qty_per_set": 1,
+        "formula_display": "PB_CAO × (PB_RAY_RONG - 0,03)"
+      }
+    },
+    {
+      "//": "Sinh từ cột I sheet ĐM ngày 22/08/2026; gom các dòng nguồn cùng công thức. Chưa qua chủ xưởng duyệt từng dòng.",
+      "type": "BOM Rule",
+      "name": "BOMR-CUA-DAI-LOAN-TON-DLM-7D-K124",
+      "data": {
+        "rule_code": "BOMR-CUA-DAI-LOAN-TON-DLM-7D-K124",
+        "rule_name": "TON_DLM_7D_K124 — Cửa Đài Loan",
+        "result_kind": "AREA",
+        "rule_version": 1,
+        "authority_type": "SOURCE",
+        "source_sheet": "ĐM",
+        "source_row": 1359,
+        "source_formula_text": "C*(R-0,03)*SL* 6,32kg/m2",
+        "source_note": "Máy dịch từ cột I sheet ĐM ngày 2026-08-22; gom từ 2 dòng nguồn giống nhau.",
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa Đài Loan",
+            "component_item": "TON_DLM_7D_K124",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Sinh từ định mức xưởng; chưa qua chủ xưởng duyệt từng dòng."
+          }
+        ],
+        "result_uom": "m2",
+        "operator": "PRODUCT",
+        "source_field": "PB_CAO",
+        "source_field_2": "PB_RAY_RONG",
+        "source_field_2_offset": -0.03,
+        "qty_per_set": 1,
+        "formula_display": "PB_CAO × (PB_RAY_RONG - 0,03)"
+      }
+    },
+    {
+      "//": "Sinh từ cột I sheet ĐM ngày 22/08/2026; gom các dòng nguồn cùng công thức. Chưa qua chủ xưởng duyệt từng dòng.",
+      "type": "BOM Rule",
+      "name": "BOMR-CUA-DUC-PKC-BO-1VIS-AL702LOP",
+      "data": {
+        "rule_code": "BOMR-CUA-DUC-PKC-BO-1VIS-AL702LOP",
+        "rule_name": "PKC_BO_1VIS_AL702LOP — Cửa Đức",
+        "result_kind": "AREA",
+        "rule_version": 1,
+        "authority_type": "SOURCE",
+        "source_sheet": "ĐM",
+        "source_row": 98,
+        "source_formula_text": "Cao x Rộng cắt lá x TL 0,0093",
+        "source_note": "Máy dịch từ cột I sheet ĐM ngày 2026-08-22; gom từ 1 dòng nguồn giống nhau.",
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa Đức",
+            "component_item": "PKC_BO_1VIS_AL702LOP",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Sinh từ định mức xưởng; chưa qua chủ xưởng duyệt từng dòng."
+          }
+        ],
+        "result_uom": "m2",
+        "operator": "PRODUCT",
+        "source_field": "PB_CAO",
+        "source_field_2": "CAT_LA_RONG",
+        "source_field_2_offset": 0,
+        "qty_per_set": 1,
+        "formula_display": "PB_CAO × (CAT_LA_RONG)"
+      }
+    },
+    {
+      "//": "Sinh từ cột I sheet ĐM ngày 22/08/2026; gom các dòng nguồn cùng công thức. Chưa qua chủ xưởng duyệt từng dòng.",
+      "type": "BOM Rule",
+      "name": "BOMR-CUA-DUC-PKDUC-VIS",
+      "data": {
+        "rule_code": "BOMR-CUA-DUC-PKDUC-VIS",
+        "rule_name": "PKDUC_VIS — Cửa Đức",
+        "result_kind": "AREA",
+        "rule_version": 1,
+        "authority_type": "SOURCE",
+        "source_sheet": "ĐM",
+        "source_row": 39,
+        "source_formula_text": "Cao x Rộng cắt lá x TL 0,0168",
+        "source_note": "Máy dịch từ cột I sheet ĐM ngày 2026-08-22; gom từ 37 dòng nguồn giống nhau.",
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa Đức",
+            "component_item": "PKDUC_VIS",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Sinh từ định mức xưởng; chưa qua chủ xưởng duyệt từng dòng."
+          }
+        ],
+        "result_uom": "m2",
+        "operator": "PRODUCT",
+        "source_field": "PB_CAO",
+        "source_field_2": "CAT_LA_RONG",
+        "source_field_2_offset": 0,
+        "qty_per_set": 1,
+        "formula_display": "PB_CAO × (CAT_LA_RONG)"
+      }
+    },
+    {
+      "//": "Sinh từ cột I sheet ĐM ngày 22/08/2026; gom các dòng nguồn cùng công thức. Chưa qua chủ xưởng duyệt từng dòng.",
+      "type": "BOM Rule",
+      "name": "BOMR-CUA-LUOI-LA-DLK-1LY",
+      "data": {
+        "rule_code": "BOMR-CUA-LUOI-LA-DLK-1LY",
+        "rule_name": "LA_DLK_1LY — Cửa Lưới",
+        "result_kind": "COUNT",
+        "rule_version": 1,
+        "authority_type": "OWNER_CONFIRMED",
+        "source_sheet": "ĐM",
+        "source_row": 1111,
+        "source_formula_text": "(CAO LÁ/75)-1 LÁ YẾM",
+        "source_note": "Máy dịch từ cột I sheet ĐM ngày 2026-08-22; gom từ 3 dòng nguồn giống nhau. · Chủ xưởng chốt 2026-08-22: bước lá cửa Đài Loan/Lưới là 0,077 m, khớp sheet GHI CHÚ (\"CPB = Số lá × 0,077\"). Giá trị cũ 0.075 là sai.",
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa Lưới",
+            "component_item": "LA_DLK_1LY",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Sinh từ định mức xưởng; chưa qua chủ xưởng duyệt từng dòng."
+          }
+        ],
+        "result_uom": "Cái",
+        "operator": "DIVIDE",
+        "source_field": "LUOI_CAO",
+        "operand": 0.077,
+        "multiply": 1,
+        "final_add": -1,
+        "rounding": "CEIL",
+        "precision": 0,
+        "qty_per_set": 1,
+        "formula_display": "CEIL(LUOI_CAO ÷ 0,077 × 1 - 1)"
+      }
+    },
+    {
+      "//": "Sinh từ cột I sheet ĐM ngày 22/08/2026; gom các dòng nguồn cùng công thức. Chưa qua chủ xưởng duyệt từng dòng.",
+      "type": "BOM Rule",
+      "name": "BOMR-CUA-LUOI-LA-YEM",
+      "data": {
+        "rule_code": "BOMR-CUA-LUOI-LA-YEM",
+        "rule_name": "LA_YEM — Cửa Lưới",
+        "result_kind": "LENGTH",
+        "rule_version": 1,
+        "authority_type": "SOURCE",
+        "source_sheet": "ĐM",
+        "source_row": 1112,
+        "source_formula_text": "1 LÁ x (Rpbray -30)",
+        "source_note": "Máy dịch từ cột I sheet ĐM ngày 2026-08-22; gom từ 2 dòng nguồn giống nhau.",
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa Lưới",
+            "component_item": "LA_YEM",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Sinh từ định mức xưởng; chưa qua chủ xưởng duyệt từng dòng."
+          }
+        ],
+        "result_uom": "Mét",
+        "source_field": "PB_RAY_RONG",
+        "operator": "SUBTRACT",
+        "operand": 0.03,
+        "qty_per_set": 1,
+        "formula_display": "PB_RAY_RONG - 0,03"
+      }
+    },
+    {
+      "//": "Sinh từ cột I sheet ĐM ngày 22/08/2026; gom các dòng nguồn cùng công thức. Chưa qua chủ xưởng duyệt từng dòng.",
+      "type": "BOM Rule",
+      "name": "BOMR-CUA-LUOI-PKC-RONNHUAVANGCANHAY-RSU70",
+      "data": {
+        "rule_code": "BOMR-CUA-LUOI-PKC-RONNHUAVANGCANHAY-RSU70",
+        "rule_name": "PKC_RONNHUAVANGCANHAY_RSU70 — Cửa Lưới",
+        "result_kind": "LENGTH",
+        "rule_version": 1,
+        "authority_type": "SOURCE",
+        "source_sheet": "ĐM",
+        "source_row": 1123,
+        "source_formula_text": "CAO X SỐ LƯỢNG x0,135x2",
+        "source_note": "Máy dịch từ cột I sheet ĐM ngày 2026-08-22; gom từ 1 dòng nguồn giống nhau.",
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa Lưới",
+            "component_item": "PKC_RONNHUAVANGCANHAY_RSU70",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Sinh từ định mức xưởng; chưa qua chủ xưởng duyệt từng dòng."
+          }
+        ],
+        "result_uom": "Mét",
+        "source_field": "PB_CAO",
+        "operator": "COPY",
+        "operand": 0,
+        "qty_per_set": 2,
+        "formula_display": "PB_CAO"
+      }
+    },
+    {
+      "//": "Sinh từ cột I sheet ĐM ngày 22/08/2026; gom các dòng nguồn cùng công thức. Chưa qua chủ xưởng duyệt từng dòng.",
+      "type": "BOM Rule",
+      "name": "BOMR-CUA-LUOI-PKC-V4-INOX",
+      "data": {
+        "rule_code": "BOMR-CUA-LUOI-PKC-V4-INOX",
+        "rule_name": "PKC_V4_INOX — Cửa Lưới",
+        "result_kind": "LENGTH",
+        "rule_version": 1,
+        "authority_type": "SOURCE",
+        "source_sheet": "ĐM",
+        "source_row": 1200,
+        "source_formula_text": "(Rpbray-30)*2",
+        "source_note": "Máy dịch từ cột I sheet ĐM ngày 2026-08-22; gom từ 3 dòng nguồn giống nhau.",
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa Lưới",
+            "component_item": "PKC_V4_INOX",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Sinh từ định mức xưởng; chưa qua chủ xưởng duyệt từng dòng."
+          }
+        ],
+        "result_uom": "Mét",
+        "source_field": "PB_RAY_RONG",
+        "operator": "SUBTRACT",
+        "operand": 0.03,
+        "qty_per_set": 2,
+        "formula_display": "PB_RAY_RONG - 0,03"
+      }
+    },
+    {
+      "//": "Sinh từ cột I sheet ĐM ngày 22/08/2026; gom các dòng nguồn cùng công thức. Chưa qua chủ xưởng duyệt từng dòng.",
+      "type": "BOM Rule",
+      "name": "BOMR-CUA-LUOI-PKC-V4-KEM",
+      "data": {
+        "rule_code": "BOMR-CUA-LUOI-PKC-V4-KEM",
+        "rule_name": "PKC_V4_KEM — Cửa Lưới",
+        "result_kind": "LENGTH",
+        "rule_version": 1,
+        "authority_type": "SOURCE",
+        "source_sheet": "ĐM",
+        "source_row": 1116,
+        "source_formula_text": "((RỘNG PBRAY - 30)x2) 1,312KG/M",
+        "source_note": "Máy dịch từ cột I sheet ĐM ngày 2026-08-22; gom từ 1 dòng nguồn giống nhau. · bỏ bản khác: (RỘNG PBRAY - 30) 1,312KG/M (2 dòng)",
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa Lưới",
+            "component_item": "PKC_V4_KEM",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Sinh từ định mức xưởng; chưa qua chủ xưởng duyệt từng dòng."
+          }
+        ],
+        "result_uom": "Mét",
+        "source_field": "PB_RAY_RONG",
+        "operator": "SUBTRACT",
+        "operand": 0.03,
+        "qty_per_set": 2,
+        "formula_display": "PB_RAY_RONG - 0,03"
+      }
+    },
+    {
+      "//": "Sinh từ cột I sheet ĐM ngày 22/08/2026; gom các dòng nguồn cùng công thức. Chưa qua chủ xưởng duyệt từng dòng.",
+      "type": "BOM Rule",
+      "name": "BOMR-CUA-LUOI-PKC-V4-STD",
+      "data": {
+        "rule_code": "BOMR-CUA-LUOI-PKC-V4-STD",
+        "rule_name": "PKC_V4_STD — Cửa Lưới",
+        "result_kind": "LENGTH",
+        "rule_version": 1,
+        "authority_type": "SOURCE",
+        "source_sheet": "ĐM",
+        "source_row": 1651,
+        "source_formula_text": "(rpbray-30)x2xTL",
+        "source_note": "Máy dịch từ cột I sheet ĐM ngày 2026-08-22; gom từ 1 dòng nguồn giống nhau.",
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa Lưới",
+            "component_item": "PKC_V4_STD",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Sinh từ định mức xưởng; chưa qua chủ xưởng duyệt từng dòng."
+          }
+        ],
+        "result_uom": "Mét",
+        "source_field": "PB_RAY_RONG",
+        "operator": "SUBTRACT",
+        "operand": 0.03,
+        "qty_per_set": 2,
+        "formula_display": "PB_RAY_RONG - 0,03"
+      }
+    },
+    {
+      "//": "Sinh từ cột I sheet ĐM ngày 22/08/2026; gom các dòng nguồn cùng công thức. Chưa qua chủ xưởng duyệt từng dòng.",
+      "type": "BOM Rule",
+      "name": "BOMR-CUA-LUOI-PKS-LUOIMV",
+      "data": {
+        "rule_code": "BOMR-CUA-LUOI-PKS-LUOIMV",
+        "rule_name": "PKS_LUOIMV — Cửa Lưới",
+        "result_kind": "LENGTH",
+        "rule_version": 1,
+        "authority_type": "SOURCE",
+        "source_sheet": "ĐM",
+        "source_row": 1108,
+        "source_formula_text": "(CAO LƯỚI MV X 16 CÂY/M )-1 CÂY (0,35KG/M) \nCao pb x (Rpbray-3cm)",
+        "source_note": "Máy dịch từ cột I sheet ĐM ngày 2026-08-22; gom từ 1 dòng nguồn giống nhau.",
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa Lưới",
+            "component_item": "PKS_LUOIMV",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Sinh từ định mức xưởng; chưa qua chủ xưởng duyệt từng dòng."
+          }
+        ],
+        "result_uom": "Mét",
+        "source_field": "PB_RAY_RONG",
+        "operator": "COPY",
+        "operand": 0,
+        "qty_per_set": 1,
+        "formula_display": "PB_RAY_RONG"
+      }
+    },
+    {
+      "//": "Sinh từ cột I sheet ĐM ngày 22/08/2026; gom các dòng nguồn cùng công thức. Chưa qua chủ xưởng duyệt từng dòng.",
+      "type": "BOM Rule",
+      "name": "BOMR-CUA-LUOI-PKS-LUOISN13X26",
+      "data": {
+        "rule_code": "BOMR-CUA-LUOI-PKS-LUOISN13X26",
+        "rule_name": "PKS_LUOISN13X26 — Cửa Lưới",
+        "result_kind": "LENGTH",
+        "rule_version": 1,
+        "authority_type": "SOURCE",
+        "source_sheet": "ĐM",
+        "source_row": 1186,
+        "source_formula_text": "(CAO LƯỚI SNX 13 CÂY/M )-1 CÂY (0,435KG/M)",
+        "source_note": "Máy dịch từ cột I sheet ĐM ngày 2026-08-22; gom từ 2 dòng nguồn giống nhau.",
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa Lưới",
+            "component_item": "PKS_LUOISN13X26",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Sinh từ định mức xưởng; chưa qua chủ xưởng duyệt từng dòng."
+          }
+        ],
+        "result_uom": "Mét",
+        "source_field": "LUOI_CAO",
+        "operator": "COPY",
+        "operand": 0,
+        "qty_per_set": 1,
+        "formula_display": "LUOI_CAO"
+      }
+    },
+    {
+      "//": "Sinh từ cột I sheet ĐM ngày 22/08/2026; gom các dòng nguồn cùng công thức. Chưa qua chủ xưởng duyệt từng dòng.",
+      "type": "BOM Rule",
+      "name": "BOMR-CUA-LUOI-PKS-LUOISNPHI19",
+      "data": {
+        "rule_code": "BOMR-CUA-LUOI-PKS-LUOISNPHI19",
+        "rule_name": "PKS_LUOISNPHI19 — Cửa Lưới",
+        "result_kind": "LENGTH",
+        "rule_version": 1,
+        "authority_type": "SOURCE",
+        "source_sheet": "ĐM",
+        "source_row": 1159,
+        "source_formula_text": "(CAO LƯỚI SNX 13 CÂY/M )-1 CÂY (0,435KG/M)",
+        "source_note": "Máy dịch từ cột I sheet ĐM ngày 2026-08-22; gom từ 2 dòng nguồn giống nhau.",
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa Lưới",
+            "component_item": "PKS_LUOISNPHI19",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Sinh từ định mức xưởng; chưa qua chủ xưởng duyệt từng dòng."
+          }
+        ],
+        "result_uom": "Mét",
+        "source_field": "LUOI_CAO",
+        "operator": "COPY",
+        "operand": 0,
+        "qty_per_set": 1,
+        "formula_display": "LUOI_CAO"
+      }
+    },
+    {
+      "//": "Sinh từ cột I sheet ĐM ngày 22/08/2026; gom các dòng nguồn cùng công thức. Chưa qua chủ xưởng duyệt từng dòng.",
+      "type": "BOM Rule",
+      "name": "BOMR-CUA-LUOI-RT-RAY-U70-RON",
+      "data": {
+        "rule_code": "BOMR-CUA-LUOI-RT-RAY-U70-RON",
+        "rule_name": "RT_RAY_U70_RON — Cửa Lưới",
+        "result_kind": "LENGTH",
+        "rule_version": 1,
+        "authority_type": "SOURCE",
+        "source_sheet": "ĐM",
+        "source_row": 1124,
+        "source_formula_text": "ray = chiều cao - 10cm x số lượng",
+        "source_note": "Máy dịch từ cột I sheet ĐM ngày 2026-08-22; gom từ 1 dòng nguồn giống nhau.",
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa Lưới",
+            "component_item": "RT_RAY_U70_RON",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Sinh từ định mức xưởng; chưa qua chủ xưởng duyệt từng dòng."
+          }
+        ],
+        "result_uom": "Mét",
+        "source_field": "PB_CAO",
+        "operator": "SUBTRACT",
+        "operand": 0.1,
+        "qty_per_set": 2,
+        "formula_display": "PB_CAO - 0,1"
+      }
+    },
+    {
+      "//": "Sinh từ cột I sheet ĐM ngày 22/08/2026; gom các dòng nguồn cùng công thức. Chưa qua chủ xưởng duyệt từng dòng.",
+      "type": "BOM Rule",
+      "name": "BOMR-CUA-LUOI-RT-TR114-1-8",
+      "data": {
+        "rule_code": "BOMR-CUA-LUOI-RT-TR114-1-8",
+        "rule_name": "RT_TR114_1.8 — Cửa Lưới",
+        "result_kind": "LENGTH",
+        "rule_version": 1,
+        "authority_type": "OWNER_CONFIRMED",
+        "source_sheet": "ĐM",
+        "source_row": 1184,
+        "source_formula_text": "Rpbray+20cm",
+        "source_note": "Máy dịch từ cột I sheet ĐM ngày 2026-08-22; gom từ 4 dòng nguồn giống nhau. · Chủ xưởng xác nhận 19/08 và nhắc lại 2026-08-22: nguồn ghi \"Rpbray+20cm\" nhưng thực tế +2cm.",
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa Lưới",
+            "component_item": "RT_TR114_1.8",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Sinh từ định mức xưởng; chưa qua chủ xưởng duyệt từng dòng."
+          }
+        ],
+        "result_uom": "Mét",
+        "source_field": "PB_RAY_RONG",
+        "operator": "ADD",
+        "operand": 0.02,
+        "qty_per_set": 1,
+        "formula_display": "PB_RAY_RONG + 0,02"
+      }
+    },
+    {
+      "//": "Sinh từ cột I sheet ĐM ngày 22/08/2026; gom các dòng nguồn cùng công thức. Chưa qua chủ xưởng duyệt từng dòng.",
+      "type": "BOM Rule",
+      "name": "BOMR-CUA-TAM-LIEN-UC-PKC-3X6M",
+      "data": {
+        "rule_code": "BOMR-CUA-TAM-LIEN-UC-PKC-3X6M",
+        "rule_name": "PKC_3X6M — Cửa tấm liền Úc",
+        "result_kind": "LENGTH",
+        "rule_version": 1,
+        "authority_type": "SOURCE",
+        "source_sheet": "ĐM",
+        "source_row": 718,
+        "source_formula_text": "m = rộng pbray - 30",
+        "source_note": "Máy dịch từ cột I sheet ĐM ngày 2026-08-22; gom từ 10 dòng nguồn giống nhau.",
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa tấm liền Úc",
+            "component_item": "PKC_3X6M",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Sinh từ định mức xưởng; chưa qua chủ xưởng duyệt từng dòng."
+          },
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa Úc",
+            "component_item": "PKC_3X6M",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Thêm 2026-08-22: luật sinh ra với door_type suy từ nhóm hàng, nhưng 8 mã cửa Úc khai door_type \"Cửa Úc\". Cấu kiện này chỉ cửa Úc dùng nên không đụng luật khác."
+          }
+        ],
+        "result_uom": "Mét",
+        "source_field": "PB_RAY_RONG",
+        "operator": "SUBTRACT",
+        "operand": 0.03,
+        "qty_per_set": 1,
+        "formula_display": "PB_RAY_RONG - 0,03"
+      }
+    },
+    {
+      "//": "Sinh từ cột I sheet ĐM ngày 22/08/2026; gom các dòng nguồn cùng công thức. Chưa qua chủ xưởng duyệt từng dòng.",
+      "type": "BOM Rule",
+      "name": "BOMR-CUA-TAM-LIEN-UC-PKC-BO-1VIS-AL701LOP",
+      "data": {
+        "rule_code": "BOMR-CUA-TAM-LIEN-UC-PKC-BO-1VIS-AL701LOP",
+        "rule_name": "PKC_BO_1VIS_AL701LOP — Cửa tấm liền Úc",
+        "result_kind": "LENGTH",
+        "rule_version": 1,
+        "authority_type": "SOURCE",
+        "source_sheet": "ĐM",
+        "source_row": 1088,
+        "source_formula_text": "rộng cắt lá x TL 0,117",
+        "source_note": "Máy dịch từ cột I sheet ĐM ngày 2026-08-22; gom từ 1 dòng nguồn giống nhau.",
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa tấm liền Úc",
+            "component_item": "PKC_BO_1VIS_AL701LOP",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Sinh từ định mức xưởng; chưa qua chủ xưởng duyệt từng dòng."
+          }
+        ],
+        "result_uom": "Mét",
+        "source_field": "CAT_LA_RONG",
+        "operator": "COPY",
+        "operand": 0,
+        "qty_per_set": 1,
+        "formula_display": "CAT_LA_RONG"
+      }
+    },
+    {
+      "//": "Sinh từ cột I sheet ĐM ngày 22/08/2026; gom các dòng nguồn cùng công thức. Chưa qua chủ xưởng duyệt từng dòng.",
+      "type": "BOM Rule",
+      "name": "BOMR-CUA-TAM-LIEN-UC-PKC-BO-1VIS-AL702LOP",
+      "data": {
+        "rule_code": "BOMR-CUA-TAM-LIEN-UC-PKC-BO-1VIS-AL702LOP",
+        "rule_name": "PKC_BO_1VIS_AL702LOP — Cửa tấm liền Úc",
+        "result_kind": "AREA",
+        "rule_version": 1,
+        "authority_type": "SOURCE",
+        "source_sheet": "ĐM",
+        "source_row": 1063,
+        "source_formula_text": "Cao x Rộng cắt lá x TL 0,0093",
+        "source_note": "Máy dịch từ cột I sheet ĐM ngày 2026-08-22; gom từ 1 dòng nguồn giống nhau.",
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa tấm liền Úc",
+            "component_item": "PKC_BO_1VIS_AL702LOP",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Sinh từ định mức xưởng; chưa qua chủ xưởng duyệt từng dòng."
+          }
+        ],
+        "result_uom": "m2",
+        "operator": "PRODUCT",
+        "source_field": "PB_CAO",
+        "source_field_2": "CAT_LA_RONG",
+        "source_field_2_offset": 0,
+        "qty_per_set": 1,
+        "formula_display": "PB_CAO × (CAT_LA_RONG)"
+      }
+    },
+    {
+      "//": "Sinh từ cột I sheet ĐM ngày 22/08/2026; gom các dòng nguồn cùng công thức. Chưa qua chủ xưởng duyệt từng dòng.",
+      "type": "BOM Rule",
+      "name": "BOMR-CUA-TAM-LIEN-UC-PKC-RON-DD",
+      "data": {
+        "rule_code": "BOMR-CUA-TAM-LIEN-UC-PKC-RON-DD",
+        "rule_name": "PKC_RON_DD — Cửa tấm liền Úc",
+        "result_kind": "LENGTH",
+        "rule_version": 1,
+        "authority_type": "SOURCE",
+        "source_sheet": "ĐM",
+        "source_row": 1062,
+        "source_formula_text": "rộng cắt lá x TL 0,117",
+        "source_note": "Máy dịch từ cột I sheet ĐM ngày 2026-08-22; gom từ 2 dòng nguồn giống nhau.",
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa tấm liền Úc",
+            "component_item": "PKC_RON_DD",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Sinh từ định mức xưởng; chưa qua chủ xưởng duyệt từng dòng."
+          }
+        ],
+        "result_uom": "Mét",
+        "source_field": "CAT_LA_RONG",
+        "operator": "COPY",
+        "operand": 0,
+        "qty_per_set": 1,
+        "formula_display": "CAT_LA_RONG"
+      }
+    },
+    {
+      "//": "Sinh từ cột I sheet ĐM ngày 22/08/2026; gom các dòng nguồn cùng công thức. Chưa qua chủ xưởng duyệt từng dòng.",
+      "type": "BOM Rule",
+      "name": "BOMR-CUA-TAM-LIEN-UC-PKC-RONDAYUC",
+      "data": {
+        "rule_code": "BOMR-CUA-TAM-LIEN-UC-PKC-RONDAYUC",
+        "rule_name": "PKC_RONDAYUC — Cửa tấm liền Úc",
+        "result_kind": "LENGTH",
+        "rule_version": 1,
+        "authority_type": "SOURCE",
+        "source_sheet": "ĐM",
+        "source_row": 693,
+        "source_formula_text": "ron đáy = chiều rộng pbray x 0.0077",
+        "source_note": "Máy dịch từ cột I sheet ĐM ngày 2026-08-22; gom từ 19 dòng nguồn giống nhau.",
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa tấm liền Úc",
+            "component_item": "PKC_RONDAYUC",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Sinh từ định mức xưởng; chưa qua chủ xưởng duyệt từng dòng."
+          },
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa Úc",
+            "component_item": "PKC_RONDAYUC",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Thêm 2026-08-22: luật sinh ra với door_type suy từ nhóm hàng, nhưng 8 mã cửa Úc khai door_type \"Cửa Úc\". Cấu kiện này chỉ cửa Úc dùng nên không đụng luật khác."
+          }
+        ],
+        "result_uom": "Mét",
+        "source_field": "PB_RAY_RONG",
+        "operator": "COPY",
+        "operand": 0,
+        "qty_per_set": 1,
+        "formula_display": "PB_RAY_RONG"
+      }
+    },
+    {
+      "//": "Sinh từ cột I sheet ĐM ngày 22/08/2026; gom các dòng nguồn cùng công thức. Chưa qua chủ xưởng duyệt từng dòng.",
+      "type": "BOM Rule",
+      "name": "BOMR-CUA-TAM-LIEN-UC-PKC-VDAY-TDU",
+      "data": {
+        "rule_code": "BOMR-CUA-TAM-LIEN-UC-PKC-VDAY-TDU",
+        "rule_name": "PKC_VDAY_TDU — Cửa tấm liền Úc",
+        "result_kind": "LENGTH",
+        "rule_version": 1,
+        "authority_type": "SOURCE",
+        "source_sheet": "ĐM",
+        "source_row": 685,
+        "source_formula_text": "(rong pbray-30)x 0.6xSL",
+        "source_note": "Máy dịch từ cột I sheet ĐM ngày 2026-08-22; gom từ 19 dòng nguồn giống nhau.",
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa tấm liền Úc",
+            "component_item": "PKC_VDAY_TDU",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Sinh từ định mức xưởng; chưa qua chủ xưởng duyệt từng dòng."
+          },
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa Úc",
+            "component_item": "PKC_VDAY_TDU",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Thêm 2026-08-22: luật sinh ra với door_type suy từ nhóm hàng, nhưng 8 mã cửa Úc khai door_type \"Cửa Úc\". Cấu kiện này chỉ cửa Úc dùng nên không đụng luật khác."
+          }
+        ],
+        "result_uom": "Mét",
+        "source_field": "PB_RAY_RONG",
+        "operator": "SUBTRACT",
+        "operand": 0.03,
+        "qty_per_set": 1,
+        "formula_display": "PB_RAY_RONG - 0,03"
+      }
+    },
+    {
+      "//": "Sinh từ cột I sheet ĐM ngày 22/08/2026; gom các dòng nguồn cùng công thức. Chưa qua chủ xưởng duyệt từng dòng.",
+      "type": "BOM Rule",
+      "name": "BOMR-CUA-TAM-LIEN-UC-PKC-XOP-N45",
+      "data": {
+        "rule_code": "BOMR-CUA-TAM-LIEN-UC-PKC-XOP-N45",
+        "rule_name": "PKC_XOP_N45 — Cửa tấm liền Úc",
+        "result_kind": "COUNT",
+        "rule_version": 1,
+        "authority_type": "SOURCE",
+        "source_sheet": "ĐM",
+        "source_row": 695,
+        "source_formula_text": "xốp = ((chiều rộng pbray/45 cm))*2",
+        "source_note": "Máy dịch từ cột I sheet ĐM ngày 2026-08-22; gom từ 21 dòng nguồn giống nhau.",
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa tấm liền Úc",
+            "component_item": "PKC_XOP_N45",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Sinh từ định mức xưởng; chưa qua chủ xưởng duyệt từng dòng."
+          },
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa Úc",
+            "component_item": "PKC_XOP_N45",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Thêm 2026-08-22: luật sinh ra với door_type suy từ nhóm hàng, nhưng 8 mã cửa Úc khai door_type \"Cửa Úc\". Cấu kiện này chỉ cửa Úc dùng nên không đụng luật khác."
+          }
+        ],
+        "result_uom": "Cái",
+        "operator": "DIVIDE",
+        "source_field": "PB_RAY_RONG",
+        "operand": 0.45,
+        "multiply": 2,
+        "final_add": 0,
+        "rounding": "CEIL",
+        "precision": 0,
+        "qty_per_set": 1,
+        "formula_display": "CEIL(PB_RAY_RONG ÷ 0,45 × 2)"
+      }
+    },
+    {
+      "//": "Sinh từ cột I sheet ĐM ngày 22/08/2026; gom các dòng nguồn cùng công thức. Chưa qua chủ xưởng duyệt từng dòng.",
+      "type": "BOM Rule",
+      "name": "BOMR-CUA-TAM-LIEN-UC-PKDUC-VIS",
+      "data": {
+        "rule_code": "BOMR-CUA-TAM-LIEN-UC-PKDUC-VIS",
+        "rule_name": "PKDUC_VIS — Cửa tấm liền Úc",
+        "result_kind": "AREA",
+        "rule_version": 1,
+        "authority_type": "SOURCE",
+        "source_sheet": "ĐM",
+        "source_row": 1064,
+        "source_formula_text": "Cao x Rộng cắt lá x TL 0,0093",
+        "source_note": "Máy dịch từ cột I sheet ĐM ngày 2026-08-22; gom từ 2 dòng nguồn giống nhau.",
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa tấm liền Úc",
+            "component_item": "PKDUC_VIS",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Sinh từ định mức xưởng; chưa qua chủ xưởng duyệt từng dòng."
+          }
+        ],
+        "result_uom": "m2",
+        "operator": "PRODUCT",
+        "source_field": "PB_CAO",
+        "source_field_2": "CAT_LA_RONG",
+        "source_field_2_offset": 0,
+        "qty_per_set": 1,
+        "formula_display": "PB_CAO × (CAT_LA_RONG)"
+      }
+    },
+    {
+      "//": "Sinh từ cột I sheet ĐM ngày 22/08/2026; gom các dòng nguồn cùng công thức. Chưa qua chủ xưởng duyệt từng dòng.",
+      "type": "BOM Rule",
+      "name": "BOMR-CUA-TAM-LIEN-UC-RT-RAY-U70-KRON",
+      "data": {
+        "rule_code": "BOMR-CUA-TAM-LIEN-UC-RT-RAY-U70-KRON",
+        "rule_name": "RT_RAY_U70_KRON — Cửa tấm liền Úc",
+        "result_kind": "LENGTH",
+        "rule_version": 1,
+        "authority_type": "SOURCE",
+        "source_sheet": "ĐM",
+        "source_row": 694,
+        "source_formula_text": "ray = (chiều cao - 10cm) x số lượng bộ cửa x 2 x1.78",
+        "source_note": "Máy dịch từ cột I sheet ĐM ngày 2026-08-22; gom từ 19 dòng nguồn giống nhau.",
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa tấm liền Úc",
+            "component_item": "RT_RAY_U70_KRON",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Sinh từ định mức xưởng; chưa qua chủ xưởng duyệt từng dòng."
+          }
+        ],
+        "result_uom": "Mét",
+        "source_field": "PB_CAO",
+        "operator": "SUBTRACT",
+        "operand": 0.1,
+        "qty_per_set": 2,
+        "formula_display": "PB_CAO - 0,1"
+      }
+    },
+    {
+      "//": "Sinh từ cột I sheet ĐM ngày 22/08/2026; gom các dòng nguồn cùng công thức. Chưa qua chủ xưởng duyệt từng dòng.",
+      "type": "BOM Rule",
+      "name": "BOMR-CUA-TAM-LIEN-UC-RT-TR114-1-8",
+      "data": {
+        "rule_code": "BOMR-CUA-TAM-LIEN-UC-RT-TR114-1-8",
+        "rule_name": "RT_TR114_1.8 — Cửa tấm liền Úc",
+        "result_kind": "LENGTH",
+        "rule_version": 1,
+        "authority_type": "SOURCE",
+        "source_sheet": "ĐM",
+        "source_row": 721,
+        "source_formula_text": "trục = chiều rộngpbray+40cm",
+        "source_note": "Máy dịch từ cột I sheet ĐM ngày 2026-08-22; gom từ 9 dòng nguồn giống nhau.",
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa tấm liền Úc",
+            "component_item": "RT_TR114_1.8",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Sinh từ định mức xưởng; chưa qua chủ xưởng duyệt từng dòng."
+          },
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa Úc",
+            "component_item": "RT_TR114_1.8",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Thêm 2026-08-22: luật sinh ra với door_type suy từ nhóm hàng, nhưng 8 mã cửa Úc khai door_type \"Cửa Úc\". Cấu kiện này chỉ cửa Úc dùng nên không đụng luật khác."
+          }
+        ],
+        "result_uom": "Mét",
+        "source_field": "PB_RAY_RONG",
+        "operator": "ADD",
+        "operand": 0.4,
+        "qty_per_set": 1,
+        "formula_display": "PB_RAY_RONG + 0,4"
+      }
+    },
+    {
+      "//": "Sinh từ cột I sheet ĐM ngày 22/08/2026; gom các dòng nguồn cùng công thức. Chưa qua chủ xưởng duyệt từng dòng.",
+      "type": "BOM Rule",
+      "name": "BOMR-CUA-TAM-LIEN-UC-RT-TRUC34",
+      "data": {
+        "rule_code": "BOMR-CUA-TAM-LIEN-UC-RT-TRUC34",
+        "rule_name": "RT_TRUC34 — Cửa tấm liền Úc",
+        "result_kind": "LENGTH",
+        "rule_version": 1,
+        "authority_type": "SOURCE",
+        "source_sheet": "ĐM",
+        "source_row": 696,
+        "source_formula_text": "trục = (chiều rộngpbray+40cm )x1.7X SL",
+        "source_note": "Máy dịch từ cột I sheet ĐM ngày 2026-08-22; gom từ 12 dòng nguồn giống nhau.",
+        "applicability": [
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa tấm liền Úc",
+            "component_item": "RT_TRUC34",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Sinh từ định mức xưởng; chưa qua chủ xưởng duyệt từng dòng."
+          },
+          {
+            "scope_type": "DOOR_TYPE",
+            "door_type": "Cửa Úc",
+            "component_item": "RT_TRUC34",
+            "priority": 50,
+            "effective_from": "2026-08-22",
+            "note": "Thêm 2026-08-22: luật sinh ra với door_type suy từ nhóm hàng, nhưng 8 mã cửa Úc khai door_type \"Cửa Úc\". Cấu kiện này chỉ cửa Úc dùng nên không đụng luật khác."
+          }
+        ],
+        "result_uom": "Mét",
+        "source_field": "PB_RAY_RONG",
+        "operator": "ADD",
+        "operand": 0.4,
+        "qty_per_set": 1,
+        "formula_display": "PB_RAY_RONG + 0,4"
+      }
+    },
+    {
+      "//": "Số đo khoảng hở thật của công trình. Bảng quy đổi sang phủ bì nằm ở sheet GHI CHÚ — xem docs/source-data/ALUMDOOR-QUY-DOI-LOT-LONG-PHU-BI.md. Chưa nối được vào luật cắt vì engine chưa cho bắc cầu qua trường Tự tính.",
+      "type": "Geometry Field",
+      "name": "LOT_LONG_CAO",
+      "data": {
+        "field_code": "LOT_LONG_CAO",
+        "field_name": "Cao lọt lòng",
+        "uom": "Mét",
+        "axis": "HEIGHT",
+        "disabled": false
+      }
+    },
+    {
+      "//": "Số đo khoảng hở thật của công trình. Bảng quy đổi sang phủ bì nằm ở sheet GHI CHÚ — xem docs/source-data/ALUMDOOR-QUY-DOI-LOT-LONG-PHU-BI.md. Chưa nối được vào luật cắt vì engine chưa cho bắc cầu qua trường Tự tính.",
+      "type": "Geometry Field",
+      "name": "LOT_LONG_RONG",
+      "data": {
+        "field_code": "LOT_LONG_RONG",
+        "field_name": "Rộng lọt lòng",
+        "uom": "Mét",
+        "axis": "WIDTH",
         "disabled": false
       }
     }
@@ -5029,8 +6428,8 @@
           "fieldname": "last_purchase_rate",
           "label": "Giá mua gần nhất",
           "fieldtype": "Currency",
-          "hidden": true,
-          "description": "Đơn giá của lần mua gần nhất từ nhà cung cấp này. Chỉ để tham khảo khi đặt hàng, máy không tự lấy làm giá."
+          "description": "Đơn giá của lần mua gần nhất từ nhà cung cấp này. Chỉ để tham khảo khi đặt hàng, máy không tự lấy làm giá.",
+          "read_only": true
         },
         "note:Small Text Ghi chú",
         "disabled:Check Ngừng dùng"
@@ -5042,7 +6441,7 @@
         "Sản xuất": "r",
         "Kinh doanh": "r"
       },
-      "menu": false
+      "menu": true
     },
     {
       "//": "Bộ theo dõi chỉ quyết định kho cần ghi nhận gì; thông số cố định nằm ở Quy cách kỹ thuật vật tư.",
@@ -5227,7 +6626,8 @@
           "fieldtype": "Link",
           "options": "Measurement Profile",
           "label": "Bộ theo dõi vật tư",
-          "required": true
+          "required": true,
+          "description": "Quyết định cách theo dõi tồn kho của TOÀN BỘ mặt hàng này (theo cây, mét, kg, lô...). Chọn sai bộ theo dõi thì mọi phiếu nhập/xuất sau này tính tồn sai theo đúng kiểu đã chọn. Mặt hàng không cần theo dõi đặc biệt thì chọn \"Hàng thường\"."
         },
         {
           "fieldname": "geometry_profile",
@@ -5280,6 +6680,23 @@
           "label": "Diện tích tối thiểu tính tiền (m2/bộ)",
           "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'",
           "description": "Diện tích tối thiểu tính tiền cho một bộ. Bộ nhỏ hơn mức này VẪN tính bằng mức này — khai 4 m² thì bộ 3,2 m² vẫn thu tiền 4 m²."
+        },
+        {
+          "fieldname": "gift_rail_min_area_sqm",
+          "fieldtype": "Float",
+          "label": "Ngưỡng tặng ray (m²/bộ)",
+          "default": 8,
+          "depends_on": "eval:doc.door_type == 'Cửa Đức'",
+          "description": "Nguồn QUY CÁCH (3).xlsx/ĐƠN GIÁ TRỌN BỘ: chỉ tặng ray khi diện tích một bộ vượt ngưỡng này."
+        },
+        {
+          "fieldname": "gift_rail_area_operator",
+          "fieldtype": "Select",
+          "label": "Toán tử ngưỡng tặng ray",
+          "options": "GT\nGTE",
+          "default": "GT",
+          "depends_on": "eval:doc.door_type == 'Cửa Đức'",
+          "description": "GT = lớn hơn nghiêm ngặt; GTE = lớn hơn hoặc bằng. Quyết định chủ xưởng 22/08/2026 dùng GT (>8 m²)."
         },
         "description:Small Text Quy cách / xuất xứ",
         "disabled:Check Ngừng kinh doanh",
@@ -5591,7 +7008,8 @@
           "options": "Bậc diện tích",
           "required": true,
           "default": "MOI-DIEN-TICH",
-          "link_filters": "{\"disabled\":0}"
+          "link_filters": "{\"disabled\":0}",
+          "description": "Bậc diện tích mà dòng giá này áp dụng. Mặc định \"Mọi diện tích\" (một giá dùng chung cho mọi kích thước) — chỉ đổi sang một bậc cụ thể khi mặt hàng có bảng giá phân theo diện tích khác nhau. Không được để trống: hệ thống dùng giá trị này để đặt tên bản ghi."
         },
         {
           "fieldname": "price_variant",
@@ -5913,6 +7331,8 @@
         "item_code",
         "sales_mode",
         "color",
+        "width_pb_ray_m",
+        "width_pb_nhua_m",
         "width_m",
         "height_m",
         "set_count",
@@ -5996,6 +7416,22 @@
           "fieldtype": "Link",
           "options": "Item Color",
           "depends_on": "eval:doc.inventory_mode != 'Hàng thường'",
+          "surface": "quick"
+        },
+        {
+          "label": "Rộng PB ray (m)",
+          "fieldname": "width_pb_ray_m",
+          "fieldtype": "Float",
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'",
+          "description": "Rộng phủ bì đo theo ray cho khách Lẻ; là field riêng, không dùng chung với rộng PB nhựa.",
+          "surface": "quick"
+        },
+        {
+          "label": "Rộng PB nhựa (m)",
+          "fieldname": "width_pb_nhua_m",
+          "fieldtype": "Float",
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'",
+          "description": "Rộng phủ bì đo theo nhựa cho khách Đại lý; là field riêng, không dùng chung với rộng PB ray.",
           "surface": "quick"
         },
         {
@@ -6345,8 +7781,12 @@
           "fieldname": "rate",
           "fieldtype": "Currency",
           "required": true,
-          "description": "Đơn giá cho MỘT đơn vị ở dòng này, chưa gồm thuế. Máy tra từ bảng giá theo mặt hàng + ĐVT + biến thể giá; gõ đè lên đây là bỏ qua giá đã tra.",
-          "surface": "quick"
+          "description": "Đơn giá do server lấy từ bảng giá, Item, ĐVT bán và biến thể; người nhập không được sửa tay.",
+          "surface": "quick",
+          "read_only": true,
+          "valueSource": "formula",
+          "editMode": "readonly",
+          "serverEnforced": true
         },
         {
           "label": "Tiền CK",
@@ -6421,6 +7861,8 @@
           "item_code",
           "color",
           "height_m",
+          "width_pb_ray_m",
+          "width_pb_nhua_m",
           "width_m",
           "set_count",
           "has_butterfly_bracket",
@@ -6453,6 +7895,8 @@
           "item_code",
           "color",
           "height_m",
+          "width_pb_ray_m",
+          "width_pb_nhua_m",
           "width_m",
           "set_count",
           "has_butterfly_bracket",
@@ -6604,6 +8048,8 @@
         "item_code",
         "sales_mode",
         "color",
+        "width_pb_ray_m",
+        "width_pb_nhua_m",
         "width_m",
         "height_m",
         "set_count",
@@ -6687,6 +8133,22 @@
           "fieldtype": "Link",
           "options": "Item Color",
           "depends_on": "eval:doc.inventory_mode != 'Hàng thường'",
+          "surface": "quick"
+        },
+        {
+          "label": "Rộng PB ray (m)",
+          "fieldname": "width_pb_ray_m",
+          "fieldtype": "Float",
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'",
+          "description": "Rộng phủ bì đo theo ray cho khách Lẻ; là field riêng, không dùng chung với rộng PB nhựa.",
+          "surface": "quick"
+        },
+        {
+          "label": "Rộng PB nhựa (m)",
+          "fieldname": "width_pb_nhua_m",
+          "fieldtype": "Float",
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'",
+          "description": "Rộng phủ bì đo theo nhựa cho khách Đại lý; là field riêng, không dùng chung với rộng PB ray.",
           "surface": "quick"
         },
         {
@@ -7060,8 +8522,12 @@
           "fieldname": "rate",
           "fieldtype": "Currency",
           "required": true,
-          "description": "Đơn giá cho MỘT đơn vị ở dòng này, chưa gồm thuế. Máy tra từ bảng giá theo mặt hàng + ĐVT + biến thể giá; gõ đè lên đây là bỏ qua giá đã tra.",
-          "surface": "quick"
+          "description": "Đơn giá do server lấy từ bảng giá, Item, ĐVT bán và biến thể; người nhập không được sửa tay.",
+          "surface": "quick",
+          "read_only": true,
+          "valueSource": "formula",
+          "editMode": "readonly",
+          "serverEnforced": true
         },
         {
           "label": "Tiền CK",
@@ -7174,6 +8640,8 @@
           "item_code",
           "color",
           "height_m",
+          "width_pb_ray_m",
+          "width_pb_nhua_m",
           "width_m",
           "set_count",
           "has_butterfly_bracket",
@@ -7205,6 +8673,8 @@
           "item_code",
           "color",
           "height_m",
+          "width_pb_ray_m",
+          "width_pb_nhua_m",
           "width_m",
           "set_count",
           "has_butterfly_bracket",
@@ -7292,9 +8762,13 @@
           "fieldname": "responsible_person",
           "fieldtype": "Link",
           "options": "Employee",
-          "fetch_from": "customer.account_manager",
           "link_filters": "{\"employee_status\":\"Đang làm việc\"}",
-          "form_region": "main"
+          "form_region": "main",
+          "read_only": true,
+          "valueSource": "system",
+          "editMode": "readonly",
+          "serverEnforced": true,
+          "description": "Tự lấy Nhân viên đang làm việc gắn với user đăng nhập."
         },
         {
           "fieldname": "manual_note",
@@ -7335,12 +8809,14 @@
           "form_region": "aside"
         },
         {
-          "label": "Nhóm khách hàng",
+          "label": "Nhóm giá",
           "//": "Nạp mặc định từ hồ sơ khách nhưng được phép chọn lại trên từng đơn; giá và công thức dùng snapshot này.",
           "fieldname": "customer_group",
           "fieldtype": "Select",
           "options": "Đại lý\nLẻ",
-          "form_region": "main"
+          "form_region": "main",
+          "read_only": true,
+          "fetch_from": "customer.price_group"
         },
         {
           "fieldname": "contact_person",
@@ -7469,6 +8945,23 @@
           "read_only": true,
           "form_region": "full",
           "form_width": "full"
+        },
+        {
+          "label": "Tiền cọc",
+          "fieldname": "deposit_amount",
+          "fieldtype": "Currency",
+          "default": 0,
+          "form_region": "full",
+          "form_width": "full",
+          "description": "Số tiền khách đặt cọc khi tạo đơn. Không được lớn hơn Tiền phải thu."
+        },
+        {
+          "label": "Còn phải thu",
+          "fieldname": "outstanding_amount",
+          "fieldtype": "Currency",
+          "read_only": true,
+          "form_region": "full",
+          "form_width": "full"
         }
       ],
       "permissions": {
@@ -7506,7 +8999,9 @@
           "surcharge_amount",
           "vat_rate",
           "vat_amount",
-          "grand_total"
+          "grand_total",
+          "deposit_amount",
+          "outstanding_amount"
         ],
         "previewMethod": "alumdoor.ui.preview_document",
         "previewParentFields": [
@@ -7515,6 +9010,7 @@
           "items",
           "vat_rate",
           "surcharge_amount",
+          "deposit_amount",
           "additional_discount_percentage"
         ]
       }
@@ -8486,35 +9982,20 @@
       "title": "item_code",
       "list": [
         "item_code",
+        "qty_basis",
         "qty",
-        "source_warehouse"
+        "bom_rule",
+        "uom",
+        "note"
       ],
       "fields": [
         {
-          "fieldname": "item_code",
           "label": "Vật tư",
+          "fieldname": "item_code",
           "fieldtype": "Link",
           "options": "Item",
           "required": true,
           "surface": "quick"
-        },
-        {
-          "fieldname": "qty",
-          "label": "SL",
-          "fieldtype": "Float",
-          "required": true,
-          "surface": "quick"
-        },
-        {
-          "label": "ĐVT định mức",
-          "//": "ĐƠN VỊ của con số định mức — không phải đơn vị tồn của vật tư.",
-          "//vi-du": [
-            "Bù lon khai 0,096 KG/CON: tồn đếm theo CON, còn định mức tính theo KG.",
-            "Ray sắt khai 1,78 KG/M NGANG: mỗi mét bề ngang cửa ăn 1,78 kg ray."
-          ],
-          "fieldname": "uom",
-          "fieldtype": "Data",
-          "surface": "expanded"
         },
         {
           "label": "Nhân theo",
@@ -8530,7 +10011,39 @@
           "fieldtype": "Select",
           "options": "Cố định\nTheo chiều cao\nTheo chiều rộng\nTheo diện tích\nTheo số lá",
           "default": "Cố định",
-          "surface": "expanded"
+          "surface": "quick"
+        },
+        {
+          "label": "SL",
+          "fieldname": "qty",
+          "fieldtype": "Float",
+          "required": true,
+          "surface": "quick"
+        },
+        {
+          "label": "Quy tắc BOM",
+          "fieldname": "bom_rule",
+          "fieldtype": "Link",
+          "options": "BOM Rule",
+          "description": "Chọn khi Cách tính KHÔNG phải Cố định. Luật giữ công thức, số cây và ĐVT — cụ thể hơn hẳn \"theo chiều rộng\", vốn không nói rộng nào trừ bao nhiêu.",
+          "surface": "quick"
+        },
+        {
+          "label": "ĐVT định mức",
+          "//": "ĐƠN VỊ của con số định mức — không phải đơn vị tồn của vật tư.",
+          "//vi-du": [
+            "Bù lon khai 0,096 KG/CON: tồn đếm theo CON, còn định mức tính theo KG.",
+            "Ray sắt khai 1,78 KG/M NGANG: mỗi mét bề ngang cửa ăn 1,78 kg ray."
+          ],
+          "fieldname": "uom",
+          "fieldtype": "Data",
+          "surface": "quick"
+        },
+        {
+          "label": "Ghi chú",
+          "fieldname": "note",
+          "fieldtype": "Data",
+          "surface": "quick"
         },
         {
           "label": "Ghi chú nguồn",
@@ -8541,20 +10054,6 @@
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true
-        },
-        {
-          "label": "Kho xuất vật tư",
-          "fieldname": "source_warehouse",
-          "fieldtype": "Link",
-          "options": "Warehouse",
-          "link_filters": "{\"is_group\":0,\"disabled\":0}",
-          "surface": "quick"
-        },
-        {
-          "fieldname": "note",
-          "label": "Ghi chú",
-          "fieldtype": "Data",
-          "surface": "expanded"
         }
       ],
       "permissions": {
@@ -8566,18 +10065,21 @@
       "form": {
         "fields": [
           "item_code",
-          "qty",
-          "uom",
           "qty_basis",
-          "source_warehouse",
+          "qty",
+          "bom_rule",
+          "uom",
           "note"
         ]
       },
       "quickEntry": {
         "fields": [
           "item_code",
+          "qty_basis",
           "qty",
-          "source_warehouse"
+          "bom_rule",
+          "uom",
+          "note"
         ]
       }
     },
@@ -9547,7 +11049,8 @@
         "schedule_date",
         "priority",
         "grand_total",
-        "received_percentage"
+        "received_percentage",
+        "billed_percentage"
       ],
       "search": [
         "supplier"
@@ -9562,13 +11065,20 @@
         "company:Link(Company)-!=(ALUMDOOR) Công ty",
         "currency:Link(Currency)-!=(VND) Tiền tệ",
         "supplier_quotation:Link(Supplier Quotation)- Theo báo giá NCC",
+        "material_request:Link(Material Request)- Theo yêu cầu vật tư",
         {
           "fieldname": "received_percentage",
           "label": "Đã nhận (%)",
           "fieldtype": "Percent",
           "read_only": true,
-          "hidden": true,
           "description": "Phần trăm đã nhận của đơn mua, tính theo số lượng."
+        },
+        {
+          "fieldname": "billed_percentage",
+          "label": "Đã xuất HĐ (%)",
+          "fieldtype": "Percent",
+          "read_only": true,
+          "description": "Phần trăm đã xuất hoá đơn mua của đơn này, tính theo số lượng."
         }
       ],
       "permissions": {
@@ -11576,12 +13086,15 @@
         "batch_no",
         "target_color",
         "qty",
-        "state"
+        "state",
+        "is_outsourced",
+        "outsource_supplier"
       ],
       "search": [
         "work_order",
         "cut_order",
-        "batch_no"
+        "batch_no",
+        "outsource_supplier"
       ],
       "fields": [
         "work_order:Link(Work Order)! Lệnh sản xuất",
@@ -11597,7 +13110,16 @@
         "planned_on:Datetime Ngày vào lò dự kiến",
         "completed_on:Datetime Hoàn thành lúc",
         "kcs_by:Link(User) KCS xác nhận",
-        "note:Small Text Ghi chú"
+        "note:Small Text Ghi chú",
+        "is_outsourced:Check Sơn thuê ngoài",
+        "outsource_supplier:Link(Supplier) NCC sơn thuê ngoài",
+        "outsource_formula:Select(Cửa Đức: RCL×Số lá×Số lớp,Cửa Úc: Cao×RCL×2 mặt,Khác - nhập tay) Công thức tính giá thuê sơn",
+        "outsource_width_m:Float RCL - Rộng cắt lá (m)",
+        "outsource_leaf_count:Int Số lá",
+        "outsource_layer_count:Int Số lớp",
+        "outsource_height_m:Float Cao (m)",
+        "outsource_rate:Currency Đơn giá thuê sơn",
+        "outsource_amount:Currency Thành tiền thuê sơn"
       ],
       "permissions": {
         "Chủ xưởng": "rwc",
@@ -12121,6 +13643,29 @@
       }
     },
     {
+      "name": "Debt Report Access",
+      "label": "Quyền báo cáo công nợ",
+      "menu": false,
+      "fields": [
+        {
+          "fieldname": "note",
+          "fieldtype": "Small Text",
+          "label": "Ghi chú",
+          "read_only": true
+        }
+      ],
+      "permissions": {
+        "Kế toán": "r",
+        "Chủ xưởng": "r",
+        "Kinh doanh": "r",
+        "General Accountant": "r",
+        "Chief Accountant": "r",
+        "Kế toán tổng hợp": "r",
+        "Kế toán trưởng": "r",
+        "Giám đốc": "r"
+      }
+    },
+    {
       "name": "Warranty Cost Item",
       "child": true,
       "label": "Chi phí xử lý lỗi",
@@ -12579,7 +14124,19 @@
         "Chủ xưởng": "rwc",
         "Sản xuất": "rwc",
         "Kinh doanh": "r"
-      }
+      },
+      "list": [
+        "template_code",
+        "item_code",
+        "source_status",
+        "priority",
+        "disabled"
+      ],
+      "search": [
+        "template_code",
+        "item_code",
+        "source_ref"
+      ]
     },
     {
       "//": "Chip lý do khi huỷ/đảo chứng từ. screen-catalog: bước LÙI bắt buộc chọn, không cho bỏ trống.",
@@ -13474,7 +15031,9 @@
           "fieldname": "members",
           "fieldtype": "Table",
           "options": "Pricing Scope Member",
-          "label": "Mặt hàng / nhóm hàng áp dụng"
+          "label": "Mặt hàng / nhóm hàng áp dụng",
+          "required": true,
+          "description": "Danh sách mặt hàng/nhóm hàng mà phạm vi này áp dụng. Để trống thì phạm vi không match được mặt hàng nào — mọi chính sách giá tham chiếu tới nó sẽ không bao giờ chạy. Phải khai ít nhất một dòng."
         },
         "note:Small Text Ghi chú",
         "disabled:Check Ngừng dùng"
@@ -13685,6 +15244,36 @@
           "surface": "quick"
         },
         {
+          "label": "Mã giá",
+          "fieldname": "price_variant",
+          "fieldtype": "Data",
+          "description": "Để trống = mọi mã giá; có giá trị = chỉ áp đúng biến thể này.",
+          "surface": "expanded"
+        },
+        {
+          "label": "Diện tích từ (m²)",
+          "fieldname": "min_area_sqm",
+          "fieldtype": "Float",
+          "description": "Cận dưới; cách tính tại trường Toán tử cận dưới.",
+          "surface": "expanded"
+        },
+        {
+          "label": "Toán tử cận dưới",
+          "fieldname": "min_area_operator",
+          "fieldtype": "Select",
+          "options": "GTE\nGT",
+          "default": "GTE",
+          "description": "GTE = lớn hơn hoặc bằng; GT = lớn hơn nghiêm ngặt.",
+          "surface": "expanded"
+        },
+        {
+          "label": "Diện tích đến (m²)",
+          "fieldname": "max_area_sqm",
+          "fieldtype": "Float",
+          "description": "Cận trên bao gồm; để trống = không giới hạn.",
+          "surface": "expanded"
+        },
+        {
           "fieldname": "bom",
           "label": "BOM",
           "fieldtype": "Link",
@@ -13736,6 +15325,10 @@
           "parent_item_group",
           "door_type",
           "component_item",
+          "price_variant",
+          "min_area_sqm",
+          "min_area_operator",
+          "max_area_sqm",
           "bom",
           "priority",
           "effective_from",
@@ -14677,6 +16270,23 @@
       ],
       "icon": "panels-top-left",
       "group": "Bán hàng"
+    },
+    {
+      "key": "alumdoor-debt:workbench",
+      "label": "Báo cáo công nợ",
+      "permission": "Debt Report Access",
+      "roles": [
+        "Kế toán",
+        "Chủ xưởng",
+        "Kinh doanh",
+        "General Accountant",
+        "Chief Accountant",
+        "Kế toán tổng hợp",
+        "Kế toán trưởng",
+        "Giám đốc"
+      ],
+      "icon": "wallet",
+      "group": "Công nợ"
     }
   ],
   "customFields": {

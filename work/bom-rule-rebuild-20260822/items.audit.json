@@ -1,0 +1,238 @@
+{
+  "format": "alumdoor-item-master-audit/v2",
+  "generated_from": "C:\\alumdoor\\work\\bom-rule-rebuild-20260822\\source.json",
+  "source_record_count": 2149,
+  "source_identity_count": 587,
+  "source_alias_count": 573,
+  "source_promotion_count": 73,
+  "source_excluded_count": 267,
+  "source_reference_count": 1232,
+  "source_blocker_count": 0,
+  "item_master_blocker_count": 0,
+  "bom_blocker_count": 0,
+  "other_blocker_count": 0,
+  "item_master_blockers": [],
+  "bom_blockers": [],
+  "other_blockers": [],
+  "item_payload_count": 587,
+  "item_payload_blocker_count": 0,
+  "item_payload_blockers": [],
+  "bom_blockers_retained": [],
+  "purchase_catalog": {
+    "source_row_count": 63,
+    "weight_row_count": 12,
+    "matched_item_count": 48,
+    "matched_by_name_count": 16,
+    "ambiguous_name_match_count": 7,
+    "ambiguous_name_matches": [
+      {
+        "name": "CON LAN",
+        "reason": "source_row_duplicated"
+      },
+      {
+        "name": "PULY 140",
+        "reason": "item_name_duplicated"
+      },
+      {
+        "name": "PULY 168",
+        "reason": "item_name_duplicated"
+      },
+      {
+        "name": "HE THONG TU DUNG",
+        "reason": "source_row_duplicated"
+      },
+      {
+        "name": "RON DAY UC",
+        "reason": "item_name_duplicated"
+      },
+      {
+        "name": "GOI GANG",
+        "reason": "item_name_duplicated"
+      },
+      {
+        "name": "BAT KHOA AM NEN",
+        "reason": "item_name_duplicated"
+      }
+    ],
+    "change_count": 12,
+    "blocked_count": 4,
+    "conflict_count": 2,
+    "purchase_price_count": 34,
+    "supplier_item_count": 13,
+    "duplicate_source_key_count": 8,
+    "unmatched_source_code_count": 79,
+    "unmatched_source_codes": [
+      "BẠC ĐẠN",
+      "BÁT KHÓA ÂM NỀN",
+      "BÁT SẮT",
+      "BẮN BƯỚM INOX - ĐÀI LOAN",
+      "BẮN BƯỚM INOX - SIÊU TRƯỜNG",
+      "BẮN BƯỚM SẮT ĐÀI LOAN",
+      "BẮN BƯỚM SẮT SIÊU TRƯỜNG",
+      "BOSTEC_BỘ ĐIỀU KHIỂN",
+      "BOSTEC_HỘP ĐK",
+      "BOSTEC_PHÍM ÂM TƯỜNG",
+      "BOSTEC_TAYDK",
+      "BÙ LON 12x12",
+      "BƯỚM INOX (LỚN)",
+      "BƯỚM INOX (NHỎ)",
+      "BƯỚM SẮT (LỚN)",
+      "BƯỚM SẮT (NHỎ)",
+      "CHTAIWAN_HỘP ĐK",
+      "CHTAIWAN_PHÍM ÂM TƯỜNG",
+      "CHTAIWAN_TAYDK",
+      "CHTAIWAN_THÂN ĐƠN_PHẢI",
+      "CÒI",
+      "CÒI BÁO ĐỘNG",
+      "CON LĂN",
+      "CON TÁN 12",
+      "CỤC NHỰA CON LĂN",
+      "CÙM HÃM NHỰA",
+      "GHIM",
+      "GỐI GANG",
+      "GỐI SẮT",
+      "HỆ THỐNG TỰ DỪNG",
+      "LÒ XO 46V",
+      "LÒ XO 50V",
+      "LÒ XO 53V",
+      "LÒ XO 63V",
+      "LÒ XO 65V",
+      "LÒ XO 68V",
+      "LÒ XO 73V",
+      "LÒ XO 83V",
+      "MTT BOSTEC ĐÔI - PHẢI",
+      "MTT BOSTEC ĐÔI - TRÁI",
+      "MTT BOSTEC ĐƠN - PHẢI",
+      "MTT BOSTEC ĐƠN - TRÁI",
+      "MTT CH TAIWAN ĐÔI - PHẢI",
+      "MTT CH TAIWAN ĐÔI - TRÁI",
+      "MTT CH TAIWAN ĐƠN - PHẢI",
+      "MTT CH TAIWAN ĐƠN - TRÁI",
+      "NVL-LX-5.5 x 70 x 46V",
+      "NVL-TRUC114_1.8LY",
+      "NVL-TRUC114_2.1LY",
+      "PULY 114 LỚN",
+      "PULY 114 NHỎ",
+      "PULY 114L",
+      "PULY 114N",
+      "PULY 140",
+      "PULY 168",
+      "PULY GAI (LÕI TRONG) -XỊN",
+      "PULY ÚC 114 - SIÊU NHỰA",
+      "PULY ÚC 34 - SIÊU NHỰA",
+      "RAY SẮT",
+      "RHM8",
+      "RON ĐÁY ÚC",
+      "RON LÔNG OR NHỰA",
+      "RON NHỰA VÀNG RAY SẮT U100",
+      "RON NHỰA VÀNG RAY SẮT U76",
+      "SÚNG BẮN GHIM",
+      "TD87A1",
+      "TP RAY ĐƠN TD",
+      "TP RAY HỘP TD",
+      "TP-MTT_BOSTEC-HOPDK",
+      "TP-MTT_CHTAIWAN-HOPDK",
+      "TP-TRỤC 114_1.8LY",
+      "TP-TRỤC 114_2.1LY",
+      "TP-V4_KẼM",
+      "TP-V5_KẼM",
+      "V ĐÁY (THANH ĐÁY ÚC)",
+      "V4",
+      "VAI HÃM XO",
+      "VÍT BẮN LÔ",
+      "VÒNG NHỰA HÃM TRỤC"
+    ],
+    "blocked": [
+      {
+        "item_code": "TP-BUOMSAT-DL",
+        "reason": "purchase_uom_without_conversion",
+        "stock_uom": "Bộ",
+        "purchase_uom": "Kg",
+        "note": "0.0195 kg/con (1m cao x 12 con)",
+        "detail": "Nguồn khai ĐVT mua khác ĐVT tồn nhưng không khai hệ số quy đổi. Gán một mình ĐVT mua sẽ làm assertCanonicalItemPayload chặn cả lượt nhập."
+      },
+      {
+        "item_code": "TP-BUOMSAT-ST",
+        "reason": "purchase_uom_without_conversion",
+        "stock_uom": "Bộ",
+        "purchase_uom": "Kg",
+        "note": "0.0311kg/con (1m cao x 10 con)",
+        "detail": "Nguồn khai ĐVT mua khác ĐVT tồn nhưng không khai hệ số quy đổi. Gán một mình ĐVT mua sẽ làm assertCanonicalItemPayload chặn cả lượt nhập."
+      },
+      {
+        "item_code": "NVL-GOIFE",
+        "reason": "purchase_uom_without_conversion",
+        "stock_uom": "Cái",
+        "purchase_uom": "Cặp",
+        "note": null,
+        "detail": "Nguồn khai ĐVT mua khác ĐVT tồn nhưng không khai hệ số quy đổi. Gán một mình ĐVT mua sẽ làm assertCanonicalItemPayload chặn cả lượt nhập."
+      },
+      {
+        "item_code": "NVL-VAIHAMXO",
+        "reason": "purchase_uom_without_conversion",
+        "stock_uom": "Cái",
+        "purchase_uom": "Kg",
+        "note": null,
+        "detail": "Nguồn khai ĐVT mua khác ĐVT tồn nhưng không khai hệ số quy đổi. Gán một mình ĐVT mua sẽ làm assertCanonicalItemPayload chặn cả lượt nhập."
+      }
+    ],
+    "conflicts": [
+      {
+        "item_code": "TP-RAYHOP",
+        "uom": "Mét",
+        "existing_factor": 1.083,
+        "source_factor": 1.119,
+        "source_text": "RHM8 = 1.119 kg/m (data/trong-luong-nhom.json)"
+      },
+      {
+        "item_code": "TP-TD87A1 GS",
+        "uom": "Mét",
+        "existing_factor": 0.6,
+        "source_factor": 0.635,
+        "source_text": "TD87A1 = 0.635 kg/m (data/trong-luong-nhom.json)"
+      }
+    ],
+    "duplicate_source_keys": [
+      {
+        "key": "CON LĂN",
+        "kept_row": 8,
+        "dropped_row": 9
+      },
+      {
+        "key": "CON LĂN",
+        "kept_row": 8,
+        "dropped_row": 10
+      },
+      {
+        "key": "CON LĂN",
+        "kept_row": 8,
+        "dropped_row": 11
+      },
+      {
+        "key": "CON LĂN",
+        "kept_row": 8,
+        "dropped_row": 12
+      },
+      {
+        "key": "PULY 140",
+        "kept_row": 16,
+        "dropped_row": 16
+      },
+      {
+        "key": "PULY 168",
+        "kept_row": 17,
+        "dropped_row": 17
+      },
+      {
+        "key": "HỆ THỐNG TỰ DỪNG",
+        "kept_row": 19,
+        "dropped_row": 19
+      },
+      {
+        "key": "TP-MTT_CHTAIWAN-DON(P)",
+        "kept_row": 63,
+        "dropped_row": 64
+      }
+    ]
+  }
+}

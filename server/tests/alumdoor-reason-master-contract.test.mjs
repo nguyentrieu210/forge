@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readBriefSource } from "../scripts/lib/read-brief-source.mjs";
+import { parseField } from "../scripts/lib/compile-brief.mjs";
 
 const brief = await readBriefSource(new URL("../briefs/alumdoor-v2.json", import.meta.url));
 
@@ -11,7 +12,9 @@ function doctype(name) {
 }
 
 function field(meta, fieldname) {
-  const value = meta.fields.find((entry) => typeof entry === "object" && entry.fieldname === fieldname);
+  const value = meta.fields
+    .map((entry, index) => parseField(entry, index, `doctype ${meta.name}`))
+    .find((entry) => entry.fieldname === fieldname);
   assert.ok(value, `missing field ${meta.name}.${fieldname}`);
   return value;
 }

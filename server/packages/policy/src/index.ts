@@ -61,12 +61,12 @@ export const STATIC_DOCTYPE_PERMISSIONS: Record<string, DoctypePermission> = {
 
 const REPORT_PERMISSIONS: Record<string, readonly string[]> = {
   "Accounts Receivable": ["Accounts Manager", "Accounts User", "Sales Manager"],
-  "Accounts Receivable Aging": ["Accounts Manager", "Accounts User", "Sales Manager"],
+  "Accounts Receivable Aging": ["System Manager", "Accounts Manager", "Accounts User", "Sales Manager"],
   "Accounts Payable": ["Accounts Manager", "Accounts User", "Purchase Manager"],
-  "Accounts Payable Aging": ["Accounts Manager", "Accounts User", "Purchase Manager"],
+  "Accounts Payable Aging": ["System Manager", "Accounts Manager", "Accounts User", "Purchase Manager"],
   "Party Statement": ["Accounts Manager", "Accounts User"],
-  "Supplier Statement": ["Accounts Manager", "Accounts User", "Purchase Manager"],
-  "Supplier Reconciliation": ["Accounts Manager", "Accounts User"],
+  "Supplier Statement": ["System Manager", "Accounts Manager", "Accounts User", "Purchase Manager"],
+  "Supplier Reconciliation": ["System Manager", "Accounts Manager", "Accounts User"],
   "Debt Summary": ["Accounts Manager", "Accounts User"],
   "Advance Balance": ["Accounts Manager", "Accounts User"],
   "Daily Detailed Ledger": [
@@ -78,6 +78,7 @@ const REPORT_PERMISSIONS: Record<string, readonly string[]> = {
     "Giám đốc",
   ],
   "Finance Daily Detailed Ledger": [
+    "System Manager",
     "Accounts Manager",
     "Accounts User",
     "General Accountant",
@@ -86,6 +87,7 @@ const REPORT_PERMISSIONS: Record<string, readonly string[]> = {
     "Kế toán trưởng",
   ],
   "Finance Reconciliation Diagnostics": [
+    "System Manager",
     "Accounts Manager",
     "Accounts User",
     "General Accountant",
@@ -94,6 +96,7 @@ const REPORT_PERMISSIONS: Record<string, readonly string[]> = {
     "Kế toán trưởng",
   ],
   "Stock Valuation Reconciliation": [
+    "System Manager",
     "Accounts Manager",
     "Accounts User",
     "General Accountant",
@@ -125,6 +128,7 @@ const REPORT_PERMISSIONS: Record<string, readonly string[]> = {
 export class PermissionService {
   assert(request: PermissionRequest): void {
     if (isAdministrator(request.actor)) return;
+    if (request.actor.roles.includes("System Manager")) return;
     const permission = STATIC_DOCTYPE_PERMISSIONS[request.doctype];
     if (!permission) throw errors.permission();
     if (!["read", "create", "save", "delete", "submit", "cancel"].includes(request.action)) throw errors.permission();

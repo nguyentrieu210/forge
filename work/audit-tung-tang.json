@@ -1,0 +1,1168 @@
+{
+  "format": "alumdoor-audit-tung-tang/v1",
+  "generated_at": "2026-08-22T14:38:49.043Z",
+  "mode": "read-only",
+  "tenant": "demo",
+  "d1": "C:\\alumdoor\\server\\apps\\tenant-worker\\.wrangler\\state\\v3\\d1\\miniflare-D1DatabaseObject\\0f70e06fc007ec84591c21ca1daaf09474ca2074a0d42ba21eb2a3fcdbb2cdf8.sqlite",
+  "tang_dat": 5,
+  "tang_tong": 7,
+  "tangs": [
+    {
+      "so": 1,
+      "ten": "Danh mục nền",
+      "muc": [
+        {
+          "nhan": "UOM",
+          "co_san": 19,
+          "duoc_tro_toi": 10,
+          "thieu": [],
+          "khong_ai_dung": [
+            "Lá",
+            "Thân",
+            "Thanh",
+            "Sợi",
+            "Túi",
+            "Hộp",
+            "Bình",
+            "Lít",
+            "Chuyến"
+          ]
+        },
+        {
+          "nhan": "Item Color",
+          "co_san": 24,
+          "duoc_tro_toi": 7,
+          "thieu": [],
+          "khong_ai_dung": [
+            "THÔ",
+            "CAFÉ",
+            "XANH NGỌC",
+            "MIDNIGHT BLUE",
+            "TRẮNG",
+            "XÁM MỜ",
+            "NÂU XINGFA",
+            "XÁM XINGFA",
+            "ĐEN XINGFA",
+            "VÀNG KEM BÓNG",
+            "XANH NGỌC BÓNG",
+            "XÁM LÔNG CHUỘT",
+            "CAM",
+            "ĐỎ ĐÔ",
+            "KEM SỮA",
+            "XANH DƯƠNG",
+            "VAN_GO"
+          ]
+        },
+        {
+          "nhan": "Item Group",
+          "co_san": 21,
+          "duoc_tro_toi": 21,
+          "thieu": [],
+          "khong_ai_dung": []
+        },
+        {
+          "nhan": "Surface Finish",
+          "co_san": 4,
+          "duoc_tro_toi": 4,
+          "thieu": [],
+          "khong_ai_dung": []
+        },
+        {
+          "nhan": "Geometry Field",
+          "co_san": 11,
+          "duoc_tro_toi": 8,
+          "thieu": [],
+          "khong_ai_dung": [
+            "LOT_LONG_CAO",
+            "LOT_LONG_RONG",
+            "billable_area_sqm"
+          ]
+        },
+        {
+          "nhan": "Measurement Profile",
+          "co_san": 9,
+          "duoc_tro_toi": 6,
+          "thieu": [],
+          "khong_ai_dung": [
+            "Ống/trục",
+            "Tấm/Kính",
+            "Lô/Serial"
+          ]
+        }
+      ],
+      "dat": true
+    },
+    {
+      "so": 2,
+      "ten": "Hàng hoá",
+      "muc": [
+        {
+          "nhan": "Mã hàng bị trỏ tới nhưng KHÔNG CÓ",
+          "co_san": 404,
+          "duoc_tro_toi": 270,
+          "thieu": [],
+          "khong_ai_dung": []
+        },
+        {
+          "nhan": "Mã hàng bị trỏ tới nhưng ĐÃ NGỪNG DÙNG",
+          "co_san": 395,
+          "duoc_tro_toi": 270,
+          "thieu": [],
+          "khong_ai_dung": []
+        },
+        {
+          "nhan": "Mã hàng thiếu trường bắt buộc",
+          "co_san": 395,
+          "duoc_tro_toi": 395,
+          "thieu": [],
+          "khong_ai_dung": []
+        }
+      ],
+      "dat": true
+    },
+    {
+      "so": 3,
+      "ten": "Quy đổi đơn vị",
+      "muc": [
+        {
+          "nhan": "Hàng nhiều đơn vị mà THIẾU hệ số",
+          "co_san": 395,
+          "duoc_tro_toi": 0,
+          "thieu": [],
+          "khong_ai_dung": []
+        },
+        {
+          "nhan": "Hệ số quy đổi bằng 0 hoặc không hợp lệ",
+          "co_san": 0,
+          "duoc_tro_toi": 0,
+          "thieu": [],
+          "khong_ai_dung": []
+        }
+      ],
+      "dat": true
+    },
+    {
+      "so": 4,
+      "ten": "Hình học",
+      "muc": [
+        {
+          "nhan": "Nhóm cửa chưa có bộ quy cách",
+          "co_san": 7,
+          "duoc_tro_toi": 7,
+          "thieu": [],
+          "khong_ai_dung": []
+        },
+        {
+          "nhan": "Bộ quy cách thiếu luật cho trường Tự tính",
+          "co_san": 5,
+          "duoc_tro_toi": 5,
+          "thieu": [],
+          "khong_ai_dung": []
+        },
+        {
+          "nhan": "Chính sách cắt trỏ bộ quy cách không có",
+          "co_san": 5,
+          "duoc_tro_toi": 5,
+          "thieu": [],
+          "khong_ai_dung": []
+        }
+      ],
+      "dat": true
+    },
+    {
+      "so": 5,
+      "ten": "Định mức",
+      "muc": [
+        {
+          "nhan": "BOM tự chứa chính nó",
+          "co_san": 149,
+          "duoc_tro_toi": 149,
+          "thieu": [],
+          "khong_ai_dung": []
+        },
+        {
+          "nhan": "BOM rỗng (không cấu kiện thật)",
+          "co_san": 149,
+          "duoc_tro_toi": 149,
+          "thieu": [],
+          "khong_ai_dung": []
+        },
+        {
+          "nhan": "Mã CỬA chưa có định mức dùng được",
+          "co_san": 149,
+          "duoc_tro_toi": 51,
+          "thieu": [
+            {
+              "gia_tri": "INOX_6D",
+              "bi_tro_boi": [
+                "chưa có BOM",
+                "Cửa Đài Loan Inox"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "INOX_7D",
+              "bi_tro_boi": [
+                "chưa có BOM",
+                "Cửa Đài Loan Inox"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "INOX_8D",
+              "bi_tro_boi": [
+                "chưa có BOM",
+                "Cửa Đài Loan Inox"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "INOX_1LY",
+              "bi_tro_boi": [
+                "chưa có BOM",
+                "Cửa Đài Loan Inox"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "CLUOI_LUOI_MV_TM",
+              "bi_tro_boi": [
+                "chưa có BOM",
+                "Cửa Lưới"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "CLUOI_LUOI_SNPHI19_INOX_TM",
+              "bi_tro_boi": [
+                "chưa có BOM",
+                "Cửa Lưới"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "CKDL_CUAKEODL",
+              "bi_tro_boi": [
+                "chưa có BOM",
+                "Cửa kéo Đài Loan"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "LA_DLM_1LY_K175",
+              "bi_tro_boi": [
+                "chưa có BOM",
+                "Cửa Siêu Trường"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "LA_DLK_1_3LY_K175",
+              "bi_tro_boi": [
+                "chưa có BOM",
+                "Cửa Siêu Trường"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "LA_DLK_1_4LY_K175",
+              "bi_tro_boi": [
+                "chưa có BOM",
+                "Cửa Siêu Trường"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "LA_DLK_1_5LY_K175",
+              "bi_tro_boi": [
+                "chưa có BOM",
+                "Cửa Siêu Trường"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "LA_DLK_1_6LY_K175",
+              "bi_tro_boi": [
+                "chưa có BOM",
+                "Cửa Siêu Trường"
+              ],
+              "so_noi_tro": 1
+            }
+          ],
+          "khong_ai_dung": []
+        },
+        {
+          "nhan": "Mã bán (mọi loại) chưa có BOM",
+          "co_san": 112,
+          "duoc_tro_toi": 223,
+          "thieu": [
+            {
+              "gia_tri": "PKC_CNHUA",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_BULON12.12",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_CONTAN12",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_BACDAN",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "BLD_UPS_E1000I",
+              "bi_tro_boi": [
+                "Bình lưu điện"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "BLD_UPS_E800I",
+              "bi_tro_boi": [
+                "Bình lưu điện"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "BLD_UPS_YH1000",
+              "bi_tro_boi": [
+                "Bình lưu điện"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "BLD_UPS_YH2000",
+              "bi_tro_boi": [
+                "Bình lưu điện"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKD_TAY_JG",
+              "bi_tro_boi": [
+                "Điều khiển & phụ kiện điện"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKD_TAY_BOSTEC",
+              "bi_tro_boi": [
+                "Điều khiển & phụ kiện điện"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKD_TAY_CHTAIWAN",
+              "bi_tro_boi": [
+                "Điều khiển & phụ kiện điện"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKD_TAY_TANKER_ALUMAX",
+              "bi_tro_boi": [
+                "Điều khiển & phụ kiện điện"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKD_TAY_MULLER",
+              "bi_tro_boi": [
+                "Điều khiển & phụ kiện điện"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKD_HOP_YHLD",
+              "bi_tro_boi": [
+                "Điều khiển & phụ kiện điện"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKD_TAY_YHLD",
+              "bi_tro_boi": [
+                "Điều khiển & phụ kiện điện"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKD_TAY_YHTAIWAN",
+              "bi_tro_boi": [
+                "Điều khiển & phụ kiện điện"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "LKMT_COT",
+              "bi_tro_boi": [
+                "Linh kiện motor"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "LKMT_HOAKHE",
+              "bi_tro_boi": [
+                "Linh kiện motor"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "LKMT_LACPHU33_1LO",
+              "bi_tro_boi": [
+                "Linh kiện motor"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "LKMT_LACPHU33_3LO",
+              "bi_tro_boi": [
+                "Linh kiện motor"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "LKMT_LACPHU36_1LO",
+              "bi_tro_boi": [
+                "Linh kiện motor"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "LKMT_LACPHU36_3LO",
+              "bi_tro_boi": [
+                "Linh kiện motor"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "LKMT_LACYHLD300_500KG",
+              "bi_tro_boi": [
+                "Linh kiện motor"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "LKMT_LACYHLD800_1000KG",
+              "bi_tro_boi": [
+                "Linh kiện motor"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "LKMT_LONGDEN",
+              "bi_tro_boi": [
+                "Linh kiện motor"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "LKMT_BOSTEC_PAT",
+              "bi_tro_boi": [
+                "Linh kiện motor"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "LKMT_CHTAIWAN_PAT",
+              "bi_tro_boi": [
+                "Linh kiện motor"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "LKMT_NAPNHIN",
+              "bi_tro_boi": [
+                "Linh kiện motor"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "LKMT_PAT_KHONGDAY",
+              "bi_tro_boi": [
+                "Linh kiện motor"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "LKMT_TANKER_ALUMAX_LAC33",
+              "bi_tro_boi": [
+                "Linh kiện motor"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "LKMT_TANKER_ALUMAX_LAC36",
+              "bi_tro_boi": [
+                "Linh kiện motor"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "LKMT_TANKER_LAC800_1000KG",
+              "bi_tro_boi": [
+                "Linh kiện motor"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "MT_TANKER_NHONG",
+              "bi_tro_boi": [
+                "Linh kiện motor"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKS_CROMATE_3",
+              "bi_tro_boi": [
+                "Phụ kiện cần sơn tĩnh điện"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKS_TAY_NHOM",
+              "bi_tro_boi": [
+                "Phụ kiện cần sơn tĩnh điện"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_3X6M",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_BANBUOM_FE",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_BANBUOM_INOX",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_BKAN",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_CHNHUA",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_CHONGXOLO",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_GIAT",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_GOIFE",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_GOIGANG",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_LV_6.0_X_70_X_53V",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_LV_6.5_X_80_X_63V",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_LV_6.5_X_80_X_68V",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_LV_7.0_X_90_X_65V",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_LV_7.0_X_90_X_73V",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_LV_7.0_X_90_X_83V",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_LX_5.5_X_70_X_46V",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_LX_5.5_X_70_X_50V",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_NAPCHUP_BACDAN",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_OKHOA",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_PHOTLONG4X5X400M",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_PHOTLONG5X6X400M",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_PULYUC114",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_PULYUC34",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_RON_DD",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_RONDAYUC",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_TIINOX",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_V4_INOX",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_V4_INOX_3LY",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_VAIHAMXO",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_VDAY_TDU_KTD",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_XOP_N45",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_XOP_N90",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKDUC_COI",
+              "bi_tro_boi": [
+                "Phụ kiện CN Đức"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKDUC_HTTD",
+              "bi_tro_boi": [
+                "Phụ kiện CN Đức"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKDUC_PULY_114L",
+              "bi_tro_boi": [
+                "Phụ kiện CN Đức"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKDUC_PULY_114N",
+              "bi_tro_boi": [
+                "Phụ kiện CN Đức"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKDUC_PULY_140",
+              "bi_tro_boi": [
+                "Phụ kiện CN Đức"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKDUC_PULY_168",
+              "bi_tro_boi": [
+                "Phụ kiện CN Đức"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "RT_TD87A1",
+              "bi_tro_boi": [
+                "Ray và trục"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "RT_RNHUA_DR",
+              "bi_tro_boi": [
+                "Ray và trục"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "RT_PHOTLONG12_5X5X120M",
+              "bi_tro_boi": [
+                "Ray và trục"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "RT_RAYNHOMUC",
+              "bi_tro_boi": [
+                "Ray và trục"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "RT_TRUC34",
+              "bi_tro_boi": [
+                "Ray và trục"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "RT_TRUC90",
+              "bi_tro_boi": [
+                "Ray và trục"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "RT_RAY_U70_KRON",
+              "bi_tro_boi": [
+                "Ray và trục"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "RT_RAY_U100_1.2LY_KRON",
+              "bi_tro_boi": [
+                "Ray và trục"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "RT_RAY_U100_1.2LY_RON",
+              "bi_tro_boi": [
+                "Ray và trục"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "RT_RAY_U100_1.4LY_KRON",
+              "bi_tro_boi": [
+                "Ray và trục"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "RT_RAY_U100_1.4LY_RON",
+              "bi_tro_boi": [
+                "Ray và trục"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "RT_RAYINOX_6P_RON",
+              "bi_tro_boi": [
+                "Ray và trục"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "RT_RAYINOX_8P_RON",
+              "bi_tro_boi": [
+                "Ray và trục"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "RT_RAYINOX_7P_KHONGRON",
+              "bi_tro_boi": [
+                "Ray và trục"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "RT_RNHUA_CR",
+              "bi_tro_boi": [
+                "Ray và trục"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "RT_RINOX_DR",
+              "bi_tro_boi": [
+                "Ray và trục"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "RT_TR114_1.8",
+              "bi_tro_boi": [
+                "Ray và trục"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "RT_TR114_2.1",
+              "bi_tro_boi": [
+                "Ray và trục"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "INOX_6D",
+              "bi_tro_boi": [
+                "Cửa Đài Loan Inox"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "INOX_7D",
+              "bi_tro_boi": [
+                "Cửa Đài Loan Inox"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "INOX_8D",
+              "bi_tro_boi": [
+                "Cửa Đài Loan Inox"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "INOX_1LY",
+              "bi_tro_boi": [
+                "Cửa Đài Loan Inox"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "TON_DLM_6D_K124",
+              "bi_tro_boi": [
+                "Nan/lá cửa"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "TON_DLM_7D_K124",
+              "bi_tro_boi": [
+                "Nan/lá cửa"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "TON_DLM_8D_K124",
+              "bi_tro_boi": [
+                "Nan/lá cửa"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "TON_DLM_1LY_K124",
+              "bi_tro_boi": [
+                "Nan/lá cửa"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "CLUOI_LUOI_MV_TM",
+              "bi_tro_boi": [
+                "Cửa Lưới"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "CLUOI_LUOI_SNPHI19_INOX_TM",
+              "bi_tro_boi": [
+                "Cửa Lưới"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "CKDL_CUAKEODL",
+              "bi_tro_boi": [
+                "Cửa kéo Đài Loan"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "LA_DLK_8D",
+              "bi_tro_boi": [
+                "Nan/lá cửa"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "LA_DLK_1_2LY",
+              "bi_tro_boi": [
+                "Nan/lá cửa"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "LA_DLM_1LY_K175",
+              "bi_tro_boi": [
+                "Cửa Siêu Trường"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "LA_DLK_1_1LY",
+              "bi_tro_boi": [
+                "Nan/lá cửa"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "LA_DLK_1_2LY_K175",
+              "bi_tro_boi": [
+                "Nan/lá cửa"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "LA_RUOT_AL71N",
+              "bi_tro_boi": [
+                "Nan/lá cửa"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_V5_KEM",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "PKC_V5_STD",
+              "bi_tro_boi": [
+                "Phụ kiện chung"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "LA_DLK_1_3LY_K175",
+              "bi_tro_boi": [
+                "Cửa Siêu Trường"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "LA_DLK_1_4LY_K175",
+              "bi_tro_boi": [
+                "Cửa Siêu Trường"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "LA_DLK_1_5LY_K175",
+              "bi_tro_boi": [
+                "Cửa Siêu Trường"
+              ],
+              "so_noi_tro": 1
+            },
+            {
+              "gia_tri": "LA_DLK_1_6LY_K175",
+              "bi_tro_boi": [
+                "Cửa Siêu Trường"
+              ],
+              "so_noi_tro": 1
+            }
+          ],
+          "khong_ai_dung": []
+        },
+        {
+          "nhan": "Dòng BOM trống số lượng mà không có luật",
+          "co_san": 33,
+          "duoc_tro_toi": 964,
+          "thieu": [],
+          "khong_ai_dung": []
+        }
+      ],
+      "dat": false
+    },
+    {
+      "so": 6,
+      "ten": "Giá",
+      "muc": [
+        {
+          "nhan": "Bậc diện tích",
+          "co_san": 11,
+          "duoc_tro_toi": 11,
+          "thieu": [],
+          "khong_ai_dung": []
+        },
+        {
+          "nhan": "Mã BÁN chưa có giá",
+          "co_san": 229,
+          "duoc_tro_toi": 223,
+          "thieu": [
+            {
+              "gia_tri": "CKDL_CUAKEODL",
+              "bi_tro_boi": [
+                "Cửa kéo Đài Loan"
+              ],
+              "so_noi_tro": 1
+            }
+          ],
+          "khong_ai_dung": []
+        },
+        {
+          "nhan": "Giá còn cắm cờ tạm",
+          "co_san": 299,
+          "duoc_tro_toi": 0,
+          "thieu": [],
+          "khong_ai_dung": []
+        }
+      ],
+      "dat": false
+    },
+    {
+      "so": 7,
+      "ten": "Chứng từ & sổ sách",
+      "muc": [
+        {
+          "nhan": "Bút toán mồ côi (chứng từ đã mất)",
+          "co_san": 0,
+          "duoc_tro_toi": 0,
+          "thieu": [],
+          "khong_ai_dung": []
+        },
+        {
+          "nhan": "Vi phạm khoá ngoại",
+          "co_san": 0,
+          "duoc_tro_toi": 0,
+          "thieu": [],
+          "khong_ai_dung": []
+        }
+      ],
+      "dat": true
+    }
+  ]
+}

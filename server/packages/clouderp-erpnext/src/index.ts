@@ -26,6 +26,7 @@ export * from "./enterprise-types.js";
 export * from "./enterprise-controllers.js";
 export * from "./alumdoor-inventory.js";
 export * from "./alumdoor-attendance.js";
+export * from "./hrm-employee-lite.js";
 export * from "./stock-reconciliation-batch.js";
 export * from "./stock-reconciliation-batch-consumer.js";
 export * from "./warehouse-cash.js";

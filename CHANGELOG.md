@@ -4,11 +4,16 @@
 
 ### Added
 
+- Alumdoor bổ sung luồng WMS cho lập kế hoạch lấy hàng FIFO, kiểm tra đóng gói, lập kế hoạch cất hàng và gom sóng lấy hàng; dữ liệu lô/serial đọc từ sổ tồn kho thực tế và có kiểm tra số lượng, cấu trúc kiện trước khi xử lý.
+- Quy tắc BOM bán hàng có thể tự sinh cấu phần còn thiếu theo biến thể giá và khoảng diện tích; quy tắc tặng ray chỉ áp dụng đúng phương án bán và ngưỡng từ 8 m².
+- Lịch sử giá nhà cung cấp lọc quyền đọc trên từng chứng từ nguồn trước khi tổng hợp.
 - HR Lite có màn Cài đặt Nhân viên & Lương để chọn và lưu công ty, địa điểm làm việc và ngày trả lương; doanh nghiệp có nhiều công ty không còn bị chặn khi tạo nhân viên.
 - Nút `+` cạnh các trường liên kết có thể tạo mới, mở đúng biểu mẫu tạo nhanh và tự chọn bản ghi vừa lưu.
 
 ### Changed
 
+- Alumdoor đồng bộ chiết khấu mặc định với kết quả tính giá thực tế, giữ đúng quà tặng khi dùng báo giá đã khóa và kiểm tra Link/Dynamic Link cả trong bảng con trước khi lưu.
+- Các truy vấn công nợ theo danh sách lớn được chia trang an toàn; Phiếu giao hàng chặn gửi khi dòng hàng còn đang tải và số phân bổ chi phí mua hàng hiển thị đúng đơn vị tiền/tỷ trọng.
 - Khi mở Đơn hàng Alumdoor từ màn danh sách, hệ thống dùng đúng biểu mẫu bán hàng chuyên dụng (gồm bảng dòng hàng, cách bán và thông số cửa) thay cho Form chi tiết chung; đơn nháp được lưu sửa trực tiếp, đơn đã khóa chuyển sang chỉ xem.
 - Cách bán `Kéo tay/Motor ngoài/Motor trong` tự đồng bộ và khóa trường `Kiểu lá / motor` để đơn bán và dữ liệu sản xuất không lệch nhau; Worker đối chiếu không phân biệt hoa thường. Bổ sung đủ sáu Chính sách công thức cửa và ước số bản lá đã kiểm kê cho 15 mã Cửa Đức, đồng thời đưa các giá trị này vào bộ sinh dữ liệu cho lần cài mới.
 - Cột dòng chính của Đơn hàng Alumdoor tiếp tục hiển thị số lượng dùng để tính giá nhưng rút gọn tiêu đề thành `Số lượng`; các ô số lượng vật lý trong dòng `Chi tiết` được đặt nhãn đúng theo loại mặt hàng (`Số bộ`, `Số cái`, `Số cặp`, `Số cây/đoạn`, `Số cuộn`...) thay vì ghi chung là `Khối lượng`.

@@ -175,6 +175,10 @@ function buildRules(root, runDir) {
   exec('build-alumdoor-bom-rule-importable.mjs', [bomPayload, rules, audit], 'BOM Rule canonical builder');
   exec('import-alumdoor-bom-rule-local.mjs', [rules, path.join(runDir, 'bom-rule-validate.json'), '--validate-only'], 'BOM Rule validate-only');
   const ruleAudit = JSON.parse(readFileSync(audit, 'utf8'));
+  if (Number(ruleAudit.rows_pending) !== 0) throw fail('DATA', `BOM Rule source rows still pending=${ruleAudit.rows_pending}`);
+  if (Number(ruleAudit.unverified_owner_override_records) !== 0) {
+    throw fail('DATA', `BOM Rule owner overrides without hashed decision evidence=${ruleAudit.unverified_owner_override_records}`);
+  }
   console.log(`ALUMDOOR_BOM_RULE_DATA_READY rules=${ruleAudit.rules_created} mapped=${ruleAudit.rows_mapped}/${ruleAudit.component_rows} pending=${ruleAudit.rows_pending} applicability=${ruleAudit.applicability_count} owner_overrides=${ruleAudit.owner_overrides}`);
   return { rules, audit };
 }

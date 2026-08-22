@@ -550,6 +550,49 @@ export interface CompiledCount {
   params: JsonValue[];
 }
 
+/**
+ * One authoritative read surface for configurable master data.
+ *
+ * App fixtures live in `master_records`; operator edits/imports live in `documents`.
+ * A list that reads only `documents` makes an installed fixture resolvable by Link
+ * validation but invisible in the same Link picker.  Keep the precedence already used
+ * by `getMasterRecordData`: a document with the same identity wins, including a disabled
+ * or cancelled document acting as a tombstone.  Only active, non-overlapped fixtures are
+ * synthesized as ordinary draft documents for the read API.
+ *
+ * Both branches are bounded by the server-owned tenant and doctype parameters before the
+ * outer filters run.  `catalog_documents AS documents` preserves the qualified names used
+ * by the permission predicates without weakening their scope.
+ */
+const CATALOG_DOCUMENTS_CTE = `WITH catalog_documents AS (
+  SELECT tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,
+         modified_by,amended_from,payload_json
+    FROM documents
+   WHERE tenant_id=?1 AND doctype=?2
+  UNION ALL
+  SELECT master.tenant_id,
+         master.record_type || ':' || master.name AS doc_key,
+         master.record_type AS doctype,
+         master.name,
+         'Administrator' AS owner,
+         0 AS docstatus,
+         'Draft' AS status,
+         1 AS version,
+         master.modified_at AS created_at,
+         master.modified_at,
+         'app' AS modified_by,
+         NULL AS amended_from,
+         master.data_json AS payload_json
+    FROM master_records AS master
+   WHERE master.tenant_id=?1 AND master.record_type=?2 AND master.disabled=0
+     AND NOT EXISTS (
+       SELECT 1 FROM documents AS overlay
+        WHERE overlay.tenant_id=master.tenant_id
+          AND overlay.doctype=master.record_type
+          AND overlay.name=master.name
+     )
+)`;
+
 export class DocumentListCompiler {
   compileList(tenantId: string, request: DocumentListRequest, definition: DocumentListDefinition, scope?: DocumentReadScope): CompiledList {
     const params: JsonValue[] = [tenantId, definition.doctype];
@@ -575,7 +618,8 @@ export class DocumentListCompiler {
       tail += ` OFFSET ?${params.length}`;
     }
     assertParamBudget(params);
-    const sql = `SELECT ${selectSql} FROM documents WHERE ${where.join(" AND ")} ORDER BY ${orderSql} ${tail}`;
+    const sql = `${CATALOG_DOCUMENTS_CTE}
+SELECT ${selectSql} FROM catalog_documents AS documents WHERE ${where.join(" AND ")} ORDER BY ${orderSql} ${tail}`;
     return { sql, params, projection, effectiveSort: sort, limit };
   }
 
@@ -585,7 +629,8 @@ export class DocumentListCompiler {
     const params: JsonValue[] = [tenantId, definition.doctype];
     const where = this.selectionPredicate(params, request, definition, scope);
     assertParamBudget(params);
-    const sql = `SELECT COUNT(*) AS count FROM documents WHERE ${where.join(" AND ")}`;
+    const sql = `${CATALOG_DOCUMENTS_CTE}
+SELECT COUNT(*) AS count FROM catalog_documents AS documents WHERE ${where.join(" AND ")}`;
     return { sql, params };
   }
 

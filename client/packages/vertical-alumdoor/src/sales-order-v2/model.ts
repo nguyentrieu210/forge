@@ -180,6 +180,8 @@ export interface LineCatalogContext extends Json {
   measurement_profile?: string | null;
   material_specification?: string | null;
   min_area_sqm?: number | null;
+  gift_rail_min_area_sqm?: number | null;
+  gift_rail_area_operator?: "GT" | "GTE";
   /** `true` = diện tích tính tiền ĐÃ bị nâng lên mức tối thiểu. `null` = không suy được. */
   min_area_applied?: boolean | null;
 }
@@ -279,6 +281,10 @@ export interface CommercialPreview extends Json {
   pricing_rule_snapshots?: PricingRuleSnapshot[];
   applied_adjustments?: AppliedAdjustment[];
   benefit_items?: BenefitItem[];
+  gift_rail_threshold_sqm?: number;
+  gift_rail_area_operator?: "GT" | "GTE";
+  gift_rail_area_sqm?: number;
+  gift_rail_eligible?: boolean;
   /* Hợp đồng làn A 2026-08-21 §B — optional; vắng mặt KHÔNG làm hỏng phần tiền cũ. */
   price_explain?: PriceExplain;
   /** `{ tên luật: tên phạm vi }` — chỉ chứa luật đã áp mà có khai `pricing_scope`. */
@@ -342,6 +348,16 @@ export interface SalesLine extends Json {
    * 22 cặp (mã + ĐVT) chỉ khai biến thể khác STANDARD đều bị từ chối lúc lưu.
    */
   price_variant?: string;
+  /**
+   * "Người bán ĐÃ TỰ TAY chạm vào ô tick Tặng ray của dòng này chưa?"
+   *
+   * Theo quyết định trực tiếp của chủ xưởng 22/08/2026: trên 8 m² thì ô tick TỰ ĐỘNG được
+   * tick, nhưng người bán vẫn bỏ tick được. Nếu không nhớ "đã chạm", mỗi lần sửa kích thước
+   * là một lần máy tick lại — lựa
+   * chọn thủ công của người bán bị nuốt mất mà không ai thấy. Cờ này CHỈ sống trên client
+   * (tiền tố `_`, không đi xuống server) và chỉ được bật ở đúng một chỗ: handler của ô tick.
+   */
+  _giftRailTouched?: boolean;
   _itemName?: string;
   _context?: SalesItemContext;
   _allowedColors?: string[];
@@ -562,6 +578,30 @@ export function isFullSetSalesItem(line: Pick<SalesLine, "item_code">): boolean 
     .includes("TRONBO");
 }
 
+/**
+ * Dòng này có nên đi hỏi định mức không.
+ *
+ * `isFullSetSalesItem` dò chữ "TRỌN BỘ" TRONG MÃ HÀNG — đó là đường lui cho khoảng 100 mã cũ
+ * còn nhồi cách bán vào mã. Mã mới thì cách bán nằm ở ô `sales_mode` của chính dòng bán, nên
+ * lấy tên mã làm chốt chặn là bỏ sót mọi mã đặt tên đúng chuẩn: `CDL_DLM_1LY` có định mức đầy
+ * đủ (2 cây ray, 1 cây trục, tôn theo số lá) nhưng không bao giờ được xổ.
+ *
+ * Backend đã tự trả `bom_applicable: false` kèm lý do đọc được cho dòng không có cấu thành,
+ * nên hỏi rộng ra không sai — chỉ tốn một lượt đọc mặt hàng, và nó dừng trước khi liệt kê BOM.
+ */
+export function mayHaveBom(line: Pick<SalesLine, "item_code"> & { sales_mode?: unknown; item_name?: unknown; _itemName?: unknown }): boolean {
+  if (!text(line.item_code)) return false;
+  if (text(line.sales_mode)) return true;
+  if (isFullSetSalesItem(line)) return true;
+  /*
+   * Dò cả TÊN HÀNG: đợt gộp mã đã bỏ token cách giao khỏi MÃ nhưng giữ trong TÊN.
+   * `CDL_DLM_1LY` có tên "CỬA ĐL1LY TRỌN BỘ" — dò mã thì trượt, và màn này không có ô
+   * Cách bán để người bán bù vào, nên dòng đó không đường nào xổ được định mức.
+   */
+  const ten = text(line.item_name) || text(line._itemName);
+  return Boolean(ten) && isFullSetSalesItem({ item_code: ten });
+}
+
 export function primaryQuantityField(line: SalesLine): "set_count" | "qty" {
   if (isAreaDoor(line) || fieldVisible(line, "set_count")) return "set_count";
   return "qty";
@@ -645,7 +685,7 @@ const PRICING_RULE_LABELS: Record<string, string> = {
   "DAILOAN-UNDER-8M2": "Phụ thu cửa Đài Loan dưới 8 m²",
   "DUC-UNDER-8M2": "Phụ thu cửa Đức dưới 8 m²",
   "DUC-DISCOUNT-15": "Chiết khấu cửa Đức 15%",
-  "DUC-GIFT-RAIL-8M2": "Tặng ray cửa Đức từ 8 m²",
+  "DUC-GIFT-RAIL-GT8M2": "Tặng ray cửa Đức trên 8 m²",
   "UC-UNDER-7M2": "Phụ thu cửa Úc dưới 7 m²",
   "CUALUOI-UNDER-8M2": "Phụ thu cửa lưới dưới 8 m²",
   "DUC-WOODGRAIN-SLAT": "Phụ thu lá vân gỗ cửa Đức",
@@ -864,9 +904,190 @@ export function linePriceVariant(line: SalesLine): string {
     || text(line._commercial?.price_variant);
 }
 
-/** Nhãn cho một cách bán: mã kỹ thuật kèm đúng con số của nó — số mới là thứ giúp chọn đúng. */
+/**
+ * Mã giá → tiếng Việt.
+ *
+ * Server tra giá theo ĐÚNG mã thô (`clouderp-pricing` lọc theo `price_variant`), nên bảng này
+ * chỉ đổi CHỮ HIỆN RA, không bao giờ đổi giá trị ghi xuống. Tập mã lấy từ dữ liệu thật đang có
+ * trong `nhap/` + `nhap/du-lieu/` (đếm 21/08/2026: STANDARD 628, TRON_BO 113, CHI_LA 35,
+ * TANG_RAY 30, TACH_MON 16, KEO_TAY 12, MOTOR_NGOAI 8) và mô tả trong brief
+ * `alumdoor-v2.json` (Sales Order Item → price_variant).
+ *
+ * Mã lạ (danh mục thêm mã mới mà bảng này chưa biết) phải hiện lại CHÍNH MÃ THÔ: người bán đọc
+ * được mã còn hơn nhìn một ô rỗng và tưởng dòng chưa có giá.
+ */
+const PRICE_VARIANT_LABELS: Record<string, string> = {
+  STANDARD: "Tiêu chuẩn",
+  TANG_RAY: "Tặng ray",
+  CHI_LA: "Chỉ lá (không tặng ray)",
+  TRON_BO: "Trọn bộ",
+  TACH_MON: "Tách món",
+  KEO_TAY: "Kéo tay",
+  MOTOR_NGOAI: "Mô tơ ngoài",
+};
+
+/** Mã giá "TANG_RAY"/"CHI_LA" — cặp duy nhất người bán thật sự phải bật/tắt trên màn. */
+export const PRICE_VARIANT_GIFT_RAIL = "TANG_RAY";
+export const PRICE_VARIANT_LEAF_ONLY = "CHI_LA";
+
+/** Nhãn tiếng Việt của một mã giá. Không biết mã ⇒ trả lại nguyên mã thô, không bao giờ rỗng. */
+export function priceVariantLabel(value: unknown): string {
+  const code = text(value);
+  if (!code) return "";
+  return PRICE_VARIANT_LABELS[code.toUpperCase()] ?? code;
+}
+
+/** Bảng `mã → nhãn` cho ô chọn (DocField.optionLabels): GIÁ TRỊ giữ mã thô, chỉ nhãn được dịch. */
+export function priceVariantOptionLabels(options: PriceVariantOption[]): Record<string, string> {
+  const labels: Record<string, string> = {};
+  for (const option of options) {
+    const code = text(option.price_variant);
+    if (code) labels[code] = priceVariantOptionLabel(option);
+  }
+  return labels;
+}
+
+/**
+ * Ô tick "Tặng ray" chỉ có nghĩa khi mặt hàng có ĐÚNG hai dòng giá TANG_RAY và CHI_LA.
+ *
+ * 202/224 cặp (mã + ĐVT) chỉ có một cách bán — bật một ô tick ở đó là hứa với người bán một
+ * lựa chọn không tồn tại. Mã có từ ba cách trở lên thì một ô tick không diễn đạt đủ, phải giữ
+ * ô chọn. `undefined` = không đủ điều kiện ⇒ dùng ô chọn như cũ.
+ */
+export function lineGiftRailToggle(line: SalesLine): {
+  checked: boolean;
+  giftOption: PriceVariantOption;
+  leafOption: PriceVariantOption;
+  /** `true` = dòng chưa chọn cách bán nào ⇒ chưa ra tiền, phải nói thẳng chứ không tick sẵn. */
+  undecided: boolean;
+  /** Ngưỡng diện tích đang áp (m²) — của server nếu server có nói, nếu không thì hằng số dưới. */
+  minArea: number;
+  /** Toán tử biên đang áp: `GT` = lớn hơn; `GTE` = lớn hơn hoặc bằng. */
+  operator: "GT" | "GTE";
+  /** Diện tích một BỘ đang dùng để so với ngưỡng; `undefined` = chưa nhập đủ kích thước. */
+  area?: number;
+  /** `true` = đủ diện tích để được tặng ray ⇒ được phép tick (và được tick sẵn). */
+  eligible: boolean;
+} | undefined {
+  const options = linePriceVariantOptions(line);
+  if (options.length !== 2) return undefined;
+  const giftOption = options.find((option) => text(option.price_variant).toUpperCase() === PRICE_VARIANT_GIFT_RAIL);
+  const leafOption = options.find((option) => text(option.price_variant).toUpperCase() === PRICE_VARIANT_LEAF_ONLY);
+  if (!giftOption || !leafOption) return undefined;
+  const chosen = linePriceVariant(line).toUpperCase();
+  const minArea = lineGiftRailMinArea(line);
+  const area = lineGiftRailArea(line);
+  const operator = lineGiftRailAreaOperator(line);
+  return {
+    checked: chosen === PRICE_VARIANT_GIFT_RAIL,
+    giftOption,
+    leafOption,
+    undecided: chosen !== PRICE_VARIANT_GIFT_RAIL && chosen !== PRICE_VARIANT_LEAF_ONLY,
+    minArea,
+    operator,
+    area,
+    eligible: area !== undefined && (operator === "GTE" ? area >= minArea - 1e-9 : area > minArea + 1e-9),
+  };
+}
+
+/**
+ * Ngưỡng diện tích được tặng ray.
+ *
+ * Quyết định trực tiếp của chủ xưởng ngày 22/08/2026 là **trên 8 m²**, thay mốc 10 m² trong
+ * workbook cũ. Đây là số dự phòng; payload server có khai chính sách cụ thể vẫn là trọng tài.
+ */
+export const GIFT_RAIL_MIN_AREA_SQM = 8;
+
+const GIFT_RAIL_MIN_AREA_KEYS = [
+  "gift_rail_min_area_sqm",
+  "gift_rail_threshold_sqm",
+  "benefit_min_area_sqm",
+] as const;
+
+/** Ngưỡng của server nếu có; không có ⇒ quyết định chủ xưởng 8 m². */
+export function lineGiftRailMinArea(line: SalesLine): number {
+  const commercial = line._commercial as Record<string, unknown> | undefined;
+  const catalog = line._commercial?.catalog_context as Record<string, unknown> | undefined;
+  const context = line._context as Record<string, unknown> | undefined;
+  for (const key of GIFT_RAIL_MIN_AREA_KEYS) {
+    const value = positiveNumber(commercial?.[key])
+      ?? positiveNumber(catalog?.[key])
+      ?? positiveNumber(context?.[key]);
+    if (value !== undefined) return value;
+  }
+  return GIFT_RAIL_MIN_AREA_SQM;
+}
+
+/** Toán tử biên của chính sách: `GT` = lớn hơn; `GTE` = lớn hơn hoặc bằng. */
+export function lineGiftRailAreaOperator(line: SalesLine): "GT" | "GTE" {
+  const commercial = line._commercial as Record<string, unknown> | undefined;
+  const catalog = line._commercial?.catalog_context as Record<string, unknown> | undefined;
+  const context = line._context as Record<string, unknown> | undefined;
+  const value = text(commercial?.gift_rail_area_operator)
+    || text(catalog?.gift_rail_area_operator)
+    || text(context?.gift_rail_area_operator);
+  return value.toUpperCase() === "GTE" ? "GTE" : "GT";
+}
+
+/**
+ * Diện tích MỘT BỘ để so với ngưỡng.
+ *
+ * Quyền lợi tặng ray đi theo từng bộ cửa, không theo tổng đơn: hai bộ 4 m² không thành một bộ
+ * đạt ngưỡng. `billable_area_sqm` của server là diện tích ĐÃ nhân số bộ, nên phải chia lại cho số bộ.
+ */
+export function lineGiftRailArea(line: SalesLine): number | undefined {
+  /*
+   * KÍCH THƯỚC THẬT đi trước `billable_area_sqm`: diện tích tính tiền đã có thể bị `min_area_sqm`
+   * NÂNG lên (bộ 3,2 m² thu tiền 4 m²). Lấy con số đã nâng đó đi so ngưỡng tặng ray là tặng ray
+   * cho một bộ cửa chưa bao giờ đủ lớn — quà tặng ra tiền thật, không được suy ra từ số đã bị nâng.
+   */
+  const width = positiveNumber(line.width_pb_ray_m) ?? positiveNumber(line.width_pb_nhua_m) ?? positiveNumber(line.width_m);
+  const height = positiveNumber(line.height_m);
+  if (width !== undefined && height !== undefined) return width * height;
+  const sets = positiveNumber(line.set_count) ?? 1;
+  const billable = positiveNumber(line.billable_area_sqm);
+  return billable === undefined ? undefined : billable / sets;
+}
+
+/**
+ * Dòng đang chọn "Tặng ray" trong khi diện tích CHƯA tới ngưỡng ⇒ phải chặn, không chỉ cảnh báo.
+ *
+ * Chốt chủ xưởng: ngưỡng 8 m², toán tử GT, vừa chặn vừa cảnh báo. Trả về câu giải thích bằng tiếng
+ * Việt để cả ô tick lẫn thanh tổng nói đúng một câu, hoặc chuỗi rỗng khi dòng hợp lệ.
+ */
+export function lineGiftRailViolation(line: SalesLine): string {
+  const toggle = lineGiftRailToggle(line);
+  if (!toggle || !toggle.checked || toggle.eligible) return "";
+  const area = toggle.area;
+  const boundary = lineGiftRailAreaOperator(line) === "GTE" ? "đạt" : "vượt";
+  return area === undefined
+    ? `Chưa nhập đủ kích thước nên chưa biết dòng này có ${boundary} ${quantity(toggle.minArea)} m² để được tặng ray hay không.`
+    : `Cửa ${quantity(area)} m²/bộ chưa ${boundary} ${quantity(toggle.minArea)} m² — không được tặng ray. Bỏ tick "Tặng ray" để bán theo đơn giá chỉ lá.`;
+}
+
+/**
+ * Ảnh mặt hàng, nếu payload có.
+ *
+ * 21/08/2026: DocType `Item` trong `server/briefs/alumdoor-v2.json` CHƯA có trường ảnh nào
+ * (`Attach Image` chỉ xuất hiện ở phiếu nhập kho và biên bản chênh lệch), và trong repo cũng
+ * chưa có kho ảnh sản phẩm. Hàm này đọc theo những tên trường chuẩn để phần UI tự sáng lên
+ * đúng ngày brief bổ sung trường ảnh, không phải sửa lại lưới lần nữa. Chưa có ⇒ chuỗi rỗng,
+ * và UI ẩn hẳn phần ảnh chứ không dựng một ô trống cho mọi dòng.
+ */
+const ITEM_IMAGE_KEYS = ["item_image", "image", "image_url", "thumbnail", "item_thumbnail"] as const;
+export function lineItemImage(line: SalesLine): string {
+  const context = line._context as Record<string, unknown> | undefined;
+  const row = line as unknown as Record<string, unknown>;
+  for (const key of ITEM_IMAGE_KEYS) {
+    const value = text(row[key]) || text(context?.[key]);
+    if (value) return value;
+  }
+  return "";
+}
+
+/** Nhãn cho một cách bán: chữ tiếng Việt kèm đúng con số của nó — số mới là thứ giúp chọn đúng. */
 export function priceVariantOptionLabel(option: PriceVariantOption): string {
-  const code = text(option.price_variant);
+  const code = priceVariantLabel(option.price_variant);
   const unit = text(option.uom) ? `/${text(option.uom)}` : "";
   const rate = numberValue(option.rate);
   if (rate !== undefined) return `${code} · ${money(rate)} ₫${unit}`;
@@ -876,6 +1097,41 @@ export function priceVariantOptionLabel(option: PriceVariantOption): string {
   const tiers = Number(option.tier_count) > 1 ? ` (${option.tier_count} bậc)` : "";
   if (min === max) return `${code} · ${money(min)} ₫${unit}${tiers}`;
   return `${code} · ${money(min)}–${money(max)} ₫${unit}${tiers}`;
+}
+
+/**
+ * Nhãn CHỈ CÓ SỐ TIỀN của một cách bán — không lặp lại tên cách bán.
+ *
+ * Lỗi chủ xưởng chụp 21/08/2026: "… · Tặng ray · Tặng ray · 1.760.000 ₫/m2". Chữ "Tặng ray" thứ
+ * nhất là nhãn ô tick, chữ thứ hai đến từ `priceVariantOptionLabel` in kèm ngay bên cạnh. Cạnh
+ * một ô tick đã có nhãn, chỉ CON SỐ mới là thông tin mới.
+ */
+export function priceVariantOptionAmountLabel(option: PriceVariantOption): string {
+  const unit = text(option.uom) ? `/${text(option.uom)}` : "";
+  const rate = numberValue(option.rate);
+  if (rate !== undefined) return `${money(rate)} ₫${unit}`;
+  const min = numberValue(option.rate_min);
+  const max = numberValue(option.rate_max);
+  if (min === undefined || max === undefined) return "";
+  const tiers = Number(option.tier_count) > 1 ? ` (${option.tier_count} bậc)` : "";
+  if (min === max) return `${money(min)} ₫${unit}${tiers}`;
+  return `${money(min)}–${money(max)} ₫${unit}${tiers}`;
+}
+
+/**
+ * Ô tick "Có bắn bướm" — chỉ có ở loại cửa mà chính sách cắt khai số trừ riêng.
+ *
+ * Server đã quyết sẵn: `sales-production-core.ts:1193` tính `supports_butterfly_bracket` từ
+ * `Cutting Policy.butterfly_cut_deduction_m`, rồi `ui-child-preview.ts:509` chiếu xuống dòng
+ * thành `field_overrides.has_butterfly_bracket.hidden`. Client KHÔNG tự đoán theo tên loại cửa:
+ * chỉ đọc lại quyết định đó. Không có override ⇒ server chưa nói ⇒ ẩn (Đức, Úc rơi vào đây).
+ *
+ * Chữ hiện ra thống nhất là "Có bắn bướm" — đúng chữ chủ xưởng dùng.
+ */
+export function lineButterflyToggle(line: SalesLine): { checked: boolean } | undefined {
+  const override = fieldOverride(line, "has_butterfly_bracket");
+  if (!override || override.hidden === true || override.hidden === 1) return undefined;
+  return { checked: numberValue(line.has_butterfly_bracket) === 1 };
 }
 
 /**
@@ -921,6 +1177,76 @@ export function lineAppliedAdjustments(line: SalesLine): AppliedAdjustment[] {
   return Array.isArray(line._commercial?.applied_adjustments) ? line._commercial!.applied_adjustments! : [];
 }
 
+export interface LineAdjustmentSplit {
+  /** Tổng các khoản ADJUSTMENT LÀM TĂNG tiền — đây mới đúng nghĩa "Phụ thu". */
+  surcharge: number;
+  /** Tổng các khoản ADJUSTMENT LÀM GIẢM tiền (trị tuyệt đối) — thuộc nhóm "Chiết khấu". */
+  reduction: number;
+  /** Tên (đã Việt hoá) của các luật đang kéo tiền xuống, để giải thích ô "Chiết khấu". */
+  reductionRules: string[];
+}
+
+/**
+ * Tách `adjustment_amount` của MỘT dòng theo DẤU của từng luật đã áp.
+ *
+ * Sau bản vá P0 chiết khấu ở server, dòng cửa Đức đại lý trả về `discount_percentage: 0` /
+ * `discount_amount: 0` còn khoản 15% nằm trong `adjustment_amount` mang dấu ÂM. Ô "Chiết khấu"
+ * mà vẫn chỉ đọc `discount_amount` thì khách nhìn thấy "Chiết khấu 0 ₫" trong khi tiền đã giảm
+ * đúng — đúng tiền, sai cách trình bày.
+ *
+ * `amount_minor` là đơn vị minor của tiền tệ; quy đổi bằng đúng tỉ lệ tổng của chính dòng đó
+ * (`adjustment_amount / Σ amount_minor`) nên đúng với mọi currency scale, không phải đoán.
+ */
+export function lineAdjustmentSplit(line: SalesLine): LineAdjustmentSplit {
+  const total = lineAdjustmentAmount(line);
+  const applied = lineAppliedAdjustments(line);
+  const minorTotal = applied.reduce((sum, row) => sum + (numberValue(row.amount_minor) ?? 0), 0);
+  const reductionRules: string[] = [];
+  const addRule = (value: unknown) => {
+    const label = pricingRuleLabel(value);
+    if (label && !reductionRules.includes(label)) reductionRules.push(label);
+  };
+  if (applied.length && minorTotal !== 0 && total !== 0) {
+    const factor = total / minorTotal;
+    let surcharge = 0;
+    let reduction = 0;
+    for (const row of applied) {
+      const amount = (numberValue(row.amount_minor) ?? 0) * factor;
+      if (amount >= 0) surcharge += amount;
+      else { reduction += -amount; addRule(row.rule_name); }
+    }
+    return { surcharge, reduction, reductionRules };
+  }
+  if (!total) return { surcharge: 0, reduction: 0, reductionRules };
+  if (total >= 0) return { surcharge: total, reduction: 0, reductionRules };
+  for (const row of applied) addRule(row.rule_name);
+  return { surcharge: 0, reduction: -total, reductionRules };
+}
+
+/**
+ * "Chiết khấu" mà người bán phải thấy trên dòng = chiết khấu % + mọi khoản ADJUSTMENT ÂM.
+ * Sau bản vá P0, phần lớn tiền chiết khấu đi đường thứ hai chứ không còn ở `discount_amount`.
+ */
+export function lineDiscountTotal(line: SalesLine): number {
+  return lineDiscountAmount(line) + lineAdjustmentSplit(line).reduction;
+}
+
+/**
+ * Dấu hiệu TRÙNG CHIẾT KHẤU, khai đúng như chốt chặn của server
+ * (`commercial-line-resolver.ts:194`): có chiết khấu, và tổng khoản ADJUSTMENT ÂM có trị tuyệt
+ * đối TRÙNG KHÍT với khoản chiết khấu đó (sai số ≤ 1 đơn vị tiền do làm tròn).
+ *
+ * Điều kiện cũ ("có chiết khấu % VÀ có một luật âm mà tên nghe như chiết khấu") nay không bao
+ * giờ đúng nữa — sau bản vá P0, dòng đi đường Pricing Rule có `discount_percentage = 0`. Giữ
+ * nguyên nó thì badge thành code chết, và UI với server nói hai thứ tiếng khác nhau.
+ */
+export function lineDuplicateDiscount(line: SalesLine): boolean {
+  const discount = lineDiscountAmount(line);
+  if (discount <= 0) return false;
+  const reduction = lineAdjustmentSplit(line).reduction;
+  return reduction > 0 && Math.abs(reduction - discount) <= 1;
+}
+
 export interface PriceExplanationRow {
   key: string;
   label: string;
@@ -958,7 +1284,7 @@ export function linePriceExplanation(line: SalesLine): PriceExplanationRow[] {
     const option = variantOptions.find((entry) => text(entry.price_variant) === chosen);
     push("price_variant", "Mã giá",
       chosen
-        ? (option ? priceVariantOptionLabel(option) : chosen)
+        ? (option ? priceVariantOptionLabel(option) : priceVariantLabel(chosen))
         : `Chưa chọn — ${variantOptions.map(priceVariantOptionLabel).join(" · ")}`,
       chosen ? undefined : "warn");
   }
@@ -1199,6 +1525,12 @@ export function lineBlockingGaps(line: SalesLine): LineGap[] {
       what: `Thiếu ${text(rule.label).replace(/\s+/g, " ") || fieldname}`,
       where: "Nhập ngay trên dòng này",
     });
+  }
+
+  /* Tặng ray dưới ngưỡng: CHẶN, không chỉ nhắc. Đây là quà tặng ra tiền thật. */
+  const giftRailViolation = lineGiftRailViolation(line);
+  if (giftRailViolation) {
+    gaps.push({ key: "gift_rail_below_threshold", what: giftRailViolation, where: "Bỏ tick \"Tặng ray\" ngay trên dòng này" });
   }
 
   for (const pending of Array.isArray(line._bomPreview?.pending_fields) ? line._bomPreview!.pending_fields! : []) {

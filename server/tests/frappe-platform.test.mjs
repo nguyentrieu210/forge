@@ -21,6 +21,7 @@ async function setup() {
     fields: [
       { fieldname: "check", fieldtype: "Data", required: true },
       { fieldname: "result", fieldtype: "Select", options: "Pass\nFail", required: true },
+      { fieldname: "item_code", fieldtype: "Link", options: "Item" },
     ], permissions: [], revision: 1,
   });
   const parent = parseDocTypeMeta({
@@ -58,6 +59,7 @@ async function setup() {
   }), admin.user_id, NOW);
   const store = new InMemoryMutationStore();
   store.seedMaster("Customer", "CUST-001", "demo", { customer_name: "Acme <North>" });
+  store.seedMaster("Item", "ITEM-001", "demo", { item_name: "Valid component" });
   const registry = new ControllerRegistry().setFallback(new GenericMetadataController(metadata));
   const kernel = new DocumentKernel(registry, store, new MetadataPermissionService(metadata), () => NOW);
   return { metadata, store, kernel };
@@ -99,6 +101,23 @@ test("generic metadata rejects unknown fields and invalid Link references at the
   const draft = { subject: "Missing customer", customer: "CUST-NO", inspection_date: "2026-07-25", amount: "0", workflow_state: "Draft", items: [{ check: "A", result: "Pass" }] };
   await execute(kernel, { commandId: "bad-link-create", doctype: "Inspection Request", name: "INSP-BAD", action: "create", expectedVersion: null, document: draft });
   await assert.rejects(execute(kernel, { commandId: "bad-link-submit", doctype: "Inspection Request", name: "INSP-BAD", action: "submit", expectedVersion: 1, document: { ...draft, workflow_state: "Approved" } }), (error) => error.code === "REFERENCE_VALIDATION_FAILED");
+});
+
+test("generic metadata validates Link references nested inside child tables", async () => {
+  const { kernel } = await setup();
+  const draft = {
+    subject: "Invalid child link", customer: "CUST-001", inspection_date: "2026-07-25",
+    amount: "0", workflow_state: "Draft",
+    items: [{ check: "Material", result: "Pass", item_code: "ITEM-NOT-FOUND" }],
+  };
+  await execute(kernel, {
+    commandId: "bad-child-link-create", doctype: "Inspection Request", name: "INSP-CHILD-BAD",
+    action: "create", expectedVersion: null, document: draft,
+  });
+  await assert.rejects(execute(kernel, {
+    commandId: "bad-child-link-submit", doctype: "Inspection Request", name: "INSP-CHILD-BAD",
+    action: "submit", expectedVersion: 1, document: { ...draft, workflow_state: "Approved" },
+  }), (error) => error.code === "REFERENCE_VALIDATION_FAILED" && /Items row 1: Item reference/i.test(error.message));
 });
 
 test("server-enforced hidden fields are derived by the runtime and cannot be forged", async () => {

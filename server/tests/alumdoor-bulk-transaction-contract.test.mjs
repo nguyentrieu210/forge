@@ -5,11 +5,12 @@ import { parseAppManifest } from "../dist/packages/app-registry/src/index.js";
 import { compileBrief } from "../scripts/lib/compile-brief.mjs";
 import { readBriefSource } from "../scripts/lib/read-brief-source.mjs";
 import { validateBriefSchema } from "../scripts/lib/validate-brief-schema.mjs";
+import { alumdoorBriefVersion } from "./helpers.mjs";
 
-test("Alumdoor 2.10.0 compiles Bulk Transaction action through canonical manifest parser", async () => {
+test("Alumdoor 2.11.1 compiles Bulk Transaction action through canonical manifest parser", async () => {
   const brief = await readBriefSource(new URL("../briefs/alumdoor-v2.json", import.meta.url));
   // 2.5.0 — hội tụ danh mục 19/08: thêm 8 DocType và 3 trường trên đường tính tiền.
-  assert.equal(brief.version, "2.10.0");
+  assert.equal(brief.version, alumdoorBriefVersion());
 
   const schemaErrors = await validateBriefSchema(brief);
   assert.deepEqual(schemaErrors, []);
@@ -53,4 +54,24 @@ test("bulk receipt source preserves user posting time in both idempotency and cr
   assert.match(source, /normalizePostingAt\(raw\.posting_at\)/);
   assert.match(source, /bulkFingerprint\(supplier, warehouse, supplierInvoiceNo, driver, postingAt, lines\)/);
   assert.match(source, /posting_at:\s*postingAt/);
+});
+
+test("Alumdoor exposes all four WMS routes through usable Kho actions", async () => {
+  const brief = await readBriefSource(new URL("../briefs/alumdoor-v2.json", import.meta.url));
+  const manifest = parseAppManifest(compileBrief(brief));
+  const expected = new Map([
+    ["lap-ke-hoach-lay-hang-fifo", "alumdoor.wms.plan_picking"],
+    ["kiem-tra-dong-goi-wms", "alumdoor.wms.validate_packing"],
+    ["lap-ke-hoach-cat-hang", "alumdoor.wms.plan_putaway"],
+    ["gom-song-lay-hang", "alumdoor.wms.build_pick_waves"],
+  ]);
+  for (const [name, method] of expected) {
+    const action = manifest.actions.find((entry) => entry.name === name);
+    assert.ok(action, `missing WMS action ${name}`);
+    assert.equal(action.group, "Kho");
+    assert.equal(action.commit.method, method);
+  }
+  const packing = manifest.actions.find((entry) => entry.name === "kiem-tra-dong-goi-wms");
+  assert.ok(packing.fields.find((field) => field.fieldname === "picked")?.options?.startsWith("BulkTransaction:"));
+  assert.ok(packing.fields.find((field) => field.fieldname === "package_rows")?.options?.startsWith("BulkTransaction:"));
 });

@@ -57,6 +57,49 @@ test("Sales Order Item treats measurement_profile area as canonical and preserve
   assert.equal(body.patch.width_pb_nhua_m, undefined);
 });
 
+test("legacy width_m migrates once into the active dealer PB field before repricing", async () => {
+  const item = {
+    item_code: "ITEM-AREA-LEGACY",
+    item_name: "Cửa diện tích cũ",
+    item_group: "Cửa kiểm thử",
+    measurement_profile: "Thành phẩm theo m2",
+    stock_uom: "Bộ",
+    default_sales_uom: "m2",
+    is_sales_item: 1,
+    disabled: 0,
+    uom_conversions: [{ uom: "m2", conversion_factor: 1 }],
+  };
+  const call = async (path) => {
+    if (path === "resource/Item/ITEM-AREA-LEGACY") return response({ data: item });
+    if (path.startsWith("resource/")) return response({ data: [] });
+    return response({ message: `unexpected ${path}` }, 404);
+  };
+
+  const result = await previewChildRow(call, {
+    child_doctype: "Sales Order Item",
+    child_fields: [
+      "item_code", "item_name", "inventory_mode", "measurement_profile", "stock_uom", "uom",
+      "width_pb_ray_m", "width_pb_nhua_m", "width_m", "height_m", "set_count", "qty", "stock_qty",
+      "conversion_factor", "amount", "discount_amount", "color", "door_type",
+    ],
+    row: {
+      item_code: "ITEM-AREA-LEGACY",
+      uom: "m2",
+      width_m: 2.2,
+      height_m: 2,
+      set_count: 1,
+    },
+    parent: { customer_group: "Đại lý" },
+    changed_field: "parent_context",
+  });
+
+  assert.equal(result.status, 200);
+  const body = await result.json();
+  assert.equal(body.patch.width_pb_nhua_m, 2.2);
+  assert.equal(body.patch.width_m, 2.2);
+  assert.equal(body.patch.qty, 4.4);
+});
+
 test("Dai Loan sales rows use PB ray for dealers and expose optional mesh height", async () => {
   const item = {
     item_code: "TP-CUADL8D-TRONBO",

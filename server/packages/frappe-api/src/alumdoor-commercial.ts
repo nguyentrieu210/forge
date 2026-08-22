@@ -1,5 +1,8 @@
 import {
-  alumdoorCommercialBenefits, areaTierBasisSqm, defaultAlumdoorDiscountPercent, errors, resolveCommercialLine,
+  alumdoorCommercialBenefits, alumdoorGiftRailAreaOperator, alumdoorGiftRailEligible,
+  alumdoorGiftRailThresholdSqm, areaTierBasisSqm, assertAlumdoorGiftRailAllowed,
+  defaultAlumdoorDiscountPercent, errors, resolveCommercialLine,
+  hasAlumdoorDiscountEffect,
   withAlumdoorDefaultDiscountSnapshot,
   type JsonObject, type JsonValue, type MutationCommand,
 } from "./router-platform.js";
@@ -99,6 +102,13 @@ export async function previewSalesCommercialLine(args: FrappeArgs, context: Frap
     billable_area_sqm: effectiveArea,
     set_count: line.set_count,
   });
+  const widthForGift = [line.width_pb_ray_m, line.width_pb_nhua_m, line.width_m]
+    .map(Number)
+    .find((value) => Number.isFinite(value) && value > 0);
+  const heightForGift = Number(line.height_m);
+  const physicalGiftAreaPerSet = widthForGift !== undefined && Number.isFinite(heightForGift) && heightForGift > 0
+    ? widthForGift * heightForGift
+    : previewAreaPerSet;
 
   const fakeCommand: MutationCommand<JsonObject> = {
     schema_version: 1,
@@ -121,10 +131,12 @@ export async function previewSalesCommercialLine(args: FrappeArgs, context: Frap
     }),
   };
   const requestedDiscount = Number(line.discount_percentage);
+  // P0-2: nhóm giá của khách quyết định có chiết khấu đại lý hay không.
+  const previewCustomerGroup = args.text("customer_group");
   const expectedDiscount = defaultAlumdoorDiscountPercent({
     ...item.data,
     item_code: itemCode,
-  });
+  }, previewCustomerGroup);
   const kernelContext = {
     command: fakeCommand,
     existing: null,
@@ -132,7 +144,7 @@ export async function previewSalesCommercialLine(args: FrappeArgs, context: Frap
     nextVersion: 1,
     reader: context.documents,
   };
-  const resolved = await resolveCommercialLine(kernelContext, {
+  const resolveInput: Parameters<typeof resolveCommercialLine>[1] = {
     itemCode,
     priceList,
     documentCurrency: currency,
@@ -159,8 +171,14 @@ export async function previewSalesCommercialLine(args: FrappeArgs, context: Frap
     ...(args.text("customer") ? { party: args.text("customer")! } : {}),
     ...(args.text("customer_group") ? { customerGroup: args.text("customer_group")! } : {}),
     facts,
-    ...(Number.isFinite(requestedDiscount) || expectedDiscount > 0
-      ? { discountPercentageOverride: Number.isFinite(requestedDiscount) ? requestedDiscount : expectedDiscount }
+    /**
+     * P0-1 — xem trước phải tính CÙNG một cách với lúc lưu, nên ở đây cũng chỉ truyền mức
+     * người bán TỰ NHẬP. Hằng số 15% (`expectedDiscount`) không còn đi vào phép tính tiền:
+     * chiết khấu đại lý do luật Pricing Rule trong danh mục cấp, một lần duy nhất.
+     * Xem lý do đầy đủ ở `commercial-sales-order-controller.ts` (cùng chỗ vá).
+     */
+    ...(Number.isFinite(requestedDiscount)
+      ? { discountPercentageOverride: requestedDiscount }
       : {}),
     ...(effectiveArea === undefined ? {} : { areaSqm: effectiveArea }),
     // Bậc tra theo diện tích MỘT BỘ. `effectiveArea` là qty của dòng m², tức ĐÃ nhân số bộ —
@@ -168,11 +186,20 @@ export async function previewSalesCommercialLine(args: FrappeArgs, context: Frap
     ...(previewAreaPerSet === undefined ? {} : { areaPerSetSqm: previewAreaPerSet }),
     ...(Number.isFinite(Number(line.length_m)) ? { lengthM: Number(line.length_m) } : {}),
     ...(Number.isFinite(Number(line.set_count)) ? { setCount: Number(line.set_count) } : {}),
-  });
+  };
+  let resolved = await resolveCommercialLine(kernelContext, resolveInput);
+  if (expectedDiscount > 0
+    && !Number.isFinite(requestedDiscount)
+    && !resolved.pricing_rule_snapshots.some(hasAlumdoorDiscountEffect)) {
+    resolved = await resolveCommercialLine(kernelContext, {
+      ...resolveInput,
+      discountPercentageOverride: expectedDiscount,
+    });
+  }
   const pricingRuleSnapshots = withAlumdoorDefaultDiscountSnapshot(resolved.pricing_rule_snapshots, {
     ...item.data,
     item_code: itemCode,
-  });
+  }, previewCustomerGroup, resolved.discount_percentage);
 
   // ── Giải trình đơn giá ───────────────────────────────────────────────────────────────────
   const chosenPrice = await readMaster(context, "Item Price", catalogText(resolved.item_price));
@@ -220,10 +247,28 @@ export async function previewSalesCommercialLine(args: FrappeArgs, context: Frap
     ? previewAreaPerSet <= minAreaSqm
     : null;
 
+  /**
+   * "10 chặn cảnh báo" — XEM TRƯỚC phải chặn CÙNG một luật với lúc lưu, nếu không người bán
+   * thấy một dòng giá đẹp rồi mới ăn lỗi lúc bấm Lưu. Chặn theo `resolved.price_variant`
+   * (biến thể engine THỰC SỰ dùng để ra giá), không theo chuỗi client gửi.
+   */
+  assertAlumdoorGiftRailAllowed(
+    { ...item.data, item_code: itemCode },
+    physicalGiftAreaPerSet,
+    resolved.price_variant,
+    itemCode,
+  );
+
   return {
     ...resolved,
     pricing_rule_snapshots: pricingRuleSnapshots,
-    benefit_items: alumdoorCommercialBenefits({ ...item.data, item_code: itemCode }, effectiveArea ?? qty),
+    // P0-3: chỉ biến thể TANG_RAY mới được tặng ray. `resolved.price_variant` là biến thể
+    // engine ĐÃ thực sự dùng để ra giá, không phải chuỗi client gửi.
+    benefit_items: alumdoorCommercialBenefits(
+      { ...item.data, item_code: itemCode },
+      physicalGiftAreaPerSet,
+      resolved.price_variant,
+    ),
     rate: resolved.selling_rate,
     amount: resolved.net_before_tax,
     net_amount: resolved.net_before_tax,
@@ -257,6 +302,20 @@ export async function previewSalesCommercialLine(args: FrappeArgs, context: Frap
             + `${resolved.item_price}${areaTier ? `, bậc ${areaTier}` : ""}.`,
       },
     }),
+    /**
+     * ── NGƯỠNG TẶNG RAY TRẢ XUỐNG CLIENT ────────────────────────────────────────────────
+     * Client phải tự tick hộ người bán khi vượt ngưỡng, nên nhận cả con số lẫn toán tử từ
+     * Item master. Hai tầng cùng gọi một engine eligibility, không tự viết lại phép so.
+     *
+     * `gift_rail_eligible` = dòng này có ĐỦ ĐIỀU KIỆN được tặng ray hay không (đúng phạm vi
+     * chính sách + đạt ngưỡng). Nó KHÔNG nói người bán đã tick hay chưa — tick là quyền của
+     * người bán, server chỉ được phép TỪ CHỐI tick sai (dưới ngưỡng), không được ép tick.
+     */
+    gift_rail_threshold_sqm: alumdoorGiftRailThresholdSqm({ ...item.data, item_code: itemCode }),
+    gift_rail_area_operator: alumdoorGiftRailAreaOperator({ ...item.data, item_code: itemCode }),
+    gift_rail_area_sqm: physicalGiftAreaPerSet ?? null,
+    gift_rail_eligible: defaultAlumdoorDiscountPercent({ ...item.data, item_code: itemCode }) === 15
+      && alumdoorGiftRailEligible({ ...item.data, item_code: itemCode }, physicalGiftAreaPerSet),
     pricing_scope_by_rule: pricingScopeByRule,
     catalog_context: {
       item_group: catalogText(item.data.item_group) || null,
@@ -266,6 +325,8 @@ export async function previewSalesCommercialLine(args: FrappeArgs, context: Frap
       material_specification: catalogText(item.data.material_specification) || null,
       min_area_sqm: minAreaSqm,
       min_area_applied: minAreaApplied,
+      gift_rail_min_area_sqm: alumdoorGiftRailThresholdSqm({ ...item.data, item_code: itemCode }),
+      gift_rail_area_operator: alumdoorGiftRailAreaOperator({ ...item.data, item_code: itemCode }),
     },
     catalog_warnings: catalogWarnings,
   };

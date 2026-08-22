@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { readBriefSource } from "../scripts/lib/read-brief-source.mjs";
+import { alumdoorBriefVersion } from "./helpers.mjs";
 
 const source = new URL("../briefs/alumdoor-v2.json", import.meta.url);
 
@@ -13,7 +14,7 @@ test("Alumdoor reference vertical declares stable package identity and dependenc
   const brief = await canonicalAlumdoorBrief();
 
   assert.equal(brief.id, "alumdoor");
-  assert.equal(brief.version, "2.10.0");
+  assert.equal(brief.version, alumdoorBriefVersion());
   assert.equal(brief.domain, "alumdoor");
 
   const dependencies = brief.requires ?? [];

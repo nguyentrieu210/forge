@@ -329,9 +329,10 @@ test("nhóm hàng chưa Bề mặt nào khai áp dụng thì CHẶN, không mở
   const { body } = await read(await salesItemContext(platform(new Map([
     ["Item:ITEM-1", {
       item_name: "Cửa", item_group: "Cửa lạ", is_sales_item: 1, disabled: 0, is_stock_item: 0,
-      stock_uom: "Cái",
+      stock_uom: "Cái", measurement_profile: "Thành phẩm theo m2",
     }],
     ["Item Group:Cửa lạ", { item_group_name: "Cửa lạ", parent_item_group: "" }],
+    ["Measurement Profile:Thành phẩm theo m2", { profile_name: "Thành phẩm theo m2", require_color: 1 }],
     ["Surface Finish:STD", {
       finish_code: "STD", finish_name: "Sơn tĩnh điện",
       applies_to_groups: [{ item_group: "Cửa CN Đức" }], usage_scope: "Mua & bán",

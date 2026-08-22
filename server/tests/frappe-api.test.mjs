@@ -77,9 +77,10 @@ test("a stale or missing modified value is a conflict, never a force-write", () 
   const current = toFrappeModified(doc.modified_at, doc.version);
   assert.doesNotThrow(() => assertModifiedMatches(doc, current));
   // Same instant, older version — the naive passthrough would accept this.
-  assert.throws(() => assertModifiedMatches(doc, toFrappeModified(doc.modified_at, 2)), /VERSION_CONFLICT|changed/);
-  assert.throws(() => assertModifiedMatches(doc, undefined), /VERSION_CONFLICT|changed/);
-  assert.throws(() => assertModifiedMatches(doc, ""), /VERSION_CONFLICT|changed/);
+  const isConflict = (error) => error?.code === "VERSION_CONFLICT";
+  assert.throws(() => assertModifiedMatches(doc, toFrappeModified(doc.modified_at, 2)), isConflict);
+  assert.throws(() => assertModifiedMatches(doc, undefined), isConflict);
+  assert.throws(() => assertModifiedMatches(doc, ""), isConflict);
 });
 
 // ---- deterministic idempotency ----------------------------------------------
@@ -213,7 +214,7 @@ test("metadata uses frappe field names, integer flags and string precision", () 
 
   const [perm] = doc.permissions;
   assert.equal(perm.read, 1);
-  assert.equal(perm.delete, 1, "delete follows write, since the kernel has no separate delete permission");
+  assert.equal(perm.delete, 0, "delete is an independent permission and must never inherit write");
   assert.equal(perm.cancel, 0);
 });
 

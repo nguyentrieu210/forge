@@ -1,0 +1,140 @@
+{
+ "AL71C": {
+  "kt_cm": 55.0,
+  "buoc_m": 0.055,
+  "ct": "(CPB-130)/ bản lá",
+  "tru1": true
+ },
+ "AL71N": {
+  "kt_cm": 57.0,
+  "buoc_m": 0.057,
+  "ct": "(CPB-130)/ bản lá -1 LÁ",
+  "tru1": true
+ },
+ "AL70": {
+  "kt_cm": 68.0,
+  "buoc_m": 0.068,
+  "ct": "(CPB-130)/ bản lá -1 LÁ",
+  "tru1": true
+ },
+ "AL75N": {
+  "kt_cm": 67.0,
+  "buoc_m": 0.067,
+  "ct": "(CPB-130)/ bản lá -1 LÁ",
+  "tru1": true
+ },
+ "AL75C": {
+  "kt_cm": 68.0,
+  "buoc_m": 0.068,
+  "ct": "(CPB-130)/ bản lá -1 LÁ",
+  "tru1": true
+ },
+ "AL503C": {
+  "kt_cm": 50.0,
+  "buoc_m": 0.05,
+  "ct": "(CPB-130)/ bản lá -1 LÁ",
+  "tru1": true
+ },
+ "AL503N": {
+  "kt_cm": 55.0,
+  "buoc_m": 0.055,
+  "ct": "(CPB-130)/ bản lá -1 LÁ",
+  "tru1": true
+ },
+ "AL548C": {
+  "kt_cm": 50.0,
+  "buoc_m": 0.05,
+  "ct": "(CPB-130)/ bản lá -1 LÁ",
+  "tru1": true
+ },
+ "AL548N": {
+  "kt_cm": 55.0,
+  "buoc_m": 0.055,
+  "ct": "(CPB-130)/ bản lá -1 LÁ",
+  "tru1": true
+ },
+ "AL501C": {
+  "kt_cm": 50.0,
+  "buoc_m": 0.05,
+  "ct": "(CPB-130)/ bản lá -1 LÁ",
+  "tru1": true
+ },
+ "AL501N": {
+  "kt_cm": 57.0,
+  "buoc_m": 0.057,
+  "ct": "(CPB-130)/ bản lá -1 LÁ",
+  "tru1": true
+ },
+ "AL552C": {
+  "kt_cm": 50.0,
+  "buoc_m": 0.05,
+  "ct": "(CPB-130)/ bản lá -1 LÁ",
+  "tru1": true
+ },
+ "AL552N": {
+  "kt_cm": 57.0,
+  "buoc_m": 0.057,
+  "ct": "(CPB-130)/ bản lá -1 LÁ",
+  "tru1": true
+ },
+ "AL595": {
+  "kt_cm": 60.0,
+  "buoc_m": 0.06,
+  "ct": "(CPB-130)/ bản lá -1 LÁ",
+  "tru1": true
+ },
+ "AL652C": {
+  "kt_cm": 50.0,
+  "buoc_m": 0.05,
+  "ct": "(CPB-130)/ bản lá -1 LÁ",
+  "tru1": true
+ },
+ "AL752C": {
+  "kt_cm": 50.0,
+  "buoc_m": 0.05,
+  "ct": "(CPB-130)/ bản lá -1 LÁ",
+  "tru1": true
+ },
+ "AL50C": {
+  "kt_cm": 50.0,
+  "buoc_m": 0.05,
+  "ct": "(CPB-130)/ bản lá -1 LÁ",
+  "tru1": true
+ },
+ "AL50N": {
+  "kt_cm": 55.0,
+  "buoc_m": 0.055,
+  "ct": "(CPB-130)/ bản lá -1 LÁ",
+  "tru1": true
+ },
+ "ALVIP50C": {
+  "kt_cm": 50.0,
+  "buoc_m": 0.05,
+  "ct": "(CPB-130)/ bản lá -1 LÁ",
+  "tru1": true
+ },
+ "ALVIP50N": {
+  "kt_cm": 55.0,
+  "buoc_m": 0.055,
+  "ct": "(CPB-130)/ bản lá -1 LÁ",
+  "tru1": true
+ },
+ "VIPST500N": {
+  "kt_cm": 53.0,
+  "buoc_m": 0.053,
+  "ct": "(CPB-130)/ bản lá -1 LÁ",
+  "tru1": true
+ },
+ "VIPST500C": {
+  "kt_cm": 50.0,
+  "buoc_m": 0.05,
+  "ct": "(CPB-130)/ bản lá -1 LÁ",
+  "tru1": true
+ },
+ "VIPST700": {
+  "kt_cm": 50.0,
+  "buoc_m": 0.05,
+  "ct": "(CPB-130)/ bản lá -1 LÁ",
+  "tru1": true
+ }
+}

@@ -1,6 +1,6 @@
 {
   "format": "alumdoor-bom-rule-owner-overrides/v1",
-  "updated_at": "2026-08-19T12:50:00+07:00",
+  "updated_at": "2026-08-22T13:57:19.861Z",
   "overrides": [
     {
       "component_item": "NVL-TR114-1.8",
@@ -27,7 +27,12 @@
       "authority_type": "OWNER_CONFIRMED",
       "confirmed_by": "Chủ xưởng",
       "confirmed_at": "2026-08-19T12:50:00+07:00",
-      "source_note": "Nguồn hiện có ghi RPBRAY+20CM; chủ xưởng xác nhận quy cách thực tế là Rộng PB ray + 2cm. Giữ nguyên source_formula_text để không mất provenance."
+      "source_note": "Nguồn hiện có ghi RPBRAY+20CM; chủ xưởng xác nhận quy cách thực tế là Rộng PB ray + 2cm. Giữ nguyên source_formula_text để không mất provenance.",
+      "evidence": {
+        "id": "ALUMDOOR-QD-20260822#QĐ-3",
+        "artifact": "docs/decisions/ALUMDOOR-QUYET-DINH-CHU-XUONG-20260822.md",
+        "sha256": "77a4bdc5f7f82f731b6739118b5de2db15a9c504f6453cda1c3e1bc16a71c361"
+      }
     }
   ]
 }

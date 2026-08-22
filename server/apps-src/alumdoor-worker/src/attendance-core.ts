@@ -219,7 +219,7 @@ export function calculateAttendance(input: {
   windows?: readonly AttendanceSegmentWindow[];
   /** Number of regular minutes scheduled by the active Shift Assignment. */
   regularDailyCapMinutes?: number;
-  /** Policy segments that overlap the active Shift Type. Defaults to all for legacy callers. */
+  /** Policy segments that overlap the active Shift Type. Legacy callers use the approved daytime pair. */
   regularSegmentCodes?: readonly AttendanceSegmentCode[];
 }): AttendanceCalculation {
   const timeZone = input.timeZone ?? ATTENDANCE_TIMEZONE;
@@ -228,7 +228,7 @@ export function calculateAttendance(input: {
   if (!Number.isInteger(regularDailyCapMinutes) || regularDailyCapMinutes <= 0 || regularDailyCapMinutes > 24 * 60) {
     throw new AttendanceRuleError("INVALID_SEGMENT_PAIR", "Giới hạn phút công thường trong ngày không hợp lệ.");
   }
-  const regularSegmentCodes = new Set(input.regularSegmentCodes ?? SEGMENT_CODES);
+  const regularSegmentCodes = new Set(input.regularSegmentCodes ?? ["SHIFT1", "SHIFT2"]);
   if ([...regularSegmentCodes].some((code) => !isSegmentCode(code))) {
     throw new AttendanceRuleError("INVALID_SEGMENT_PAIR", "Danh sách đoạn ca làm thường không hợp lệ.");
   }

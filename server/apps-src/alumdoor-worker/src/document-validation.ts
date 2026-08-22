@@ -953,6 +953,7 @@ export async function validateTransactionLines(
   if (side === "sales" && customerName) {
     if (!customer) return refuse(`Khách hàng ${customerName} không tồn tại hoặc đã ngừng dùng.`);
     if (customerGroup !== "Đại lý" && customerGroup !== "Lẻ") {
+      if (!customerGroup) return refuse(`Khách hàng ${customerName} chưa có Nhóm giá Đại lý/Lẻ.`);
       return refuse(`Nhóm giá "${customerGroup || "(trống)"}" không hợp lệ; hãy chọn Đại lý hoặc Lẻ.`);
     }
   }

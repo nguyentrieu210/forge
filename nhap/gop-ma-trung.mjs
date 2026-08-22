@@ -12,6 +12,11 @@ import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
+throw new Error(
+  "ĐÃ KHÓA gop-ma-trung.mjs: script DELETE mã cũ và gán hệ số tạm 10. "
+  + "Phải dùng canonical ledger + cascade + preflight zero conflict qua local runner.",
+);
+
 const GOC = "http://127.0.0.1:8799";
 let cookie = "", csrf = "";
 async function goi(duong, { method = "GET", body } = {}) {

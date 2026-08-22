@@ -1,0 +1,117 @@
+const sourceNote = "QUY CÁCH  (3).xlsx / ĐƠN GIÁ TRỌN BỘ — trích tại docs/ALUMDOOR-QUY-CACH-BOM-RULE-20260821.md §4";
+const common = {
+  rule_version: 1,
+  authority_type: "SOURCE",
+  source_sheet: "ĐƠN GIÁ TRỌN BỘ",
+  source_note: sourceNote,
+};
+
+function applicability(doorType, componentItem, extra = {}) {
+  return [{
+    scope_type: "DOOR_TYPE",
+    door_type: doorType,
+    component_item: componentItem,
+    priority: 100,
+    effective_from: "2026-08-21",
+    note: "Chỉ áp cho dòng phụ kiện tự sinh của loại cửa này.",
+    ...extra,
+  }];
+}
+
+function fixture(name, data) {
+  return {
+    "//": "Dòng phụ kiện tự sinh — QUY TẮC BOM trích nguyên văn từ workbook nguồn; mã thành phần đã đối chiếu Item canonical.",
+    type: "BOM Rule",
+    name,
+    data: { ...common, rule_code: name, ...data },
+  };
+}
+
+export const ALUMDOOR_BOM_RULE_FIXTURES = [
+  fixture("BOMR-RAY-HOP-TD-DUC", {
+    rule_name: "Ray hộp TD — cửa Đức tặng ray",
+    description: "Chọn ĐƠN GIÁ TẶNG RAY thì nhảy 1 dòng ray hộp TD dài = Cao phủ bì trừ 0,20 m, 2 cây, khóa cột đơn giá.",
+    result_kind: "LENGTH",
+    result_uom: "Mét",
+    operator: "SUBTRACT",
+    qty_per_set: 2,
+    source_formula_code: "C4",
+    authority_type: "OWNER_DECISION",
+    source_note: "Quyết định trực tiếp của chủ xưởng ngày 22/08/2026: ngưỡng tặng ray là 8 m², không phải 10 m²; giữ toán tử GT (> 8 m²).",
+    source_formula_text: "Chọn đơn giá tặng ray thì sinh ray hộp TD = cao phủ bì - 0,2 m, số lượng 2 cây; chỉ áp dụng khi diện tích một bộ > 8 m².",
+    note: "Quyết định chủ xưởng 22/08/2026 thay mốc 10 m² trong workbook cũ: biến thể TANG_RAY và diện tích một bộ > 8 m²; không áp cho CHI_LA.",
+    disabled: false,
+    applicability: applicability("Cửa Đức", "RT_RAYHOP", {
+      effective_from: "2026-08-22",
+      price_variant: "TANG_RAY",
+      min_area_sqm: 8,
+      min_area_operator: "GT",
+    }),
+    source_field: "PB_CAO",
+    operand: 0.2,
+    formula_display: "PB_CAO - 0,2",
+  }),
+  fixture("BOMR-RAY-U70-KRON-UC", {
+    rule_name: "Ray sắt U70 không ron — cửa Úc trọn bộ",
+    description: "Chọn ĐƠN GIÁ TRỌN BỘ cửa Úc thì nhảy dòng ray sắt U70 (không ron) dài = Cao phủ bì trừ 0,10 m, 2 cây, khóa cột đơn giá.",
+    result_kind: "LENGTH",
+    result_uom: "Mét",
+    operator: "SUBTRACT",
+    qty_per_set: 2,
+    source_formula_code: "C5",
+    source_formula_text: "Khi chọn cửa úc sễ nhảy ra các dòng sau: ... ray sắt U70 (không ron) = cao phủ bì - 0,1 x 2 cây",
+    note: "Item RT_RAY_U70_KRON có quy đổi 1 Mét = 1,78 Kg (khớp hệ số RAY_U70_WEIGHT 1,78 trong brief) nên Mét đổi sang Kg tồn được.",
+    disabled: false,
+    applicability: applicability("Cửa Úc", "RT_RAY_U70_KRON", { price_variant: "TRON_BO" }),
+    source_field: "PB_CAO",
+    operand: 0.1,
+    formula_display: "PB_CAO - 0,1",
+  }),
+  fixture("BOMR-GIA-T-UC", {
+    rule_name: "Giá T — cửa Úc trọn bộ",
+    description: "Chọn ĐƠN GIÁ TRỌN BỘ cửa Úc thì nhảy dòng Giá T, 1 cặp, khóa cột đơn giá. Không phụ thuộc kích thước.",
+    result_kind: "COUNT",
+    result_uom: "Cặp",
+    operator: "CONSTANT",
+    qty_per_set: 1,
+    source_formula_code: "C5",
+    source_formula_text: "Khi chọn cửa úc sễ nhảy ra các dòng sau: ... giá T x 1 cặp",
+    note: "ĐVT tồn của PKC_GIAT đúng bằng Cặp nên không cần quy đổi.",
+    disabled: false,
+    applicability: applicability("Cửa Úc", "PKC_GIAT", { price_variant: "TRON_BO" }),
+    operand: 1,
+    formula_display: "1",
+  }),
+  fixture("BOMR-RAY-U70-RON-DL", {
+    rule_name: "Ray sắt U70 có ron — cửa Đài Loan trọn bộ",
+    description: "Chọn ĐƠN GIÁ TRỌN BỘ cửa Đài Loan thì nhảy dòng ray sắt U70 (có ron) dài = Cao phủ bì trừ 0,10 m, khóa cột đơn giá.",
+    result_kind: "LENGTH",
+    result_uom: "Mét",
+    operator: "SUBTRACT",
+    qty_per_set: 1,
+    source_formula_code: "C6",
+    source_formula_text: "khi chọn đơn giá trọn bộ thì sẽ nhảy ra các dòng sau: ... ray sắt U70 có ron = cao phủ bì - 0,1",
+    note: "File KHÔNG ghi số cây cho cửa Đài Loan (khác cửa Úc ghi rõ 2 cây) — đang để 1. Cần chủ xưởng xác nhận 1 hay 2 cây.",
+    disabled: true,
+    applicability: applicability("Cửa Đài Loan", "RT_RAY_U70_RON"),
+    source_field: "PB_CAO",
+    operand: 0.1,
+    formula_display: "PB_CAO - 0,1",
+  }),
+  fixture("BOMR-RAY-U70-RON-LUOI", {
+    rule_name: "Ray sắt U70 có ron — cửa Lưới trọn bộ",
+    description: "Chọn ĐƠN GIÁ CHỈ LÁ (TRỌN BỘ) cửa Lưới thì nhảy dòng ray sắt U70 (có ron) dài = Cao phủ bì trừ 0,10 m, khóa cột đơn giá.",
+    result_kind: "LENGTH",
+    result_uom: "Mét",
+    operator: "SUBTRACT",
+    qty_per_set: 1,
+    source_formula_code: "C9",
+    source_formula_text: "khi chọn đơn giá trọn bộ thì sẽ nhảy ra các dòng sau: ... ray sắt U70 có ron = cao phủ bì - 0,1",
+    note: "File KHÔNG ghi số cây cho cửa Lưới — đang để 1. Cần chủ xưởng xác nhận 1 hay 2 cây.",
+    disabled: true,
+    applicability: applicability("Cửa Lưới", "RT_RAY_U70_RON"),
+    source_field: "PB_CAO",
+    operand: 0.1,
+    formula_display: "PB_CAO - 0,1",
+  }),
+];

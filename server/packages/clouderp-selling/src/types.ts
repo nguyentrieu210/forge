@@ -88,6 +88,11 @@ export interface SalesItem extends UomLine {
     uom: string;
     label: string;
     source_rule: string;
+    /** Luôn "0": quà tặng kèm có đơn giá 0 đồng (đáp án chủ xưởng 21/08/2026). */
+    rate?: string;
+    /** Luôn "0". Không bao giờ cộng vào tiền hàng — xem `benefit_items` ở trên. */
+    amount?: string;
+    is_free?: boolean;
   }>;
   /** Source Quotation child row. Required when a Sales Order declares against_quotation. */
   quotation_item?: string;

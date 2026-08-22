@@ -15,6 +15,10 @@ export interface BomRuleApplicability {
   parent_item_group?: string;
   door_type?: string;
   component_item?: string;
+  price_variant?: string;
+  min_area_sqm?: number;
+  min_area_operator?: "GT" | "GTE" | string;
+  max_area_sqm?: number;
   bom?: string;
   priority?: number;
   effective_from?: string;
@@ -62,6 +66,8 @@ export interface BomRuleContext {
   parent_item_group?: string;
   door_type?: string;
   component_item?: string;
+  price_variant?: string;
+  area_sqm?: number;
   on?: string;
 }
 
@@ -129,12 +135,38 @@ function same(actual: unknown, expected: unknown): boolean {
 
 function applicabilityMatches(row: BomRuleApplicability, context: BomRuleContext): boolean {
   if (text(row.component_item) && !same(context.component_item, row.component_item)) return false;
+  if (text(row.price_variant) && !same(context.price_variant, row.price_variant)) return false;
+  const area = Number(context.area_sqm);
+  const minArea = Number(row.min_area_sqm);
+  const maxArea = Number(row.max_area_sqm);
+  const minAreaOperator = text(row.min_area_operator).toUpperCase() === "GT" ? "GT" : "GTE";
+  if (Number.isFinite(minArea) && minArea > 0
+    && (!Number.isFinite(area) || (minAreaOperator === "GT" ? area <= minArea : area < minArea))) return false;
+  if (Number.isFinite(maxArea) && maxArea > 0 && (!Number.isFinite(area) || area > maxArea)) return false;
   const scope = normalizedScope(row.scope_type);
   if (scope === "BOM") return Boolean(text(row.bom)) && same(context.bom, row.bom);
   if (scope === "ITEM") return Boolean(text(row.parent_item)) && same(context.parent_item, row.parent_item);
   if (scope === "ITEM_GROUP") return Boolean(text(row.parent_item_group)) && same(context.parent_item_group, row.parent_item_group);
   if (scope === "DOOR_TYPE") return Boolean(text(row.door_type)) && same(context.door_type, row.door_type);
   return true;
+}
+
+/** Các component mà rule đang bật được phép tự sinh trong đúng ngữ cảnh bán hàng. */
+export function applicableBomRuleComponents(rules: BomRuleMaster[], context: BomRuleContext): string[] {
+  const on = dateOnly(context.on) || new Date().toISOString().slice(0, 10);
+  const declared = new Set<string>();
+  for (const rule of rules) {
+    if (checked(rule.disabled)) continue;
+    for (const row of Array.isArray(rule.applicability) ? rule.applicability : []) {
+      const component = text(row.component_item);
+      if (!component || !activeOn(row, on)) continue;
+      if (applicabilityMatches(row, { ...context, component_item: component })) declared.add(component);
+    }
+  }
+  return [...declared].filter((component) => Boolean(resolveBomRuleMaster(rules, {
+    ...context,
+    component_item: component,
+  })));
 }
 
 export function resolveBomRuleMaster(rules: BomRuleMaster[], context: BomRuleContext): BomRuleMaster | null {

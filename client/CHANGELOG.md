@@ -2,6 +2,9 @@
 
 ## Unreleased — Alumdoor UI
 
+- Dòng cửa trên Đơn hàng có gợi ý motor/UPS theo diện tích và cho chèn trực tiếp vật tư được đề xuất; trạng thái tặng ray đã lưu được nhận diện đúng khi mở lại đơn.
+- Thanh tác vụ Kho bổ sung bốn luồng WMS: lập kế hoạch lấy hàng FIFO, kiểm tra đóng gói, lập kế hoạch cất hàng và gom sóng lấy hàng.
+- Phiếu giao hàng không cho gửi khi dòng hàng còn đang tải; cột quy đổi tồn kho và số lá vẫn hiện ở chứng từ đã gửi, còn checkbox giữ đúng bố cục nhóm trên biểu mẫu.
 - Bỏ lối tắt “Nhập khách hàng” khỏi trang Danh mục; chức năng nhập liệu nền vẫn giữ nguyên.
 - Thanh Bán hàng chỉ giữ `Đơn hàng` và `Phiếu giao hàng`; route danh sách Phiếu giao hàng mở thẳng `SalesDeliveryWorkspace.tsx`, còn route có mã phiếu vẫn mở chi tiết chứng từ. Action nhiều Đơn bán đã nối vào Worker local để tải nguồn và xem FIFO.
 - Tách đúng hai field kích thước `Rộng PB ray` và `Rộng PB nhựa` trên dòng bán hàng: khách Lẻ nhập field PB ray, Đại lý nhập field PB nhựa, không còn đổi nhãn chung trên `width_m`; `Cao PB` là cột chiều cao riêng. Backend chỉ chuẩn hoá field đang dùng sang `width_m` để công thức/BOM hiện hữu tiếp tục chạy.

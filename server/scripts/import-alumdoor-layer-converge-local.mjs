@@ -56,6 +56,11 @@ if (validateOnly) {
   process.exit(0);
 }
 
+throw new Error(
+  "Layer converge mutation is disabled: its current plan treats the generated brief as source authority "
+  + "and cannot resolve the 14 source/D1 conflicts. Supply a dated authority ledger before re-enabling it.",
+);
+
 assertLocalMutationChildContext(['layer-converge']);
 
 const origin = (process.env.FORGE_ORIGIN || 'http://127.0.0.1:8799').replace(/\/$/, '');

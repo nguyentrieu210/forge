@@ -17,6 +17,9 @@ const production = read("server/apps-src/alumdoor-worker/src/sales-production-co
 const salesValidator = read("server/apps-src/alumdoor-worker/src/index.ts");
 const commercialSalesOrder = read("server/packages/clouderp-selling/src/commercial-sales-order-controller.ts");
 const salesBrief = read("server/briefs/alumdoor-v2.json");
+const salesBriefJson = JSON.parse(salesBrief);
+const briefDoc = (name) => salesBriefJson.doctypes.find((entry) => entry.name === name);
+const briefField = (doctype, fieldname) => briefDoc(doctype)?.fields?.find((entry) => entry.fieldname === fieldname);
 const pbWidthMigration = read("server/migrations/tenant/0134_alumdoor_distinct_pb_widths.sql");
 const depositMigration = read("server/migrations/tenant/0135_alumdoor_sales_order_deposit.sql");
 
@@ -50,13 +53,14 @@ test("commercial row keeps rate fixed while discount and server money remain exp
   assert.doesNotMatch(grid, /onCommit\(line\._key, "rate"/);
   assert.match(grid, /Đơn giá tự động theo bảng giá/);
   assert.match(grid, /onCommit\(line\._key, "discount_percentage"/);
-  assert.match(grid, /Tiền phải trả/);
+  assert.match(grid, /Tiền phải thu/);
   assert.match(grid, /Phụ thu/);
   assert.match(grid, /surchargeRuleNames/);
   assert.match(grid, /effect_type\)\.toUpperCase\(\) === "ADJUSTMENT"/);
   assert.match(grid, /surchargeNames\.join\(" · "\)/);
   assert.match(workbench, /preview_sales_commercial_line/);
-  assert.match(salesBrief, /"fieldname": "rate"[\s\S]{0,180}"read_only": true/);
+  assert.equal(briefField("Sales Order Item", "rate")?.read_only, true);
+  assert.equal(briefField("Sales Order Item", "rate")?.serverEnforced, true);
   assert.match(model, /lineDiscountNeedsApproval/);
   assert.match(grid, /khác chính sách .* cần duyệt/);
 });
@@ -68,8 +72,8 @@ test("policy discount baseline comes from server snapshots, not the sale overrid
   assert.match(grid, /khác chuẩn \{quantity\(policyDiscount\)\}%/);
   assert.match(grid, /benefit_items/);
   assert.match(grid, /text\(benefit\.label\) \|\| "Tặng kèm"/);
-  assert.match(model, /DUC-GIFT-RAIL-8M2/);
-  assert.match(model, /Tặng ray cửa Đức từ 8 m²/);
+  assert.match(model, /DUC-GIFT-RAIL-GT8M2/);
+  assert.match(model, /Tặng ray cửa Đức trên 8 m²/);
 });
 
 test("VAT and document totals are server-owned projections", () => {
@@ -107,8 +111,12 @@ test("summary is below the full-width grid and technical projection copy is remo
 
 test("customer defaults are centralized in server preview and stale customer data is cleared", () => {
   assert.doesNotMatch(workbench, /getListView\("Price List"/);
-  assert.doesNotMatch(workbench, /getDoc\("Customer"/);
-  assert.match(documentPreview, /ALUMDOOR_SELLING_PRICE_LIST/);
+  const ordinaryCustomerSelection = workbench.slice(workbench.indexOf("const setHeaderField"), workbench.indexOf("const activateSupplierAsCustomer"));
+  assert.doesNotMatch(ordinaryCustomerSelection, /getDoc\("Customer"/);
+  assert.doesNotMatch(documentPreview, /ALUMDOOR_SELLING_PRICE_LIST/);
+  assert.match(documentPreview, /resolveSellingPriceList/);
+  assert.match(documentPreview, /listDocs\(call, "Price List"/);
+  assert.match(documentPreview, /const chosen = text\(doc\.selling_price_list\)/);
   assert.match(documentPreview, /customerDoc\.price_group/);
   assert.doesNotMatch(documentPreview, /readDoc\(call, "Customer Group"/);
   assert.doesNotMatch(documentPreview, /default_selling_price_list/);
@@ -120,7 +128,7 @@ test("customer defaults are centralized in server preview and stale customer dat
 });
 
 test("price group is selectable, server-validated and reprices every active line", () => {
-  assert.match(workbench, /headerControl\("customer_group", "Nhóm giá", metaField\("customer_group"\)!\.fieldtype, metaField\("customer_group"\)!\.options, false, true\)/);
+  assert.match(workbench, /headerControl\("customer_group", "Nhóm giá", metaField\("customer_group"\)!\.fieldtype, metaField\("customer_group"\)!\.options, !pendingSupplierName, true\)/);
   assert.match(workbench, /markActiveLinesForReprice[\s\S]{0,700}_commercial: undefined/);
   assert.match(workbench, /markActiveLinesForReprice[\s\S]{0,900}_bomPreview: undefined/);
   assert.match(workbench, /active\.map\(\(line\) => previewLine\(line, "parent_context", \{\}, false\)\)/);
@@ -208,7 +216,7 @@ test("compact grid wraps headers, clips controls and centers check fields", () =
   assert.match(grid, /whitespace-normal break-words text-center leading-tight/);
   assert.match(grid, /border-r-\[1\.5px\]/);
   assert.match(grid, /border-b-\[3px\]/);
-  assert.match(grid, /flex min-w-0 shrink items-center justify-end/);
+  assert.match(grid, /relative flex h-full min-h-10 items-center justify-center py-1/);
   assert.match(grid, /max-w-full overflow-hidden text-center/);
   assert.match(grid, /bg-primary px-1\.5 text-center font-semibold/);
   const field = read("client/packages/vertical-alumdoor/src/sales-order-v2/AlumdoorSalesOrderField.tsx");
@@ -252,7 +260,8 @@ test("dimension and money header units render on a dedicated second line", () =>
 
 test("item-code selector and administrative links hide duplicate display identifiers", () => {
   assert.match(workbench, /return \{ value: option\.value, label: option\.value/);
-  assert.match(workbench, /description: itemName/);
+  assert.match(workbench, /const hints = \[/);
+  assert.match(workbench, /hints \? \{ description: hints \} : \{\}/);
   assert.match(workbench, /doctype === "Item"[\s\S]{0,80}\{ label: name \}/);
   const field = read("client/packages/vertical-alumdoor/src/sales-order-v2/AlumdoorSalesOrderField.tsx");
   assert.match(field, /isAdministrativeLink/);
@@ -355,7 +364,17 @@ test("line previews wait for complete customer commercial context", () => {
   assert.match(workbench, /const documentRevision = previewClock\.current\.revision/);
   assert.match(workbench, /canApplySalesOrderDocumentPreview\(previewClock\.current, documentRevision\)/);
   assert.match(workbench, /markActiveLinesForReprice/);
-  assert.match(workbench, /if \(loading \|\| !childMeta \|\| customerHydrating\) return/);
+  assert.match(workbench, /if \(loading \|\| !childMeta \|\| customerHydrating \|\| pendingSupplierName\) return/);
+});
+
+test("a supplier may explicitly gain the Customer role without leaking a synthetic Link value", () => {
+  assert.match(workbench, /const activateSupplierAsCustomer = useCallback/);
+  assert.match(workbench, /adapter\.createDoc\("Customer", payload\)/);
+  assert.match(workbench, /adapter\.getDoc\("Customer", supplierName\)/);
+  assert.match(workbench, /supplierCustomerPrefill\(supplierName, supplier\)/);
+  assert.match(workbench, /supplierNameFromOption\(headerRef\.current\.customer\)/);
+  assert.match(workbench, /NCC đã chọn chưa có vai trò Khách hàng/);
+  assert.match(workbench, /Thêm vai trò khách/);
 });
 
 test("save and submit fail closed while document, customer or line previews are unresolved", () => {

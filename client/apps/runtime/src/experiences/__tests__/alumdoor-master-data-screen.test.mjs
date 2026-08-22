@@ -400,6 +400,20 @@ function renderScreen(props) {
   return { ...sink, joined: sink.text.join(" ") };
 }
 
+function findNode(node, predicate) {
+  if (!node || typeof node !== "object") return null;
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      const match = findNode(child, predicate);
+      if (match) return match;
+    }
+    return null;
+  }
+  if (predicate(node)) return node;
+  if (typeof node.type === "function") return findNode(node.type(node.props ?? {}), predicate);
+  return findNode(node.props?.children, predicate);
+}
+
 const allKeys = () => screen.MASTER_DATA_DECLARED_KEYS.map(navItem);
 
 test("chưa đo thì KHÔNG vẽ chip trạng thái nào — im lặng đúng hơn một chip bịa", { skip }, () => {
@@ -409,6 +423,37 @@ test("chưa đo thì KHÔNG vẽ chip trạng thái nào — im lặng đúng h�
   assert.match(rendered.joined, /Chưa có số liệu tình trạng dữ liệu/);
   // Vai trò trong chuỗi là dữ kiện thiết kế nên vẫn phải hiện dù chưa đo được gì.
   assert.match(rendered.joined, /Cổng chuỗi · nhập kho/);
+});
+
+test("đang tải readiness phải nói rõ đang tải, không kết luận chuỗi đã thông", { skip }, () => {
+  const rendered = renderScreen({
+    items: allKeys(),
+    onNavigate: () => {},
+    readinessStatus: "loading",
+  });
+  assert.match(rendered.joined, /Đang đo tình trạng dữ liệu/);
+  assert.equal(rendered.joined.includes("Không còn mục nào chặn"), false);
+});
+
+test("readiness lỗi phải hiện cảnh báo và nút thử lại", { skip }, () => {
+  let retries = 0;
+  const node = screen.AlumdoorMasterDataScreen({
+    items: allKeys(),
+    onNavigate: () => {},
+    readinessStatus: "error",
+    readinessError: "Mất kết nối local",
+    onRetryReadiness: () => { retries += 1; },
+  });
+  const sink = { types: [], text: [] };
+  renderDeep(node, sink);
+  const joined = sink.text.join(" ");
+  assert.match(joined, /Không tải được tình trạng dữ liệu/);
+  assert.match(joined, /Mất kết nối local/);
+  assert.match(joined, /Thử lại/);
+  const retryButton = findNode(node, (candidate) => candidate?.props?.children === "Thử lại");
+  assert.ok(retryButton, "phải có nút thử lại");
+  retryButton.props.onClick();
+  assert.equal(retries, 1);
 });
 
 test("đo rồi thì chip trạng thái xuất hiện đúng số mục có tin để báo", { skip }, () => {
@@ -533,7 +578,7 @@ test("không hàng nào tự mâu thuẫn với chip ngay cạnh nó", { skip },
   assert.equal(ncc.joined.includes("0 bản ghi"), false, "vừa nói bảng kia 0 vừa nói 448");
 });
 
-test("bản bọc phải chuyển tiếp `readiness`, không nuốt im lặng", { skip }, () => {
+test("bản bọc phải chuyển tiếp toàn bộ trạng thái readiness, không nuốt im lặng", { skip }, () => {
   /**
    * Đường gắn là BA CHẶNG: `main-base.tsx:26` nhập tên `AlumdoorMasterDataScreen` từ
    * `experience-registry.js` → `experience-registry.tsx:10` khai tên đó là
@@ -545,9 +590,24 @@ test("bản bọc phải chuyển tiếp `readiness`, không nuốt im lặng", 
    * thì màn vẫn in "Chưa có số liệu tình trạng dữ liệu" và không ai hiểu vì sao.
    */
   const readiness = { Warehouse: { total: 0 } };
-  const node = wrapper.AlumdoorMasterDataWithImport({ items: allKeys(), onNavigate: () => {}, readiness });
+  let retries = 0;
+  const onRetryReadiness = () => { retries += 1; };
+  const node = wrapper.AlumdoorMasterDataWithImport({
+    items: allKeys(),
+    onNavigate: () => {},
+    readiness,
+    readinessStatus: "error",
+    readinessError: "Mất kết nối local",
+    onRetryReadiness,
+  });
   assert.equal(node.type, screen.AlumdoorMasterDataScreen, "bản bọc phải dựng đúng màn thật");
   assert.deepEqual(node.props.readiness, readiness);
+  assert.equal(node.props.readinessStatus, "error");
+  assert.equal(node.props.readinessError, "Mất kết nối local");
+  assert.equal(node.props.onRetryReadiness, onRetryReadiness);
+
+  node.props.onRetryReadiness();
+  assert.equal(retries, 1);
 
   // Và số đo đó phải đi hết đường: dựng sâu qua bản bọc thì chip trạng thái phải hiện ra.
   const sink = { types: [], text: [] };

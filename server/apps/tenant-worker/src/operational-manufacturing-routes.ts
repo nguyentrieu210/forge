@@ -1,5 +1,6 @@
 import type { Actor, JsonObject } from "../../../packages/contracts/src/index.js";
 import type { StockEntryData } from "../../../packages/clouderp-core/src/index.js";
+import type { SalesOrderData } from "../../../packages/clouderp-selling/src/types.js";
 import { errors } from "../../../packages/core/src/index.js";
 import { D1MutationStore } from "../../../packages/document-kernel/src/index.js";
 import type {
@@ -13,10 +14,15 @@ import { isManufacturingCapacityApiPath, isManufacturingCapacityFrappePath, rout
 import { isManufacturingCostingApiPath, isManufacturingCostingFrappePath, routeManufacturingCostingApi } from "./manufacturing-costing-api.js";
 import { isManufacturingGenealogyApiPath, isManufacturingGenealogyFrappePath, routeManufacturingGenealogyApi } from "./manufacturing-genealogy-api.js";
 import { isManufacturingMrpApiPath, isManufacturingMrpFrappePath, routeManufacturingMrpApi } from "./manufacturing-mrp-api.js";
+import { isManufacturingPlanningApiPath, isManufacturingPlanningFrappePath, routeManufacturingPlanningApi } from "./manufacturing-planning-api.js";
 import { isQmsApiPath, isQmsFrappePath, routeQmsApi } from "./qms-api.js";
 import type { TenantEnv } from "./env.js";
 
-export type ManufacturingOperationalRoute = "bom-bulk" | "mrp" | "capacity" | "costing" | "genealogy" | "qms";
+// NOTE (vá P0 21/08/2026 — xem docs/audits/ALUMDOOR-SAN-XUAT-SAU-VONG2-20260821.md §1 S1): "planning"
+// từng bị bỏ sót khỏi union này lẫn khỏi matchManufacturingOperationalRoute/
+// isManufacturingOperationalFrappePath, khiến get_open_sales_production_demand luôn 404 dù handler
+// (routeManufacturingPlanningApi) đã viết xong đầy đủ.
+export type ManufacturingOperationalRoute = "bom-bulk" | "mrp" | "capacity" | "costing" | "genealogy" | "qms" | "planning";
 
 export function matchManufacturingOperationalRoute(pathname: string): ManufacturingOperationalRoute | null {
   if (isManufacturingBomBulkApiPath(pathname)) return "bom-bulk";
@@ -24,6 +30,7 @@ export function matchManufacturingOperationalRoute(pathname: string): Manufactur
   if (isManufacturingCapacityApiPath(pathname)) return "capacity";
   if (isManufacturingCostingApiPath(pathname)) return "costing";
   if (isManufacturingGenealogyApiPath(pathname)) return "genealogy";
+  if (isManufacturingPlanningApiPath(pathname)) return "planning";
   if (isQmsApiPath(pathname)) return "qms";
   return null;
 }
@@ -34,6 +41,7 @@ export function isManufacturingOperationalFrappePath(pathname: string): boolean 
     || isManufacturingCapacityFrappePath(pathname)
     || isManufacturingCostingFrappePath(pathname)
     || isManufacturingGenealogyFrappePath(pathname)
+    || isManufacturingPlanningFrappePath(pathname)
     || isQmsFrappePath(pathname);
 }
 
@@ -110,6 +118,14 @@ export async function routeManufacturingOperationalRequest(input: ManufacturingO
       loadWorkOrder: (name) => documents.getDocument<WorkOrderData>(tenantId, "Work Order", name),
       listStockEntries: () => documents.listDocumentsByDoctype<StockEntryData>(tenantId, "Stock Entry"),
       getVoucherStockEntries: (name, version) => documents.getVoucherStockEntries(tenantId, "Stock Entry", name, version),
+    });
+  }
+  if (route === "planning") {
+    return routeManufacturingPlanningApi(request, url, {
+      tenantId, actor, permissions, traceId,
+      listSalesOrders: () => documents.listDocumentsByDoctype<SalesOrderData>(tenantId, "Sales Order"),
+      listProductionPlans: () => documents.listDocumentsByDoctype<ProductionPlanData>(tenantId, "Production Plan"),
+      listBoms: () => documents.listDocumentsByDoctype<VersionedBomData>(tenantId, "Bill of Materials"),
     });
   }
   return routeQmsApi(request, url, {

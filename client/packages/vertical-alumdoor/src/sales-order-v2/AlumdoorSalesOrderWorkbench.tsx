@@ -21,6 +21,7 @@ import {
   blankFromMeta,
   hydrateSalesLines,
   isFullSetSalesItem,
+  mayHaveBom,
   lineAdjustmentAmount,
   lineBillableArea,
   lineDiscountAmount,
@@ -415,7 +416,7 @@ export function AlumdoorSalesOrderWorkbench(props: AlumdoorSalesOrderCreateProps
         }
       }
 
-      if (isFullSetSalesItem(candidate)) {
+      if (mayHaveBom(candidate)) {
         try {
           const bom = await adapter.callPost<BomPreview>("alumdoor.sales.preview_bom_requirements", {
             ...cleanLine(candidate),

@@ -18,6 +18,16 @@ import {
   approveAlumDoorPayroll,
   type AlumDoorPayrollApprovalInput,
 } from "./payroll-coordinator.js";
+import {
+  commitAlumDoorAttendanceStationLite,
+  commitAlumDoorEmployeeLite,
+  commitAlumDoorHrLiteSettings,
+  commitAlumDoorPayProfileLite,
+  type AlumDoorAttendanceStationLiteInput,
+  type AlumDoorEmployeeLiteInput,
+  type AlumDoorHrLiteSettingsInput,
+  type AlumDoorPayProfileLiteInput,
+} from "./employee-lite-coordinator.js";
 import { isInventoryCoordinatedCommand, resolveInventoryCoordinatorKey } from "./inventory-coordinator.js";
 import { PurchaseCommandSerialExecutor } from "./purchase-command-retry.js";
 import {
@@ -34,6 +44,10 @@ interface AggregateStub extends DurableObjectStub {
   submitAlumDoorAttendanceCorrection(input: AlumDoorAttendanceCorrectionSubmitInput): Promise<JsonObject>;
   reviewAlumDoorAttendanceCorrection(input: AlumDoorAttendanceCorrectionInput): Promise<JsonObject>;
   approveAlumDoorPayroll(input: AlumDoorPayrollApprovalInput): Promise<JsonObject>;
+  commitAlumDoorEmployeeLite(input: AlumDoorEmployeeLiteInput): Promise<JsonObject>;
+  commitAlumDoorHrLiteSettings(input: AlumDoorHrLiteSettingsInput): Promise<JsonObject>;
+  commitAlumDoorPayProfileLite(input: AlumDoorPayProfileLiteInput): Promise<JsonObject>;
+  commitAlumDoorAttendanceStationLite(input: AlumDoorAttendanceStationLiteInput): Promise<JsonObject>;
 }
 
 const PURCHASE_ALLOCATION_DOCTYPES = new Set(["Purchase Order", "Purchase Receipt"]);
@@ -43,6 +57,7 @@ const APP_FACTORY_APPROVAL_EXECUTORS = new WeakMap<object, MutationSerialExecuto
 const ATTENDANCE_EXECUTORS = new WeakMap<object, MutationSerialExecutor>();
 const ATTENDANCE_CORRECTION_EXECUTORS = new WeakMap<object, MutationSerialExecutor>();
 const PAYROLL_EXECUTORS = new WeakMap<object, MutationSerialExecutor>();
+const HR_LITE_EXECUTORS = new WeakMap<object, MutationSerialExecutor>();
 
 /** One Durable Object class serves the keyed business coordinators in the existing AGGREGATES namespace. */
 export class AggregateCoordinator extends DurableObject<TenantEnv> {
@@ -138,6 +153,34 @@ export class AggregateCoordinator extends DurableObject<TenantEnv> {
     });
   }
 
+  async commitAlumDoorEmployeeLite(input: AlumDoorEmployeeLiteInput): Promise<JsonObject> {
+    return this.withHrLiteExecutor(() => {
+      const { kernel, store } = this.commandServices();
+      return commitAlumDoorEmployeeLite(input, { kernel, store });
+    });
+  }
+
+  async commitAlumDoorHrLiteSettings(input: AlumDoorHrLiteSettingsInput): Promise<JsonObject> {
+    return this.withHrLiteExecutor(() => {
+      const { kernel, store } = this.commandServices();
+      return commitAlumDoorHrLiteSettings(input, { kernel, store });
+    });
+  }
+
+  async commitAlumDoorPayProfileLite(input: AlumDoorPayProfileLiteInput): Promise<JsonObject> {
+    return this.withHrLiteExecutor(() => {
+      const { kernel, store } = this.commandServices();
+      return commitAlumDoorPayProfileLite(input, { kernel, store });
+    });
+  }
+
+  async commitAlumDoorAttendanceStationLite(input: AlumDoorAttendanceStationLiteInput): Promise<JsonObject> {
+    return this.withHrLiteExecutor(() => {
+      const { kernel, store } = this.commandServices();
+      return commitAlumDoorAttendanceStationLite(input, { kernel, store });
+    });
+  }
+
   private withAttendanceExecutor<T>(operation: () => Promise<T>): Promise<T> {
     let executor = ATTENDANCE_EXECUTORS.get(this);
     if (!executor) { executor = new MutationSerialExecutor(); ATTENDANCE_EXECUTORS.set(this, executor); }
@@ -147,6 +190,12 @@ export class AggregateCoordinator extends DurableObject<TenantEnv> {
   private withCorrectionExecutor<T>(operation: () => Promise<T>): Promise<T> {
     let executor = ATTENDANCE_CORRECTION_EXECUTORS.get(this);
     if (!executor) { executor = new MutationSerialExecutor(); ATTENDANCE_CORRECTION_EXECUTORS.set(this, executor); }
+    return executor.execute(operation);
+  }
+
+  private withHrLiteExecutor<T>(operation: () => Promise<T>): Promise<T> {
+    let executor = HR_LITE_EXECUTORS.get(this);
+    if (!executor) { executor = new MutationSerialExecutor(); HR_LITE_EXECUTORS.set(this, executor); }
     return executor.execute(operation);
   }
 

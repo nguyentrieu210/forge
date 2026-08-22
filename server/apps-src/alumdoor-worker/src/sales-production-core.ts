@@ -1,4 +1,4 @@
-import { roundTo } from "../../../packages/core/src/index.js";
+import { roundTo } from "./numeric.js";
 import {
   calculateDoorFormula,
   inferDoorType,
@@ -253,12 +253,6 @@ function isWidthQuantitySalesItem(item: ItemDoc): boolean {
     || itemCode.includes("ladau");
 }
 
-function isIntermediateFinishedLeafForSales(item: ItemDoc, componentIndex: number): boolean {
-  if (componentIndex !== 0) return false;
-  return normalized(item.item_group) === normalized("Nan/lá cửa")
-    && normalized(item.item_name).startsWith("tp lá ");
-}
-
 function parentSalesWidthField(parent: Json): "width_pb_ray_m" | "width_pb_nhua_m" | null {
   const doorType = normalized(parent.door_type);
   const itemGroup = normalized(parent.item_group ?? parent.product_group);
@@ -331,12 +325,12 @@ async function enrichSalesBomComponents(
   ] as const));
   const itemByCode = new Map(itemEntries);
 
+  // Trước đây dòng đầu tiên thuộc nhóm "Nan/lá cửa" bị bỏ, coi là bán thành phẩm không bán rời.
+  // Nhưng cả 4 BOM có lá đều để lá ở dòng đầu, nên luật đó xoá lá khỏi 4/4 — và BOM lá bán rời
+  // (DM-2026-0092) chỉ có đúng dòng lá nên thành rỗng. Các dòng này chỉ để xem vật tư/sản xuất,
+  // giá vẫn nằm ở mặt hàng cha, nên giữ lá lại không làm tính tiền hai lần.
   return components.flatMap((component, componentIndex) => {
     const item = itemByCode.get(text(component.item_code)) ?? {};
-    // The first TP LÁ row is an intermediate production item. Keep it in the
-    // source BOM, but omit it from the sales composition to avoid presenting
-    // it as another sellable child line.
-    if (isIntermediateFinishedLeafForSales(item, componentIndex)) return [];
     const configuredSalesUom = text(item.default_sales_uom);
     const calculated = salesCompositionQuantity(item, parent, configuredSalesUom, setCount);
     const {
@@ -474,7 +468,19 @@ function choosePolicy(
 ): { parsed: DoorFormulaPolicy; raw: RawPolicy } {
   const pairs = parsedPolicies(rawPolicies);
   const wantedRay = RAY_TYPES.find((entry) => entry === text(rayType));
-  const parsed = selectDoorPolicy(pairs.map((entry) => entry.parsed), doorType, itemGroup, wantedRay);
+  // Some catalogs split one Cutting Policy per ray; others keep a generic parent policy and
+  // put ray-specific deductions in geometry_rules. Only apply the parent-level ray filter when
+  // this door/group actually declares parent-level ray variants. The geometry evaluator still
+  // validates the selected row ray and fails closed for an unsupported value.
+  const hasParentRayVariants = pairs.some(({ parsed }) => parsed.door_type === doorType
+    && (!parsed.item_group || normalized(parsed.item_group) === normalized(itemGroup))
+    && Boolean(parsed.ray_type));
+  const parsed = selectDoorPolicy(
+    pairs.map((entry) => entry.parsed),
+    doorType,
+    itemGroup,
+    hasParentRayVariants ? wantedRay : undefined,
+  );
   const pair = pairs.find((entry) => entry.parsed.policy_name === parsed.policy_name);
   if (!pair) throw new Error(`Không đọc được chi tiết chính sách ${parsed.policy_name}.`);
   return pair;
@@ -661,16 +667,11 @@ function raySpecificGeometry(
   if (!profile || checked(profile.disabled)) throw new Error(`${chosen.parsed.policy_name}: không đọc được Geometry Profile đang hiệu lực ${profileName}.`);
   const rules = Array.isArray(chosen.raw.geometry_rules) ? chosen.raw.geometry_rules : [];
   if (!rules.length) throw new Error(`${chosen.parsed.policy_name}: chưa khai Geometry Rules.`);
-  /**
-   * MÃ Ô HÌNH HỌC PHẢI TRÙNG VỚI DANH MỤC `Geometry Field`, và danh mục đó dùng gạch nối:
-   * RONG-CAT-LA · CAO-PB · RONG-PB-RAY. Code trước đây tra CAT_LA_RONG / PB_CAO / PB_RAY_RONG —
-   * hai bộ từ vựng không có một chữ nào chung, nên bộ lọc dưới đây luôn ra RỖNG và mọi dòng cửa
-   * tấm liền Úc chết với "Loại ray ... không được hỗ trợ. Cho phép: ." — thông báo tự nó đã lộ
-   * ra danh sách rỗng mà không ai đọc ra nghĩa.
-   */
+  // Geometry Policy canonicalizes the legacy hyphen vocabulary before validation. Keep this
+  // path on the generated catalog's underscore codes so profile, rules and returned values agree.
   const supportedRayTypes = [...new Set(
     rules
-      .filter((rule) => text(rule.target_field) === "RONG-CAT-LA")
+      .filter((rule) => ["CAT_LA_RONG", "RONG-CAT-LA"].includes(text(rule.target_field)))
       .map((rule) => text(rule.ray_type))
       .filter(Boolean),
   )];
@@ -682,15 +683,15 @@ function raySpecificGeometry(
     geometry_profile: profileName,
     profile_fields: Array.isArray(profile.fields) ? profile.fields : [],
     rules,
-    inputs: { "CAO-PB": height, "RONG-PB-RAY": width },
+    inputs: { PB_CAO: height, PB_RAY_RONG: width },
     context: {
       customer_group: customerGroup,
       ray_type: rayType,
       has_butterfly_bracket: checked(row.has_butterfly_bracket),
     },
-    required_targets: ["RONG-CAT-LA"],
+    required_targets: ["CAT_LA_RONG"],
   });
-  const cutWidth = finitePositive(result.values["RONG-CAT-LA"], "Rộng cắt lá theo Geometry Policy");
+  const cutWidth = finitePositive(result.values.CAT_LA_RONG, "Rộng cắt lá theo Geometry Policy");
   return { cut_width_m: roundTo(cutWidth), ray_type: rayType, applied_rules: result.applied_rules.map((entry) => entry.rule_code) };
 }
 
@@ -747,9 +748,22 @@ function isSplitSalesItemCode(value: unknown): boolean {
  * Vẫn giữ hai phép dò mã làm ĐƯỜNG LUI cho 100 mã còn nhồi cách giao: chúng chưa được gộp, và
  * dòng bán cũ để trống `sales_mode` thì vẫn phải chạy như trước.
  */
-function salesLineHasComposition(itemCode: string, args: Json): boolean {
+function salesLineHasComposition(itemCode: string, args: Json, itemName = ""): boolean {
   if (text(args.sales_mode)) return true;
-  return isFullSetSalesItemCode(itemCode) || isSplitSalesItemCode(itemCode);
+  /*
+   * Dò cả TÊN HÀNG, không chỉ mã.
+   *
+   * Đợt gộp mã đã bỏ token cách giao ra khỏi MÃ nhưng giữ nguyên trong TÊN: `CDL_DLM_1LY` có
+   * tên "CỬA ĐL1LY TRỌN BỘ". Cổng chỉ dò mã nên từ chối đúng những mặt hàng đã đặt tên chuẩn —
+   * và màn bán hàng KHÔNG có ô Cách bán để người bán bù vào, nên dòng đó không đường nào xổ
+   * được định mức. Đo ngày 22/08: `CDL_DLM_1LY` có đủ 4 cấu kiện và 4 Quy tắc BOM khớp, vẫn
+   * trả `bom_applicable: false`.
+   *
+   * Tên hàng là dữ liệu của danh mục, cùng độ tin cậy với mã, và hai vị từ dò chuỗi bên dưới
+   * đã được đo là không trúng oan mã nào.
+   */
+  return isFullSetSalesItemCode(itemCode) || isSplitSalesItemCode(itemCode)
+    || isFullSetSalesItemCode(itemName) || isSplitSalesItemCode(itemName);
 }
 
 function sameBomItem(left: unknown, right: unknown): boolean {
@@ -946,6 +960,12 @@ export function buildSalesProductionLines(input: BuildInputs, options: { allow_m
         leaf,
         estimated_weight_kg: estimatedWeightPerSet ?? null,
         estimated_minutes: standard.minutes,
+        // Vá 21/08/2026 (docs/audits/ALUMDOOR-SAN-XUAT-KE-TOAN-DANH-MUC-GAP-20260821.md §S5):
+        // `standard.warning` trước đây chỉ được gắn vào `lines.push({...schedule_warning...})` bên dưới —
+        // đối tượng TẠM THỜI dùng để tạo Work Order rồi bị vứt, không field nào của Work Order từng nhận
+        // nó. Gắn thêm vào `snapshot` (ghi thẳng vào `Work Order.formula_snapshot`) để nó SỐNG SÓT sau khi
+        // tạo lệnh và Workbench đọc lại được — xem `WorkOrderFormulaSnapshot.schedule_warning` (model.ts).
+        schedule_warning: standard.warning ?? null,
         bom_actual_components: bomActualComponents,
         ray_type: geometry?.ray_type ?? null,
         geometry_applied_rules: geometry?.applied_rules ?? [],
@@ -1241,7 +1261,7 @@ export async function previewDraftSalesBomRequirements(call: ProductionPlatformC
     const itemCode = text(args.item_code);
     if (!itemCode) throw new Error("Cần chọn mặt hàng cửa.");
     const item = await readDoc<ItemDoc>(call, "Item", itemCode);
-    if (!salesLineHasComposition(itemCode, args)) {
+    if (!salesLineHasComposition(itemCode, args, text((item as Json).item_name))) {
       return answer({
         item_code: itemCode,
         bom_applicable: false,

@@ -394,6 +394,24 @@ export class InMemoryMutationStore implements MutationStore {
     this.masterRecords.set(`${tenantId}:${recordType}:${name}`, structuredClone(data));
   }
 
+  /** Test/fixture helper for lifecycle-aware references that must be real documents, not master rows. */
+  seedDocument(doctype: string, name: string, tenantId = "demo", data: JsonObject = {}, docstatus: 0 | 1 | 2 = 0): void {
+    const now = "1970-01-01T00:00:00.000Z";
+    this.documents.set(this.docKey(tenantId, doctype, name), {
+      tenant_id: tenantId,
+      doctype,
+      name,
+      owner: "fixture",
+      docstatus,
+      status: docstatus === 1 ? "Submitted" : docstatus === 2 ? "Cancelled" : "Draft",
+      version: 1,
+      created_at: now,
+      modified_at: now,
+      data: structuredClone(data),
+      children: [],
+    });
+  }
+
   seedO2CMasters(input: {
     tenantId?: string; company: string; customer: string; currency: string; items: string[];
     warehouses?: string[]; accounts?: string[]; companyCurrency?: string; companyCurrencyScale?: number; currencyScale?: number;

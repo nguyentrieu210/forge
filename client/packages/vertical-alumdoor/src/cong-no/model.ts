@@ -123,6 +123,14 @@ export interface PartyRow {
   /** Số chứng từ còn dư trong sổ Payment Ledger. */
   ledgerVoucherCount: number;
   currencies: string[];
+  /**
+   * `Customer.credit_limit` — chỉ gắn cho mặt PHẢI THU (K2,
+   * docs/audits/ALUMDOOR-SAN-XUAT-KE-TOAN-DANH-MUC-GAP-20260821.md §K2). `undefined` = chưa nạp
+   * (chưa gọi `loadCreditLimits`); `null` = đã hỏi Customer nhưng field trống (chưa từng nhập hạn
+   * mức) — hai trạng thái này KHÔNG được gộp làm một, "chưa nạp" không phải "không có hạn mức".
+   * `Supplier` không có field tương đương trong danh mục nên mặt PHẢI TRẢ luôn để `undefined`.
+   */
+  creditLimit?: number | null;
 }
 
 /** Một dòng chứng từ còn dư trong sổ Payment Ledger (báo cáo `Accounts Receivable`/`Accounts Payable`). */
@@ -173,6 +181,65 @@ export type AgingState =
   | { status: "loading" }
   | { status: "ready"; rows: AgingRow[] }
   | { status: "unavailable"; message: string };
+
+/**
+ * Một dòng tổng hợp công nợ theo party-account-currency (báo cáo nền tảng `Debt Summary`).
+ *
+ * Khác bảng đối tác chính (tổng theo từng đối tác, gộp mọi tài khoản/tiền tệ), dòng ở đây
+ * TÁCH theo từng tài khoản-tiền tệ — vì đó đúng là đơn vị mà báo cáo `Party Statement`
+ * (sao kê luỹ kế) cần để chạy. Xem `documentPath`/nút "Sao kê" trong màn.
+ */
+export interface DebtSummaryRow {
+  party: string;
+  accountType: string;
+  company: string;
+  account: string;
+  currency: string;
+  totalOutstanding: number | null;
+  due: number | null;
+  overdue: number | null;
+  oldestDueDate: string | null;
+  advance: number | null;
+  netExposure: number | null;
+}
+
+/** Trạng thái của khối tổng hợp công nợ: cùng khuôn với `AgingState`. */
+export type DebtSummaryState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "ready"; rows: DebtSummaryRow[] }
+  | { status: "unavailable"; message: string };
+
+/** Một dòng tạm ứng chưa phân bổ hết (báo cáo nền tảng `Advance Balance`), một dòng = một Payment Entry gốc. */
+export interface AdvanceBalanceRow {
+  sourcePaymentEntry: string;
+  sourcePostingAt: string;
+  partyType: string;
+  party: string;
+  company: string;
+  account: string;
+  currency: string;
+  originalAdvance: number | null;
+  allocatedAmount: number | null;
+  remainingAdvance: number | null;
+}
+
+/**
+ * Một dòng sổ luỹ kế của một đối tác trên đúng MỘT tài khoản-tiền tệ (báo cáo nền tảng
+ * `Party Statement`). Dòng đầu tiên server trả luôn là "Opening" — số dư đầu kỳ, không phải
+ * một chứng từ thật.
+ */
+export interface PartyStatementRow {
+  postingAt: string;
+  voucherType: string;
+  voucherNo: string;
+  entryType: string;
+  debit: number | null;
+  credit: number | null;
+  runningBalance: number | null;
+  againstVoucherType: string;
+  againstVoucherNo: string;
+}
 
 /** Một dòng chứng từ gốc để đối chiếu; `doctype` + `name` là đường nhảy tới chính chứng từ đó. */
 export interface SourceDocumentRow {

@@ -8,7 +8,7 @@ import { AlumDoorLiteAttendanceDayController } from "./alumdoor-attendance-lite.
 import { CutOrderReservationIntegrityController } from "./cut-order-reservation-integrity.js";
 import { StockReservationIntegrityController } from "./stock-reservation-integrity.js";
 import { StockReconciliationIntegrityController } from "./stock-reconciliation-integrity.js";
-import { SalesLinkedProductionPlanController, SalesLinkedWorkOrderController } from "./manufacturing-sales-lineage.js";
+import { SalesLinkedProductionPlanController } from "./manufacturing-sales-lineage.js";
 import { ManufacturingReleaseAuthorityWorkOrderController } from "./manufacturing-release-authority.js";
 
 export function registerErpNextControllersPart04(registry: ControllerRegistry): ControllerRegistry {
@@ -27,6 +27,10 @@ export function registerErpNextControllersPart04(registry: ControllerRegistry): 
     .register(new StockReservationIntegrityController())
     .register(new StockReconciliationIntegrityController())
     .register(new SalesLinkedProductionPlanController())
-    .register(new SalesLinkedWorkOrderController())
+    // "Work Order" chỉ register MỘT lần ở đây (vá 21/08/2026, §1 S6 cùng file nêu trên):
+    // `ManufacturingReleaseAuthorityWorkOrderController` đã `extends SalesLinkedWorkOrderController`
+    // nên tự mang đủ hành vi của lớp cha; register riêng `SalesLinkedWorkOrderController` trước đó chỉ
+    // bị `Map.set("Work Order", …)` ghi đè ngay dòng dưới — không đổi hành vi nhưng đọc code dễ tưởng
+    // nhầm nó là controller đang chạy.
     .register(new ManufacturingReleaseAuthorityWorkOrderController());
 }

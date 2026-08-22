@@ -341,21 +341,21 @@ test("xem trước thương mại ĐI THEO cách bán của dòng, không tự r
    * đằng, lưu một nẻo.
    */
   const chiLa = await previewSalesCommercialLine(
-    commercialArgs({ item_code: "CDUC_AL70_1LOP", uom: "m2", qty: 9, set_count: 1, price_variant: "CHI_LA" }),
+    commercialArgs({ item_code: "CDUC_AL70_1LOP", uom: "m2", qty: 11, set_count: 1, price_variant: "CHI_LA" }),
     commercialContext(commercialMasters()),
   );
   assert.equal(chiLa.price_explain.price_variant, "CHI_LA");
   assert.equal(chiLa.price_explain.price_rate, "1146000");
 
   const tangRay = await previewSalesCommercialLine(
-    commercialArgs({ item_code: "CDUC_AL70_1LOP", uom: "m2", qty: 9, set_count: 1, price_variant: "TANG_RAY" }),
+    commercialArgs({ item_code: "CDUC_AL70_1LOP", uom: "m2", qty: 11, set_count: 1, price_variant: "TANG_RAY" }),
     commercialContext(commercialMasters()),
   );
   assert.equal(tangRay.price_explain.price_variant, "TANG_RAY");
   assert.equal(tangRay.price_explain.price_rate, "1221000");
 
-  // Cùng một dòng 9 m², chỉ khác cách bán ⇒ lệch đúng 675.000 đ.
-  assert.equal(Number(tangRay.selling_rate) * 9 - Number(chiLa.selling_rate) * 9, 675000);
+  // Cùng một dòng 11 m², chỉ khác cách bán ⇒ lệch đúng 825.000 đ.
+  assert.equal(Number(tangRay.selling_rate) * 11 - Number(chiLa.selling_rate) * 11, 825000);
 });
 
 test("dòng không mang cách bán vẫn hỏng như cũ — bản vá KHÔNG lặng lẽ đoán hộ", async () => {

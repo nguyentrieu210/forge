@@ -22,7 +22,7 @@ test("social cart conversion uses canonical Sales Order kernel instead of local 
   assert.match(api, /stock_reservation: "pending_ws04_generic_reservation"/);
   assert.doesNotMatch(api, /randomId\("social_order"\)/);
 
-  assert.match(bridge, /new DocumentKernel\(registry, store, permissions\)/);
+  assert.match(bridge, /new DocumentKernel\(registry, store, permissions, undefined, new MetadataWorkflowGuard\(metadata\)\)/);
   assert.match(bridge, /new D1OrganizationSecurityGuard\(db, metadata\)/);
   assert.match(bridge, /doctype: "Sales Order"/);
   assert.match(bridge, /selling_price_list: input\.selling_price_list/);

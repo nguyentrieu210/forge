@@ -353,6 +353,12 @@ export interface WorkOrderFormulaSnapshot extends Json {
   leaf?: WorkOrderFormulaSnapshotLeaf;
   estimated_weight_kg?: number | null;
   estimated_minutes?: number;
+  /**
+   * Cảnh báo vượt công suất từ `Production Standard` (S5,
+   * `docs/audits/ALUMDOOR-SAN-XUAT-KE-TOAN-DANH-MUC-GAP-20260821.md`) — server dựng lúc lập lệnh,
+   * ghi vào đây từ 21/08/2026 để Workbench đọc lại được thay vì bị vứt sau khi tạo lệnh.
+   */
+  schedule_warning?: string | null;
   bom_actual_components?: WorkOrderActualComponent[];
   ray_type?: string | null;
   geometry_applied_rules?: string[];
@@ -678,4 +684,86 @@ export function minutesLabel(value: unknown): string {
 /** Số có thì định dạng, không có thì “—”. Không bao giờ trả 0 thay cho “chưa biết”. */
 export function optionalQuantity(value: number | undefined): string {
   return value === undefined ? "—" : quantity(value);
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * 8. Hợp đồng đọc từ `metaforge.manufacturing.get_work_order_cost_evidence` +
+ *    `metaforge.manufacturing.get_work_order_genealogy` (S4 gộp — hai finding P1 cùng gốc:
+ *    docs/audits/ALUMDOOR-SAN-XUAT-KE-TOAN-DANH-MUC-GAP-20260821.md §S4 và
+ *    docs/audits/ALUMDOOR-SAN-XUAT-SAU-VONG2-20260821.md §S4).
+ *    Chữ ký thật: server/apps/tenant-worker/src/manufacturing-costing-api.ts (COST_PATH)
+ *               + server/packages/clouderp-erpnext/src/manufacturing-costing-read.ts
+ *               + server/apps/tenant-worker/src/manufacturing-genealogy-api.ts
+ *               + server/packages/clouderp-erpnext/src/manufacturing-genealogy.ts
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/** `ManufacturingCostEvidence` — đọc-chỉ, KHÔNG có bút toán nào phát sinh từ việc gọi route này. */
+export interface WorkOrderCostEvidence extends Json {
+  schema_version?: number;
+  evidence_scope?: string;
+  posting_status?: string;
+  work_order?: string;
+  company?: string;
+  production_item?: string;
+  bom_no?: string;
+  bom_revision?: number;
+  currency?: string;
+  currency_scale?: number;
+  target_qty?: string;
+  produced_qty?: string;
+  completion_pct?: string;
+  standard_material_cost_minor?: number;
+  standard_operating_cost_minor?: number;
+  standard_total_cost_minor?: number;
+  actual_consumption_value_minor?: number;
+  actual_recovery_value_minor?: number;
+  actual_net_material_cost_minor?: number;
+  actual_finished_good_value_minor?: number;
+  actual_accounted_output_value_minor?: number;
+  implied_operating_cost_minor?: number;
+  material_variance_minor?: number;
+  operation_variance_minor?: number;
+  total_variance_minor?: number;
+  actual_operation_cost_source?: string;
+  warnings?: string[];
+  genealogy_warnings?: string[];
+}
+
+export type GenealogyMovementRole =
+  | "Material Transfer Out" | "WIP Transfer In" | "Consumption" | "Finished Good" | "Scrap" | "Offcut" | "Recovery";
+
+export interface WorkOrderGenealogyMovement extends Json {
+  stock_entry?: string;
+  purpose?: string;
+  posting_at?: string;
+  role?: GenealogyMovementRole;
+  direction?: "Outward" | "Inward";
+  item_code?: string;
+  warehouse?: string;
+  qty?: string;
+  stock_value_difference_minor?: number;
+  batch_no?: string;
+  serial_no?: string;
+}
+
+export interface WorkOrderGenealogy extends Json {
+  schema_version?: number;
+  work_order?: string;
+  company?: string;
+  production_item?: string;
+  bom_no?: string;
+  target_qty?: string;
+  effective_stock_entry_count?: number;
+  cancelled_stock_entries?: string[];
+  material_transfers?: WorkOrderGenealogyMovement[];
+  consumptions?: WorkOrderGenealogyMovement[];
+  finished_goods?: WorkOrderGenealogyMovement[];
+  recoveries?: WorkOrderGenealogyMovement[];
+  warnings?: string[];
+}
+
+/** `_minor` (số nguyên theo `currency_scale`) → chuỗi tiền đã định dạng. Thiếu scale thì KHÔNG đoán, trả “—”. */
+export function moneyMinor(valueMinor: number | undefined, scale: number | undefined): string {
+  if (valueMinor === undefined || scale === undefined || !Number.isFinite(scale)) return "—";
+  return money(valueMinor / (10 ** scale));
 }
