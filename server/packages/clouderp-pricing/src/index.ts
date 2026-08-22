@@ -170,6 +170,28 @@ function fieldMatchedPrice(
     && (lineUom ? priceUom === lineUom : !priceUom);
 }
 
+/**
+ * Người bán không ghi cách bán thì suy từ chính bảng giá — xem chú thích ở `resolveServerPrice`.
+ *
+ * Chỉ nhìn dòng ĐANG BẬT: một cách bán đã ngừng dùng thì không phải là lựa chọn còn lại. Không
+ * lọc theo bậc diện tích ở đây, vì bậc chỉ chia nhỏ TRONG một cách bán chứ không đổi cách bán.
+ */
+function suyBienTheDuyNhat(
+  bangGia: ReadonlyArray<{ name: string; data: JsonObject }>,
+  priceList: string,
+  itemCode: string,
+  lineUom: string,
+): string {
+  const hop = bangGia.filter(({ data }) =>
+    normalizedText(data.price_list) === priceList
+    && normalizedText(data.item_code) === itemCode
+    && (lineUom ? normalizedText(data.uom) === lineUom : !normalizedText(data.uom))
+    && !disabled(data.disabled));
+  const cachBan = new Set(hop.map(({ data }) => itemPriceVariant(data)));
+  if (cachBan.has(STANDARD_PRICE_VARIANT) || cachBan.size !== 1) return STANDARD_PRICE_VARIANT;
+  return [...cachBan][0]!;
+}
+
 function namedPriceCompatible(
   data: JsonObject,
   priceList: string,
@@ -297,7 +319,27 @@ export async function resolveServerPrice(
   const itemCode = normalizedText(input.itemCode);
   const lineUom = normalizedText(input.uom);
   const documentCurrency = normalizedText(input.documentCurrency);
-  const priceVariant = normalizePriceVariant(input.priceVariant);
+  /**
+   * BIẾN THỂ GIÁ: người gọi ghi rõ thì theo, không ghi thì SUY từ bảng giá — đừng mặc định
+   * `STANDARD` rồi ném lỗi.
+   *
+   * `normalizePriceVariant` trả `STANDARD` khi đầu vào rỗng. Trước 2026-08-23 giá trị đó đi
+   * thẳng xuống tra cứu, nên mọi đường KHÔNG tự chọn biến thể — Báo giá, và mọi form chung —
+   * đều tra `STANDARD`. Từ khi bảng giá cửa chuyển hẳn sang biến thể theo ảnh (TRON_BO/TACH_MON
+   * cho Đài Loan, CHI_LA/TANG_RAY cho Đức, KEO_TAY/MOTOR_NGOAI cho Úc) thì không dòng STANDARD
+   * nào còn tồn tại, và KHÔNG cánh cửa nào lập được báo giá: "Item Price … does not exist for
+   * variant STANDARD". Đơn hàng thoát nạn chỉ vì màn của nó tự chọn biến thể rồi mới gửi lên.
+   *
+   * Luật suy ở đây trùng đúng luật màn Đơn hàng đang dùng (`sales-item-context.ts`): có dòng
+   * STANDARD thì STANDARD thắng; không có mà chỉ còn ĐÚNG MỘT cách bán thì lấy cách đó; từ hai
+   * cách bán trở lên thì giữ nguyên `STANDARD` để lỗi "không có dòng giá" vẫn nổ — chọn hộ
+   * người bán giữa hai cách bán khác giá là đoán tiền của khách.
+   */
+  const bienTheYeuCau = normalizedText(input.priceVariant);
+  const bangGia = await context.reader.listMasterRecordData(context.command.tenant_id, "Item Price");
+  const priceVariant = bienTheYeuCau
+    ? normalizePriceVariant(bienTheYeuCau)
+    : suyBienTheDuyNhat(bangGia, priceList, itemCode, lineUom);
   const legacyPriceName = `${priceList}:${itemCode}`;
   const preferredPriceName = preferredPriceRecordName(priceList, itemCode, lineUom, priceVariant);
   const legacy = await context.reader.getMasterRecordData(context.command.tenant_id, "Item Price", legacyPriceName);
@@ -342,7 +384,7 @@ export async function resolveServerPrice(
     for (const row of rows) if (await priceTierMatches(context, row.data, areaSqm)) kept.push(row);
     return kept;
   };
-  const listedPrices = await context.reader.listMasterRecordData(context.command.tenant_id, "Item Price");
+  const listedPrices = bangGia;
   const fieldMatches = listedPrices.filter(({ data }) => fieldMatchedPrice(data, priceList, itemCode, lineUom, priceVariant));
   const activeFieldMatches = await keepByTier(fieldMatches.filter(({ data }) => !disabled(data.disabled)));
   const exactCandidates = new Map<string, JsonObject>();

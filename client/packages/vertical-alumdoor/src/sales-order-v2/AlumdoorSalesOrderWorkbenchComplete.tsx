@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, Eye, Factory, Loader2, RefreshCw, Save, Send, UserPlus } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Eye, Factory, Loader2, Lock, RefreshCw, Save, Send, Truck, Undo2, UserPlus } from "lucide-react";
 import {
   applyContextPolicy,
   mapError,
@@ -242,6 +242,36 @@ function checked(value: unknown): boolean {
   return value === true || value === 1 || value === "1" || text(value).toLowerCase() === "true";
 }
 
+/** Id của ô header trên màn này. Giữ một chỗ để `focusHeaderField` không đoán chuỗi. */
+function headerFieldId(fieldname: string): string {
+  return `sales-v2-complete-header-${fieldname}`;
+}
+
+/**
+ * Cuộn tới và focus ô header đang chặn lưu.
+ *
+ * Control của từng fieldtype tự quyết `id` rơi vào thẻ nào — Link thì rơi vào nút mở picker,
+ * Data thì rơi vào `input`. Nên thử focus chính thẻ mang id trước; không focus được thì tìm
+ * phần tử nhận focus đầu tiên trong cùng khối.
+ *
+ * Vì sao `setTimeout` chứ không `requestAnimationFrame`: màn nằm trong Radix `DialogContent`,
+ * và toast lỗi vừa mount ngay trước đó. Cả hai đều chỉnh focus trong nhịp kế tiếp, nên focus
+ * đặt trong rAF bị kéo ngược về khung dialog (đo ngày 23/08/2026: `activeElement` thành
+ * `div[id^="radix-"]`). Lùi một nhịp ngắn để đặt sau cùng.
+ */
+function focusHeaderField(fieldname: string): void {
+  if (typeof document === "undefined" || typeof window === "undefined") return;
+  window.setTimeout(() => {
+    const anchor = document.getElementById(headerFieldId(fieldname));
+    if (!anchor) return;
+    const focusable = anchor.matches("input, select, textarea, button, [tabindex]")
+      ? anchor
+      : anchor.closest("div")?.querySelector<HTMLElement>("input, select, textarea, button, [tabindex]") ?? null;
+    (focusable ?? anchor).scrollIntoView({ block: "center", behavior: "smooth" });
+    focusable?.focus({ preventScroll: true });
+  }, 160);
+}
+
 /** Thân JSON của lỗi HTTP, nếu adapter còn giữ. Hợp đồng làn A §A.10 làm giàu chính thân này. */
 function errorPayload(error: unknown): Json | undefined {
   const candidate = (error as { response?: { data?: unknown } } | undefined)?.response?.data;
@@ -318,6 +348,17 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
   const customerHydrationSeq = useRef(0);
   const [caps, setCaps] = useState<SalesCaps>({});
   const [productionCaps, setProductionCaps] = useState<SalesCaps>({});
+  /**
+   * Phiếu xuất kho CÒN HIỆU LỰC của đơn này. Đây là thứ quyết định đơn còn sửa được hay không.
+   *
+   * Luật của xưởng: ghi sổ rồi vẫn huỷ duyệt để sửa được, CHỪNG NÀO hàng chưa rời kho. Hàng đã
+   * rời kho thì khoá chặt — sửa đơn lúc đó là đơn một đằng, kho một nẻo, và không ai đối chiếu
+   * lại được. Phiếu đã huỷ (docstatus 2) không tính, vì hàng đã trả về kho.
+   */
+  const [deliveryNotes, setDeliveryNotes] = useState<Doc[]>([]);
+  const [deliveryNotesLoaded, setDeliveryNotesLoaded] = useState(false);
+  const [unsubmitting, setUnsubmitting] = useState(false);
+  const [confirmUnsubmit, setConfirmUnsubmit] = useState(false);
   const [sourceModified, setSourceModified] = useState("");
   const [docstatus, setDocstatus] = useState(0);
   const [dirty, setDirty] = useState(false);
@@ -1193,31 +1234,38 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
     setSelectedLineKeys(new Set());
   }, [replaceLinesAndRefreshTotals, selectedLineKeys]);
 
-  const validate = useCallback((): string | null => {
-    if (previewClock.current.pending > 0 || customerHydrating) return "Đơn đang tính lại dữ liệu từ server, hãy hoàn tất trước khi lưu.";
-    if (text(headerErrorRef.current)) return `Cần xử lý lỗi tính lại trước khi lưu: ${text(headerErrorRef.current)}`;
-    if (!text(headerRef.current.customer)) return "Cần chọn khách hàng.";
-    if (supplierNameFromOption(headerRef.current.customer)) return "NCC đã chọn chưa có vai trò Khách hàng. Chọn Nhóm giá rồi bấm ‘Thêm vai trò khách’.";
-    if (!text(headerRef.current.transaction_date)) return "Cần ngày đặt hàng.";
-    if (!text(headerRef.current.selling_price_list)) return "Cần Bảng giá áp dụng theo commercial contract hiện hành.";
+  /**
+   * Lỗi validate phải CHỈ ĐƯỢC CHỖ SỬA, không chỉ hiện một toast ở góc màn.
+   *
+   * Bấm "Ghi sổ đơn" trên form trống chỉ ra toast "Cần chọn khách hàng." ở góc phải, còn ô
+   * Khách hàng không viền đỏ và không được focus — người bán phải tự đi tìm. `focus` mang
+   * tên trường để `persistDraft` cuộn tới và focus đúng ô đó.
+   */
+  const validate = useCallback((): { message: string; focus?: string } | null => {
+    if (previewClock.current.pending > 0 || customerHydrating) return { message: "Đơn đang tính lại dữ liệu từ server, hãy hoàn tất trước khi lưu." };
+    if (text(headerErrorRef.current)) return { message: `Cần xử lý lỗi tính lại trước khi lưu: ${text(headerErrorRef.current)}` };
+    if (!text(headerRef.current.customer)) return { message: "Cần chọn khách hàng.", focus: "customer" };
+    if (supplierNameFromOption(headerRef.current.customer)) return { message: "NCC đã chọn chưa có vai trò Khách hàng. Chọn Nhóm giá rồi bấm ‘Thêm vai trò khách’.", focus: "customer" };
+    if (!text(headerRef.current.transaction_date)) return { message: "Cần ngày đặt hàng.", focus: "transaction_date" };
+    if (!text(headerRef.current.selling_price_list)) return { message: "Cần Bảng giá áp dụng theo commercial contract hiện hành.", focus: "selling_price_list" };
     const depositAmount = numberValue(headerRef.current.deposit_amount) ?? 0;
     const grandTotal = numberValue(headerRef.current.grand_total) ?? 0;
-    if (depositAmount < 0) return "Tiền cọc không được nhỏ hơn 0.";
-    if (depositAmount > grandTotal) return "Tiền cọc không được lớn hơn tiền phải thu của đơn.";
+    if (depositAmount < 0) return { message: "Tiền cọc không được nhỏ hơn 0.", focus: "deposit_amount" };
+    if (depositAmount > grandTotal) return { message: "Tiền cọc không được lớn hơn tiền phải thu của đơn.", focus: "deposit_amount" };
     const currentLines = linesRef.current.filter((line) => text(line.item_code));
-    if (!currentLines.length) return "Cần ít nhất một dòng hàng.";
+    if (!currentLines.length) return { message: "Cần ít nhất một dòng hàng." };
     for (const [index, line] of currentLines.entries()) {
-      if (line._loading) return `Dòng ${index + 1} đang tính lại, hãy hoàn tất trước khi lưu.`;
-      if (text(line._error)) return `Dòng ${index + 1}: ${text(line._error)}`;
-      if (text(line._pricingError)) return `Dòng ${index + 1}: ${text(line._pricingError)}`;
+      if (line._loading) return { message: `Dòng ${index + 1} đang tính lại, hãy hoàn tất trước khi lưu.` };
+      if (text(line._error)) return { message: `Dòng ${index + 1}: ${text(line._error)}` };
+      if (text(line._pricingError)) return { message: `Dòng ${index + 1}: ${text(line._pricingError)}` };
       // Cổng chặn của danh mục do server tuyên bố. Thiếu khai báo thì từ chối lưu và chỉ đúng
       // chỗ sửa, thay vì để đơn đi tiếp với một con số không giải thích được.
       const readinessBlock = lineReadinessBlock(line);
-      if (readinessBlock) return `Dòng ${index + 1}: ${readinessBlock.what} — sửa ở: ${readinessBlock.where}`;
-      if (numberValue(line.rate) === undefined) return `Dòng ${index + 1}: thiếu Đơn giá.`;
+      if (readinessBlock) return { message: `Dòng ${index + 1}: ${readinessBlock.what} — sửa ở: ${readinessBlock.where}` };
+      if (numberValue(line.rate) === undefined) return { message: `Dòng ${index + 1}: thiếu Đơn giá.` };
       for (const [fieldname, rule] of Object.entries(line._overrides ?? {}) as Array<[string, FieldOverride]>) {
         if (!(rule.reqd === true || rule.reqd === 1) || rule.hidden === true || rule.hidden === 1) continue;
-        if (line[fieldname] == null || line[fieldname] === "") return `Dòng ${index + 1}: thiếu ${text(rule.label) || fieldname}.`;
+        if (line[fieldname] == null || line[fieldname] === "") return { message: `Dòng ${index + 1}: thiếu ${text(rule.label) || fieldname}.` };
       }
     }
     return null;
@@ -1238,7 +1286,11 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
 
   const persistDraft = useCallback(async (): Promise<Doc | null> => {
     const validationError = validate();
-    if (validationError) { toast.error(validationError); return null; }
+    if (validationError) {
+      toast.error(validationError.message);
+      if (validationError.focus) focusHeaderField(validationError.focus);
+      return null;
+    }
     if (!meta) return null;
     const document = buildDocument();
     const finalProjection = await requestDocumentPreview(document, "items", linesRef.current);
@@ -1282,6 +1334,28 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
 
   const submitOrder = useCallback(async () => {
     if (!canSubmit) return;
+    /**
+     * PA-14 — override thương mại phải được DUYỆT rồi mới ghi sổ.
+     *
+     * Trước 23/08/2026 màn chỉ HIỆN "CK x% khác chuẩn y% — cần duyệt" rồi vẫn cho bấm Ghi sổ:
+     * đơn ra `docstatus = 1` với chiết khấu ngoài chính sách, và `Sales Order` không có một
+     * trường approval nào để ai đó phát hiện lại về sau (soát field ngày 23/08: chỉ có
+     * `status`, `discount_amount`, `docstatus`). Cảnh báo như vậy là cảnh báo dối.
+     *
+     * Hợp đồng nghiệm thu nói đúng ranh giới: "save draft MAY preserve override; submit is
+     * denied when approval required". Nên chặn ở đây — Lưu nháp vẫn giữ nguyên override để
+     * người bán không mất công nhập lại trong lúc chờ duyệt.
+     */
+    const pendingApproval = linesRef.current
+      .filter((line) => text(line.item_code))
+      .filter(lineCommercialNeedsApproval).length;
+    if (pendingApproval || checked(headerRef.current.discount_requires_approval)) {
+      toast.error(
+        `${pendingApproval || 1} dòng có giá/chiết khấu khác chính sách — cần duyệt trước khi ghi sổ. `
+        + "Lưu nháp để giữ nguyên số đã nhập, hoặc trả chiết khấu về mức chuẩn.",
+      );
+      return;
+    }
     setSubmitting(true);
     try {
       const saved = await persistDraft();
@@ -1311,6 +1385,65 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
     if (!documentName || docstatus !== 1 || !productionCaps.read) return;
     window.location.assign(`/app/${encodeURIComponent("Production Request")}?f_sales_order=${encodeURIComponent(documentName)}`);
   }, [docstatus, documentName, productionCaps.read]);
+
+  /** Sang thẳng màn xuất kho, đã biết sẵn xuất cho đơn nào. */
+  const openDelivery = useCallback(() => {
+    if (!documentName || docstatus !== 1) return;
+    window.location.assign(`/app/${encodeURIComponent("Delivery Note")}?f_sales_order=${encodeURIComponent(documentName)}`);
+  }, [docstatus, documentName]);
+
+  /* Đơn đã ghi sổ thì đi hỏi xem đã có phiếu xuất kho nào chưa — câu trả lời quyết định
+     đơn còn sửa được hay đã khoá. Hỏi lúc mở đơn chứ không đợi người dùng bấm, vì nút phải
+     hiện đúng ngay từ đầu. */
+  useEffect(() => {
+    let active = true;
+    if (docstatus !== 1 || !documentName) { setDeliveryNotes([]); setDeliveryNotesLoaded(docstatus === 0); return; }
+    void (async () => {
+      try {
+        const rows = await adapter.getList("Delivery Note", {
+          fields: ["name", "docstatus", "posting_at"],
+          filters: { against_sales_order: documentName },
+          pageLength: 50,
+        });
+        if (!active) return;
+        setDeliveryNotes(rows.filter((row) => Number(row.docstatus) !== 2));
+      } catch {
+        // Hỏi không được thì coi như CHƯA BIẾT: giữ nút huỷ duyệt tắt, đừng mở khoá dựa trên
+        // một câu hỏi thất bại.
+        if (active) setDeliveryNotes([]);
+      } finally {
+        if (active) setDeliveryNotesLoaded(true);
+      }
+    })();
+    return () => { active = false; };
+  }, [adapter, docstatus, documentName, loadAttempt]);
+
+  const daXuatKho = deliveryNotes.length > 0;
+  const coTheHuyDuyet = docstatus === 1 && Boolean(documentName) && Boolean(caps.cancel) && Boolean(caps.amend) && deliveryNotesLoaded && !daXuatKho;
+
+  /**
+   * Huỷ duyệt để sửa. `cancel` đưa chứng từ về docstatus 2 — nó Ở LẠI sổ, không biến mất — rồi
+   * `amend` lập một bản nháp mới mang số mới, trỏ ngược về bản cũ qua `amended_from`.
+   *
+   * Không có kiểu "gỡ ghi sổ tại chỗ": chứng từ đã ghi sổ mà sửa thẳng thì sổ sách không còn
+   * đối chiếu được. Đây đúng là cách kế toán làm — huỷ chứng từ cũ, lập bản sửa.
+   */
+  const huyDuyetDeSua = useCallback(async () => {
+    if (!coTheHuyDuyet || !documentName) return;
+    setUnsubmitting(true);
+    try {
+      await adapter.cancel("Sales Order", documentName);
+      const banSua = await adapter.amend("Sales Order", documentName);
+      const tenMoi = text(banSua.name);
+      toast.success(`Đã huỷ duyệt ${documentName}. Bản sửa: ${tenMoi}`);
+      if (tenMoi) window.location.assign(`/app/${encodeURIComponent("Sales Order")}/${encodeURIComponent(tenMoi)}`);
+    } catch (error) {
+      toast.error(adapter.mapError(error).message);
+    } finally {
+      setUnsubmitting(false);
+      setConfirmUnsubmit(false);
+    }
+  }, [adapter, coTheHuyDuyet, documentName]);
 
   if (loading) return <div className="grid h-full place-items-center text-sm text-muted-foreground"><span className="flex items-center gap-2"><Loader2 className="size-4 animate-spin" /> Đang mở Sales Workbench…</span></div>;
   if (fatal) return <div className="grid h-full place-items-center p-6"><div className="max-w-md space-y-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm"><div className="flex items-start gap-2 text-destructive"><AlertTriangle className="mt-0.5 size-4 shrink-0" /><span>{fatal}</span></div><Button type="button" variant="outline" size="sm" onClick={() => { setFatal(""); setLoading(true); setLoadAttempt((value) => value + 1); }}><RefreshCw className="size-3.5" /> Thử kết nối lại</Button></div></div>;
@@ -1357,7 +1490,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
 
   const headerControl = (fieldname: string, label: string, fieldtype: DocField["fieldtype"] = "Data", options?: string, readOnly = false, preview = false) => (
     <AlumdoorSalesOrderField
-      id={`sales-v2-complete-header-${fieldname}`}
+      id={headerFieldId(fieldname)}
       field={headerField(fieldname, label, fieldtype, options)}
       label={label}
       value={header[fieldname]}
@@ -1510,7 +1643,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
                 {recalculating ? <span className="inline-flex items-center gap-1.5"><Loader2 className="size-3.5 animate-spin" /> Đang tính lại</span> : unresolvedLines || bomBlocked ? <span className="inline-flex items-center gap-1.5"><AlertTriangle className="size-3.5" />{unresolvedLines ? `${unresolvedLines} dòng chưa tính xong` : ""}{unresolvedLines && bomBlocked ? " · " : ""}{bomBlocked ? `${bomBlocked} dòng BOM còn thiếu vật tư thực tế` : ""}</span> : <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="size-3.5" /> Dữ liệu preview đã sẵn sàng</span>}
                 {catalogGapLines ? <Badge variant="outline" className="border-destructive/40 text-destructive">{catalogGapLines} dòng thiếu khai báo danh mục — mở dòng để xem sửa ở đâu</Badge> : null}
                 {giftRailViolations.length ? <Badge variant="outline" className="border-destructive/40 text-destructive" title={giftRailViolations.join(" · ")}>{giftRailViolations.length} dòng tặng ray dưới ngưỡng — không lưu được cho tới khi bỏ tick</Badge> : null}
-                {approvalNeeded ? <Badge variant="outline">{approvalLines || 1} dòng / thay đổi cần duyệt</Badge> : null}
+                {approvalNeeded ? <Badge variant="outline" className="border-destructive/40 text-destructive" title="Ghi sổ bị chặn cho tới khi override được duyệt hoặc trả về mức chuẩn. Lưu nháp vẫn được.">{approvalLines || 1} dòng / thay đổi cần duyệt — chưa ghi sổ được</Badge> : null}
                 {duplicateDiscountCount ? <Badge variant="outline" className="border-destructive/40 text-destructive" title="Dòng đang bị trừ theo Chiết khấu % VÀ bị trừ thêm bởi một quy tắc giá mang nghĩa chiết khấu. Kiểm tra lại Pricing Rule trước khi ghi sổ.">{duplicateDiscountCount} dòng có thể bị trừ chiết khấu 2 lần — kiểm tra quy tắc giá</Badge> : null}
                 <span className="ml-auto text-muted-foreground">Bảng giá: <strong className="font-medium text-foreground">{text(header.selling_price_list) || "Chưa chọn"}</strong></span>
               </div>
@@ -1526,11 +1659,14 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
           <div className="flex items-center gap-2"><span className="text-muted-foreground">{recalculating ? "Đang tính lại" : dirty ? "Có thay đổi chưa lưu" : docstatus === 1 ? "Đã ghi sổ" : "Nháp đã đồng bộ"}</span><strong className="tabular-nums">Còn phải thu: {money(outstandingAmount)} ₫</strong></div>
           <div className="flex flex-wrap items-center gap-1.5">
             {docstatus === 1 && documentName && productionCaps.read ? <Button type="button" variant="outline" size="sm" onClick={openProduction}><Factory className="size-3.5" /> Sản xuất</Button> : null}
+            {docstatus === 1 && documentName ? <Button type="button" variant="outline" size="sm" onClick={openDelivery}><Truck className="size-3.5" /> Xuất kho</Button> : null}
+            {coTheHuyDuyet ? <Button type="button" variant="outline" size="sm" disabled={unsubmitting} onClick={() => setConfirmUnsubmit(true)}>{unsubmitting ? <Loader2 className="size-3.5 animate-spin" /> : <Undo2 className="size-3.5" />} Huỷ duyệt để sửa</Button> : null}
+            {docstatus === 1 && daXuatKho ? <span className="flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-700" title={`Phiếu xuất kho: ${deliveryNotes.map((row) => text(row.name)).join(", ")}`}><Lock className="size-3" /> Đã xuất kho — khoá sửa</span> : null}
             {isExisting ? <Button type="button" variant="outline" size="sm" onClick={() => props.onPreviewCreated(documentName)}><Eye className="size-3.5" /> In / xem</Button> : null}
             <Button type="button" variant="ghost" size="sm" onClick={requestClose}>{isExisting ? "Đóng" : "Hủy"}</Button>
             <Button type="button" variant="outline" size="sm" disabled={busy || formReadOnly} onClick={() => { const active = linesRef.current.filter((line) => text(line.item_code)); void Promise.all(active.map((line) => previewLine(line, "manual_refresh", {}, false))).finally(() => void refreshDocumentPreview("manual_refresh")); }}><RefreshCw className="size-3.5" /> Tính lại</Button>
             {docstatus === 0 ? <Button type="button" variant="outline" size="sm" disabled={persistenceBlocked || !canSave} onClick={() => void saveDraft(false)}>{saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />} Lưu nháp</Button> : null}
-            {docstatus === 0 && canSubmit ? <Button type="button" size="sm" disabled={persistenceBlocked} onClick={() => void submitOrder()}>{submitting ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />} Ghi sổ đơn</Button> : null}
+            {docstatus === 0 && canSubmit ? <Button type="button" size="sm" disabled={persistenceBlocked || approvalNeeded} title={approvalNeeded ? "Còn dòng giá/chiết khấu khác chính sách — cần duyệt trước khi ghi sổ. Lưu nháp vẫn được." : undefined} onClick={() => void submitOrder()}>{submitting ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />} Ghi sổ đơn</Button> : null}
             {docstatus === 0 && isExisting ? <Button type="button" variant="outline" size="sm" disabled={persistenceBlocked || !canSave} onClick={() => void saveDraft(true)}><Eye className="size-3.5" /> Lưu & xem</Button> : null}
           </div>
         </div>
@@ -1541,6 +1677,28 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
       <DialogContent>
         <DialogHeader><DialogTitle>Bỏ thay đổi chưa lưu?</DialogTitle></DialogHeader>
         <div className="space-y-4 p-1 text-sm"><p className="text-muted-foreground">Đơn đang có thay đổi ở thông tin đầu đơn, dòng hàng, giá/chiết khấu, VAT hoặc BOM thực tế. Đóng bây giờ sẽ bỏ các thay đổi này.</p><div className="flex justify-end gap-2"><Button variant="outline" onClick={() => setConfirmDiscard(false)}>Tiếp tục chỉnh</Button><Button variant="destructive" onClick={() => { setConfirmDiscard(false); setDirty(false); props.onCancel(); }}>Bỏ thay đổi</Button></div></div>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog open={confirmUnsubmit} onOpenChange={setConfirmUnsubmit}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Huỷ duyệt đơn {documentName} để sửa?</DialogTitle></DialogHeader>
+        <div className="space-y-4 p-1 text-sm">
+          <p className="text-muted-foreground">
+            Đơn này <strong>chưa có phiếu xuất kho</strong> nên còn sửa được. Sau khi huỷ duyệt, hệ
+            thống lập một <strong>bản sửa mang số mới</strong> để anh chỉnh; đơn cũ <strong>ở lại
+            sổ</strong> với trạng thái đã huỷ chứ không biến mất — sổ sách phải đối chiếu được.
+          </p>
+          <p className="text-muted-foreground">
+            Xuất kho rồi thì không huỷ duyệt được nữa: lúc đó sửa đơn là đơn một đằng, kho một nẻo.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setConfirmUnsubmit(false)} disabled={unsubmitting}>Thôi</Button>
+            <Button onClick={() => void huyDuyetDeSua()} disabled={unsubmitting}>
+              {unsubmitting ? <Loader2 className="size-3.5 animate-spin" /> : <Undo2 className="size-3.5" />} Huỷ duyệt và lập bản sửa
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   </>;

@@ -38,6 +38,14 @@ function stockPurpose(raw: string | null): ManufacturingStockPurpose | undefined
 const ALUMDOOR_PRINT_FORMAT: Record<string, string> = {
   "Sales Order": "Đơn bán hàng ALUMDOOR",
   "Delivery Note": "Phiếu giao hàng / lắp đặt ALUMDOOR",
+  // Hoá đơn bán dính đúng cái bẫy trên: tenant có BA mẫu cùng `is_default=1` cho
+  // `Sales Invoice` (đo 23/08), và "Standard Sales Invoice" thắng theo thứ tự tên nên hoá đơn
+  // giao khách in ra mẫu rỗng tiếng Anh. Chỉ đích danh thì hết.
+  "Sales Invoice": "Hoá đơn ALUMDOOR",
+  "Quotation": "Báo giá ALUMDOOR",
+  "Purchase Receipt": "Phiếu nhập kho ALUMDOOR",
+  "Production Request": "Phiếu yêu cầu sản xuất ALUMDOOR",
+  "Cut Order": "Phiếu cắt nhôm ALUMDOOR",
 };
 
 /** Đường dẫn bản in kèm tên mẫu AlumDoor, cho cả shell `/print` lẫn shell có printBase riêng. */
@@ -193,6 +201,35 @@ export const alumdoorWorkspaceExtension: DoctypeWorkspaceExtension = {
               onSaved={() => {}}
               onPreviewCreated={(currentName) => onNavigate(alumdoorPrintPath(printBase, doctype, currentName))}
               onCancel={() => onNavigate(listPath)}
+            />
+          </Suspense>
+        ),
+      };
+    }
+
+    /*
+     * Vào thẳng màn xuất kho cho MỘT đơn cụ thể, mở từ nút "Xuất kho" trên màn đơn hàng.
+     *
+     * Đi qua route list kèm `?f_sales_order=…` chứ không qua route `/new`, cùng nếp với phiếu
+     * kho sản xuất bên dưới. Không có đường này thì thủ kho phải tự nhớ số đơn rồi gõ lại — mà
+     * số đơn thì không ai thuộc.
+     */
+    const xuatChoDonBan = bridge.get("f_sales_order")?.trim() ?? "";
+    if (!isNew && !decoded && doctype === "Delivery Note" && xuatChoDonBan) {
+      return {
+        hasDetail: true,
+        suppressBulk: true,
+        contextTitle: xuatChoDonBan,
+        onCloseDetail: () => onNavigate(`${base}/${encodeURIComponent("Sales Order")}/${encodeURIComponent(xuatChoDonBan)}`),
+        detail: (
+          <Suspense fallback={<div className="grid h-full place-items-center text-sm text-muted-foreground">Đang mở màn xuất kho AlumDoor…</div>}>
+            <AlumdoorDeliveryNoteCreate
+              key={`alumdoor-delivery-from/${xuatChoDonBan}`}
+              initialSalesOrder={xuatChoDonBan}
+              closeRequest={closeRequest}
+              onCreated={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
+              onPreviewCreated={(newName) => onNavigate(alumdoorPrintPath(printBase, doctype, newName))}
+              onCancel={() => onNavigate(`${base}/${encodeURIComponent("Sales Order")}/${encodeURIComponent(xuatChoDonBan)}`)}
             />
           </Suspense>
         ),

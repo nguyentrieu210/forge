@@ -36,6 +36,13 @@ export type Json = Record<string, unknown>;
  */
 export interface AlumdoorDeliveryNoteCreateProps {
   name?: string;
+  /**
+   * Đơn bán cần xuất, truyền sẵn từ nút "Xuất kho" trên màn đơn hàng.
+   *
+   * Không có nó thì người dùng phải tự nhớ số đơn rồi gõ lại vào ô "Theo đơn bán" — mà số đơn
+   * thì không ai thuộc. Có nó thì bấm một nút là màn tự nạp phần CÒN PHẢI XUẤT của đúng đơn đó.
+   */
+  initialSalesOrder?: string;
   closeRequest?: number;
   onCreated?: (name: string) => void;
   onSaved?: (name: string) => void;

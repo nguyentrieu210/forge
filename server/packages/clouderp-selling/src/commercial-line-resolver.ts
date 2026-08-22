@@ -67,6 +67,17 @@ export interface ResolvedCommercialLine extends JsonObject {
   applied_adjustments: AppliedPricingAdjustment[];
 }
 
+/**
+ * Chuẩn hoá mã giá NHƯNG giữ nguyên ô trống.
+ *
+ * `normalizePriceVariant` biến rỗng thành `STANDARD` — hữu ích ở tầng tra giá, tai hại ở tầng
+ * này, vì nó xoá mất khác biệt giữa "người bán chọn STANDARD" và "người bán không chọn gì".
+ */
+function normalizedVariantOrEmpty(value: unknown): string {
+  const raw = String(value ?? "").normalize("NFC").trim();
+  return raw ? normalizePriceVariant(raw) : "";
+}
+
 export async function resolveCommercialLine(
   context: ControllerContext<JsonObject>,
   input: ResolveCommercialLineInput,
@@ -81,9 +92,21 @@ export async function resolveCommercialLine(
     }),
   };
 
-  // Cách bán/gói bán đã bị loại bỏ khỏi nền tảng: mọi dòng bán theo thẳng giá STANDARD.
-  const requestedVariant = normalizePriceVariant(input.priceVariant);
-  const requestedBasisVariant = normalizePriceVariant(input.discountBasisVariant ?? requestedVariant);
+  /*
+   * Ô TRỐNG phải đi xuống nguyên là ô trống, đừng hoá thành "STANDARD" ở đây.
+   *
+   * `normalizePriceVariant` biến rỗng thành `STANDARD`. Trước 2026-08-23 việc đó xảy ra NGAY
+   * chỗ này, nên `resolveServerPrice` luôn nhận một biến thể tường minh và không thể phân biệt
+   * "người bán chọn STANDARD" với "người bán không chọn gì". Hệ quả: từ khi bảng giá cửa bỏ hết
+   * dòng STANDARD, mọi đường không tự chọn biến thể — Báo giá, và mọi form chung — đều chết với
+   * "Item Price … does not exist for variant STANDARD". Đơn hàng thoát nạn chỉ vì màn của nó
+   * tự điền biến thể trước khi gửi lên.
+   *
+   * Nay để rỗng đi tiếp; `resolveServerPrice` tự suy khi mặt hàng chỉ có ĐÚNG MỘT cách bán, và
+   * vẫn từ chối khi có từ hai cách bán khác giá — chọn hộ giữa hai giá là đoán tiền của khách.
+   */
+  const requestedVariant = normalizedVariantOrEmpty(input.priceVariant);
+  const requestedBasisVariant = normalizedVariantOrEmpty(input.discountBasisVariant ?? input.priceVariant);
   const sharedPriceContext = {
     itemCode: input.itemCode,
     qtyMicros: pricedQtyMicros,
@@ -113,10 +136,13 @@ export async function resolveCommercialLine(
     ...(input.customerGroup ? { customerGroup: input.customerGroup } : {}),
     ...(input.supplierGroup ? { supplierGroup: input.supplierGroup } : {}),
   };
-  const rawPrice = await resolveServerPrice(context, { ...sharedPriceContext, priceVariant: requestedVariant });
-  const discountBasisPrice = requestedBasisVariant === rawPrice.price_variant
+  const rawPrice = await resolveServerPrice(context, { ...sharedPriceContext, ...(requestedVariant ? { priceVariant: requestedVariant } : {}) });
+  // Không khai gốc chiết khấu riêng thì gốc CHÍNH LÀ dòng giá vừa tra — so với biến thể đã suy
+  // ra, không so với ô trống, nếu không sẽ tra thừa một lượt rồi lại rơi về STANDARD.
+  const basisVariant = requestedBasisVariant || rawPrice.price_variant;
+  const discountBasisPrice = basisVariant === rawPrice.price_variant
     ? rawPrice
-    : await resolveServerPrice(context, { ...sharedPriceContext, priceVariant: requestedBasisVariant });
+    : await resolveServerPrice(context, { ...sharedPriceContext, priceVariant: basisVariant });
   if (discountBasisPrice.currency !== rawPrice.currency || discountBasisPrice.currency_scale !== rawPrice.currency_scale) {
     throw errors.validation("Selling price and discount-basis price must use the same currency and scale");
   }

@@ -63,6 +63,18 @@ function num(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+/**
+ * Số đo hiện ra cho NGƯỜI BÁN, không phải cho máy.
+ *
+ * `billable_area_sqm` là tích của hai số thập phân (3,2 × 2,8), nên IEEE-754 trả về
+ * 8.959999999999999. In thẳng ra câu "vì cửa 8.959999999999999 m² < ngưỡng 15 m²" là đưa rác
+ * dấu phẩy động vào mặt khách. Làm tròn 2 chữ số — đúng độ chính xác mà bảng ngưỡng dùng —
+ * rồi định dạng theo vi-VN cho khớp mọi con số khác trên màn.
+ */
+function measure(value: number): string {
+  return value.toLocaleString("vi-VN", { maximumFractionDigits: 2 });
+}
+
 function SuggestionRow({
   kind,
   suggestion,
@@ -184,7 +196,7 @@ export function AlumdoorMotorSuggestPanel({
         <SuggestionRow
           kind="motor"
           suggestion={result.motor}
-          reason={`cửa ${area} m² < ngưỡng ${result.motor.threshold} m² của ${result.motor.rule_code}`}
+          reason={`cửa ${measure(area)} m² < ngưỡng ${measure(result.motor.threshold)} m² của ${result.motor.rule_code}`}
           current={currentMotorItemCode}
           disabled={disabled}
           onAccept={onAccept}
@@ -195,7 +207,7 @@ export function AlumdoorMotorSuggestPanel({
         <SuggestionRow
           kind="ups"
           suggestion={result.ups}
-          reason={`tải motor ${result.motor_kg ?? "?"} kg < ngưỡng ${result.ups.threshold} kg của ${result.ups.rule_code} (UPS chọn theo TẢI MOTOR, không theo diện tích)`}
+          reason={`tải motor ${result.motor_kg === undefined || result.motor_kg === null ? "?" : measure(result.motor_kg)} kg < ngưỡng ${measure(result.ups.threshold)} kg của ${result.ups.rule_code} (UPS chọn theo TẢI MOTOR, không theo diện tích)`}
           current={currentUpsItemCode}
           disabled={disabled}
           onAccept={onAccept}
@@ -206,7 +218,7 @@ export function AlumdoorMotorSuggestPanel({
         <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-50/50 p-2.5 text-sm dark:bg-amber-950/20">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
           <div>
-            <div>{result.note || `Không có motor nào cho cửa ${area} m².`}</div>
+            <div>{result.note || `Không có motor nào cho cửa ${measure(area)} m².`}</div>
             <div className="mt-0.5 text-muted-foreground">
               Mở danh mục <span className="font-medium">Ngưỡng chọn Motor</span> để khai bảng tra. Hệ thống không tự đoán mã motor.
             </div>

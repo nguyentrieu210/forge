@@ -226,7 +226,8 @@ export function AlumdoorDeliveryNoteWorkbench(props: AlumdoorDeliveryNoteCreateP
         setSavedName(text(existingDoc?.name) || documentName);
         setSourceModified(text(existingDoc?.modified));
         setHeaderState(initialHeader);
-        const order = text(existingDoc?.against_sales_order);
+        // Phiếu mới mở từ nút "Xuất kho" trên đơn hàng thì đã biết sẵn xuất cho đơn nào.
+        const order = text(existingDoc?.against_sales_order) || (documentName ? "" : text(props.initialSalesOrder));
         if (order) setSelectedOrders([order]);
         replaceLines(hydrateDeliveryLines(existingItems, order));
         setDirty(false);
@@ -465,6 +466,21 @@ export function AlumdoorDeliveryNoteWorkbench(props: AlumdoorDeliveryNoteCreateP
     hydratedExisting.current = true;
     void refreshAllLineContexts().then(() => refreshReservations());
   }, [loading, lines, refreshAllLineContexts, refreshReservations]);
+
+  /**
+   * Mở từ nút "Xuất kho" trên đơn hàng: nạp luôn phần CÒN PHẢI XUẤT của đơn đó.
+   *
+   * `loadPlan` khai sau khối khởi tạo nên không gọi thẳng trong đó được — phải chờ một nhịp.
+   * Chỉ chạy một lần, và chỉ khi đang lập phiếu MỚI: mở phiếu cũ thì đơn lấy từ chính phiếu.
+   */
+  const nappedInitialOrder = useRef(false);
+  useEffect(() => {
+    if (loading || nappedInitialOrder.current || documentName) return;
+    const order = text(props.initialSalesOrder);
+    if (!order) return;
+    nappedInitialOrder.current = true;
+    void loadPlan([order]);
+  }, [loading, documentName, props.initialSalesOrder, loadPlan]);
 
   const toggleOrder = useCallback((order: string, checked: boolean) => {
     setSelectedOrders((current) => {
