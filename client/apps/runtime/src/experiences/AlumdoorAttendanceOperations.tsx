@@ -267,7 +267,32 @@ function HrSettingsScreen({ onExit }: { onExit: () => void }) {
   const { adapter } = useMetaForge();
   const [settings, setSettings] = useState<LiteSettings | null>(null); const [failure, setFailure] = useState(""); const [success, setSuccess] = useState(""); const [busy, setBusy] = useState(false);
   const [saveKey, setSaveKey] = useState(() => idempotency("hr-settings"));
-  const load = useCallback(async () => { setBusy(true); try { setSettings(await adapter.callPost<LiteSettings>("alumdoor.hr.payroll_lite_settings_get", {})); setFailure(""); } catch (error) { setFailure(errorText(adapter, error)); } finally { setBusy(false); } }, [adapter]);
+  /**
+   * Ô Công ty / Nơi làm việc / Tiền tệ phải mang GIÁ TRỊ THẬT ngay khi mở màn.
+   *
+   * Server trả về cấu hình chưa lưu lần nào thì `company` là chuỗi rỗng. `<select>` được
+   * controlled bằng đúng chuỗi rỗng đó, nên trình duyệt hiển thị option đầu tiên trong khi state
+   * vẫn trống — người dùng thấy "ALUMDOOR" trên màn, bấm Lưu, và server nhận `company: ""` rồi
+   * trả 422. Chạm vào ô rồi đổi qua đổi lại mới chạy `onChange` và lưu được: đúng triệu chứng
+   * đo ngày 23/08/2026, và nó chặn luôn việc tạo trạm chấm công vì màn trạm đòi có cấu hình.
+   *
+   * Điền sẵn lựa chọn đầu tiên là nói đúng thứ người dùng đang NHÌN THẤY.
+   */
+  const load = useCallback(async () => {
+    setBusy(true);
+    try {
+      const doc = await adapter.callPost<LiteSettings>("alumdoor.hr.payroll_lite_settings_get", {});
+      const dau = <T,>(rows: ReadonlyArray<{ value: T }> | undefined) => rows?.[0]?.value;
+      const company = doc.company || dau(doc.companies) || "";
+      setSettings({
+        ...doc,
+        company,
+        workplace: doc.workplace || dau(doc.workplaces?.filter((row) => !row.company || row.company === company)) || "",
+        currency: doc.currency || dau(doc.currencies) || "",
+      });
+      setFailure("");
+    } catch (error) { setFailure(errorText(adapter, error)); } finally { setBusy(false); }
+  }, [adapter]);
   useEffect(() => { void load(); }, [load]);
   const patch = <K extends keyof LiteSettings>(field: K, value: LiteSettings[K]) => setSettings((current) => current ? { ...current, [field]: value } : current);
   const save = async () => {

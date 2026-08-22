@@ -5,30 +5,163 @@
   "is_submittable": false,
   "autoname": "field:station_code",
   "title_field": "station_name",
-  "search_fields": ["station_code", "station_name"],
+  "search_fields": [
+    "station_code",
+    "station_name"
+  ],
   "sort_field": "modified",
   "sort_order": "DESC",
   "track_changes": true,
   "fields": [
-    { "fieldname": "station_code", "label": "Mã trạm", "fieldtype": "Data", "required": true, "unique": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true, "search_index": true },
-    { "fieldname": "station_name", "label": "Tên trạm", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
-    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "in_list_view": true, "in_standard_filter": true },
-    { "fieldname": "branch", "label": "Chi nhánh / Địa điểm", "fieldtype": "Link", "options": "Branch", "required": true, "in_list_view": true, "in_standard_filter": true },
-    { "fieldname": "policy", "label": "Chính sách ca", "fieldtype": "Link", "options": "AlumDoor Attendance Policy", "required": true, "in_list_view": true, "in_standard_filter": true },
-    { "fieldname": "latitude", "label": "Vĩ độ", "fieldtype": "Float", "required": true, "precision": 7, "ui_control": "coordinate_pair", "options": "longitude", "description": "Tọa độ tâm vùng chấm công của trạm." },
-    { "fieldname": "longitude", "label": "Kinh độ", "fieldtype": "Float", "required": true, "description": "Tọa độ tâm vùng chấm công của trạm." },
-    { "fieldname": "allowed_radius_m", "label": "Bán kính cho phép (m)", "fieldtype": "Float", "required": true, "default": 50, "non_negative": true, "allow_on_submit": true },
-    { "fieldname": "max_gps_accuracy_m", "label": "Sai số GPS tối đa (m)", "fieldtype": "Float", "required": true, "default": 50, "non_negative": true, "allow_on_submit": true },
-    { "fieldname": "secret_version", "label": "Phiên bản khóa QR", "fieldtype": "Int", "default": 1, "non_negative": true, "read_only": true, "hidden": true, "editMode": "hidden", "serverEnforced": true, "surface": "internal", "valueSource": "system" },
-    { "fieldname": "qr_rotated_at", "label": "Đổi mã QR lúc", "fieldtype": "Datetime", "read_only": true },
-    { "fieldname": "is_active", "label": "Đang hoạt động", "fieldtype": "Check", "default": 1, "in_list_view": true, "in_standard_filter": true },
-    { "fieldname": "last_seen_at", "label": "Hoạt động gần nhất", "fieldtype": "Datetime", "read_only": true, "in_list_view": true }
+    {
+      "fieldname": "station_code",
+      "label": "Mã trạm",
+      "fieldtype": "Data",
+      "required": true,
+      "unique": true,
+      "set_only_once": true,
+      "in_list_view": true,
+      "in_standard_filter": true,
+      "search_index": true
+    },
+    {
+      "fieldname": "station_name",
+      "label": "Tên trạm",
+      "fieldtype": "Data",
+      "required": true,
+      "in_list_view": true,
+      "search_index": true
+    },
+    {
+      "fieldname": "company",
+      "label": "Công ty",
+      "fieldtype": "Link",
+      "options": "Company",
+      "required": true,
+      "in_list_view": true,
+      "in_standard_filter": true
+    },
+    {
+      "fieldname": "branch",
+      "label": "Chi nhánh / Địa điểm",
+      "fieldtype": "Link",
+      "options": "Branch",
+      "required": true,
+      "in_list_view": true,
+      "in_standard_filter": true
+    },
+    {
+      "fieldname": "policy",
+      "label": "Chính sách ca",
+      "fieldtype": "Link",
+      "options": "AlumDoor Attendance Policy",
+      "required": true,
+      "in_list_view": true,
+      "in_standard_filter": true
+    },
+    {
+      "fieldname": "latitude",
+      "label": "Vĩ độ",
+      "fieldtype": "Float",
+      "required": true,
+      "precision": 7,
+      "ui_control": "coordinate_pair",
+      "options": "longitude",
+      "description": "Tọa độ tâm vùng chấm công của trạm."
+    },
+    {
+      "fieldname": "longitude",
+      "label": "Kinh độ",
+      "fieldtype": "Float",
+      "required": true,
+      "description": "Tọa độ tâm vùng chấm công của trạm."
+    },
+    {
+      "fieldname": "allowed_radius_m",
+      "label": "Bán kính cho phép (m)",
+      "fieldtype": "Float",
+      "required": true,
+      "default": 50,
+      "non_negative": true,
+      "allow_on_submit": true
+    },
+    {
+      "fieldname": "max_gps_accuracy_m",
+      "label": "Sai số GPS tối đa (m)",
+      "fieldtype": "Float",
+      "required": true,
+      "default": 50,
+      "non_negative": true,
+      "allow_on_submit": true
+    },
+    {
+      "fieldname": "secret_version",
+      "label": "Phiên bản khóa QR",
+      "fieldtype": "Int",
+      "default": 1,
+      "non_negative": true,
+      "read_only": true,
+      "hidden": true,
+      "editMode": "hidden",
+      "serverEnforced": true,
+      "surface": "internal",
+      "valueSource": "system",
+      "systemWriterRole": "AlumDoor QR System",
+      "//": "Chỉ đường \"Tạo lại QR\" của server được tăng số này; người dùng không đặt được. Không khai systemWriterRole thì chính guard serverEnforced chặn luôn đường đó, và QR dán ở cổng không thu hồi được."
+    },
+    {
+      "fieldname": "qr_rotated_at",
+      "label": "Đổi mã QR lúc",
+      "fieldtype": "Datetime",
+      "read_only": true
+    },
+    {
+      "fieldname": "is_active",
+      "label": "Đang hoạt động",
+      "fieldtype": "Check",
+      "default": 1,
+      "in_list_view": true,
+      "in_standard_filter": true
+    },
+    {
+      "fieldname": "last_seen_at",
+      "label": "Hoạt động gần nhất",
+      "fieldtype": "Datetime",
+      "read_only": true,
+      "in_list_view": true
+    }
   ],
   "permissions": [
-    { "role": "AlumDoor QR System", "read": true, "write": true },
-    { "role": "AlumDoor Attendance Manager", "read": true, "write": true, "create": true, "report": true, "export": true },
-    { "role": "HR Manager", "read": true, "write": true, "create": true, "report": true, "export": true },
-    { "role": "System Manager", "read": true, "write": true, "create": true, "report": true, "export": true, "share": true }
+    {
+      "role": "AlumDoor QR System",
+      "read": true,
+      "write": true
+    },
+    {
+      "role": "AlumDoor Attendance Manager",
+      "read": true,
+      "write": true,
+      "create": true,
+      "report": true,
+      "export": true
+    },
+    {
+      "role": "HR Manager",
+      "read": true,
+      "write": true,
+      "create": true,
+      "report": true,
+      "export": true
+    },
+    {
+      "role": "System Manager",
+      "read": true,
+      "write": true,
+      "create": true,
+      "report": true,
+      "export": true,
+      "share": true
+    }
   ],
   "revision": 2
 }

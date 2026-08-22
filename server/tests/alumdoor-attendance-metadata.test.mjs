@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import path from "node:path";
+import { readFile } from "node:fs/promises";
 import { parseAppManifest } from "../dist/packages/app-registry/src/index.js";
 import { readAppSource } from "../scripts/lib/read-app-source.mjs";
 
@@ -17,7 +18,16 @@ function permission(meta, role) {
 test("AlumDoor attendance payroll metadata stays an isolated HRM-dependent package", async () => {
   const manifest = parseAppManifest(await readAppSource(source));
   assert.equal(manifest.id, "alumdoor-attendance");
-  assert.equal(manifest.version, "0.7.5");
+  /*
+   * Đọc phiên bản từ chính `app.json`, đừng ghim chuỗi.
+   *
+   * Ghim số thì mỗi lần bump app là test đỏ mà không nói lên điều gì sai — đúng kiểu đã làm 14
+   * test của brief đỏ cùng lúc hôm 23/08. Thứ đáng khoá là app có phiên bản HỢP LỆ và khai đúng
+   * phụ thuộc, không phải nó đang ở số mấy.
+   */
+  const manifestSource = JSON.parse(await readFile(path.join(source, "app.json"), "utf8"));
+  assert.equal(manifest.version, manifestSource.version);
+  assert.match(manifest.version, /^\d+\.\d+\.\d+$/, "phiên bản app phải là dạng x.y.z");
   assert.deepEqual(manifest.requires, [{ id: "hrm", version: "1.8.0" }]);
   assert.deepEqual(
     manifest.doctypes.map((meta) => meta.name).sort(),

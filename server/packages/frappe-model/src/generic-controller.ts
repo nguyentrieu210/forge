@@ -111,7 +111,14 @@ async function normalizeDocument(
      * này trước mỗi lệnh, nên thứ client gửi lên bị thay chứ không được tin.
      */
     const suyRaTuCongThuc = field.valueSource === "formula";
-    if (field.serverEnforced && field.editMode === "hidden" && !suyRaTuCongThuc) {
+    /**
+     * Ô server-controlled vẫn phải có MỘT đường ghi được, nếu không thì nó tự khoá luôn chính
+     * chức năng của mình. Ô khai `systemWriterRole` và người ghi mang đúng vai đó thì cho qua —
+     * xem chú thích ở `types.ts`. Vai hệ thống, không cấp cho người thật.
+     */
+    const nguoiGhiHeThong = Boolean(field.systemWriterRole)
+      && context.command.actor.roles.includes(field.systemWriterRole!);
+    if (field.serverEnforced && field.editMode === "hidden" && !suyRaTuCongThuc && !nguoiGhiHeThong) {
       if (prior !== undefined) {
         if (changed) throw errors.validation(`Field is server-controlled: ${field.fieldname}`);
         output[field.fieldname] = structuredClone(prior);
@@ -135,7 +142,16 @@ async function normalizeDocument(
      * luật kiểm so bộ MỚI với kiểu tồn CŨ rồi từ chối — lỗi trỏ vào đúng ô người dùng vừa sửa.
      * Cùng gốc với lỗi "Field is read-only: inventory_mode" lúc nhập liệu.
      */
-    const suyRaTuServer = (typeof field.fetch_from === "string" && field.fetch_from.trim() !== "") || suyRaTuCongThuc;
+    /*
+     * Người ghi hệ thống cũng phải vượt được nhánh "chỉ đọc thì giữ giá trị cũ".
+     *
+     * Bỏ qua mỗi guard `serverEnforced` là chưa đủ: ô còn `read_only: true`, nên giá trị mới rơi
+     * vào nhánh giữ nguyên `prior` và lệnh ghi "thành công" mà số không đổi. Đo 23/08/2026: nút
+     * "Tạo lại QR" trả 200, `qr_rotated_at` có ghi, còn `secret_version` vẫn đứng ở 1 — tức là
+     * vẫn không thu hồi được bản QR cũ, chỉ khác là nay im lặng thay vì báo lỗi.
+     */
+    const suyRaTuServer = (typeof field.fetch_from === "string" && field.fetch_from.trim() !== "")
+      || suyRaTuCongThuc || nguoiGhiHeThong;
     let value: JsonValue | undefined;
     if (readOnly && suyRaTuServer && provided !== undefined) value = normalizeValue(field, provided, context.command.action);
     else if (readOnly && prior !== undefined) value = structuredClone(prior);

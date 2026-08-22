@@ -116,6 +116,20 @@ export interface DocFieldMeta extends JsonObject {
   surface?: "quick" | "expanded" | "internal";
   /** True when accepting a client value would violate a server-owned invariant. */
   serverEnforced?: boolean;
+  /**
+   * Vai được phép GHI một ô `serverEnforced`.
+   *
+   * "Server-controlled" nghĩa là người dùng không đặt được giá trị — chứ không có nghĩa là
+   * KHÔNG AI đặt được. Vài ô chỉ đổi qua đúng một đường mã nguồn của server; đường đó vẫn phải
+   * đi qua `save`, nên nó bị chính cái guard bảo vệ ô đó chặn lại. Đo ngày 23/08/2026:
+   * `AlumDoor QR Station.secret_version` khai `serverEnforced` nên nút "Tạo lại QR" luôn ném
+   * "Field is server-controlled: secret_version" — QR dán ở cổng bị chụp lại thì không thu hồi
+   * được, đúng thứ màn hình đang hứa là làm được.
+   *
+   * Khai vai ở ĐÂY, trên chính ô đó, thay vì nhét tên vai của một vertical vào kernel dùng
+   * chung. Vai này phải là vai hệ thống, không cấp cho người thật.
+   */
+  systemWriterRole?: string;
   /** Preserve a value the user has changed when a later Link fetch resolves. */
   dirtyGuard?: "preserve_user_value";
 }

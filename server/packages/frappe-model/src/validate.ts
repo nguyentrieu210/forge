@@ -238,6 +238,9 @@ function parseField(value: unknown, index: number): DocFieldMeta {
     ...(editMode ? { editMode: editMode as NonNullable<DocFieldMeta["editMode"]> } : {}),
     ...(surface ? { surface: surface as NonNullable<DocFieldMeta["surface"]> } : {}),
     serverEnforced: bool(input.serverEnforced, false),
+    // Vai được phép GHI một ô server-controlled. Không giữ lại ở đây thì thuộc tính bị lược mất
+    // lúc biên dịch và ô tự khoá luôn đường ghi hợp lệ duy nhất của nó — xem `types.ts`.
+    ...(input.systemWriterRole === undefined ? {} : { systemWriterRole: text(input.systemWriterRole, `fields[${index}].systemWriterRole`, 140) }),
     ...(dirtyGuard ? { dirtyGuard: "preserve_user_value" as const } : {}),
     // Value rules the SERVER enforces. Grouped here rather than scattered so it stays
     // obvious which properties change behaviour and which only change appearance.
