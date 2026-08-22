@@ -103,7 +103,7 @@ const moveFieldsAfter = (dt, names, anchor) => {
  * `unchanged` khi manifest byte-identical, nên giữ nguyên số cũ là mọi sửa đổi metadata nằm im
  * trong file mà không bao giờ vào tenant.
  */
-brief.version = "2.29.0";
+brief.version = "2.30.0";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 for (const role of ["General Accountant", "Chief Accountant", "Director", "Kế toán tổng hợp", "Kế toán trưởng", "Giám đốc"]) {
   if (!brief.roles.includes(role)) brief.roles.push(role);
@@ -3438,6 +3438,28 @@ brief.fixtures.push({
     if (!vatTu.fields.some((entry) => ten(entry) === field.fieldname)) vatTu.fields.splice(moc + offset, 0, field);
   }
 }
+/*
+ * ── Báo giá: ô "có hiệu lực đến" là BẮT BUỘC (23/08/2026) ──
+ *
+ * `quotation-controller.ts` vốn đã đòi ô này (`requiredText`), nhưng doctype khai không bắt
+ * buộc và để nó ở tab phụ — nên người bán điền xong hết mới ăn lỗi, ở một ô họ không nhìn thấy,
+ * bằng tiếng Anh. Khai đúng bản chất để form đánh dấu sao và chặn ngay tại chỗ.
+ */
+{
+  const baoGia = brief.doctypes.find((entry) => entry.name === "Quotation");
+  const ten = (field) => (typeof field === "string" ? field.split(":")[0].trim() : field.fieldname);
+  const viTri = baoGia.fields.findIndex((field) => ten(field) === "valid_till");
+  if (viTri >= 0) baoGia.fields[viTri] = {
+  "//": "Server BẮT BUỘC ô này (quotation-controller.ts: requiredText). Doctype trước nay khai không bắt buộc và để ở tab phụ, nên người bán điền xong hết mới ăn lỗi \"Valid till is required\" bằng tiếng Anh, ở một ô họ không nhìn thấy. Khai đúng bản chất: bắt buộc, và có mặc định 30 ngày.",
+  "fieldname": "valid_till",
+  "fieldtype": "Date",
+  "label": "Báo giá có hiệu lực đến",
+  "required": true,
+  "description": "Quá ngày này thì báo giá hết hiệu lực. Bỏ trống là không lưu được."
+};
+}
+note("Báo giá: valid_till thành bắt buộc");
+
 note("Item: +3 ô kỹ thuật nhôm cây (ẩn) — has_batch_no, has_catch_weight, weight_uom");
 
 note("Hoá đơn bán: +bảng thuế + tài khoản VAT đầu ra");

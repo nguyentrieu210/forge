@@ -69,10 +69,18 @@ export class QuotationController implements DocumentController<QuotationData> {
     input.currency = requiredText(input.currency, "Currency");
     assertStableField(context, "currency", input.currency);
     input.transaction_date = requiredText(input.transaction_date, "Quotation date");
-    input.valid_till = requiredText(input.valid_till, "Valid till");
+    /*
+     * Câu lỗi này đi thẳng ra mặt người bán, nên nói tiếng Việt và gọi đúng tên ô trên màn.
+     * `requiredText` nối sẵn " is required" bằng tiếng Anh; đổi hàm dùng chung thì đụng mọi ô
+     * của các controller khác, nên chặn riêng ở đây.
+     */
+    if (!String(input.valid_till ?? "").trim()) {
+      throw errors.validation("Chưa điền \"Báo giá có hiệu lực đến\". Quá ngày đó thì báo giá hết hiệu lực.", { fieldname: "valid_till" });
+    }
+    input.valid_till = requiredText(input.valid_till, "Báo giá có hiệu lực đến");
     assertDate(input.transaction_date, "Quotation date");
     assertDate(input.valid_till, "Valid till");
-    if (input.valid_till < input.transaction_date) throw errors.validation("Quotation valid_till cannot precede transaction_date");
+    if (input.valid_till < input.transaction_date) throw errors.validation("Ngày hết hiệu lực của báo giá không được sớm hơn ngày báo giá.");
     if (!Array.isArray(input.items) || input.items.length === 0) throw errors.validation("Quotation requires at least one item");
     input.items = input.items.map((row, index) => normalizeItemIdentity(row, index));
     input.taxes = (input.taxes ?? []).map((row, index) => normalizeTaxIdentity(row, index));

@@ -89,6 +89,37 @@ const RESULT_LABELS: Record<string, string> = {
   message: "Diễn giải",
   name: "Mã chứng từ",
   doctype: "Loại chứng từ",
+  /*
+   * Các ô của dòng BÁN. Thiếu chúng ở đây thì bảng xem trước rơi về tên trường viết hoa chữ đầu
+   * — đo 23/08/2026 trên bảng "Đơn hàng → Hoá đơn": Sales order · Customer · Lines · Row id ·
+   * Item name · Inventory mode · Measurement profile · Min area sqm · Width pb ray m · Set
+   * count. Người ở xưởng không đọc được, và cũng không đoán được "Min area sqm" là gì.
+   */
+  sales_order: "Đơn bán",
+  sales_invoice: "Hoá đơn bán",
+  customer: "Khách hàng",
+  lines: "Số dòng",
+  row_id: "Dòng số",
+  sales_order_row_id: "Dòng đơn bán",
+  item_name: "Tên hàng",
+  inventory_mode: "Kiểu tính tồn",
+  measurement_profile: "Bộ theo dõi",
+  min_area_sqm: "Diện tích tính tối thiểu (m²)",
+  billable_area_sqm: "Diện tích tính tiền (m²)",
+  width_pb_ray_m: "Rộng phủ bì ray (m)",
+  width_pb_nhua_m: "Rộng phủ bì nhựa (m)",
+  cut_width_m: "Rộng cắt lá (m)",
+  set_count: "Số bộ",
+  height_m: "Cao (m)",
+  width_m: "Rộng (m)",
+  mesh_height_m: "Cao lưới (m)",
+  stock_uom: "ĐVT tồn",
+  stock_qty: "SL quy ra tồn",
+  conversion_factor: "Hệ số quy đổi",
+  leaf_count: "Số lá",
+  door_type: "Loại cửa",
+  price_variant: "Mã giá",
+  delivered_qty: "Đã giao",
 };
 
 const TABLE_TITLES: Record<string, string> = {
@@ -96,8 +127,26 @@ const TABLE_TITLES: Record<string, string> = {
   order_balances: "Đơn còn nợ",
   allocations: "Lịch sử trừ FIFO lần này",
   receipt_history: "Lịch sử hàng về",
-  items: "Dòng phiếu nhập sẽ tạo",
 };
+
+/**
+ * Tiêu đề bảng `items` phải theo NGHIỆP VỤ đang chạy.
+ *
+ * `items` là tên trường dùng chung, nên gắn cứng một tiêu đề là gán nhầm cho mọi hành động
+ * khác: đo 23/08/2026, màn "Đơn hàng → Hoá đơn" hiện tiêu đề "Dòng phiếu nhập sẽ tạo" trong
+ * khi đang lập hoá đơn BÁN. Sai từ nghiệp vụ, và người đọc có lý do để ngờ mình bấm nhầm nút.
+ */
+const ITEMS_TITLE_BY_ACTION: Record<string, string> = {
+  "don-ban-thanh-hoa-don": "Dòng hoá đơn sẽ tạo",
+  "don-ban-thanh-phieu-xuat": "Dòng phiếu xuất sẽ tạo",
+  "don-mua-thanh-phieu-nhap": "Dòng phiếu nhập sẽ tạo",
+  "nhap-nhom-fifo": "Dòng phiếu nhập sẽ tạo",
+  "nhap-nhom-hang-loat": "Dòng phiếu nhập sẽ tạo",
+};
+
+function itemsTitle(actionName: string): string {
+  return ITEMS_TITLE_BY_ACTION[actionName] ?? "Dòng chứng từ sẽ tạo";
+}
 
 const OBJECT_TITLES: Record<string, string> = {
   debt: "Công nợ giao hàng sau lần nhận",
@@ -373,6 +422,7 @@ export function ActionScreen({ action, onOpen }: ActionScreenProps) {
       {shown != null && !isDoorCalculator
         ? <ActionResult
             value={shown}
+            actionName={action.name}
             table={action.result_table}
             committed={result != null}
             format={(value: number) => fmt.number(value)}
@@ -528,10 +578,12 @@ function orderedTableEntries(record: ResultRecord, primary?: string): Array<[str
  * thành một bảng riêng; object được render thành summary cards. Nhờ đó API giàu dữ liệu không
  * còn bị UI làm mất thông tin chỉ vì manifest cũ chỉ có một `result_table`.
  */
-function ActionResult({ value, table, committed, format, onOpen }: {
+function ActionResult({ value, table, committed, format, onOpen, actionName }: {
   value: unknown;
   table?: string;
   committed: boolean;
+  /** Tiêu đề bảng `items` phụ thuộc hành động đang chạy — xem `ITEMS_TITLE_BY_ACTION`. */
+  actionName: string;
   format: (value: number) => string;
   onOpen?: (doctype: string, name: string) => void;
 }) {
@@ -591,7 +643,7 @@ function ActionResult({ value, table, committed, format, onOpen }: {
       {tables.map(([key, rows]) => (
         <section key={key} className="overflow-hidden rounded-xl border bg-card" data-action-result-section={key}>
           <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
-            <h3 className="text-sm font-semibold">{TABLE_TITLES[key] ?? labelForKey(key)}</h3>
+            <h3 className="text-sm font-semibold">{key === "items" ? itemsTitle(actionName) : TABLE_TITLES[key] ?? labelForKey(key)}</h3>
             <span className="text-xs text-muted-foreground">{rows.length} dòng</span>
           </div>
           {rows.length

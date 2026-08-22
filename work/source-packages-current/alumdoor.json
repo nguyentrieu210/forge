@@ -1,7 +1,7 @@
 {
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "2.29.0",
+  "version": "2.30.0",
   "metaContractVersion": 1,
   "platform_requires": "1.0.0",
   "requires": [
@@ -7484,14 +7484,17 @@
           "idx": 4
         },
         {
-          "fieldname": "valid_till",
           "label": "Báo giá có hiệu lực đến",
+          "//": "Server BẮT BUỘC ô này (quotation-controller.ts: requiredText). Doctype trước nay khai không bắt buộc và để ở tab phụ, nên người bán điền xong hết mới ăn lỗi \"Valid till is required\" bằng tiếng Anh, ở một ô họ không nhìn thấy. Khai đúng bản chất: bắt buộc, và có mặc định 30 ngày.",
+          "fieldname": "valid_till",
           "fieldtype": "Date",
+          "required": true,
+          "description": "Quá ngày này thì báo giá hết hiệu lực. Bỏ trống là không lưu được.",
           "in_list_view": true,
           "in_standard_filter": false,
           "valueSource": "user",
           "editMode": "immutable_after_submit",
-          "surface": "expanded",
+          "surface": "quick",
           "serverEnforced": false,
           "idx": 5
         },
@@ -7678,6 +7681,7 @@
           "fields": [
             "customer",
             "transaction_date",
+            "valid_till",
             "items"
           ]
         },

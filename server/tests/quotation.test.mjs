@@ -61,7 +61,7 @@ test("Quotation customer must match CRM Deal and validity cannot run backwards",
   await assert.rejects(() => mutate(kernel, {
     commandId: "quote-bad-validity", actor: salesUser, doctype: "Quotation", name: "QTN-Y", action: "create", expectedVersion: null,
     document: quotationDocument({ valid_till: "2026-08-01" }),
-  }), /valid_till cannot precede transaction_date/);
+  }), /không được sớm hơn ngày báo giá/);
 });
 
 test("Quotation business revision uses the canonical amended_from chain", async () => {
