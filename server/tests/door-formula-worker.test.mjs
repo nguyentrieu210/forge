@@ -60,6 +60,8 @@ function request(
           inventory_mode: "Thành phẩm theo m2",
           width_m: 4,
           height_m: 3,
+          // Cửa Lưới mua vật tư theo Cao lưới; ghi sổ đơn bán bắt buộc có ô này.
+          mesh_height_m: 2.8,
           set_count: 1,
           sales_mode: "Tách món",
           color: "GS",
@@ -93,6 +95,58 @@ test("Worker từ chối cửa khi khách chưa có Nhóm giá", async () => {
 test("Worker cho phép snapshot Nhóm giá hợp lệ khác mặc định hồ sơ khách", async () => {
   const response = await alumdoorWorker.fetch(request(11.91, "Đại lý", "CUST-RETAIL"), { PLATFORM: platform }, {});
   assert.equal(response.status, 200, await response.text());
+});
+
+/**
+ * Cao lưới không suy được từ Cao phủ bì. Thiếu nó thì khâu PHÁT LỆNH SẢN XUẤT mới vỡ với
+ * "Cao lưới phải lớn hơn 0" — tức là sau khi đã hứa ngày giao với khách. Cổng phải nằm ở
+ * lúc ghi sổ đơn, và phải KHÔNG nằm ở báo giá hay bản nháp.
+ */
+function meshRequest(doctype, action) {
+  return new Request("https://app.internal/hooks/validate", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-cloudforge-tenant": "tenant-test",
+      "x-cloudforge-callback": "https://tenant.test/_app/",
+    },
+    body: JSON.stringify({
+      doctype,
+      name: `NEW-${doctype.replace(/\s+/g, "-").toUpperCase()}`,
+      action,
+      payload: {
+        customer: "CUST-DEALER",
+        customer_group: "Đại lý",
+        items: [{
+          item_code: "CUA-LUOI-TEST",
+          inventory_mode: "Thành phẩm theo m2",
+          width_m: 4,
+          height_m: 3,
+          set_count: 1,
+          sales_mode: "Tách món",
+          color: "GS",
+          uom: "m2",
+          qty: 11.91,
+          conversion_factor: 1,
+          stock_qty: 11.91,
+        }],
+      },
+    }),
+  });
+}
+
+test("ghi sổ đơn bán Cửa Lưới thiếu Cao lưới bị chặn ngay, không để vỡ ở khâu sản xuất", async () => {
+  const response = await alumdoorWorker.fetch(meshRequest("Sales Order", "submit"), { PLATFORM: platform }, {});
+  const body = await response.json();
+  assert.equal(response.status, 422);
+  assert.match(body.message, /Cao lưới/);
+});
+
+test("báo giá và bản nháp vẫn để trống Cao lưới được — lúc đó người bán chưa ra tận nơi đo", async () => {
+  for (const [doctype, action] of [["Quotation", "submit"], ["Sales Order", "save"]]) {
+    const response = await alumdoorWorker.fetch(meshRequest(doctype, action), { PLATFORM: platform }, {});
+    assert.equal(response.status, 200, `${doctype}/${action}: ${await response.text()}`);
+  }
 });
 
 test("method tính thử trả cùng rộng cắt và m2 với validator", async () => {

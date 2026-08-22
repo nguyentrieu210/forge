@@ -219,3 +219,79 @@ test("React must not own U70/U76 cut deductions", async () => {
   assert.match(table, /ray_type: "Loại ray"/);
   assert.doesNotMatch(model + table, /0\.05|0\.08/);
 });
+
+/**
+ * Ước tính Kg nhôm là số THAM KHẢO, không phải điều kiện để phát lệnh.
+ *
+ * Soát ngày 23/08/2026: 54/54 mã có `door_type` đều trống `purchase_kg_per_m2`, nên đường
+ * `purpose: "all"` ném "Barem kg/m2 phải lớn hơn 0" và KHÔNG đơn nào phát được lệnh sản xuất —
+ * kể cả đơn đã đo đủ. Vật tư thật cấp theo BOM, nên thiếu barem phải hạ xuống cảnh báo.
+ */
+function daiLoanProductionInput({ barem, meshHeight }) {
+  return {
+    sales: {
+      name: "DH-DL-TEST",
+      docstatus: 1,
+      customer_group: "Đại lý",
+      delivery_date: "2026-08-30",
+      items: [{
+        row_id: "ROW-DL",
+        item_code: "CUA-DL-TEST",
+        inventory_mode: "Thành phẩm theo m2",
+        width_m: 4,
+        height_m: 3,
+        ...(meshHeight === undefined ? {} : { mesh_height_m: meshHeight }),
+        set_count: 1,
+        sales_mode: "Trọn bộ",
+        color: "GS",
+      }],
+    },
+    items: new Map([["CUA-DL-TEST", {
+      item_code: "CUA-DL-TEST",
+      item_group: "Cửa Đài Loan",
+      door_type: "Cửa Đài Loan",
+      inventory_mode: "Thành phẩm theo m2",
+      stock_uom: "Bộ",
+      min_area_sqm: 0,
+      ...(barem === undefined ? {} : { purchase_kg_per_m2: barem }),
+    }]]),
+    // Fixture trong `briefs/alumdoor.json` chưa khai chia lá cho ba chính sách Barem, còn
+    // bản đang chạy thì có (soát D1 ngày 23/08/2026). Dùng hình dạng THẬT để test đo đúng
+    // đường mà xưởng đi, không đo một chính sách chỉ tồn tại trong brief cũ.
+    policies: [{
+      ...fixturePolicy("Cửa Đài Loan — công thức chuẩn"),
+      leaf_formula: "Kiểu Đài Loan Lưới",
+      leaf_divisor_source: "Hằng số của chính sách",
+      leaf_divisor_const: 0.077,
+      leaf_height_deduction_m: 0,
+      leaf_rounding: "Ngưỡng trừ-một-lá",
+      leaf_round_threshold: 0.8,
+    }],
+    standards: [{ department: "Cửa Đài Loan", door_type: "Cửa Đài Loan", minutes_per_set: 40 }],
+    boms: [{ name: "BOM-DL-1", item: "CUA-DL-TEST", color: "GS", docstatus: 1, bom_status: "Active", revision: 1 }],
+    source_warehouse: "Kho xưởng",
+    target_warehouse: "Kho xưởng",
+  };
+}
+
+test("thiếu Barem kg/m2 vẫn phát được lệnh — ô Kg để trống kèm lý do, không chặn cả xưởng", () => {
+  const lines = buildSalesProductionLines(daiLoanProductionInput({ meshHeight: 2.8 }));
+  assert.equal(lines.length, 1);
+  assert.equal(lines[0].estimated_weight_kg, undefined);
+  assert.match(lines[0].estimate_missing_reason, /Barem kg\/m2/);
+  assert.equal(lines[0].bom_no, "BOM-DL-1");
+});
+
+test("thiếu Cao lưới cũng chỉ bỏ ước tính, không chặn phát lệnh", () => {
+  const lines = buildSalesProductionLines(daiLoanProductionInput({ barem: 7.5 }));
+  assert.equal(lines.length, 1);
+  assert.equal(lines[0].estimated_weight_kg, undefined);
+  assert.match(lines[0].estimate_missing_reason, /Cao lưới/);
+});
+
+test("đủ Barem và Cao lưới thì vẫn ước tính Kg nhôm như cũ", () => {
+  const lines = buildSalesProductionLines(daiLoanProductionInput({ barem: 7.5, meshHeight: 2.8 }));
+  assert.equal(lines.length, 1);
+  assert.ok(lines[0].estimated_weight_kg > 0, `Kg phải > 0, nhận ${lines[0].estimated_weight_kg}`);
+  assert.equal(lines[0].estimate_missing_reason, undefined);
+});

@@ -913,6 +913,31 @@ function validateSalesTransactionQuantity(
  * are master data, not user input. Quantity remains the commercial quantity; stock quantity is
  * a separate snapshot used by the ledger.
  */
+/**
+ * Trả về TÊN LOẠI CỬA khi dòng bán bắt buộc Cao lưới mà ô đó còn trống; "" nếu không bắt.
+ *
+ * Không tự chọn danh sách loại cửa: hỏi thẳng `purchase_height_basis` của Cutting Policy, để
+ * xưởng đổi chính sách trong dữ liệu là phép kiểm đi theo, không phải sửa mã. Không chọn được
+ * chính sách thì im lặng nhường — phép kiểm chính ở dưới sẽ báo đúng lỗi chính sách.
+ */
+function meshHeightMissing(
+  row: Record<string, unknown>,
+  item: InventoryItem,
+  doorPolicies: DoorFormulaPolicy[],
+): string {
+  const doorType = inferDoorType(item.door_type, item.item_group);
+  if (!doorType) return "";
+  let policy: DoorFormulaPolicy;
+  try {
+    policy = selectDoorPolicy(doorPolicies, doorType, String(item.item_group ?? ""), rayTypeOf(row.ray_type));
+  } catch {
+    return "";
+  }
+  if (policy.purchase_height_basis !== "Cao lưới") return "";
+  const mesh = Number(row.mesh_height_m);
+  return Number.isFinite(mesh) && mesh > 0 ? "" : doorType;
+}
+
 export async function validateTransactionLines(
   call: PlatformCall,
   subject: ValidatorSubject,
@@ -970,6 +995,21 @@ export async function validateTransactionLines(
     }
     if (side === "sales" && item.is_sales_item !== undefined && !checked(item.is_sales_item)) {
       return refuse(`${line}: Item không được phép bán.`);
+    }
+    /**
+     * Cao lưới là số đo ĐỘC LẬP, không suy được từ Cao phủ bì. Ba loại cửa có
+     * `Cutting Policy.purchase_height_basis = "Cao lưới"` (Cửa Lưới, Cửa Đài Loan, Cửa Siêu
+     * Trường) tính Kg nhôm theo chiều cao đó, nên thiếu ô này thì phát lệnh sản xuất vỡ với
+     * "Cao lưới phải lớn hơn 0" — sau khi đã hứa ngày giao với khách.
+     *
+     * Chặn ở GHI SỔ ĐƠN BÁN chứ không ở báo giá: lúc báo giá người bán chưa ra tận nơi đo,
+     * và bắt buộc từ đó là chặn đúng cái việc mà màn báo giá sinh ra để làm.
+     */
+    if (side === "sales" && subject.doctype === "Sales Order" && subject.action === "submit") {
+      const missing = meshHeightMissing(row, item, doorPolicies);
+      if (missing) {
+        return refuse(`${line}: ${missing} tính vật tư theo Cao lưới; hãy nhập ô "Cao lưới (m)" trước khi ghi sổ đơn.`);
+      }
     }
 
     const stockUom = String(item.stock_uom ?? "").trim();

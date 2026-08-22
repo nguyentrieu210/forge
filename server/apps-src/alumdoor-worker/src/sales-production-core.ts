@@ -163,6 +163,8 @@ export interface SalesProductionLine extends Json {
   bom_actual_requirements?: BomActualRequirement[];
   missing_actual_component_keys?: string[];
   bom_actual_complete?: 0 | 1;
+  /** Chỉ dùng cho bản xem trước: vì sao dòng này không ước tính được Kg nhôm. */
+  estimate_missing_reason?: string;
   output_qty: number;
   stock_uom: string;
   paint_required: 0 | 1;
@@ -886,6 +888,25 @@ export function buildSalesProductionLines(input: BuildInputs, options: { allow_m
     const salesMode = (text(row.sales_mode) || "Trọn bộ") as SalesMode;
     if (salesMode !== "Trọn bộ" && salesMode !== "Tách món") throw new Error(`Dòng ${index + 1}: Cách bán không hợp lệ.`);
     const chosen = choosePolicy(input.policies, doorType, itemGroup, text(row.ray_type));
+    /**
+     * Ước tính Kg nhôm là số THAM KHẢO: `estimated_weight_kg` khai nullable ở cả `SalesProductionLine`
+     * lẫn `Production Request Item`, và vật tư thật lấy theo BOM chứ không theo con số này.
+     *
+     * Nhưng đường tính nó (`purpose: "all"`) lại NÉM khi thiếu Barem kg/m2 hoặc Cao lưới, nên một
+     * ô danh mục chưa ai điền chặn đứng việc phát lệnh của cả xưởng: soát ngày 23/08/2026 thấy
+     * 54/54 mã có `door_type` đều trống `purchase_kg_per_m2`, tức KHÔNG đơn nào phát lệnh được —
+     * kể cả đơn có đủ mọi số đo. Cùng một kiểu lỗi đã vá cho `leaf_divisor_m` ngay bên dưới.
+     *
+     * Nên chỉ hỏi ước tính khi đủ đầu vào. Thiếu thì lệnh vẫn phát, ô Kg để trống và mang theo
+     * lý do để bản xem trước nói thẳng ra.
+     */
+    const barem = Number(item.purchase_kg_per_m2 ?? 0);
+    const caoLuoi = row.mesh_height_m == null || row.mesh_height_m === "" ? 0 : Number(row.mesh_height_m);
+    const canCaoLuoi = chosen.parsed.purchase_height_basis === "Cao lưới";
+    const theoBarem = chosen.parsed.purchase_formula === "Barem kg/m2";
+    const thieuUocTinh = !theoBarem ? "" : !(barem > 0)
+      ? `chưa khai Barem kg/m2 trên hồ sơ mặt hàng ${itemCode}`
+      : canCaoLuoi && !(caoLuoi > 0) ? "dòng đơn chưa có Cao lưới" : "";
     const formula = calculateDoorFormula(chosen.parsed, {
       door_type: doorType,
       item_group: itemGroup,
@@ -898,8 +919,8 @@ export function buildSalesProductionLines(input: BuildInputs, options: { allow_m
       ...(row.mesh_height_m == null || row.mesh_height_m === "" ? {} : { mesh_height_m: Number(row.mesh_height_m) }),
       set_count: sets,
       min_area_sqm: Number(item.min_area_sqm ?? 0) || 0,
-      ...(Number(item.purchase_kg_per_m2 ?? 0) > 0 ? { kg_per_m2: Number(item.purchase_kg_per_m2) } : {}),
-      purpose: chosen.parsed.purchase_formula === "Barem kg/m2" ? "all" : "sales",
+      ...(barem > 0 ? { kg_per_m2: barem } : {}),
+      purpose: theoBarem && !thieuUocTinh ? "all" : "sales",
     });
     const geometry = raySpecificGeometry(
       doorType,
@@ -995,6 +1016,7 @@ export function buildSalesProductionLines(input: BuildInputs, options: { allow_m
         ...(leaf.single_layer_leaf_count == null ? {} : { single_layer_leaf_count: leaf.single_layer_leaf_count }),
         ...(leaf.double_layer_leaf_count == null ? {} : { double_layer_leaf_count: leaf.double_layer_leaf_count }),
         ...(estimatedWeightPerSet == null ? {} : { estimated_weight_kg: estimatedWeightPerSet }),
+        ...(thieuUocTinh ? { estimate_missing_reason: thieuUocTinh } : {}),
         estimated_minutes: standard.minutes,
         ...(standard.warning ? { schedule_warning: standard.warning } : {}),
         source_warehouse: input.source_warehouse,
@@ -1365,6 +1387,10 @@ export async function previewSalesProduction(call: ProductionPlatformCall, args:
       ...items.map((line) => line.schedule_warning).filter((value): value is string => Boolean(value)),
       ...items.filter((line) => line.bom_actual_complete === 0).map((line) =>
         `${line.item_code} · bộ ${line.set_no}: thiếu vật tư BOM thực tế ${line.missing_actual_component_keys?.join(", ") || "chưa xác định"}.`),
+      // Ước tính Kg nhôm không chặn phát lệnh, nhưng phải nói ra — nếu không, ô Kg trống trông
+      // như xưởng không cần nhôm.
+      ...items.filter((line) => text(line.estimate_missing_reason)).map((line) =>
+        `${line.item_code} · bộ ${line.set_no}: chưa ước tính được Kg nhôm vì ${line.estimate_missing_reason}. Lệnh vẫn phát được; vật tư cấp theo BOM.`),
     ])];
     return answer({
       sales_order: input.sales.name,

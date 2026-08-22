@@ -359,6 +359,9 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
   const [deliveryNotesLoaded, setDeliveryNotesLoaded] = useState(false);
   const [unsubmitting, setUnsubmitting] = useState(false);
   const [confirmUnsubmit, setConfirmUnsubmit] = useState(false);
+  /** Bản xem trước của lệnh sản xuất sắp phát; `null` = chưa hỏi. Kèm `_warehouse` đã chốt. */
+  const [productionPreview, setProductionPreview] = useState<Json | null>(null);
+  const [productionBusy, setProductionBusy] = useState(false);
   const [sourceModified, setSourceModified] = useState("");
   const [docstatus, setDocstatus] = useState(0);
   const [dirty, setDirty] = useState(false);
@@ -1356,6 +1359,32 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
       );
       return;
     }
+    /**
+     * Cao lưới: bắt ở GHI SỔ, không bắt ở Lưu nháp.
+     *
+     * Ba loại cửa (Cửa Lưới, Cửa Đài Loan, Cửa Siêu Trường) tính Kg nhôm theo Cao lưới, mà số
+     * đo đó KHÔNG suy được từ Cao phủ bì. Thiếu nó thì đơn vẫn ghi sổ trót lọt và chỗ vỡ rơi
+     * xuống tận khâu phát lệnh sản xuất — "Cao lưới phải lớn hơn 0" — sau khi đã hứa ngày giao.
+     *
+     * KHÔNG chép danh sách loại cửa xuống đây: server đã cho `hidden = 0` đúng những dòng cần
+     * ô này, nên hỏi lại chính cờ đó. Xưởng đổi Cutting Policy thì màn đi theo, không phải sửa
+     * hai chỗ rồi trôi dạt.
+     */
+    const thieuCaoLuoi = linesRef.current
+      .filter((line) => text(line.item_code))
+      .findIndex((line) => {
+        const rule = (line._overrides ?? {})["mesh_height_m"] as FieldOverride | undefined;
+        if (!rule || rule.hidden === true || rule.hidden === 1) return false;
+        const caoLuoi = numberValue(line.mesh_height_m);
+        return caoLuoi === undefined || caoLuoi <= 0;
+      });
+    if (thieuCaoLuoi >= 0) {
+      toast.error(
+        `Dòng ${thieuCaoLuoi + 1}: loại cửa này tính vật tư theo Cao lưới — hãy nhập ô "Cao lưới (m)" `
+        + "trước khi ghi sổ. Lưu nháp vẫn được nếu chưa ra tận nơi đo.",
+      );
+      return;
+    }
     setSubmitting(true);
     try {
       const saved = await persistDraft();
@@ -1381,10 +1410,71 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
     }
   }, [adapter, canSubmit, documentName, isExisting, persistDraft, props, replaceLines, setHeaderState]);
 
-  const openProduction = useCallback(() => {
+  /**
+   * "Sản xuất" phải PHÁT ĐƯỢC LỆNH, không chỉ mở một danh sách rỗng.
+   *
+   * Trước 23/08/2026 nút này nhảy sang `/app/Production Request?f_sales_order=…`. Tenant chưa
+   * có Yêu cầu sản xuất nào nên người dùng luôn gặp danh sách trắng, và màn đó không có nút
+   * tạo — đường cụt. Server đã có sẵn `alumdoor.sales.create_production`: nó tự lập Yêu cầu
+   * sản xuất nếu chưa có rồi sinh Work Order, và CHẠY LẠI ĐƯỢC (đơn đã có lệnh thì trả về
+   * lệnh cũ, không sinh trùng).
+   *
+   * Xem trước rồi mới phát: phát lệnh là lúc giữ chỗ vật tư, không phải việc bấm nhầm rồi lui.
+   */
+  const khoChinh = useCallback(async (): Promise<string> => {
+    const rows = await adapter.getList("Warehouse", {
+      fields: ["name", "stock_role", "disabled", "is_group"],
+      filters: { stock_role: "Kho chính" },
+      pageLength: 20,
+    });
+    const dung = rows.filter((row) => !checked(row.disabled) && !checked(row.is_group));
+    // Có hai kho chính thì KHÔNG đoán: chọn hộ kho là chọn hộ chỗ vật tư bị trừ.
+    return dung.length === 1 ? text(dung[0]?.name) : "";
+  }, [adapter]);
+
+  const openProduction = useCallback(async () => {
     if (!documentName || docstatus !== 1 || !productionCaps.read) return;
-    window.location.assign(`/app/${encodeURIComponent("Production Request")}?f_sales_order=${encodeURIComponent(documentName)}`);
-  }, [docstatus, documentName, productionCaps.read]);
+    setProductionBusy(true);
+    try {
+      const kho = await khoChinh();
+      if (!kho) {
+        toast.error("Chưa xác định được Kho chính duy nhất — hãy đặt đúng một kho có Vai trò kho = \"Kho chính\" trước khi phát lệnh sản xuất.");
+        return;
+      }
+      const preview = await adapter.callPost<Json>("alumdoor.sales.preview_production", {
+        sales_order: documentName,
+        source_warehouse: kho,
+        target_warehouse: kho,
+      });
+      setProductionPreview({ ...preview, _warehouse: kho });
+    } catch (error) {
+      toast.error(adapter.mapError(error).message);
+    } finally {
+      setProductionBusy(false);
+    }
+  }, [adapter, docstatus, documentName, khoChinh, productionCaps.read]);
+
+  const phatLenhSanXuat = useCallback(async () => {
+    const kho = text(productionPreview?._warehouse);
+    if (!documentName || !kho) return;
+    setProductionBusy(true);
+    try {
+      const result = await adapter.callPost<Json>("alumdoor.sales.create_production", {
+        sales_order: documentName,
+        source_warehouse: kho,
+        target_warehouse: kho,
+      });
+      const request = text(result.production_request) || text(result.request);
+      const created = Array.isArray(result.created) ? result.created.length : 0;
+      toast.success(created ? `Đã phát ${created} lệnh sản xuất.` : "Đơn này đã có lệnh sản xuất.");
+      setProductionPreview(null);
+      if (request) window.location.assign(`/app/${encodeURIComponent("Production Request")}/${encodeURIComponent(request)}`);
+    } catch (error) {
+      toast.error(adapter.mapError(error).message);
+    } finally {
+      setProductionBusy(false);
+    }
+  }, [adapter, documentName, productionPreview]);
 
   /** Sang thẳng màn xuất kho, đã biết sẵn xuất cho đơn nào. */
   const openDelivery = useCallback(() => {
@@ -1658,7 +1748,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
         <div className="flex w-full flex-wrap items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2"><span className="text-muted-foreground">{recalculating ? "Đang tính lại" : dirty ? "Có thay đổi chưa lưu" : docstatus === 1 ? "Đã ghi sổ" : "Nháp đã đồng bộ"}</span><strong className="tabular-nums">Còn phải thu: {money(outstandingAmount)} ₫</strong></div>
           <div className="flex flex-wrap items-center gap-1.5">
-            {docstatus === 1 && documentName && productionCaps.read ? <Button type="button" variant="outline" size="sm" onClick={openProduction}><Factory className="size-3.5" /> Sản xuất</Button> : null}
+            {docstatus === 1 && documentName && productionCaps.read ? <Button type="button" variant="outline" size="sm" disabled={productionBusy} onClick={() => void openProduction()}>{productionBusy ? <Loader2 className="size-3.5 animate-spin" /> : <Factory className="size-3.5" />} Sản xuất</Button> : null}
             {docstatus === 1 && documentName ? <Button type="button" variant="outline" size="sm" onClick={openDelivery}><Truck className="size-3.5" /> Xuất kho</Button> : null}
             {coTheHuyDuyet ? <Button type="button" variant="outline" size="sm" disabled={unsubmitting} onClick={() => setConfirmUnsubmit(true)}>{unsubmitting ? <Loader2 className="size-3.5 animate-spin" /> : <Undo2 className="size-3.5" />} Huỷ duyệt để sửa</Button> : null}
             {docstatus === 1 && daXuatKho ? <span className="flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-700" title={`Phiếu xuất kho: ${deliveryNotes.map((row) => text(row.name)).join(", ")}`}><Lock className="size-3" /> Đã xuất kho — khoá sửa</span> : null}
@@ -1672,6 +1762,30 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
         </div>
       </div>
     </div>
+
+    {/* Phát lệnh sản xuất: bày đủ số bộ, kho bị trừ và mọi cảnh báo TRƯỚC khi bấm. */}
+    <Dialog open={productionPreview !== null} onOpenChange={(open) => { if (!open) setProductionPreview(null); }}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Phát lệnh sản xuất cho đơn {documentName}</DialogTitle></DialogHeader>
+        <div className="space-y-4 p-1 text-sm">
+          <div className="grid gap-2 rounded-lg border bg-muted/30 p-3">
+            <div className="flex justify-between"><span className="text-muted-foreground">Số bộ phải sản xuất</span><strong className="tabular-nums">{Number(productionPreview?.lines ?? 0)}</strong></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Lệnh sẽ tạo</span><strong className="tabular-nums">{Number(productionPreview?.work_orders ?? 0)}</strong></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Nhôm ước tính</span><strong className="tabular-nums">{Number(productionPreview?.estimated_weight_kg ?? 0).toLocaleString("vi-VN")} Kg</strong></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Trừ vật tư ở kho</span><strong>{text(productionPreview?._warehouse)}</strong></div>
+          </div>
+          {Array.isArray(productionPreview?.warnings) && productionPreview.warnings.length ? <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
+            <div className="flex items-center gap-2 text-sm font-medium text-amber-700"><AlertTriangle className="size-4" /> Còn {productionPreview.warnings.length} cảnh báo — lệnh vẫn phát được, nhưng xưởng sẽ vướng</div>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-[13px] text-amber-800">{(productionPreview.warnings as unknown[]).slice(0, 8).map((warning, index) => <li key={index}>{String(warning)}</li>)}</ul>
+          </div> : null}
+          <p className="text-muted-foreground">Phát lệnh là lúc giữ chỗ vật tư cho đơn này. Bấm lại lần nữa không sinh lệnh trùng — đơn đã có lệnh thì mở lại lệnh cũ.</p>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setProductionPreview(null)}>Để sau</Button>
+            <Button disabled={productionBusy || Number(productionPreview?.lines ?? 0) === 0} onClick={() => void phatLenhSanXuat()}>{productionBusy ? <Loader2 className="size-4 animate-spin" /> : <Factory className="size-4" />} Phát lệnh sản xuất</Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
 
     <Dialog open={confirmDiscard} onOpenChange={setConfirmDiscard}>
       <DialogContent>

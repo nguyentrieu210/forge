@@ -502,6 +502,13 @@ async function previewSales(call: PlatformCall, args: Json, row: Json, parent: J
     fieldOverride(overrides, fields, "width_m", { hidden: selectedWidthField ? 1 : 0, reqd: selectedWidthField ? 0 : 1, label: widthBasis.includes("nhựa") ? "Rộng PB nhựa\n(m)" : widthBasis.includes("ray") ? "Rộng PB ray\n(m)" : "Rộng PB\n(m)" });
     fieldOverride(overrides, fields, "height_m", { label: "Cao PB\n(m)" });
     const meshHeightApplicable = usesMeshHeight(effectiveDoorType, item.item_group);
+    /**
+     * CỐ Ý để `reqd: 0` dù ghi sổ đơn bán bắt buộc có Cao lưới (xem `meshHeightMissing` trong
+     * document-validation.ts). Cờ `reqd` của lưới chặn cả nút LƯU NHÁP, mà nháp là chỗ người
+     * bán đỗ đơn lại khi chưa ra tận nơi đo. Chặn ở nháp là chặn đúng việc màn này sinh ra để
+     * làm. Màn bán tự chặn lúc GHI SỔ bằng chính cờ `hidden` dưới đây: ô nào server cho hiện
+     * mà còn trống thì không ghi sổ được.
+     */
     fieldOverride(overrides, fields, "mesh_height_m", {
       hidden: meshHeightApplicable ? 0 : 1,
       reqd: 0,
