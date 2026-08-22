@@ -133,6 +133,16 @@ function statusMetrics(doctype: string, data: JsonObject): O2CStatusMetrics {
  * vốn đã trả về — nên sửa rồi lưu lại vẫn ra đúng khoá cũ. Dòng mới chèn vào giữa không
  * bao giờ cướp khoá của một dòng đang có: khoá đã dùng được gom trước rồi mới đúc tiếp.
  */
+/**
+ * Vai được duyệt giá/chiết khấu ngoài chính sách. Giữ ĐỒNG BỘ với
+ * `commercial-sales-order-controller.ts` — hai chốt chặn cùng một câu hỏi thì phải cùng câu
+ * trả lời, lệch nhau là đơn qua được đường này mà chết đường kia.
+ */
+export const PRICING_APPROVER_ROLES: ReadonlySet<string> = new Set([
+  "Sales Manager", "System Manager",
+  "Chủ xưởng", "Giám đốc", "Director",
+]);
+
 export function withStableRowIds<T extends JsonObject>(items: readonly T[]): T[] {
   const taken = new Set<string>();
   for (const item of items) {
@@ -196,9 +206,11 @@ export class SalesOrderController extends BaseController<SalesOrderData> {
       || orderDiscountMicros !== 0
       || pricedItems.some((item) => item.rate_requires_approval === true);
     if (context.command.action === "submit" && locksOrderPricing && pricingRequiresApproval) {
+      // Cùng danh sách vai với `commercial-sales-order-controller.ts` — xem chú thích ở đó về
+      // việc chỉ khai vai tiếng Anh làm chốt chặn này chặn quá tay ở tenant Alumdoor.
       const approver = context.command.actor.user_id === "Administrator"
-        || context.command.actor.roles.some((role) => role === "Sales Manager" || role === "System Manager");
-      if (!approver) throw errors.permission("Đơn hàng có đơn giá/chiết khấu khác chính sách; Sales Manager phải duyệt trước khi bán.");
+        || context.command.actor.roles.some((role) => PRICING_APPROVER_ROLES.has(role));
+      if (!approver) throw errors.permission("Đơn hàng có đơn giá/chiết khấu khác chính sách; chủ xưởng hoặc giám đốc phải duyệt trước khi bán.");
     }
     const totals = calculateSalesTotals(discountPolicy.items, input.taxes ?? [], currencyScale, {
       use_priced_quantity: true,

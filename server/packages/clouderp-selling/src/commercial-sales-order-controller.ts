@@ -12,6 +12,7 @@ import {
   defaultAlumdoorDiscountPercent,
   hasAlumdoorDiscountEffect,
   isAlumdoorCommercialContext,
+  PRICING_APPROVER_ROLES,
   withAlumdoorDefaultDiscountSnapshot,
   withStableRowIds,
 } from "./controllers.js";
@@ -702,9 +703,24 @@ async function assertMasterData(context: ControllerContext<SalesOrderData>, reco
   }
 }
 
+/**
+ * Ai được duyệt giá/chiết khấu khác chính sách.
+ *
+ * Trước 2026-08-23 danh sách chỉ có `Sales Manager` và `System Manager` — hai vai KHÔNG TỒN TẠI
+ * trong tenant Alumdoor (vai ở đó là Chủ xưởng · Kinh doanh · Thủ kho · Kế toán · Sản xuất ·
+ * Giám đốc · Director…). Hệ quả: ngoài Administrator ra thì KHÔNG AI duyệt nổi, nên mọi đơn có
+ * chiết khấu ngoài chuẩn bị chặn vĩnh viễn — và vì người test đăng nhập bằng Administrator nên
+ * chốt chặn trông như "chỉ là trang trí", trong khi thật ra nó chặn quá tay.
+ *
+ * Người duyệt phải là người CHỊU TRÁCH NHIỆM về tiền: chủ xưởng và giám đốc. `Kinh doanh` KHÔNG
+ * có trong danh sách — người bán tự duyệt chiết khấu của chính mình thì chốt chặn còn nghĩa gì.
+ *
+ * Danh sách nằm ở `controllers.ts` và dùng chung: hai chốt chặn cùng một câu hỏi thì phải cùng
+ * một câu trả lời, chép làm hai bản là chờ ngày chúng trôi dạt.
+ */
 function isPricingApprover(context: ControllerContext<SalesOrderData>): boolean {
   return context.command.actor.user_id === "Administrator"
-    || context.command.actor.roles.some((role) => role === "Sales Manager" || role === "System Manager");
+    || context.command.actor.roles.some((role) => PRICING_APPROVER_ROLES.has(role));
 }
 
 function submittedNumber(value: unknown): number | undefined {
