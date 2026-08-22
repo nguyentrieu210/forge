@@ -2849,7 +2849,7 @@
       "role": "AlumDoor HR Lite System"
     }
   ],
-  "version": "0.7.7",
+  "version": "0.7.8",
   "workflows": [
     {
       "document_type": "AlumDoor Attendance Policy",

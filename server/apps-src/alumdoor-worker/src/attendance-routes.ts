@@ -182,6 +182,13 @@ export async function attendanceStationLiteCreate(input: {
     const latitude = number(input.args.latitude, "Vĩ độ", -90, 90);
     const longitude = number(input.args.longitude, "Kinh độ", -180, 180);
     const allowedRadiusM = number(input.args.allowed_radius_m ?? 50, "Bán kính trạm", 10, 500);
+    /*
+     * Sai số GPS tối đa: doctype vốn có ô này, nhưng đường tạo trạm không nhận nên mọi trạm
+     * đứng ở mặc định mà không ai biết. Đo 23/08/2026: trình duyệt trên máy tính trả sai số
+     * 113 m trong khi bán kính trạm 50 m — trạm dựng bằng toạ độ đó sẽ từ chối người đứng đúng
+     * chỗ. Quản lý phải chỉnh được con số này theo thực tế từng cổng.
+     */
+    const maxGpsAccuracyM = number(input.args.max_gps_accuracy_m ?? 50, "Sai số GPS tối đa", 1, 10_000);
     const idempotencyKey = text(input.args.idempotency_key, "Khoá chống ghi trùng", 128);
     if (idempotencyKey.length < 12) throw new AttendanceRouteError("VALIDATION_ERROR", "Khoá chống ghi trùng quá ngắn.");
     const response = await input.call("method/metaforge.api.commit_alumdoor_attendance_station_lite", {
@@ -191,6 +198,7 @@ export async function attendanceStationLiteCreate(input: {
         latitude,
         longitude,
         allowed_radius_m: allowedRadiusM,
+        max_gps_accuracy_m: maxGpsAccuracyM,
         idempotency_key: idempotencyKey,
       }),
     });

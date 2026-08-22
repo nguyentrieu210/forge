@@ -1,7 +1,7 @@
 {
   "id": "alumdoor-attendance",
   "name": "AlumDoor — Chấm công & tính lương",
-  "version": "0.7.7",
+  "version": "0.7.8",
   "metaContractVersion": 1,
   "requires": [
     {

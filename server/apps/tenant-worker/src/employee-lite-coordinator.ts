@@ -27,7 +27,10 @@ export interface AlumDoorPayProfileLiteInput {
 }
 export interface AlumDoorAttendanceStationLiteInput {
   tenantId: string; actor: Actor; stationCode: string; stationName: string; latitude: number; longitude: number;
-  allowedRadiusM: number; idempotencyKey: string;
+  allowedRadiusM: number;
+  /** Sai số GPS tối đa chấp nhận khi quét. Doctype vốn có ô này; đường tạo trạm trước nay ép cứng 50. */
+  maxGpsAccuracyM?: number;
+  idempotencyKey: string;
 }
 
 export async function commitAlumDoorEmployeeLite(input: AlumDoorEmployeeLiteInput, services: Services): Promise<JsonObject> {
@@ -170,7 +173,7 @@ export async function commitAlumDoorAttendanceStationLite(input: AlumDoorAttenda
     station_code: stationCode, station_name: stationName,
     company: organization.company, branch: organization.workplace, policy: policyName,
     latitude, longitude, allowed_radius_m: allowedRadiusM,
-    max_gps_accuracy_m: 50, secret_version: 1, is_active: 1,
+    max_gps_accuracy_m: finite(input.maxGpsAccuracyM ?? 50, "Sai số GPS tối đa", 1, 10_000), secret_version: 1, is_active: 1,
   };
   await services.kernel.execute(await mutation({ tenantId: input.tenantId, actor, doctype: "AlumDoor QR Station", name: stationCode, action: "create", expectedVersion: null, document, commandId: `alu-hr-lite:station:${input.idempotencyKey}`, now: nowOf(services) }));
   return { name: stationCode, policy: policyName, is_active: 1, company: organization.company, workplace: organization.workplace };

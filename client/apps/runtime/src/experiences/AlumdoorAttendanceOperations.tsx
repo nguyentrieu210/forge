@@ -181,6 +181,20 @@ function KioskScreen({ onExit }: { onExit: () => void }) {
   const [station, setStation] = useState(() => typeof localStorage === "undefined" ? "" : localStorage.getItem("alumdoor-attendance-print-station") ?? "");
   const [stationName, setStationName] = useState("");
   const [latitude, setLatitude] = useState(""); const [longitude, setLongitude] = useState(""); const [radius, setRadius] = useState("50");
+  /** Doctype vốn đã có `max_gps_accuracy_m` nhưng UI không cho nhập, nên mặc định 50 im lặng. */
+  const [maxAccuracy, setMaxAccuracy] = useState("50");
+  /**
+   * Các trạm ĐÃ TẠO, để mở lại QR mà in thêm.
+   *
+   * Màn này trước nay chỉ nhớ ĐÚNG MỘT trạm, bằng `localStorage` của trình duyệt, và "Đổi trạm"
+   * chỉ xoá bộ nhớ đó rồi quay về form trắng. Xưởng có 2–3 cổng thì không mở lại được QR của
+   * trạm cũ, không tắt được trạm bỏ đi, không sửa được toạ độ — trạm vẫn nằm nguyên trong
+   * doctype, chỉ là không có lối vào. Không bày CRUD thô lên menu (menu của xưởng nhỏ cố ý
+   * không có bảng kỹ thuật), mà cho chính màn này liệt kê.
+   */
+  const [stations, setStations] = useState<Array<{ name: string; station_name?: string; secret_version?: number; is_active?: number }>>([]);
+  /** Sai số của lần bấm "Dùng vị trí hiện tại" gần nhất, để cảnh báo tại chỗ. */
+  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
   const [qr, setQr] = useState<StationQr | null>(null); const [failure, setFailure] = useState(""); const [loading, setLoading] = useState(false);
   const [createKey, setCreateKey] = useState(() => idempotency("station"));
   const loadQr = useCallback(async (code: string) => {
@@ -191,10 +205,33 @@ function KioskScreen({ onExit }: { onExit: () => void }) {
     finally { setLoading(false); }
   }, [adapter]);
   useEffect(() => { if (station) void loadQr(station); }, [loadQr, station]);
+  const loadStations = useCallback(async () => {
+    try {
+      setStations(await adapter.getList("AlumDoor QR Station", {
+        fields: ["name", "station_name", "secret_version", "is_active"],
+        orderBy: "name asc",
+        pageLength: 50,
+      }) as typeof stations);
+    } catch { setStations([]); }
+  }, [adapter]);
+  useEffect(() => { void loadStations(); }, [loadStations]);
+  /**
+   * Lấy toạ độ, và NÓI RA sai số — đừng để người dùng tự đoán.
+   *
+   * Máy tính bàn định vị theo IP/WiFi: đo ngày 23/08/2026 trên chính máy này, trình duyệt trả
+   * sai số 113 m trong khi bán kính trạm là 50 m. Toạ độ lệch hơn cả bán kính thì trạm dựng lên
+   * sẽ từ chối người đứng đúng chỗ, hoặc nhận người đứng ngoài cổng — và không có gì báo.
+   */
   const locate = () => {
     if (!navigator.geolocation) { setFailure("Thiết bị này không hỗ trợ lấy vị trí."); return; }
     navigator.geolocation.getCurrentPosition(
-      (position) => { setLatitude(position.coords.latitude.toFixed(6)); setLongitude(position.coords.longitude.toFixed(6)); setFailure(""); },
+      (position) => {
+        setLatitude(position.coords.latitude.toFixed(6));
+        setLongitude(position.coords.longitude.toFixed(6));
+        const saiSo = Number(position.coords.accuracy);
+        setGpsAccuracy(Number.isFinite(saiSo) ? Math.round(saiSo) : null);
+        setFailure("");
+      },
       () => setFailure("Không lấy được vị trí. Hãy cho phép GPS rồi thử lại."),
       { enableHighAccuracy: true, timeout: 15_000 },
     );
@@ -204,7 +241,7 @@ function KioskScreen({ onExit }: { onExit: () => void }) {
     try {
       const created = await adapter.callPost<{ name: string }>("alumdoor.attendance.station_create_lite", {
         station_name: stationName.trim(), latitude: Number(latitude), longitude: Number(longitude),
-        allowed_radius_m: Number(radius), idempotency_key: createKey,
+        allowed_radius_m: Number(radius), max_gps_accuracy_m: Number(maxAccuracy), idempotency_key: createKey,
       });
       setStation(created.name); localStorage.setItem("alumdoor-attendance-print-station", created.name);
       setCreateKey(idempotency("station")); setFailure("");
@@ -220,9 +257,10 @@ function KioskScreen({ onExit }: { onExit: () => void }) {
   };
   return <Shell><PageTitle title="In mã QR cố định của trạm" subtitle="QR giữ nguyên cho đến khi quản lý chủ động tạo lại để thu hồi bản in cũ." onExit={onExit} />
     {failure && <Failure message={failure} />}
-    {!station ? <section className="rounded-xl border bg-card p-4"><h2 className="font-medium">Thiết lập trạm chấm công</h2><p className="mt-1 text-sm text-muted-foreground">Cấu hình giờ làm phải được lưu trước. Vị trí và bán kính được server kiểm tra mỗi lần quét.</p><div className="mt-4 grid gap-3 md:grid-cols-2"><input className={inputClass} value={stationName} onChange={(event) => setStationName(event.target.value)} placeholder="Tên trạm, ví dụ Cổng xưởng" /><div className="flex gap-2"><input className={`${inputClass} min-w-0 flex-1`} inputMode="decimal" value={latitude} onChange={(event) => setLatitude(event.target.value)} placeholder="Vĩ độ" /><input className={`${inputClass} min-w-0 flex-1`} inputMode="decimal" value={longitude} onChange={(event) => setLongitude(event.target.value)} placeholder="Kinh độ" /></div><input className={inputClass} type="number" min="10" max="500" value={radius} onChange={(event) => setRadius(event.target.value)} placeholder="Bán kính (m)" /><div className="flex flex-wrap gap-2"><Button variant="outline" onClick={locate}><MapPin className="mr-2 size-4" />Dùng vị trí hiện tại</Button><Button onClick={() => void create()} disabled={loading || stationName.trim().length < 2 || !latitude || !longitude}><Save className="mr-2 size-4" />Tạo trạm</Button></div></div></section>
+    {!station ? <section className="rounded-xl border bg-card p-4"><h2 className="font-medium">Thiết lập trạm chấm công</h2><p className="mt-1 text-sm text-muted-foreground">Cấu hình giờ làm phải được lưu trước. Vị trí và bán kính được server kiểm tra mỗi lần quét.</p><p className="mt-1 text-sm text-muted-foreground">Lấy toạ độ bằng <strong>điện thoại, đứng đúng chỗ sẽ dán QR</strong>. Máy tính bàn định vị theo IP/WiFi nên lệch hàng trăm mét.</p>{gpsAccuracy !== null && <p className={`mt-2 text-sm ${gpsAccuracy > Number(radius || 0) ? "text-destructive" : "text-muted-foreground"}`}>{gpsAccuracy > Number(radius || 0) ? `Vị trí vừa lấy có sai số ±${gpsAccuracy} m, LỚN HƠN bán kính ${radius} m — toạ độ này không dùng được. Hãy lấy lại bằng điện thoại tại chỗ.` : `Vị trí vừa lấy có sai số ±${gpsAccuracy} m.`}</p>}<div className="mt-4 grid gap-3 md:grid-cols-2"><input className={inputClass} value={stationName} onChange={(event) => setStationName(event.target.value)} placeholder="Tên trạm, ví dụ Cổng xưởng" /><div className="flex gap-2"><input className={`${inputClass} min-w-0 flex-1`} inputMode="decimal" value={latitude} onChange={(event) => setLatitude(event.target.value)} placeholder="Vĩ độ" /><input className={`${inputClass} min-w-0 flex-1`} inputMode="decimal" value={longitude} onChange={(event) => setLongitude(event.target.value)} placeholder="Kinh độ" /></div><div className="flex gap-2"><input className={`${inputClass} min-w-0 flex-1`} type="number" min="10" max="500" value={radius} onChange={(event) => setRadius(event.target.value)} placeholder="Bán kính (m)" /><input className={`${inputClass} min-w-0 flex-1`} type="number" min="10" max="500" value={maxAccuracy} onChange={(event) => setMaxAccuracy(event.target.value)} placeholder="Sai số GPS tối đa (m)" /></div><div className="flex flex-wrap gap-2"><Button variant="outline" onClick={locate}><MapPin className="mr-2 size-4" />Dùng vị trí hiện tại</Button><Button onClick={() => void create()} disabled={loading || stationName.trim().length < 2 || !latitude || !longitude}><Save className="mr-2 size-4" />Tạo trạm</Button></div></div></section>}
+    {!station && stations.length > 0 && <section className="rounded-xl border bg-card p-4"><h2 className="font-medium">Trạm đã tạo</h2><p className="mt-1 text-sm text-muted-foreground">Mở lại để in thêm QR, hoặc tạo lại QR để thu hồi bản in cũ.</p><ul className="mt-3 divide-y">{stations.map((row) => <li key={row.name} className="flex flex-wrap items-center justify-between gap-2 py-2"><div><div className="text-sm font-medium">{row.station_name || row.name}</div><div className="text-xs text-muted-foreground">{row.name} · QR phiên bản {row.secret_version ?? 1}{row.is_active ? "" : " · đã tắt"}</div></div><Button size="sm" variant="outline" onClick={() => { localStorage.setItem("alumdoor-attendance-print-station", row.name); setStation(row.name); }}>Mở QR</Button></li>)}</ul></section>
       : loading && !qr ? <Empty><Loader2 className="mx-auto mb-2 size-5 animate-spin" />Đang lấy QR trạm…</Empty>
-        : qr && <section className="mx-auto flex w-full max-w-xl flex-col items-center gap-4 rounded-xl border bg-white p-6 text-center text-slate-950 print:border-0 print:shadow-none"><div><h2 className="text-xl font-semibold">{qr.station_name}</h2><p className="mt-1 text-sm text-slate-600">Mã trạm: {qr.station}</p></div><StaticQr value={qr.token} label={`QR trạm ${qr.station_name}`} /><p className="text-sm text-slate-600">Phiên bản token: {qr.token_version}</p><div className="flex flex-wrap justify-center gap-2 print:hidden"><Button onClick={() => window.print()}><Printer className="mr-2 size-4" />In QR</Button><Button variant="outline" onClick={() => void rotate()} disabled={loading}>Tạo lại QR</Button><Button variant="ghost" onClick={() => { localStorage.removeItem("alumdoor-attendance-print-station"); setStation(""); setQr(null); }}>Đổi trạm</Button></div></section>}
+        : qr && <section className="mx-auto flex w-full max-w-xl flex-col items-center gap-4 rounded-xl border bg-white p-6 text-center text-slate-950 print:border-0 print:shadow-none"><div><h2 className="text-xl font-semibold">{qr.station_name}</h2><p className="mt-1 text-sm text-slate-600">Mã trạm: {qr.station}</p></div><StaticQr value={qr.token} label={`QR trạm ${qr.station_name}`} /><p className="text-sm text-slate-600">Phiên bản token: {qr.token_version}</p><div className="flex flex-wrap justify-center gap-2 print:hidden"><Button onClick={() => window.print()}><Printer className="mr-2 size-4" />In QR</Button><Button variant="outline" onClick={() => void rotate()} disabled={loading}>Tạo lại QR</Button><Button variant="ghost" onClick={() => { localStorage.removeItem("alumdoor-attendance-print-station"); setStation(""); setQr(null); void loadStations(); }}>Đổi trạm</Button></div></section>}
   </Shell>;
 }
 

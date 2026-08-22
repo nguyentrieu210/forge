@@ -237,6 +237,7 @@ async function commitAlumdoorAttendanceStationLite(args: FrappeArgs, context: Fr
     latitude: finiteArg(args, "latitude"),
     longitude: finiteArg(args, "longitude"),
     allowedRadiusM: finiteArg(args, "allowed_radius_m"),
+    ...(args.json("max_gps_accuracy_m") === undefined ? {} : { maxGpsAccuracyM: finiteArg(args, "max_gps_accuracy_m") }),
     idempotencyKey,
   });
 }
