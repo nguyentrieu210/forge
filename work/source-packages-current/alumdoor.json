@@ -1,7 +1,7 @@
 {
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "2.26.0",
+  "version": "2.27.0",
   "metaContractVersion": 1,
   "platform_requires": "1.0.0",
   "requires": [
@@ -28742,6 +28742,14 @@
       }
     },
     {
+      "record_type": "UOM",
+      "name": "Chuyến",
+      "data": {
+        "uom_name": "Chuyến",
+        "must_be_whole_number": true
+      }
+    },
+    {
       "record_type": "Item Group",
       "name": "Tất cả mặt hàng",
       "data": {
@@ -28972,6 +28980,55 @@
         "item_group_name": "Bộ lưu điện",
         "parent_item_group": "Motor & điện",
         "disabled": true
+      }
+    },
+    {
+      "record_type": "Item Group",
+      "name": "Phụ kiện & vật tư",
+      "data": {
+        "item_group_name": "Phụ kiện & vật tư",
+        "parent_item_group": "Tất cả mặt hàng",
+        "is_group": true
+      }
+    },
+    {
+      "record_type": "Item Group",
+      "name": "Motor",
+      "data": {
+        "item_group_name": "Motor",
+        "parent_item_group": "Motor & điện",
+        "is_group": false,
+        "disabled": false
+      }
+    },
+    {
+      "record_type": "Item Group",
+      "name": "Bình lưu điện",
+      "data": {
+        "item_group_name": "Bình lưu điện",
+        "parent_item_group": "Motor & điện",
+        "is_group": false,
+        "disabled": false
+      }
+    },
+    {
+      "record_type": "Item Group",
+      "name": "Tôn & nhôm cây",
+      "data": {
+        "item_group_name": "Tôn & nhôm cây",
+        "parent_item_group": "Phụ kiện & vật tư",
+        "is_group": false,
+        "disabled": false
+      }
+    },
+    {
+      "record_type": "Item Group",
+      "name": "Phụ kiện cần sơn tĩnh điện",
+      "data": {
+        "item_group_name": "Phụ kiện cần sơn tĩnh điện",
+        "parent_item_group": "Phụ kiện & vật tư",
+        "is_group": false,
+        "disabled": false
       }
     },
     {
@@ -30871,6 +30928,44 @@
       }
     },
     {
+      "record_type": "Measurement Profile",
+      "name": "Ray và trục",
+      "data": {
+        "profile_name": "Ray và trục",
+        "inventory_mode": "Cuộn",
+        "stock_uom": "Kg",
+        "track_dimension_lot": true,
+        "require_color": false,
+        "require_condition": true,
+        "require_length": true,
+        "require_width": false,
+        "require_piece_qty": true,
+        "track_bundle_qty": false,
+        "weight_tolerance_pct": 13,
+        "note": "Ray và trục: MUA Kg · TỒN Kg · BÁN Mét. Hệ số Mét→Kg chính là Kg/m lý thuyết của quy cách. Chiều dài và số cây vẫn ghi trên lô để đối chiếu giao nhận, nhưng TỒN là Kg nên tầng cắt theo cây không áp dụng cho nhóm này.",
+        "disabled": false
+      }
+    },
+    {
+      "record_type": "Measurement Profile",
+      "name": "Nan/lá cửa",
+      "data": {
+        "profile_name": "Nan/lá cửa",
+        "inventory_mode": "Tấm/Kính",
+        "stock_uom": "m2",
+        "track_dimension_lot": true,
+        "require_color": true,
+        "require_condition": false,
+        "require_length": true,
+        "require_width": true,
+        "require_piece_qty": false,
+        "track_bundle_qty": false,
+        "weight_tolerance_pct": 13,
+        "note": "Nan/lá cửa: hàng xưởng CÁN RA từ tôn hoặc nhôm, tồn và bán theo m2. Lá cố định bản (lá đầu, ba lá đáy) thì dùng Mét chứ không dùng bộ này.",
+        "disabled": false
+      }
+    },
+    {
       "record_type": "Geometry Field",
       "name": "PB_CAO",
       "data": {
@@ -31344,6 +31439,27 @@
         "warehouse_name": "Stores",
         "is_group": false,
         "disabled": true
+      }
+    },
+    {
+      "record_type": "Warehouse",
+      "name": "Kho xưởng",
+      "data": {
+        "warehouse_name": "Kho xưởng",
+        "is_group": false,
+        "stock_role": "Kho chính",
+        "disabled": false
+      }
+    },
+    {
+      "record_type": "Warehouse",
+      "name": "Kho đầu thừa",
+      "data": {
+        "warehouse_name": "Kho đầu thừa",
+        "parent_warehouse": "Kho xưởng",
+        "is_group": false,
+        "stock_role": "Kho đầu thừa",
+        "disabled": false
       }
     },
     {

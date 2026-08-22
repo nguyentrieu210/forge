@@ -106,7 +106,10 @@ test("static V2 metadata contains Geometry masters and moved ownership", async (
   const geometryProfile = (item.fields ?? []).find((field) => (typeof field === "string" ? field.split(":", 1)[0] : field.fieldname) === "geometry_profile");
   assert.ok(geometryProfile);
   assert.equal(typeof geometryProfile === "object" ? geometryProfile.options : "", "Geometry Profile");
-  assert.equal(brief.fixtures.filter((row) => row.type === "Measurement Profile").length, 7);
+  // 9 chứ không phải 7. "Ray và trục" (33 mã RT_) và "Nan/lá cửa" (14 mã) trước đây chỉ sống ở
+  // tầng `documents` của D1, không có trong brief — nên cài lên tenant MỚI là 47 mã mất bộ đo,
+  // im lặng. Đã khai vào brief ngày 23/08.
+  assert.equal(brief.fixtures.filter((row) => row.type === "Measurement Profile").length, 9);
   // 8 kích thước dài + billable_area_sqm + LOT_LONG_CAO/LOT_LONG_RONG. Hai ô lọt lòng thêm
   // 22/08/2026 khi đọc được bảng quy đổi lọt lòng ↔ phủ bì trong sheet GHI CHÚ: khách đo lọt
   // lòng, xưởng cắt theo phủ bì, không có hai ô này thì phải nhẩm tay.

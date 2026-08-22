@@ -103,7 +103,7 @@ const moveFieldsAfter = (dt, names, anchor) => {
  * `unchanged` khi manifest byte-identical, nên giữ nguyên số cũ là mọi sửa đổi metadata nằm im
  * trong file mà không bao giờ vào tenant.
  */
-brief.version = "2.26.0";
+brief.version = "2.27.0";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 for (const role of ["General Accountant", "Chief Accountant", "Director", "Kế toán tổng hợp", "Kế toán trưởng", "Giám đốc"]) {
   if (!brief.roles.includes(role)) brief.roles.push(role);
@@ -3215,6 +3215,95 @@ const childPresentation = applyAlumdoorChildPresentation(brief);
   }
   note("SHIPPED · catalog authority + purchase progress + outsourced paint preserved by generator");
 }
+
+/*
+ * ── Master từng CHỈ sống ở tầng `documents` của D1 ──
+ *
+ * Mười bản ghi dưới đây có thật trong tenant đang chạy nhưng chưa bao giờ được khai ở brief, nên
+ * cài lên tenant MỚI là chúng không tồn tại — im lặng, không báo gì. Hậu quả cụ thể lúc phát hiện
+ * (2026-08-23): 33 mã ray/trục và 14 mã nan/lá mất bộ đo; 69 mã hàng mất nhóm; và `Kho xưởng` —
+ * kho đang giữ TOÀN BỘ bút toán kho — không được tạo, tức tenant mới không có kho làm việc.
+ *
+ * `Ống/trục` (tồn Cây) vẫn giữ trong brief nhưng KHÔNG mã nào dùng: nó là ý cũ, đã bị `Ray và
+ * trục` (tồn Kg) thay thế — xem ghi chú trong chính fixture đó.
+ */
+brief.fixtures.push(
+  {
+    "//": "33 mã RT_. MUA Kg · TỒN Kg · BÁN Mét — thay cho ý cũ 'tồn theo cây' của bộ Ống/trục.",
+    type: "Measurement Profile",
+    name: "Ray và trục",
+    data: {
+      profile_name: "Ray và trục", inventory_mode: "Cuộn", stock_uom: "Kg",
+      track_dimension_lot: true, require_color: false, require_condition: true,
+      require_length: true, require_width: false, require_piece_qty: true,
+      track_bundle_qty: false, weight_tolerance_pct: 13,
+      note: "Ray và trục: MUA Kg · TỒN Kg · BÁN Mét. Hệ số Mét→Kg chính là Kg/m lý thuyết của quy cách. Chiều dài và số cây vẫn ghi trên lô để đối chiếu giao nhận, nhưng TỒN là Kg nên tầng cắt theo cây không áp dụng cho nhóm này.",
+      disabled: false,
+    },
+  },
+  {
+    "//": "14 mã. Hàng xưởng cán ra từ tôn hoặc nhôm.",
+    type: "Measurement Profile",
+    name: "Nan/lá cửa",
+    data: {
+      profile_name: "Nan/lá cửa", inventory_mode: "Tấm/Kính", stock_uom: "m2",
+      track_dimension_lot: true, require_color: true, require_condition: false,
+      require_length: true, require_width: true, require_piece_qty: false,
+      track_bundle_qty: false, weight_tolerance_pct: 13,
+      note: "Nan/lá cửa: hàng xưởng CÁN RA từ tôn hoặc nhôm, tồn và bán theo m2. Lá cố định bản (lá đầu, ba lá đáy) thì dùng Mét chứ không dùng bộ này.",
+      disabled: false,
+    },
+  },
+  {
+    "//": "Nút cha của 'Tôn & nhôm cây' và 'Phụ kiện cần sơn tĩnh điện'. Không mã nào trực thuộc.",
+    type: "Item Group",
+    name: "Phụ kiện & vật tư",
+    data: { item_group_name: "Phụ kiện & vật tư", parent_item_group: "Tất cả mặt hàng", is_group: true },
+  },
+  {
+    "//": "32 mã hàng.",
+    type: "Item Group",
+    name: "Motor",
+    data: { item_group_name: "Motor", parent_item_group: "Motor & điện", is_group: false, disabled: false },
+  },
+  {
+    "//": "4 mã hàng.",
+    type: "Item Group",
+    name: "Bình lưu điện",
+    data: { item_group_name: "Bình lưu điện", parent_item_group: "Motor & điện", is_group: false, disabled: false },
+  },
+  {
+    "//": "28 mã hàng.",
+    type: "Item Group",
+    name: "Tôn & nhôm cây",
+    data: { item_group_name: "Tôn & nhôm cây", parent_item_group: "Phụ kiện & vật tư", is_group: false, disabled: false },
+  },
+  {
+    "//": "5 mã hàng.",
+    type: "Item Group",
+    name: "Phụ kiện cần sơn tĩnh điện",
+    data: { item_group_name: "Phụ kiện cần sơn tĩnh điện", parent_item_group: "Phụ kiện & vật tư", is_group: false, disabled: false },
+  },
+  {
+    "//": "Kho ĐANG GIỮ TOÀN BỘ bút toán kho. Thiếu nó thì tenant mới không có kho làm việc.",
+    type: "Warehouse",
+    name: "Kho xưởng",
+    data: { warehouse_name: "Kho xưởng", is_group: false, stock_role: "Kho chính", disabled: false },
+  },
+  {
+    "//": "Đầu thừa của Kho xưởng.",
+    type: "Warehouse",
+    name: "Kho đầu thừa",
+    data: { warehouse_name: "Kho đầu thừa", parent_warehouse: "Kho xưởng", is_group: false, stock_role: "Kho đầu thừa", disabled: false },
+  },
+  {
+    "//": "Đơn vị tính cước vận chuyển.",
+    type: "UOM",
+    name: "Chuyến",
+    data: { uom_name: "Chuyến", must_be_whole_number: true },
+  },
+);
+note("Master từng chỉ sống ở D1: +10 fixture (2 bộ đo, 5 nhóm hàng, 2 kho, 1 ĐVT)");
 
 note(`UI ?? child-grid presentation metadata: ${childPresentation.migrated} child DocType`);
 
