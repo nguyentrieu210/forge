@@ -11,6 +11,7 @@ const AlumdoorProductionRequestDetail = lazy(() => import("./AlumdoorProductionR
 const AlumdoorProductionPlanDetail = lazy(() => import("./AlumdoorProductionPlanDetail.js").then((module) => ({ default: module.AlumdoorProductionPlanDetail })));
 const AlumdoorWorkOrderDetail = lazy(() => import("./AlumdoorWorkOrderDetail.js").then((module) => ({ default: module.AlumdoorWorkOrderDetail })));
 const AlumdoorManufacturingStockEntryCreate = lazy(() => import("./AlumdoorManufacturingStockEntryCreate.js").then((module) => ({ default: module.AlumdoorManufacturingStockEntryCreate })));
+const AlumdoorStockEntryCreate = lazy(() => import("./AlumdoorStockEntryCreate.js").then((module) => ({ default: module.AlumdoorStockEntryCreate })));
 const AlumdoorBomRuleEditor = lazy(() => import("./AlumdoorBomRuleEditor.js").then((module) => ({ default: module.AlumdoorBomRuleEditor })));
 
 type ManufacturingStockPurpose = "Material Transfer" | "Manufacture";
@@ -262,6 +263,29 @@ export const alumdoorWorkspaceExtension: DoctypeWorkspaceExtension = {
         detail: (
           <Suspense fallback={<div className="grid h-full place-items-center text-sm text-muted-foreground">Đang mở phiếu sản xuất…</div>}>
             <AlumdoorWorkOrderDetail key={`alumdoor-work-order/${decoded}`} name={decoded} onNavigate={onNavigate} />
+          </Suspense>
+        ),
+      };
+    }
+
+    /*
+     * Phiếu kho lập TAY. Trước đây `Stock Entry` chỉ mở được khi đi từ một lệnh sản xuất (nhánh
+     * ngay dưới), nên xưởng không có đường nào lập phiếu xuất vật tư, chuyển kho hay điều chỉnh
+     * tồn — mà lệnh sản xuất thì đang bằng không. Đây KHÔNG phải phiếu giao khách: giao khách là
+     * `Delivery Note`, có ô "Mục đích xuất" riêng.
+     */
+    if (isNew && doctype === "Stock Entry") {
+      return {
+        createSurface: "full",
+        createDataSurface: "alumdoor-stock-entry-create",
+        suppressBulk: true,
+        create: (
+          <Suspense fallback={<div className="grid h-full place-items-center text-sm text-muted-foreground">Đang mở màn phiếu kho AlumDoor…</div>}>
+            <AlumdoorStockEntryCreate
+              closeRequest={closeRequest}
+              onCreated={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
+              onCancel={() => onNavigate(listPath)}
+            />
           </Suspense>
         ),
       };

@@ -47,6 +47,31 @@ nghĩa được và đã chuyển xuống mục "Còn treo".
 
 **Bộ sinh brief nay bị chặn ghi đè** — xem mục 6.
 
+**Thêm màn lập PHIẾU KHO bằng tay.** Trước đó `Stock Entry` chỉ mở được khi đi từ một lệnh sản
+xuất, mà lệnh sản xuất đang bằng **không** — nghĩa là xưởng không có đường nào lập phiếu xuất
+vật tư hay chuyển kho. Nay vào **Phiếu kho → Tạo mới** là lập được, có nút *Xổ định mức*: chọn
+một BOM và số bộ thì tự đổ ra đủ dòng vật tư, thợ không gõ tay từng dòng rồi gõ sót.
+
+> Đây **không phải** phiếu giao khách. Giao khách là `Delivery Note`, và việc nó gộp "phiếu xuất
+> kho" với "phiếu giao hàng" làm một là **cố ý**: ô *Mục đích xuất* bắt buộc, 5 giá trị
+> `Bán hàng · Xuất mẫu · Đổi bảo hành · Xuất nội bộ · Xuất gia công`, nên xuất mẫu hay đổi bảo
+> hành vẫn ghi được mà không cần khách hàng lẫn đơn giá.
+
+**Ba việc còn thiếu quanh phiếu xuất kho** (chưa làm, cần anh quyết):
+
+1. **Không có mẫu in "Phiếu xuất kho".** `Delivery Note` chỉ có 2 mẫu, đều là mẫu giao khách:
+   *Phiếu giao hàng / lắp đặt* và *Biên bản bàn giao / nghiệm thu*. Thủ kho không có tờ phiếu
+   để người nhận ký.
+2. **Không tách được mốc rời kho và mốc khách nhận.** Chỉ có một ô `posting_at`. Hàng rời kho
+   chiều nay, khách nhận sáng mai thì không ghi được vào đâu.
+3. **`Điều chỉnh tồn` khai mà chưa ai thi hành.** DocType `Stock Entry` cho chọn loại này, ô
+   `adjust_reason` có, danh mục `Nguyên nhân chênh lệch` đã dựng đủ 7 mục (Hao hụt · Hư hỏng ·
+   Lệch cân thực tế · Sai nhập liệu · Sai số đếm · Thợ cắt sai không báo · Khác) — **nhưng bộ
+   điều khiển chỉ nhận `Material Receipt | Material Issue | Material Transfer | Manufacture`**
+   (`packages/clouderp-core/src/controllers.ts`). Chọn nó là nổ *"Company, posting_at and valid
+   purpose are required"*. Nên màn mới **không bày** loại đó ra, và có test khoá lại để ai thêm
+   vào mà chưa làm phía server thì đỏ ngay. Kiểm kê tồn kho hiện **chưa dùng được**.
+
 ---
 
 ## 1. Chạy lên như thế nào
