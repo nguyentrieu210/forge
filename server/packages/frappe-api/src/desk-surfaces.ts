@@ -390,6 +390,27 @@ export async function listView(args: FrappeArgs, context: FrappeRouterContext): 
     metaPromise.then((value) => capabilityFlags(doctype, value, null, context)),
   ]);
   const rows = page.rows.map((row) => toFrappeListRow(row as JsonObject));
+
+  /*
+   * Đơn mua: phần trăm đã nhận / đã xuất hoá đơn phải TÍNH LẠI cho danh sách.
+   *
+   * Giá trị lưu trong `documents` là "0.00" từ lúc tạo đơn và không ai ghi đè; chỉ đường mở MỘT
+   * chứng từ mới tính lại. Nên trước 23/08/2026, mở DMH-2026-0009 ra thấy 100,00% còn danh sách
+   * và báo cáo "Đơn mua chưa nhận đủ" đều thấy 0,00% — thủ kho đi giục nhà cung cấp những đơn
+   * đã về đủ. Một truy vấn gộp cho cả trang, không đọc từng đơn một.
+   */
+  if (doctype === "Purchase Order" && rows.length) {
+    const tienDo = await context.documents.getPurchaseOrderProgress(
+      context.tenantId,
+      rows.map((row) => String(row.name ?? "")).filter(Boolean),
+    );
+    for (const row of rows) {
+      const so = tienDo.get(String(row.name ?? ""));
+      if (!so) continue;
+      if ("received_percentage" in row) row.received_percentage = so.received.toFixed(2);
+      if ("billed_percentage" in row) row.billed_percentage = so.billed.toFixed(2);
+    }
+  }
   const linkFields = meta.fields.filter((field) => field.fieldtype === "Link" && field.options);
   const displayItems: Array<{ doctype: string; name: string }> = [];
   for (const row of rows) {

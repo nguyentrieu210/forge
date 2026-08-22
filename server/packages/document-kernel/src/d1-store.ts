@@ -569,6 +569,57 @@ export class D1MutationStore implements MutationStore {
     return Number(row?.total ?? 0);
   }
 
+  /**
+   * Phần trăm đã nhận / đã xuất hoá đơn cho NHIỀU đơn mua bằng MỘT truy vấn.
+   *
+   * `getDocument` tính hai con số này lúc mở một chứng từ nhưng KHÔNG ghi lại, nên giá trị nằm
+   * trong `documents` vẫn là "0.00" từ lúc tạo đơn. Hệ quả đo được ngày 23/08/2026: mở
+   * DMH-2026-0009 ra thấy 100,00% còn danh sách và báo cáo "Đơn mua chưa nhận đủ" đều thấy
+   * 0,00% — thủ kho đi giục nhà cung cấp những đơn đã về đủ.
+   *
+   * Gộp cả trang vào một câu truy vấn: đường danh sách không được phép đọc từng đơn một.
+   * Số lượng đặt lấy y hệt `getDocument`: `qty_micros` nếu có, không thì quy `qty` ra micro.
+   */
+  async getPurchaseOrderProgress(
+    tenantId: string,
+    names: readonly string[],
+  ): Promise<Map<string, { received: number; billed: number }>> {
+    const unique = [...new Set(names.filter(Boolean))];
+    const ket = new Map<string, { received: number; billed: number }>();
+    if (!unique.length) return ket;
+    const cho = unique.map((_, index) => `?${index + 2}`).join(",");
+    const rows = await this.writer.prepare(
+      `WITH dat AS (
+         SELECT d.name AS don,
+                COALESCE(SUM(COALESCE(
+                  CAST(json_extract(j.value,'$.qty_micros') AS INTEGER),
+                  CAST(ROUND(CAST(COALESCE(json_extract(j.value,'$.qty'),0) AS REAL) * 1000000) AS INTEGER),
+                  0)), 0) AS dat_micros
+         FROM documents d, json_each(json_extract(d.payload_json,'$.items')) j
+         WHERE d.tenant_id=?1 AND d.doctype='Purchase Order' AND d.name IN (${cho})
+         GROUP BY d.name
+       ), tien AS (
+         SELECT purchase_order AS don, kind, COALESCE(SUM(qty_micros),0) AS q
+         FROM purchase_order_progress_entries
+         WHERE tenant_id=?1 AND purchase_order IN (${cho})
+         GROUP BY purchase_order, kind
+       )
+       SELECT dat.don AS don, dat.dat_micros AS dat_micros,
+              COALESCE((SELECT q FROM tien WHERE tien.don=dat.don AND tien.kind='Receipt'),0) AS nhan,
+              COALESCE((SELECT q FROM tien WHERE tien.don=dat.don AND tien.kind='Billing'),0) AS hoadon
+       FROM dat`,
+    ).bind(tenantId, ...unique).all<{ don: string; dat_micros: number; nhan: number; hoadon: number }>();
+    for (const row of rows.results ?? []) {
+      const dat = Number(row.dat_micros ?? 0);
+      if (dat <= 0) continue;
+      ket.set(row.don, {
+        received: (Number(row.nhan ?? 0) * 100) / dat,
+        billed: (Number(row.hoadon ?? 0) * 100) / dat,
+      });
+    }
+    return ket;
+  }
+
   async getProcuredQuantityMicros(
     tenantId: string,
     purchaseOrder: string,
