@@ -1,12 +1,12 @@
 # Bàn giao Alumdoor — 22/08/2026, cập nhật 23/08/2026
 
-Trạng thái tenant `demo` cục bộ, app `alumdoor@2.26.0`.
+Trạng thái tenant `demo` cục bộ, app `alumdoor@2.29.0`.
 
 ```
 CỔNG NHẬP        852 → 6 blocker      (6 ô Excel, CỐ Ý chặn — xem mục 5a)
 AUDIT THEO TẦNG  2/7 → 5/7 tầng đạt
 AUDIT CÔNG THỨC       0 lỗi
-BỘ TEST          14 đỏ → 2712/2712 XANH
+BỘ TEST          14 đỏ → 2718/2718 XANH
 ```
 
 Sáu blocker còn lại **đều nằm ngoài cơ sở dữ liệu** — chúng là 2 ô hỏng trong file Excel của
