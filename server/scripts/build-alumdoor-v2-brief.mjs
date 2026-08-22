@@ -103,7 +103,7 @@ const moveFieldsAfter = (dt, names, anchor) => {
  * `unchanged` khi manifest byte-identical, nên giữ nguyên số cũ là mọi sửa đổi metadata nằm im
  * trong file mà không bao giờ vào tenant.
  */
-brief.version = "2.30.0";
+brief.version = "2.31.0";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 for (const role of ["General Accountant", "Chief Accountant", "Director", "Kế toán tổng hợp", "Kế toán trưởng", "Giám đốc"]) {
   if (!brief.roles.includes(role)) brief.roles.push(role);
@@ -3459,6 +3459,85 @@ brief.fixtures.push({
 };
 }
 note("Báo giá: valid_till thành bắt buộc");
+
+/*
+ * ── Báo cáo chỉ đếm chứng từ ĐÃ GHI SỔ, và kho K36 ngừng dùng (23/08/2026) ──
+ *
+ * Chứng từ nháp không phải là nợ, cũng không phải là cam kết mua. Không lọc `docstatus` thì báo
+ * cáo công nợ ghi một khách nợ 2.360.000 từ một hoá đơn NHÁP — nợ không có thật, và không ai kêu
+ * vì con số trông hợp lý.
+ *
+ * K36: chủ xưởng chốt chỉ dùng "Kho xưởng"; K36 chưa từng phát sinh bút toán kho nào.
+ */
+{
+  const dieuKien = {
+  "Đơn hàng theo khách": {
+    "base_filters": [
+      {
+        "field": "docstatus",
+        "operator": "=",
+        "value": 1
+      }
+    ],
+    "//": "Chỉ tính đơn đã ghi sổ."
+  },
+  "Công nợ theo khách hàng": {
+    "base_filters": [
+      {
+        "field": "docstatus",
+        "operator": "=",
+        "value": 1
+      }
+    ],
+    "//": "Hoá đơn NHÁP không phải là nợ, hoá đơn ĐÃ HUỶ càng không. Không lọc thì báo cáo ghi khách nợ tiền của một chứng từ chưa ai duyệt — đo 23/08/2026: một hoá đơn nháp 2.360.000 hiện thành nợ thật."
+  },
+  "Mua hàng theo nhà cung cấp": {
+    "base_filters": [
+      {
+        "field": "docstatus",
+        "operator": "=",
+        "value": 1
+      }
+    ],
+    "//": "Chỉ tính đơn đã ghi sổ."
+  },
+  "Đơn mua chưa nhận đủ": {
+    "base_filters": [
+      {
+        "field": "docstatus",
+        "operator": "=",
+        "value": 1
+      }
+    ],
+    "//": "Đơn mua nháp chưa phải là cam kết với nhà cung cấp."
+  },
+  "Nhập kho theo nhà cung cấp": {
+    "base_filters": [
+      {
+        "field": "docstatus",
+        "operator": "=",
+        "value": 1
+      }
+    ],
+    "//": "Chỉ tính phiếu nhập đã ghi sổ."
+  }
+};
+  for (const report of brief.reports ?? []) {
+    const khai = dieuKien[report.name];
+    if (khai) Object.assign(report, khai);
+  }
+  const k36 = brief.fixtures.find((entry) => entry.type === "Warehouse" && entry.name === "K36");
+  if (k36) Object.assign(k36, {
+  "//": "2026-08-23: chủ xưởng chốt CHỈ dùng \"Kho xưởng\". K36 chưa từng phát sinh bút toán kho nào — 9/9 nằm ở Kho xưởng — nên tắt là an toàn. Chuẩn kho ở docs/ALUMDOOR-QUY-TRINH.md mục 0.1 đã cập nhật theo: một địa điểm thì một kho chính là đủ, và đơn bán tự điền được kho xuất mà không phải hỏi ai.",
+  "data": {
+    "warehouse_name": "K36",
+    "is_group": false,
+    "stock_role": "Kho chính",
+    "disabled": true
+  }
+});
+}
+note("Báo cáo: +điều kiện docstatus=1 · K36 ngừng dùng");
 
 note("Item: +3 ô kỹ thuật nhôm cây (ẩn) — has_batch_no, has_catch_weight, weight_uom");
 

@@ -34,8 +34,17 @@
 
 ## 0.1. Chuẩn kho production (2026-07-28)
 
+> **Cập nhật 23/08/2026 — chuẩn kho đã đổi.** Thực tế và chuẩn cũ đã lệch nhau: toàn bộ bút toán
+> kho (9/9) nằm ở `Kho xưởng`, còn `K36` bật mà trống, `K12` đã tắt. Chủ xưởng chốt:
+> **`Kho xưởng` là kho chính DUY NHẤT**, `Kho đầu thừa` là kho con của nó. `K36` đã ngừng dùng.
+>
+> Hệ quả có lợi: đơn bán **tự điền được kho xuất** khi ghi sổ, không phải hỏi ai và không còn
+> cảnh đơn chốt với khách xong tới màn giao hàng mới nổ "dòng chưa có Kho xuất". Ngày nào xưởng
+> có địa điểm thứ hai thì phải hiện ô Kho xuất trên dòng đơn — server cố ý KHÔNG đoán khi có từ
+> hai kho chính trở lên.
+
 - `Kho Alumdoor` là nút nhóm của cây, không phát sinh tồn.
-- `K36` và `K12` là hai kho vật lý duy nhất được phép phát sinh tồn.
+- ~~`K36` và `K12` là hai kho vật lý duy nhất được phép phát sinh tồn.~~ (thay bằng khối trên)
 - Không tạo kho ảo cho trạng thái chứng từ. Chỉ thêm kho con khi cần kiểm đếm tồn riêng thật sự
   (ví dụ: chờ kiểm, hàng lỗi/phế, đang gia công).
 - Màn danh mục Kho dùng cây cha–con; nút bung nhánh không mở nhầm form chi tiết.

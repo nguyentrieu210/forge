@@ -441,6 +441,8 @@ export interface AppReportSpec {
   group_by?: string;
   order_by?: { column: string; direction: "asc" | "desc" };
   filters: string[];
+  /** Điều kiện luôn áp, người xem không gỡ được — xem `base_filters` ở app manifest. */
+  base_filters?: Array<{ field: string; operator: FilterOperator; value: JsonValue }>;
   limit: number;
 }
 
@@ -469,6 +471,28 @@ export function compileAppReport(spec: AppReportSpec, request: QueryRequest): Co
   // `docstatus<>2` — a cancelled document is not deleted, but it must not be counted.
   // Leaving it in makes every total quietly too big, and nothing on the screen says why.
   const where = ["tenant_id=?1", "doctype=?2", "docstatus<>2"];
+
+  /*
+   * Điều kiện CỐ ĐỊNH của báo cáo — do app khai, không phải người xem gửi lên.
+   *
+   * Áp ở đây, TRƯỚC vòng kiểm lọc người dùng, và không đi qua danh sách `spec.filters`: danh
+   * sách đó nói "người xem được lọc theo ô nào", còn đây là điều kiện thuộc về chính báo cáo.
+   * Bắt nó xin phép danh sách kia thì phải bày `docstatus` ra cho người xem tự tắt — mà tắt đi
+   * là báo cáo lại đếm chứng từ nháp thành nợ thật.
+   */
+  for (const filter of spec.base_filters ?? []) {
+    if (!APP_REPORT_FIELD.test(filter.field)) throw errors.validation(`Base filter field is not allowed: ${filter.field}`);
+    if (!APP_REPORT_OPERATORS.has(filter.operator)) throw errors.validation(`Base filter operator is not allowed: ${String(filter.operator)}`);
+    const expression = fieldExpression(filter.field);
+    if (filter.operator === "is_null") { where.push(`${expression} IS NULL`); continue; }
+    if (filter.operator === "in") {
+      if (!Array.isArray(filter.value) || filter.value.length === 0) throw errors.validation(`Base IN filter requires a non-empty array: ${filter.field}`);
+      where.push(`${expression} IN (${filter.value.map((value) => { params.push(value); return `?${params.length}`; }).join(",")})`);
+      continue;
+    }
+    params.push(filter.value ?? null);
+    where.push(`${expression} ${filter.operator} ?${params.length}`);
+  }
 
   for (const filter of request.filters ?? []) {
     if (!spec.filters.includes(filter.field)) throw errors.validation(`Filter is not allowed: ${filter.field}`);

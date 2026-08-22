@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "2.30.0",
+  "version": "2.31.0",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -1264,9 +1264,9 @@
         "warehouse_name": "K36",
         "is_group": false,
         "stock_role": "Kho chính",
-        "disabled": false
+        "disabled": true
       },
-      "//": "2026-08-22: khớp với bản đang dùng. Chủ xưởng chọn giữ K36 phẳng và ngừng dùng cây \"Kho Alumdoor\"."
+      "//": "2026-08-23: chủ xưởng chốt CHỈ dùng \"Kho xưởng\". K36 chưa từng phát sinh bút toán kho nào — 9/9 nằm ở Kho xưởng — nên tắt là an toàn. Chuẩn kho ở docs/ALUMDOOR-QUY-TRINH.md mục 0.1 đã cập nhật theo: một địa điểm thì một kho chính là đủ, và đơn bán tự điền được kho xuất mà không phải hỏi ai."
     },
     {
       "type": "Warehouse",
@@ -15835,7 +15835,15 @@
         "transaction_date"
       ],
       "icon": "shopping-cart",
-      "group": "Báo cáo"
+      "group": "Báo cáo",
+      "base_filters": [
+        {
+          "field": "docstatus",
+          "operator": "=",
+          "value": 1
+        }
+      ],
+      "//": "Chỉ tính đơn đã ghi sổ."
     },
     {
       "name": "Lệnh sản xuất theo mặt hàng",
@@ -15908,10 +15916,18 @@
         "posting_at"
       ],
       "icon": "wallet",
-      "group": "Báo cáo"
+      "group": "Báo cáo",
+      "base_filters": [
+        {
+          "field": "docstatus",
+          "operator": "=",
+          "value": 1
+        }
+      ],
+      "//": "Hoá đơn NHÁP không phải là nợ, hoá đơn ĐÃ HUỶ càng không. Không lọc thì báo cáo ghi khách nợ tiền của một chứng từ chưa ai duyệt — đo 23/08/2026: một hoá đơn nháp 2.360.000 hiện thành nợ thật."
     },
     {
-      "//": "Mua theo nhà cung cấp — câu hỏi 'tháng này mua của ai bao nhiêu'.",
+      "//": "Chỉ tính đơn đã ghi sổ.",
       "name": "Mua hàng theo nhà cung cấp",
       "doctype": "Purchase Order",
       "columns": [
@@ -15926,10 +15942,17 @@
         "transaction_date"
       ],
       "icon": "shopping-bag",
-      "group": "Báo cáo"
+      "group": "Báo cáo",
+      "base_filters": [
+        {
+          "field": "docstatus",
+          "operator": "=",
+          "value": 1
+        }
+      ]
     },
     {
-      "//": "Đơn đã đặt mà hàng chưa về đủ — câu hỏi thủ kho hỏi mỗi sáng. Không gộp, vì phải xem TỪNG đơn.",
+      "//": "Đơn mua nháp chưa phải là cam kết với nhà cung cấp.",
       "name": "Đơn mua chưa nhận đủ",
       "doctype": "Purchase Order",
       "columns": [
@@ -15947,7 +15970,14 @@
         "schedule_date"
       ],
       "icon": "clock-alert",
-      "group": "Báo cáo"
+      "group": "Báo cáo",
+      "base_filters": [
+        {
+          "field": "docstatus",
+          "operator": "=",
+          "value": 1
+        }
+      ]
     },
     {
       "name": "Nhập kho theo nhà cung cấp",
@@ -15964,7 +15994,15 @@
         "posting_at"
       ],
       "icon": "truck",
-      "group": "Báo cáo"
+      "group": "Báo cáo",
+      "base_filters": [
+        {
+          "field": "docstatus",
+          "operator": "=",
+          "value": 1
+        }
+      ],
+      "//": "Chỉ tính phiếu nhập đã ghi sổ."
     },
     {
       "//": "Nỗi đau #1 đo được: cân thực lệch cân lý thuyết bao nhiêu, theo từng mã. Không có bảng này thì 'nhôm thiếu ký' mãi là cảm giác.",

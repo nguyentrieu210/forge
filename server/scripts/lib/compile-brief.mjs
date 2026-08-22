@@ -131,6 +131,11 @@ function compileReport(report, index, doctypeNames) {
     ...(report.groupBy ? { group_by: report.groupBy } : {}),
     ...(orderBy ? { order_by: orderBy } : {}),
     filters: report.filters ?? [],
+    // Điều kiện LUÔN áp — người xem không gỡ được. Không mang qua đây thì brief khai mà bộ chạy
+    // báo cáo không bao giờ thấy, và báo cáo vẫn đếm cả chứng từ nháp lẫn đã huỷ.
+    ...(report.base_filters?.length
+      ? { base_filters: report.base_filters.map((row) => ({ field: row.field, operator: row.operator ?? "=", value: row.value })) }
+      : {}),
     limit: report.limit ?? 500,
   };
 }

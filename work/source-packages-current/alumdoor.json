@@ -1,7 +1,7 @@
 {
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "2.30.0",
+  "version": "2.31.0",
   "metaContractVersion": 1,
   "platform_requires": "1.0.0",
   "requires": [
@@ -29268,7 +29268,7 @@
         "warehouse_name": "K36",
         "is_group": false,
         "stock_role": "Kho chính",
-        "disabled": false
+        "disabled": true
       }
     },
     {
@@ -34946,6 +34946,13 @@
         "customer",
         "transaction_date"
       ],
+      "base_filters": [
+        {
+          "field": "docstatus",
+          "operator": "=",
+          "value": 1
+        }
+      ],
       "limit": 500
     },
     {
@@ -35094,6 +35101,13 @@
         "customer",
         "posting_at"
       ],
+      "base_filters": [
+        {
+          "field": "docstatus",
+          "operator": "=",
+          "value": 1
+        }
+      ],
       "limit": 500
     },
     {
@@ -35128,6 +35142,13 @@
       "filters": [
         "supplier",
         "transaction_date"
+      ],
+      "base_filters": [
+        {
+          "field": "docstatus",
+          "operator": "=",
+          "value": 1
+        }
       ],
       "limit": 500
     },
@@ -35177,6 +35198,13 @@
         "transaction_date",
         "schedule_date"
       ],
+      "base_filters": [
+        {
+          "field": "docstatus",
+          "operator": "=",
+          "value": 1
+        }
+      ],
       "limit": 500
     },
     {
@@ -35211,6 +35239,13 @@
       "filters": [
         "supplier",
         "posting_at"
+      ],
+      "base_filters": [
+        {
+          "field": "docstatus",
+          "operator": "=",
+          "value": 1
+        }
       ],
       "limit": 500
     },

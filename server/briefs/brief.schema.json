@@ -437,6 +437,42 @@
           },
           "icon": {
             "type": "string"
+          },
+          "base_filters": {
+            "description": "Điều kiện LUÔN áp, người xem không gỡ được. Báo cáo trên doctype ghi sổ mà không lọc docstatus thì đếm cả chứng từ nháp và đã huỷ thành số thật.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "field",
+                "value"
+              ],
+              "properties": {
+                "field": {
+                  "type": "string",
+                  "pattern": "^[a-z_][a-z0-9_]*$"
+                },
+                "operator": {
+                  "type": "string",
+                  "enum": [
+                    "=",
+                    "!=",
+                    ">",
+                    ">=",
+                    "<",
+                    "<=",
+                    "in",
+                    "like",
+                    "is_null"
+                  ]
+                },
+                "value": {}
+              }
+            }
+          },
+          "//": {
+            "type": "string"
           }
         },
         "patternProperties": {

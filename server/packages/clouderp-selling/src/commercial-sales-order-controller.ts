@@ -57,6 +57,24 @@ export class CommercialSalesOrderController extends SalesOrderController {
       withStableRowIds(input.items),
       { transactionKind: "sales" },
     );
+    /*
+     * KHO XUẤT: server tự điền, đừng chặn muộn ở khâu giao hàng.
+     *
+     * `Sales Order Item.warehouse` là ô ẩn (`surface: internal`) nên người bán không đặt được.
+     * Trước 23/08/2026 đơn ghi sổ trơn tru, tới màn Phiếu giao hàng mới nổ "dòng items-1 chưa có
+     * Kho xuất" — đơn đã chốt với khách rồi mới biết không xuất được. Chặn sớm cũng không cứu:
+     * ô ẩn thì người dùng lấy gì mà điền.
+     *
+     * Xưởng chỉ còn MỘT kho chính (chủ xưởng chốt 23/08), nên điền được mà không phải hỏi ai.
+     * Nhiều hơn một thì KHÔNG đoán: để trống và khâu sau vẫn chặn, vì chọn hộ kho là chọn hộ
+     * chỗ hàng đi ra.
+     */
+    const khoChinh = await soleMainWarehouse(context);
+    if (khoChinh) {
+      for (const line of converted) {
+        if (!text(line.warehouse)) line.warehouse = khoChinh;
+      }
+    }
     const quotation = await quotationForFreeze(context, input.against_quotation);
 
     const pricedItems: SalesItem[] = [];
@@ -718,6 +736,23 @@ async function assertMasterData(context: ControllerContext<SalesOrderData>, reco
  * Danh sách nằm ở `controllers.ts` và dùng chung: hai chốt chặn cùng một câu hỏi thì phải cùng
  * một câu trả lời, chép làm hai bản là chờ ngày chúng trôi dạt.
  */
+/**
+ * Kho chính DUY NHẤT đang dùng, hoặc rỗng khi không có / có nhiều hơn một.
+ *
+ * "Nhiều hơn một" trả rỗng là có chủ đích: chọn hộ kho là chọn hộ chỗ hàng đi ra, và sai thì tồn
+ * hai kho lệch nhau mà không có gì báo.
+ */
+async function soleMainWarehouse(context: ControllerContext<SalesOrderData>): Promise<string> {
+  const rows = await context.reader.listMasterRecordData(context.command.tenant_id, "Warehouse");
+  const chinh = rows.filter((row) => {
+    const data = row.data as JsonObject;
+    if (data.disabled === true || data.disabled === 1) return false;
+    if (data.is_group === true || data.is_group === 1) return false;
+    return String(data.stock_role ?? "").normalize("NFC").trim() === "Kho chính";
+  });
+  return chinh.length === 1 ? chinh[0]!.name : "";
+}
+
 function isPricingApprover(context: ControllerContext<SalesOrderData>): boolean {
   return context.command.actor.user_id === "Administrator"
     || context.command.actor.roles.some((role) => PRICING_APPROVER_ROLES.has(role));

@@ -153,6 +153,15 @@ export interface AppReport {
   order_by?: { column: string; direction: "asc" | "desc" };
   /** Fieldnames a user may filter on. Anything else is refused. */
   filters: string[];
+  /**
+   * Điều kiện LUÔN áp, người xem không gỡ được.
+   *
+   * Báo cáo trên doctype ghi sổ mà không lọc `docstatus` thì đếm cả chứng từ nháp và đã huỷ.
+   * Đo 23/08/2026: "Công nợ theo khách hàng" ghi một khách nợ 2.360.000 từ một hoá đơn NHÁP —
+   * nợ không có thật, và không ai kêu vì con số trông hợp lý. Đây phải là thuộc tính của báo
+   * cáo chứ không phải bộ lọc người dùng nhớ bật.
+   */
+  base_filters?: Array<{ field: string; operator: "=" | "!=" | ">" | ">=" | "<" | "<=" | "in" | "like" | "is_null"; value: JsonValue }>;
   limit: number;
 }
 
@@ -925,6 +934,19 @@ function parseReport(value: JsonValue, index: number, doctypeNames: Set<string>)
     if (!REPORT_FIELD.test(field)) throw errors.validation(`reports[${index}].filters[${position}] is not a plain fieldname: ${field}`);
     return field;
   });
+  const baseFilters = array(entry.base_filters ?? [], `reports[${index}].base_filters`).map((raw, position) => {
+    const where = `reports[${index}].base_filters[${position}]`;
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw errors.validation(`${where} must be an object`);
+    const row = raw as JsonObject;
+    const field = text(row.field, `${where}.field`, 120);
+    if (!REPORT_FIELD.test(field)) throw errors.validation(`${where}.field is not a plain fieldname: ${field}`);
+    const operator = text(row.operator ?? "=", `${where}.operator`, 8);
+    if (!["=", "!=", ">", ">=", "<", "<=", "in", "like", "is_null"].includes(operator)) {
+      throw errors.validation(`${where}.operator is not supported: ${operator}`);
+    }
+    if (row.value === undefined) throw errors.validation(`${where}.value is required`);
+    return { field, operator: operator as NonNullable<AppReport["base_filters"]>[number]["operator"], value: row.value };
+  });
   const limit = entry.limit === undefined ? 500 : Number(entry.limit);
   if (!Number.isInteger(limit) || limit < 1 || limit > 5000) {
     throw errors.validation(`reports[${index}].limit must be an integer between 1 and 5000`);
@@ -937,6 +959,7 @@ function parseReport(value: JsonValue, index: number, doctypeNames: Set<string>)
     ...(groupBy ? { group_by: groupBy } : {}),
     ...(orderBy ? { order_by: orderBy } : {}),
     filters,
+    ...(baseFilters.length ? { base_filters: baseFilters } : {}),
     limit,
   };
 }
