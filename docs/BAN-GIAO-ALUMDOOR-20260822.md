@@ -6,7 +6,7 @@ Trạng thái tenant `demo` cục bộ, app `alumdoor@2.29.0`.
 CỔNG NHẬP        852 → 6 blocker      (6 ô Excel, CỐ Ý chặn — xem mục 5a)
 AUDIT THEO TẦNG  2/7 → 5/7 tầng đạt
 AUDIT CÔNG THỨC       0 lỗi
-BỘ TEST          14 đỏ → 2718/2718 XANH
+BỘ TEST          14 đỏ → 2722/2722 XANH
 ```
 
 Sáu blocker còn lại **đều nằm ngoài cơ sở dữ liệu** — chúng là 2 ô hỏng trong file Excel của
@@ -76,7 +76,7 @@ một BOM và số bộ thì tự đổ ra đủ dòng vật tư, thợ không g
 
 ## Sửa theo hai bản test UI ngày 23/08
 
-Bản test dòng BÁN nêu 4 lỗi chặn, bản test MUA nêu 4. Đã sửa 5, mỗi cái đều đo lại trên tenant
+Bản test dòng BÁN nêu 4 lỗi chặn, bản test MUA nêu 4. Đã sửa 6, mỗi cái đều đo lại trên tenant
 chứ không suy đoán.
 
 | Lỗi | Gốc thật | Bằng chứng sau khi sửa |
@@ -86,6 +86,7 @@ chứ không suy đoán.
 | "Cần duyệt" chỉ là trang trí | Chốt chặn CÓ thật, nhưng vai được duyệt là `Sales Manager`/`System Manager` — **không tồn tại** ở Alumdoor | nay Chủ xưởng · Giám đốc · Director duyệt được; `Kinh doanh` thì không |
 | Không đặt mua được nhôm cây | Ba gốc chồng nhau (xem dưới) | đúng ca của bản test: 200 cây × 7,2 m → **34.729.920 đ** |
 | Nhập số vào tự xoá | Dòng nhôm chưa đủ dữ kiện thì xem trước **xoá luôn ô Kg** | gõ Kg giữ nguyên qua mọi bước |
+| Báo cáo "Đơn mua chưa nhận đủ" liệt kê cả đơn đã đủ | Phần trăm được **tính lúc mở chứng từ nhưng không ghi lại**, nên danh sách đọc giá trị "0.00" từ lúc tạo đơn | cả 7 đơn nay báo 100,00%, khớp chứng từ |
 
 Ba gốc của lỗi đặt mua nhôm cây, thiếu vá cái nào cũng chưa chạy được:
 
@@ -108,8 +109,7 @@ lệnh sản xuất đang bằng 0.
 | Lỗi | Vì sao chưa sửa |
 |---|---|
 | Giữ chỗ tồn chưa nối (bán §2.4) | Chủ xưởng đã chốt mốc **phát lệnh sản xuất**; chưa nối dây |
-| `received_percentage` đọc hai đường ra hai số (mua §2.2) | Tính lúc đọc chứng từ nhưng **không ghi lại**, nên danh sách và báo cáo thấy 0. Sửa đúng chỗ nằm trong kernel dùng chung |
-| KPI gắn nhãn "cây" cứng (mua §2.4) | Mã mua theo Kg luôn ra 0 |
+| KPI gắn nhãn "cây" cứng (mua §2.4) | Bốn ô trên panel "Tổng quan" của màn Phiếu nhập mua gắn nhãn "cây" cố định, nên mã mua theo **Kg** (`RT_RAYHOP`, `stock_uom = Kg`) luôn ra 0. Con số đúng vẫn nằm ở cột "Kg thực" cuối bảng chi tiết. Chưa định vị được component dựng panel đó |
 | Thiếu 5/8 chứng từ và 4/6 báo cáo mua hàng (mua §4) | Là việc dựng mới, không phải sửa lỗi |
 
 ---
