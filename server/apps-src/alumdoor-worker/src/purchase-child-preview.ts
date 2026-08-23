@@ -100,6 +100,11 @@ export async function previewPurchaseChildRow(call: PlatformCall, args: Json): P
     const runtime = await readPurchaseItemRuntime(call, itemCode, surface, item);
     if (!runtime) return answer({ message: `Không dựng được Purchase Runtime cho ${itemCode}.` }, 422);
 
+    // Metadata hiện chưa có cờ semantic riêng cho "Dập". Giữ đúng hành vi cũ nhưng đánh dấu
+    // source=legacy trong contract: dòng theo lô kích thước + đếm cây/lá phải xác nhận Dập.
+    const stamped = runtimeField(runtime, "is_stamped");
+    if (stamped?.visible) stamped.required = true;
+
     const changed = text(args.changed_field);
     const patch: Json = {};
     const clear = new Set<string>();
@@ -112,10 +117,9 @@ export async function previewPurchaseChildRow(call: PlatformCall, args: Json): P
 
     const measurement = runtime.measurement_profile;
     const material = runtime.material_specification;
-    const inventoryMode = measurement?.inventory_mode ?? null;
     const plan: Array<[string, unknown]> = [
       ["stock_uom", runtime.stock_uom],
-      ["inventory_mode", inventoryMode],
+      ["inventory_mode", measurement?.inventory_mode ?? null],
       ["measurement_profile", measurement?.name ?? item.measurement_profile],
       ["material_specification", material?.name ?? item.material_specification],
       ["item_name", item.item_name],
@@ -149,8 +153,13 @@ export async function previewPurchaseChildRow(call: PlatformCall, args: Json): P
     const transactionUom = text(row.uom) || preferredUom;
     setIfField(patch, fields, "uom", transactionUom);
 
+    // Catch-weight purchase axis is intentionally dynamic. A stale/static Item conversion for
+    // the purchase weight UOM must NEVER win before the line has both counted pieces and kg.
+    const dynamicPurchaseAxis = runtime.tracking.catch_weight
+      && transactionUom === preferredUom
+      && transactionUom !== stockUom;
     let factor: number | null = transactionUom && transactionUom === stockUom ? 1 : null;
-    if (!factor && Array.isArray(item.uom_conversions)) {
+    if (!dynamicPurchaseAxis && !factor && Array.isArray(item.uom_conversions)) {
       const match = item.uom_conversions.find((entry) => text((entry as Json)?.uom) === transactionUom) as Json | undefined;
       factor = positive(match?.conversion_factor);
     }
@@ -172,6 +181,7 @@ export async function previewPurchaseChildRow(call: PlatformCall, args: Json): P
       if (pieces && pricedKg && transactionUom !== stockUom) factor = pieces / pricedKg;
     }
     if (factor) setIfField(patch, fields, "conversion_factor", factor);
+    else if (dynamicPurchaseAxis) clearIfField(clear, fields, "conversion_factor");
 
     if (fields.has("rate") && (changed === "item_code" || row.rate == null || row.rate === "")) {
       const standardRate = Number(item.standard_rate);
