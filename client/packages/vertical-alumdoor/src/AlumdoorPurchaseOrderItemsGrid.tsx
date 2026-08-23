@@ -93,14 +93,12 @@ function money(value: unknown): string { return formatMoney(numeric(value), { st
 export function purchaseLineKey(line: PurchaseLine, index = 0): string { return text(line.name) || `purchase-row-${index + 1}`; }
 export function purchaseFieldOverride(line: PurchaseLine, fieldname: string): PurchaseFieldOverride | undefined { return line._overrides?.[fieldname]; }
 
-/** Legacy name kept for existing callers; it no longer reads inventory_mode. */
+/** Legacy name kept for existing callers; semantically this now means server-declared catch-weight. */
 export function isAluminumPurchaseLine(line: PurchaseLine): boolean {
   const qty = purchaseFieldOverride(line, "qty");
-  const theory = purchaseFieldOverride(line, "theoretical_kg");
   const qtyHidden = qty?.hidden === true || qty?.hidden === 1;
   const qtyReadonly = qty?.read_only === true || qty?.read_only === 1;
-  const theoryVisible = theory && theory.hidden !== true && theory.hidden !== 1;
-  return Boolean(qtyHidden && qtyReadonly && theoryVisible);
+  return Boolean(qtyHidden && qtyReadonly);
 }
 
 /** Structural visibility comes only from the server runtime; values are data, never schema. */
