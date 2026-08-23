@@ -17,7 +17,7 @@ Master Data Hub
   → công việc nhiều DocType / công thức → dedicated TSX workbench
 ```
 
-Extension mới compose theo đúng một đường:
+Extension compose theo đúng một đường:
 
 ```text
 combined-workspace-extension
@@ -28,157 +28,229 @@ combined-workspace-extension
 
 Không sửa `@metaforge/views` để nhét Alumdoor vào lõi dùng chung.
 
-`?master_ui=generic` là escape hatch có chủ đích: cùng URL record/new có thể ép bỏ workbench và mở form metadata đầy đủ. Nhờ đó mỗi workbench có thể rollout dần mà không giấu các field hiếm chưa surface.
+`?master_ui=generic` là escape hatch có chủ đích: cùng URL record/new có thể ép bỏ workbench và mở form metadata đầy đủ. Generic form là fallback lâu dài, không phải đồ tạm chờ xoá.
 
 ---
 
-## 2. Luật phân loại
+## 2. Phân loại 31 mục trên Master Data Hub
 
-### Generic
-
-Giữ generic khi dữ liệu phẳng, ít field, không cần preview/công thức và nhập sai không tạo một chuỗi lỗi khó lần ra ở màn khác.
-
-### Enhanced generic
-
-Vẫn là generic nhưng cần description, section, validation liên-field đơn giản, lookup/guide tốt hơn. Không viết TSX chỉ vì bố cục generic chưa đẹp.
-
-### Dedicated TSX
-
-Dùng workbench khi một công việc cần nhiều DocType/bảng con, có preview/công thức, hoặc sai dữ liệu có thể làm sai giá, BOM, tồn, sản xuất.
-
----
-
-## 3. Phân loại 31 mục đang khai trên Master Data Hub
-
-| Nhóm | DocType | Phân loại | Đích / lý do |
-|---|---|---|---|
-| Vật tư & quy cách | Item | **Dedicated — ĐÃ LÀM P1** | `ItemMasterWorkbench`: vai trò hàng, ĐVT/kho, UOM conversion, quy cách kỹ thuật, geometry/công thức cửa, liên kết master |
-| Vật tư & quy cách | Item Group | Generic | Cây phân nhóm, CRUD rõ |
-| Vật tư & quy cách | UOM | Generic | Lookup phẳng |
-| Vật tư & quy cách | Surface Finish | Generic | Lookup phẳng |
-| Vật tư & quy cách | Item Color | Generic | Lookup phẳng; luật màu nằm ở chiều Item.allowed_colors |
-| Vật tư & quy cách | Material Specification | Enhanced generic / thuộc cụm Item | Hồ sơ Kg/m và thông số kỹ thuật; Item workbench link thẳng tới hồ sơ nguồn, chưa copy editor vào Item |
-| Vật tư & quy cách | Quy cách cửa | **Dedicated — P4** | Gom với Geometry/Cutting Policy; bản lá tác động trực tiếp diện tích tính tiền |
-| Vật tư & quy cách | Measurement Profile | Enhanced generic / thuộc cụm Item | Nguồn duy nhất của cách theo dõi vật tư; cần guide rõ nhưng chưa cần editor riêng |
-| Vật tư & quy cách | Geometry Field | Enhanced generic / thuộc cụm Geometry | Định nghĩa trường hình học dùng chung |
-| Vật tư & quy cách | Geometry Profile | **Dedicated — P4** | Một profile gồm nhiều field + applicability; người dùng không nên tự nhớ ID nối giữa các bảng |
-| Kho | Warehouse | Generic | Danh mục kho; validation kho lá/kho nhóm để server giữ |
-| Mua hàng & NCC | Supplier | Generic | Hồ sơ đối tác phẳng |
-| Mua hàng & NCC | Supplier Item | Enhanced generic / thuộc cụm Item | Mã NCC + giá gần nhất; Item workbench có đường mở nhanh. Chưa inline-edit để tránh đoán schema/authority của giá gần nhất |
-| Khách hàng & giá | Customer | Generic | Hồ sơ khách; đã có luồng nghiệp vụ khác dùng |
-| Khách hàng & giá | Price List | Generic | Lookup bảng giá |
-| Khách hàng & giá | Item Price | **Dedicated — P2** | Cần nhìn bậc diện tích/phạm vi/preview cùng chính sách |
-| Khách hàng & giá | Bậc diện tích | Generic | Bảng ngưỡng phẳng |
-| Khách hàng & giá | Pricing Scope | **Dedicated — P2** | Scope rỗng hiện có thể lưu nhưng rule không match; cần editor theo công việc |
-| Khách hàng & giá | Pricing Rule | **Dedicated — P2** | Cần bắt đủ phạm vi + effect + preview; không copy pricing engine sang client |
-| Bán hàng & SX | Cutting Policy | **Dedicated — P4** | Gom `Quy cách cửa + Geometry Profile + Cutting Policy` thành Door/Geometry Workbench |
-| Bán hàng & SX | Ngưỡng chọn Motor | **Dedicated — P5** | Bảng điều kiện diện tích → motor → tải → UPS, tái sử dụng engine server |
-| Bán hàng & SX | BOM Rule | **Dedicated — ĐÃ CÓ** | `AlumdoorBomRuleEditor.tsx` đã override create/detail |
-| Bán hàng & SX | Bill of Materials | **Dedicated — P3** | Hội tụ BOM thật + BOM Rule + preview; tái sử dụng `AlumdoorBomActualEditor`/logic hiện có |
-| Bán hàng & SX | Production Standard | Enhanced generic | Chưa mở lịch sản xuất đầy đủ; không xây workbench sớm |
-| Địa bàn | Tỉnh Thành | Generic | Lookup phẳng |
-| Địa bàn | Phường Xã | Generic | Lookup phẳng dù số bản ghi lớn; vấn đề là search/list, không phải editor nghiệp vụ |
-| Địa bàn | Địa chỉ giao lắp | Enhanced generic | Có liên kết địa bàn nhưng chưa đủ phức tạp để tạo TSX riêng |
-| Kế toán | Tài khoản ngân hàng | Generic | Master kế toán phẳng |
-| Lý do vận hành | Lý do huỷ | Generic | Lookup phẳng |
-| Lý do vận hành | Nguyên nhân chênh lệch | Generic | Lookup phẳng |
-| Lý do vận hành | Nguyên nhân cửa lỗi | Generic | Lookup phẳng |
+| Nhóm | DocType | Phân loại / trạng thái |
+|---|---|---|
+| Vật tư & quy cách | Item | **Dedicated · P1 xong** — `ItemMasterWorkbench` |
+| Vật tư & quy cách | Item Group | Generic |
+| Vật tư & quy cách | UOM | Generic |
+| Vật tư & quy cách | Surface Finish | Generic |
+| Vật tư & quy cách | Item Color | Generic |
+| Vật tư & quy cách | Material Specification | Enhanced generic / mở nhanh từ Item workbench |
+| Vật tư & quy cách | Quy cách cửa | **Dedicated · P4 xong** — `DoorGeometryWorkbench` |
+| Vật tư & quy cách | Measurement Profile | Enhanced generic / mở nhanh từ Item workbench |
+| Vật tư & quy cách | Geometry Field | Generic/Enhanced — lookup trường hình học, không cần editor riêng |
+| Vật tư & quy cách | Geometry Profile | **Dedicated · P4 xong** — `DoorGeometryWorkbench` |
+| Kho | Warehouse | Generic |
+| Mua hàng & NCC | Supplier | Generic |
+| Mua hàng & NCC | Supplier Item | Enhanced generic / mở nhanh từ Item workbench |
+| Khách hàng & giá | Customer | Generic |
+| Khách hàng & giá | Price List | Generic |
+| Khách hàng & giá | Item Price | **Dedicated · P2 xong** — `PricingMasterWorkbench` |
+| Khách hàng & giá | Bậc diện tích | Generic |
+| Khách hàng & giá | Pricing Scope | **Dedicated · P2 xong** — `PricingMasterWorkbench` |
+| Khách hàng & giá | Pricing Rule | **Dedicated · P2 xong** — `PricingMasterWorkbench` |
+| Bán hàng & SX | Cutting Policy | **Dedicated · P4 xong** — `DoorGeometryWorkbench` |
+| Bán hàng & SX | Ngưỡng chọn Motor | **Dedicated · P5 xong** — `MotorUpsMasterWorkbench` |
+| Bán hàng & SX | BOM Rule | **Dedicated có sẵn** — `AlumdoorBomRuleEditor` qua operational extension |
+| Bán hàng & SX | Bill of Materials | **Dedicated · P3 xong** — `BomMasterWorkbench` |
+| Bán hàng & SX | Production Standard | Enhanced generic; chưa cần workbench riêng |
+| Địa bàn | Tỉnh Thành | Generic |
+| Địa bàn | Phường Xã | Generic — nhiều bản ghi là bài toán search/list, không phải editor |
+| Địa bàn | Địa chỉ giao lắp | Enhanced generic |
+| Kế toán | Tài khoản ngân hàng | Generic |
+| Lý do vận hành | Lý do huỷ | Generic |
+| Lý do vận hành | Nguyên nhân chênh lệch | Generic |
+| Lý do vận hành | Nguyên nhân cửa lỗi | Generic |
 
 ---
 
-## 4. P1 đã triển khai — Item/Vật tư
+## 3. Registry và routing
 
-File:
+Các file kiến trúc:
 
 ```text
-client/packages/vertical-alumdoor/src/master-workspaces/ItemMasterWorkbench.tsx
-client/packages/vertical-alumdoor/src/master-workspaces/registry.tsx
 client/packages/vertical-alumdoor/src/combined-workspace-extension.tsx
+client/packages/vertical-alumdoor/src/master-workspaces/registry.tsx
+client/packages/vertical-alumdoor/src/index.ts
 ```
 
-### Route
+Danh sách vẫn dùng generic List. Create/detail mới được workbench nhận:
 
 ```text
-/app/Item/new       → ItemMasterWorkbench
-/app/Item/<name>    → ItemMasterWorkbench
-/app/Item           → generic List (giữ nguyên)
+/app/Item/new | /app/Item/<name>
+/app/Item Price/new | /app/Item Price/<name>
+/app/Pricing Scope/new | /app/Pricing Scope/<name>
+/app/Pricing Rule/new | /app/Pricing Rule/<name>
+/app/Bill of Materials/new | /app/Bill of Materials/<name>
+/app/Quy cách cửa/new | /app/Quy cách cửa/<name>
+/app/Geometry Profile/new | /app/Geometry Profile/<name>
+/app/Cutting Policy/new | /app/Cutting Policy/<name>
+/app/Ngưỡng chọn Motor/new | /app/Ngưỡng chọn Motor/<name>
 ```
 
-Escape hatch:
+Thêm `?master_ui=generic` vào create/detail để mở form metadata đầy đủ.
 
-```text
-/app/Item/new?master_ui=generic
-/app/Item/<name>?master_ui=generic
-```
+`BOM Rule` vẫn do operational extension cũ xử lý; không đăng ký trùng trong master registry.
 
-→ generic Form.
+---
 
-### Tabs hiện có
+## 4. P1 — Item / Vật tư
 
-1. **Cơ bản** — mã, tên, nhóm, tính chất, giai đoạn vật tư, nguồn cung, giá vốn, cờ mua/bán/tồn.
-2. **ĐVT & kho** — Measurement Profile, stock/purchase/sales UOM, catch-weight, batch/serial, kho, bảng `uom_conversions`.
+File: `master-workspaces/ItemMasterWorkbench.tsx`.
+
+Tabs:
+
+1. **Cơ bản** — mã, tên, nhóm, tính chất, giai đoạn vật tư, nguồn cung, giá vốn, mua/bán/tồn.
+2. **ĐVT & kho** — Measurement Profile, stock/purchase/sales UOM, catch-weight, batch/serial, kho, `uom_conversions`.
 3. **Quy cách & cửa** — Material Specification, door type, Cutting Policy, Geometry Profile, barem Kg/m², diện tích tối thiểu.
-4. **Liên kết** — mở thẳng hồ sơ nguồn Measurement Profile / Material Specification / Geometry Profile / Cutting Policy / Supplier Item, không copy logic master sang Item.
+4. **Liên kết** — mở master nguồn thay vì copy editor/authority sang Item.
 
-### Validation ở workbench
+Chốt validation:
 
-- mã Item mới theo `[A-Z0-9.-]`, tối đa 24;
-- tên, nhóm, Measurement Profile, stock UOM bắt buộc;
-- purchase/sales UOM khác stock UOM thì cần conversion dương;
-- catch-weight không được mang bảng quy đổi cố định;
-- catch-weight phải có weight UOM;
-- batch và serial không bật đồng thời;
-- Item là cửa phải có Cutting Policy + Geometry Profile;
-- barem Kg/m² thiếu chỉ cảnh báo vì luồng sản xuất hiện chủ đích cho phép bỏ trống ước tính, không tự bịa số;
-- nguyên vật liệu không có Material Specification chỉ cảnh báo ở P1, không chặn mọi phụ kiện/vật tư chưa phân loại đủ.
-
-### Điều cố ý không làm
-
-- không đưa `standard_length_m` trở lại UI/cảnh báo;
-- không tự điền Material Specification/Geometry Profile;
-- không tự xoá UOM conversion khi người dùng bật catch-weight — phải báo để người dùng thấy dữ liệu đang mâu thuẫn;
-- không inline sửa `Supplier Item.last_purchase_rate` vì authority của giá mua gần nhất không được suy đoán ở client;
-- không viết lại pricing/BOM/motor engine trong client.
+- purchase/sales UOM khác stock UOM thì phải có conversion dương;
+- catch-weight không dùng bảng conversion cố định;
+- cửa phải có Cutting Policy + Geometry Profile;
+- cửa và vật tư cây không bị ép cùng một loại profile;
+- `standard_length_m` không được đưa lại vào cảnh báo;
+- barem Kg/m² thiếu chỉ cảnh báo theo behavior sản xuất hiện tại, không bịa số.
 
 ---
 
-## 5. Các pha tiếp theo
+## 5. P2 — Pricing
 
-### P2 — Pricing Workbench
+File: `master-workspaces/PricingMasterWorkbench.tsx`.
 
-Gom `Item Price + Pricing Scope + Pricing Rule` theo luồng:
-
-```text
-Áp cho cái gì → Điều kiện → Tác động giá → Ưu tiên → Preview server
-```
-
-Chặn trạng thái scope rỗng / rule không effect ngay khi lưu active.
-
-### P3 — BOM Workbench
-
-Tái sử dụng editor hiện có, hiển thị rõ:
+Ba DocType cùng một tư duy:
 
 ```text
-Thành phẩm → thành phần → qty → qty_basis → BOM Rule → preview kích thước
+Item Price      → giá gốc theo bảng giá / Item / UOM / price_variant / area_tier
+Pricing Scope   → tập Item / Item Group tái sử dụng
+Pricing Rule    → phạm vi → effect → hiệu lực → điều kiện → preview
 ```
 
-`qty_basis` là hệ số nhân, không phải cờ tự tính thay `qty`.
+Chốt:
 
-### P4 — Door / Geometry Workbench
-
-Gom `Quy cách cửa + Geometry Profile + Geometry Field + Cutting Policy`, tập trung vào một việc: cấu hình một loại cửa và xem Item nào đang dùng.
-
-### P5 — Motor / UPS Workbench
-
-Bảng nghiệp vụ trực tiếp; engine chọn motor/UPS vẫn nằm server.
+- Pricing Scope không được lưu rỗng;
+- Pricing Rule phải có effect hợp lệ;
+- rule bật mà không có bất kỳ filter nào phải xác nhận rõ **“Tôi chủ đích áp dụng toàn bộ”**; không cấm global rule vì engine server hỗ trợ nó;
+- Item Price không lặng lẽ bỏ `area_tier`; hàng không chia bậc dùng `MOI-DIEN-TICH`;
+- preview gọi **`metaforge.api.preview_sales_commercial_line`**, cùng engine màn bán hàng; client không copy pricing engine;
+- preview nói rõ phải lưu rule trước để rule đang sửa xuất hiện trong state server.
 
 ---
 
-## 6. Nguyên tắc giữ lâu dài
+## 6. P3 — BOM
 
-- Một DocType mới **không mặc định có TSX riêng**.
-- Một công việc cần bốn DocType có thể là **một workbench**.
-- Master Data Hub vẫn là bản đồ/readiness, không biến thành editor khổng lồ.
-- Generic form là fallback lâu dài, không phải đồ tạm chờ xoá.
-- Mọi workbench chuyên dụng phải đi qua `master-workspaces/registry`; không rải `if (doctype === ...)` thêm vào operational `workspace-extension.tsx`.
-- Preview phải gọi engine server hoặc thin endpoint dùng chung logic server.
+File: `master-workspaces/BomMasterWorkbench.tsx`.
+
+Màn làm rõ ngay trên từng dòng:
+
+```text
+Vật tư → SL cơ sở → qty_basis → UOM → BOM Rule → nguồn/trạng thái
+```
+
+Chốt an toàn:
+
+- `qty_basis` là **hệ số nhân**, không thay thế `qty`;
+- `Theo số lá` = `qty × số_lá`;
+- phát hiện `_tam_dien_1`, `PENDING`, SL rỗng/không dương và hiện cảnh báo;
+- workbench **không tự chữa** các dòng tạm;
+- BOM đã ghi sổ/hủy read-only;
+- workbench chỉ có **Lưu nháp**; thao tác ghi sổ đi qua “Form đầy đủ / Ghi sổ” để giữ workflow submit chuẩn hiện có thay vì viết một submit path thứ hai;
+- `BOM Rule` vẫn là authority công thức tiêu hao dùng chung; `Cutting Policy` vẫn là authority hình học cửa.
+
+---
+
+## 7. P4 — Cửa / Geometry
+
+File: `master-workspaces/DoorGeometryWorkbench.tsx`.
+
+### `Quy cách cửa`
+
+Tách rõ hai số dễ bị nhập nhầm:
+
+- `buoc_la_m` = **ước số chia lá**, tham gia phép tính số lá;
+- `be_rong_nan_mm` = **bề rộng nan**, dùng nhận diện/tra giá, không phải divisor.
+
+Không suy một số từ số kia. `AL552 (CŨ)` hiện cảnh báo mâu thuẫn nguồn và **không tự sửa** 0,057 → 0,05.
+
+`rong_toi_da_mm` và `trong_luong_kg_m2` được phép trống nếu chưa có nguồn đáng tin.
+
+### `Geometry Profile`
+
+Quản lý:
+
+- nhóm hàng áp dụng;
+- danh sách Geometry Field;
+- role INPUT / CALCULATED / INFO;
+- required / visible / editable / sequence.
+
+Chặn CALCULATED nhưng vẫn editable, hoặc required nhưng invisible.
+
+`Geometry Field` bản thân vẫn generic vì là lookup phẳng.
+
+### `Cutting Policy`
+
+Nhóm giao diện theo đúng authority:
+
+1. khóa phân giải: door type / ray / item group / priority;
+2. cơ sở đo và số trừ cắt;
+3. chia lá;
+4. geometry rules.
+
+Giữ các quyết định nguồn quan trọng trên UI:
+
+- khách lẻ cửa Đức trừ **0,08 m**, không đổi thành 0,06;
+- mọi loại cửa phải có công thức chia lá;
+- divisor “Bản lá của bộ quy cách” đọc `Quy cách cửa.buoc_la_m`, không đọc `be_rong_nan_mm`;
+- Cutting Policy không chứa Pricing/BOM quantity.
+
+---
+
+## 8. P5 — Motor / UPS
+
+File: `master-workspaces/MotorUpsMasterWorkbench.tsx`.
+
+Một record editor đi kèm bảng toàn bộ ngưỡng đang hoạt động để người dùng nhìn được thứ tự và khoảng trống.
+
+Hai luật hiển thị tách rõ:
+
+```text
+Motor → selection_basis = "Diện tích cửa" → area < max_area_sqm
+UPS   → selection_basis = "Tải motor"     → motor_kg < max_motor_kg
+```
+
+Cả hai là **cận trên mở**, đúng 15 m² không dùng dòng `<15 m²`.
+
+Panel thử diện tích tái sử dụng `AlumdoorMotorSuggestPanel`, và panel đó gọi **`alumdoor.motor.suggest`**. Không có ngưỡng/không phủ tải thì server trả thiếu và UI báo thiếu; client không đoán mã motor/UPS.
+
+---
+
+## 9. Những thứ cố ý KHÔNG làm
+
+- không tạo 31 TSX;
+- không fork `DoctypeWorkspace`;
+- không sửa `@metaforge/views` để hard-code Alumdoor;
+- không copy engine Pricing/BOM/Motor sang client;
+- không tự sửa AL552;
+- không tự biến `_tam_dien_1` thành định mức thật;
+- không tự điền Kg/m, Kg/m², ngưỡng, UOM conversion khi nguồn chưa đủ;
+- không biến `Geometry Field`/UOM/Color/Province/Ward thành workbench chỉ vì danh sách dài;
+- không làm CI trong nhánh này.
+
+---
+
+## 10. Chốt giữ lâu dài
+
+- Thiết kế theo **công việc người dùng**, không theo “một DocType = một màn”.
+- Master Data Hub tiếp tục là bản đồ/readiness, không thành siêu editor.
+- Mọi master workbench mới phải đăng ký qua `master-workspaces/registry.tsx`.
+- Không match registry → operational extension → generic fallback.
+- Mỗi dedicated workbench phải giữ `?master_ui=generic` để thoát về form đầy đủ.
+- Preview/tính toán phải gọi engine server hoặc method dùng chung logic server.
