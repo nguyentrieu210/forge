@@ -44,13 +44,18 @@ test("ui child preview routes Purchase through runtime while Sales stays on pres
   assert.doesNotMatch(purchase, /Nhôm cây\/lá|Tấm\/Kính|Thành phẩm theo m2|Hàng thường/);
 });
 
-test("purchase order grid treats server overrides as structural schema", () => {
+test("purchase order grid treats server overrides as structural schema and catch-weight identity", () => {
   const source = read("client/packages/vertical-alumdoor/src/AlumdoorPurchaseOrderItemsGrid.tsx");
   const visibleStart = source.indexOf("export function purchaseFieldVisible");
   const visibleEnd = source.indexOf("\n}\n", visibleStart);
   const visibleFn = source.slice(visibleStart, visibleEnd + 2);
   assert.match(visibleFn, /purchaseFieldOverride/);
   assert.doesNotMatch(visibleFn, /_inventoryMode|inventory_mode|line\[fieldname\]|Nhôm|Ống/);
+  const catchStart = source.indexOf("export function isAluminumPurchaseLine");
+  const catchEnd = source.indexOf("\n}\n", catchStart);
+  const catchFn = source.slice(catchStart, catchEnd + 2);
+  assert.match(catchFn, /qtyHidden && qtyReadonly/);
+  assert.doesNotMatch(catchFn, /theoretical_kg|inventory_mode|Nhôm/);
   assert.match(source, /sequence/);
   assert.match(source, /"condition"/);
   assert.match(source, /"width_m"/);
