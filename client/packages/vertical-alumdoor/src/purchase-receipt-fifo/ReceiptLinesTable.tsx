@@ -96,7 +96,9 @@ export function ReceiptLinesTable(props: ReceiptLinesTableProps) {
   };
 
   const variableColumns = [showQtyBar, showQty, showActualWeight, showTheory, showActualKgPerM, showLength, showWidth, showColor, showStamped, showCondition, showSoNo].filter(Boolean).length;
-  const colSpan = 12 + variableColumns;
+  // 6 cột đầu + 7 cột giao dịch cuối. Khi có cân thực, một cờ `showActualWeight` sinh thêm
+  // HAI cột đối chiếu (Lệch cân + Nguyên nhân) ngoài chính cột Kg thực cân.
+  const colSpan = 13 + variableColumns + (showActualWeight ? 2 : 0);
 
   return <section className="rounded-lg border bg-card" data-section="purchase-receipt-lines" aria-label="Dòng hàng nhận">
     <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2 text-xs font-semibold"><span>Dòng hàng nhận</span><span className="text-[10px] font-normal text-muted-foreground">Cột vật lý đến từ Purchase Runtime; xóa giá trị không làm cột tự biến mất.</span><Button type="button" size="sm" variant="outline" className="ml-auto h-7" disabled={props.readOnly} onClick={props.onAdd}><Plus className="size-3.5" /> Thêm dòng</Button></div>
