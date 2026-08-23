@@ -36,6 +36,11 @@ test("ui child preview routes Purchase through runtime while Sales stays on pres
   assert.match(purchase, /source: entry\.source/);
   assert.match(purchase, /material\?\.standard_length_m/);
   assert.match(purchase, /changed === "item_code"/);
+  assert.match(purchase, /HIDDEN_RUNTIME_PERSISTED_FIELDS/);
+  assert.match(purchase, /!entry\.visible && !HIDDEN_RUNTIME_PERSISTED_FIELDS\.has/);
+  assert.match(purchase, /changed === "item_code" \? preferredUom/);
+  assert.match(purchase, /runtimeField\(runtime, "length_m"\)\?\.visible \? positive/);
+  assert.match(purchase, /runtimeField\(runtime, "qty_bar"\)\?\.visible \? positive/);
   assert.doesNotMatch(purchase, /Nhôm cây\/lá|Tấm\/Kính|Thành phẩm theo m2|Hàng thường/);
 });
 
@@ -59,6 +64,7 @@ test("receipt table uses the same overrides for common purchase fields", () => {
   assert.match(source, /lineFieldVisible\(line, "color", false\)/);
   assert.match(source, /lineFieldVisible\(line, "qty_bar", false\)/);
   assert.match(source, /lineFieldVisible\(line, "actual_weight_kg", false\)/);
+  assert.match(source, /13 \+ variableColumns \+ \(showActualWeight \? 2 : 0\)/);
   assert.doesNotMatch(source, /Nhôm cây\/lá|Ống\/trục/);
 });
 
