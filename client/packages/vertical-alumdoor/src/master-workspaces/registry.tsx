@@ -5,6 +5,7 @@ import type { PricingMasterDoctype } from "./PricingMasterWorkbench.js";
 
 const ItemMasterWorkbench = lazy(() => import("./ItemMasterWorkbench.js").then((module) => ({ default: module.ItemMasterWorkbench })));
 const PricingMasterWorkbench = lazy(() => import("./PricingMasterWorkbench.js").then((module) => ({ default: module.PricingMasterWorkbench })));
+const BomMasterWorkbench = lazy(() => import("./BomMasterWorkbench.js").then((module) => ({ default: module.BomMasterWorkbench })));
 
 type WorkspaceContext = Parameters<DoctypeWorkspaceExtension["resolve"]>[0];
 type WorkspaceResolution = ReturnType<DoctypeWorkspaceExtension["resolve"]>;
@@ -28,41 +29,29 @@ export function resolveAlumdoorMasterWorkspace(context: WorkspaceContext): Works
   if (doctype === "Item") {
     const editor = (
       <Suspense fallback={<div className="grid h-full place-items-center text-sm text-muted-foreground">Đang mở hồ sơ mặt hàng…</div>}>
-        <ItemMasterWorkbench
-          key={decoded ? `alumdoor-item-master/${decoded}` : "alumdoor-item-master/new"}
-          name={decoded}
-          base={base}
-          listPath={listPath}
-          onNavigate={onNavigate}
-          onSaved={(savedName) => onNavigate(`${listPath}/${encodeURIComponent(savedName)}`)}
-          onCancel={() => onNavigate(listPath)}
-        />
+        <ItemMasterWorkbench key={decoded ? `alumdoor-item-master/${decoded}` : "alumdoor-item-master/new"} name={decoded} base={base} listPath={listPath} onNavigate={onNavigate} onSaved={(savedName) => onNavigate(`${listPath}/${encodeURIComponent(savedName)}`)} onCancel={() => onNavigate(listPath)} />
       </Suspense>
     );
-    return isNew
-      ? { createSurface: "full", createDataSurface: "alumdoor-item-master-create", suppressBulk: true, create: editor }
-      : { hasDetail: true, suppressBulk: true, detail: editor };
+    return isNew ? { createSurface: "full", createDataSurface: "alumdoor-item-master-create", suppressBulk: true, create: editor } : { hasDetail: true, suppressBulk: true, detail: editor };
   }
 
   if (PRICING_MASTERS.has(doctype as PricingMasterDoctype)) {
     const pricingDoctype = doctype as PricingMasterDoctype;
     const editor = (
       <Suspense fallback={<div className="grid h-full place-items-center text-sm text-muted-foreground">Đang mở danh mục giá…</div>}>
-        <PricingMasterWorkbench
-          key={decoded ? `alumdoor-pricing/${pricingDoctype}/${decoded}` : `alumdoor-pricing/${pricingDoctype}/new`}
-          doctype={pricingDoctype}
-          name={decoded}
-          base={base}
-          listPath={listPath}
-          onNavigate={onNavigate}
-          onSaved={(savedName) => onNavigate(`${listPath}/${encodeURIComponent(savedName)}`)}
-          onCancel={() => onNavigate(listPath)}
-        />
+        <PricingMasterWorkbench key={decoded ? `alumdoor-pricing/${pricingDoctype}/${decoded}` : `alumdoor-pricing/${pricingDoctype}/new`} doctype={pricingDoctype} name={decoded} base={base} listPath={listPath} onNavigate={onNavigate} onSaved={(savedName) => onNavigate(`${listPath}/${encodeURIComponent(savedName)}`)} onCancel={() => onNavigate(listPath)} />
       </Suspense>
     );
-    return isNew
-      ? { createSurface: "full", createDataSurface: "alumdoor-pricing-master-create", suppressBulk: true, create: editor }
-      : { hasDetail: true, suppressBulk: true, detail: editor };
+    return isNew ? { createSurface: "full", createDataSurface: "alumdoor-pricing-master-create", suppressBulk: true, create: editor } : { hasDetail: true, suppressBulk: true, detail: editor };
+  }
+
+  if (doctype === "Bill of Materials") {
+    const editor = (
+      <Suspense fallback={<div className="grid h-full place-items-center text-sm text-muted-foreground">Đang mở định mức BOM…</div>}>
+        <BomMasterWorkbench key={decoded ? `alumdoor-bom-master/${decoded}` : "alumdoor-bom-master/new"} name={decoded} base={base} listPath={listPath} onNavigate={onNavigate} onSaved={(savedName) => onNavigate(`${listPath}/${encodeURIComponent(savedName)}`)} onCancel={() => onNavigate(listPath)} />
+      </Suspense>
+    );
+    return isNew ? { createSurface: "full", createDataSurface: "alumdoor-bom-master-create", suppressBulk: true, create: editor } : { hasDetail: true, suppressBulk: true, detail: editor };
   }
 
   return undefined;
