@@ -2,6 +2,17 @@ import { roundTo } from "./numeric.js";
 import { salesItemContext, type SalesPlatformCall } from "./sales-item-context.js";
 import { calculateSalesProductionLine, type ProductionPlatformCall } from "./sales-production.js";
 import { allowedColorNamesForGroup } from "./color-scopes.js";
+import {
+  parseDoorPolicy,
+  rayTypeOf,
+  selectDoorPolicy,
+  type CustomerGroup,
+  type DoorType,
+} from "./door-formulas.js";
+import {
+  readGeometryProfileRuntime,
+  type GeometryProfileRuntimeContract,
+} from "./geometry-profile-runtime.js";
 
 type Json = Record<string, unknown>;
 type PlatformCall = SalesPlatformCall & ProductionPlatformCall;
@@ -87,6 +98,24 @@ async function readDoc(call: PlatformCall, doctype: string, name: string): Promi
   return ((await response.json()) as { data?: Json }).data ?? null;
 }
 
+async function listDocs(
+  call: PlatformCall,
+  doctype: string,
+  fields: string[],
+  filters: unknown[],
+  limit = 50,
+): Promise<Json[]> {
+  const query = new URLSearchParams({
+    fields: JSON.stringify(fields),
+    filters: JSON.stringify(filters),
+    limit_page_length: String(limit),
+  });
+  const response = await call(`resource/${encodeURIComponent(doctype)}?${query.toString()}`);
+  if (response.status === 404) return [];
+  if (!response.ok) throw new Error(`Không tra được ${doctype} (HTTP ${response.status}).`);
+  return ((await response.json()) as { data?: Json[] }).data ?? [];
+}
+
 /**
  * Chọn lại ĐVT theo master Item trước khi gọi salesItemContext.
  *
@@ -153,43 +182,87 @@ function fieldOverride(overrides: Record<string, Json>, fields: Set<string>, fie
   if (fields.has(fieldname)) overrides[fieldname] = { ...(overrides[fieldname] ?? {}), ...value };
 }
 
-function customerWidthField(customerGroup: unknown): "width_pb_ray_m" | "width_pb_nhua_m" | null {
-  const group = text(customerGroup);
-  if (group === "Lẻ") return "width_pb_ray_m";
-  if (group === "Đại lý") return "width_pb_nhua_m";
-  return null;
+/** Geometry Profile owns structural field metadata; calculated/input logic stays server-side. */
+function applyGeometryRuntimeOverrides(
+  overrides: Record<string, Json>,
+  fields: Set<string>,
+  runtime: GeometryProfileRuntimeContract | null,
+): void {
+  if (!runtime) return;
+  for (const entry of runtime.fields) {
+    const fieldname = text(entry.runtime_fieldname);
+    if (!fieldname) continue;
+    const sequence = Number(entry.sequence);
+    const unit = text(entry.uom);
+    const label = text(entry.label);
+    fieldOverride(overrides, fields, fieldname, {
+      hidden: entry.visible ? 0 : 1,
+      reqd: entry.required ? 1 : 0,
+      read_only: entry.role === "CALCULATED" || entry.editable === false ? 1 : 0,
+      ...(label ? { label: unit ? `${label}\n(${unit})` : label } : {}),
+      ...(Number.isFinite(sequence) ? { sequence } : {}),
+      depends_on: null,
+      mandatory_depends_on: null,
+    });
+  }
 }
 
-function salesWidthField(
-  doorType: unknown,
-  itemGroup: unknown,
-  customerGroup: unknown,
-): "width_pb_ray_m" | "width_pb_nhua_m" | null {
-  const type = normalized(doorType);
-  const group = normalized(itemGroup);
-  const alwaysUsesPbRay = [
-    "cửa úc",
-    "cửa tấm liền úc",
-    "cửa lưới",
-    "cửa đài loan",
-    "cửa siêu trường",
-  ].includes(type)
-    || [
-      "cửa tấm liền úc",
-      "cửa lưới",
-      "cửa đài loan",
-      "cửa đài loan inox",
-      "cửa kéo đài loan",
-      "cửa siêu trường",
-    ].includes(group);
-  return alwaysUsesPbRay ? "width_pb_ray_m" : customerWidthField(customerGroup);
+async function resolveCustomerGroup(call: PlatformCall, parent: Json): Promise<CustomerGroup | null> {
+  let customerGroup = text(parent.customer_group);
+  if (customerGroup !== "Đại lý" && customerGroup !== "Lẻ") {
+    const priceListName = text(parent.selling_price_list);
+    const priceList = priceListName ? await readDoc(call, "Price List", priceListName) : null;
+    customerGroup = text(priceList?.customer_group);
+  }
+  return customerGroup === "Đại lý" || customerGroup === "Lẻ" ? customerGroup : null;
 }
 
-function usesMeshHeight(doorType: unknown, itemGroup: unknown): boolean {
-  const type = normalized(doorType);
-  const group = normalized(itemGroup);
-  return ["cửa lưới", "cửa đài loan", "cửa siêu trường"].includes(type)
-    || ["cửa lưới", "cửa đài loan", "cửa đài loan inox", "cửa kéo đài loan", "cửa siêu trường"].includes(group);
+/**
+ * Cutting Policy decides which measured-width basis applies to the current customer context.
+ * Geometry Profile then binds that semantic dimension to the concrete Sales row field.
+ * No door-name or Item Group branching belongs in the UI/preview layer.
+ */
+async function resolveGeometryWidthInputField(
+  call: PlatformCall,
+  runtime: GeometryProfileRuntimeContract | null,
+  item: Json,
+  row: Json,
+  parent: Json,
+  effectiveDoorType: string,
+): Promise<"width_pb_ray_m" | "width_pb_nhua_m" | null> {
+  if (!runtime || !effectiveDoorType) return null;
+  const customerGroup = await resolveCustomerGroup(call, parent);
+  if (!customerGroup) return null;
+  const policyRows = await listDocs(
+    call,
+    "Cutting Policy",
+    [
+      "name", "policy_name", "door_type", "item_group", "dealer_width_basis", "retail_width_basis",
+      "dealer_cut_deduction_m", "retail_cut_deduction_m", "butterfly_cut_deduction_m",
+      "dealer_split_sales_basis", "dealer_full_sales_basis", "retail_sales_basis", "manual_pull_sales_basis",
+      "purchase_formula", "purchase_height_basis", "purchase_width_basis", "priority", "disabled", "ray_type",
+    ],
+    [["Cutting Policy", "door_type", "=", effectiveDoorType]],
+    50,
+  );
+  if (!policyRows.length) return null;
+  try {
+    const policies = policyRows.map(parseDoorPolicy);
+    const selected = selectDoorPolicy(
+      policies,
+      effectiveDoorType as DoorType,
+      text(item.item_group),
+      rayTypeOf(row.ray_type),
+    );
+    const basis = customerGroup === "Đại lý" ? selected.dealer_width_basis : selected.retail_width_basis;
+    const geometryField = basis === "Phủ bì ray" ? "PB_RAY_RONG" : basis === "Phủ bì nhựa" ? "PB_NHUA_RONG" : "";
+    const runtimeField = runtime.fields.find((entry) => entry.geometry_field === geometryField && entry.visible);
+    const fieldname = text(runtimeField?.runtime_fieldname);
+    return fieldname === "width_pb_ray_m" || fieldname === "width_pb_nhua_m" ? fieldname : null;
+  } catch {
+    // Formula preview/submit owns the authoritative policy error. Visibility must not guess.
+    return null;
+  }
 }
 
 function salesQuantity(row: Json, item: Json, formula: Json | null): { derived: boolean; quantity?: number; policy: string } {
@@ -284,17 +357,8 @@ function applyAverageWeight(patch: Json, clear: Set<string>, fields: Set<string>
 async function formulaPreview(call: PlatformCall, row: Json, parent: Json, item: Json): Promise<Json | null> {
   if (!isAreaFinishedProduct(item)) return null;
   if (!positive(row.width_m) || !positive(row.height_m)) return null;
-  let customerGroup = text(parent.customer_group);
-  // The Sales Order header normally receives this from Customer.price_group. During fast
-  // entry that fetch can finish after the line preview, while the selected Price List already
-  // carries the same authoritative Đại lý/Lẻ scope. Use that scope instead of silently
-  // clearing qty and leaving an apparently complete dimension row at "—".
-  if (customerGroup !== "Đại lý" && customerGroup !== "Lẻ") {
-    const priceListName = text(parent.selling_price_list);
-    const priceList = priceListName ? await readDoc(call, "Price List", priceListName) : null;
-    customerGroup = text(priceList?.customer_group);
-  }
-  if (customerGroup !== "Đại lý" && customerGroup !== "Lẻ") return null;
+  const customerGroup = await resolveCustomerGroup(call, parent);
+  if (!customerGroup) return null;
   const response = await calculateSalesProductionLine(call, {
     ...row,
     item_code: row.item_code,
@@ -319,6 +383,9 @@ async function previewSales(call: PlatformCall, args: Json, row: Json, parent: J
   const overrides: Record<string, Json> = {};
   if (changed === "item_code") for (const name of ITEM_DERIVED_FIELDS) clearIfField(clear, fields, name);
 
+  const geometryRuntimePending = text(item.geometry_profile)
+    ? readGeometryProfileRuntime(call, text(item.geometry_profile)).catch(() => null)
+    : Promise.resolve(null);
   const configuredUom = resolveConfiguredSalesUom(item, row.uom);
   const contextResponse = await salesItemContext(call, {
     item_code: itemCode,
@@ -327,8 +394,11 @@ async function previewSales(call: PlatformCall, args: Json, row: Json, parent: J
     price_list: parent.selling_price_list,
     currency: parent.currency,
     qty: row.qty,
+    customer_group: parent.customer_group,
+    ray_type: row.ray_type,
   });
   const context = contextResponse.ok ? await contextResponse.json() as Json : {};
+  const geometryRuntime = await geometryRuntimePending;
 
   const masterPlan: Array<[string, unknown]> = [
     ["stock_uom", item.stock_uom], ["inventory_mode", effectiveInventoryMode(item)],
@@ -339,6 +409,8 @@ async function previewSales(call: PlatformCall, args: Json, row: Json, parent: J
   ];
   for (const [name, value] of masterPlan) setIfField(patch, fields, name, value);
   const effectiveDoorType = text(context.door_type ?? item.door_type);
+  applyGeometryRuntimeOverrides(overrides, fields, geometryRuntime);
+
   if (effectiveDoorType === "Cửa tấm liền Úc") {
     fieldOverride(overrides, fields, "ray_type", {
       hidden: 0,
@@ -408,18 +480,18 @@ async function previewSales(call: PlatformCall, args: Json, row: Json, parent: J
     clearIfField(clear, fields, "discount_percentage");
   }
 
-  // PB ray và PB nhựa là hai số đo nghiệp vụ độc lập. `width_m` chỉ là trường
-  // chuẩn hoá mà công thức/BOM cũ đang đọc; không dùng nó làm ô nhập rồi đổi nhãn.
+  // Geometry Profile owns which dimensions exist; Cutting Policy owns which measured-width
+  // basis is active for the current customer context. width_m remains only the legacy canonical
+  // alias consumed by formula/BOM engines and is never itself used to decide the form structure.
   const areaFinishedProduct = isAreaFinishedProduct(item);
   const selectedWidthField = areaFinishedProduct
-    ? salesWidthField(effectiveDoorType, item.item_group, parent.customer_group)
+    ? await resolveGeometryWidthInputField(call, geometryRuntime, item, row, parent, effectiveDoorType)
     : null;
   if (selectedWidthField) {
     const selectedWidth = positive(patch[selectedWidthField] ?? row[selectedWidthField]);
     const hasSeparateWidth = positive(row.width_pb_ray_m) || positive(row.width_pb_nhua_m);
-    // Nếu người bán nhập ô Rộng PB chung trước khi chọn khách, lúc nhóm giá xuất hiện phải
-    // chuyển đúng một lần sang PB ray/nhựa. Chỉ chuyển khi chưa có bất kỳ số đo chuyên biệt nào;
-    // đổi từ Lẻ sang Đại lý sau đó không được đoán hai loại phủ bì bằng nhau.
+    // Compatibility for old drafts that only stored width_m. Never equate PB ray and PB nhựa
+    // after either specialized value already exists.
     const legacyWidth = !hasSeparateWidth && ["initial_load", "parent_context"].includes(changed)
       ? positive(row.width_m)
       : null;
@@ -483,39 +555,32 @@ async function previewSales(call: PlatformCall, args: Json, row: Json, parent: J
   const widthBasis = normalized(finalForFields.width_basis);
   const supportsButterflyBracket = formula?.supports_butterfly_bracket === true;
   if (areaFinishedProduct) {
-    fieldOverride(overrides, fields, "width_pb_ray_m", {
-      hidden: selectedWidthField === "width_pb_ray_m" ? 0 : 1,
-      reqd: selectedWidthField === "width_pb_ray_m" ? 1 : 0,
-      read_only: selectedWidthField === "width_pb_ray_m" ? 0 : 1,
-      label: "Rộng PB ray\n(m)",
-      depends_on: null,
-      mandatory_depends_on: null,
-    });
-    fieldOverride(overrides, fields, "width_pb_nhua_m", {
-      hidden: selectedWidthField === "width_pb_nhua_m" ? 0 : 1,
-      reqd: selectedWidthField === "width_pb_nhua_m" ? 1 : 0,
-      read_only: selectedWidthField === "width_pb_nhua_m" ? 0 : 1,
-      label: "Rộng PB nhựa\n(m)",
-      depends_on: null,
-      mandatory_depends_on: null,
-    });
-    fieldOverride(overrides, fields, "width_m", { hidden: selectedWidthField ? 1 : 0, reqd: selectedWidthField ? 0 : 1, label: widthBasis.includes("nhựa") ? "Rộng PB nhựa\n(m)" : widthBasis.includes("ray") ? "Rộng PB ray\n(m)" : "Rộng PB\n(m)" });
-    fieldOverride(overrides, fields, "height_m", { label: "Cao PB\n(m)" });
-    const meshHeightApplicable = usesMeshHeight(effectiveDoorType, item.item_group);
-    /**
-     * CỐ Ý để `reqd: 0` dù ghi sổ đơn bán bắt buộc có Cao lưới (xem `meshHeightMissing` trong
-     * document-validation.ts). Cờ `reqd` của lưới chặn cả nút LƯU NHÁP, mà nháp là chỗ người
-     * bán đỗ đơn lại khi chưa ra tận nơi đo. Chặn ở nháp là chặn đúng việc màn này sinh ra để
-     * làm. Màn bán tự chặn lúc GHI SỔ bằng chính cờ `hidden` dưới đây: ô nào server cho hiện
-     * mà còn trống thì không ghi sổ được.
-     */
-    fieldOverride(overrides, fields, "mesh_height_m", {
-      hidden: meshHeightApplicable ? 0 : 1,
-      reqd: 0,
-      read_only: meshHeightApplicable ? 0 : 1,
-      label: "Cao lưới\n(m)",
-      depends_on: null,
-      mandatory_depends_on: null,
+    // Profile baseline was already applied above. Customer/policy context is more specific and
+    // may select exactly one of the two measured-width inputs without teaching the client any
+    // customer-group or door-name rules.
+    if (selectedWidthField) {
+      fieldOverride(overrides, fields, "width_pb_ray_m", {
+        hidden: selectedWidthField === "width_pb_ray_m" ? 0 : 1,
+        reqd: selectedWidthField === "width_pb_ray_m" ? 1 : 0,
+        read_only: selectedWidthField === "width_pb_ray_m" ? 0 : 1,
+        depends_on: null,
+        mandatory_depends_on: null,
+      });
+      fieldOverride(overrides, fields, "width_pb_nhua_m", {
+        hidden: selectedWidthField === "width_pb_nhua_m" ? 0 : 1,
+        reqd: selectedWidthField === "width_pb_nhua_m" ? 1 : 0,
+        read_only: selectedWidthField === "width_pb_nhua_m" ? 0 : 1,
+        depends_on: null,
+        mandatory_depends_on: null,
+      });
+    }
+    // width_m is a compatibility alias for formula/BOM, not a second user input when a catalog
+    // width binding exists. If the catalog/policy cannot resolve an input yet, keep the old
+    // generic width visible rather than inventing a ray/plastic choice.
+    fieldOverride(overrides, fields, "width_m", {
+      hidden: selectedWidthField ? 1 : 0,
+      reqd: selectedWidthField ? 0 : 1,
+      label: widthBasis.includes("nhựa") ? "Rộng PB nhựa\n(m)" : widthBasis.includes("ray") ? "Rộng PB ray\n(m)" : "Rộng PB\n(m)",
     });
   }
   fieldOverride(overrides, fields, "has_butterfly_bracket", {
@@ -559,7 +624,14 @@ async function previewSales(call: PlatformCall, args: Json, row: Json, parent: J
     fieldOverride(overrides, fields, "qty_bar", { reqd: 1, label: "Số cây/đoạn" });
   }
 
-  return answer({ patch, clear: [...clear], field_overrides: overrides, source: "alumdoor.ui.preview_child_row" });
+  return answer({
+    patch,
+    clear: [...clear],
+    field_overrides: overrides,
+    geometry_runtime: geometryRuntime,
+    geometry_input_field: selectedWidthField,
+    source: "alumdoor.ui.preview_child_row",
+  });
 }
 
 async function previewPurchase(call: PlatformCall, args: Json, row: Json, fields: Set<string>): Promise<Response> {
