@@ -1,0 +1,75 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const repoRoot = resolve(here, "..", "..");
+const read = (path) => readFileSync(resolve(repoRoot, path), "utf8");
+
+test("purchase runtime reads Measurement Profile and Material Specification as separate authorities", () => {
+  const source = read("server/apps-src/alumdoor-worker/src/purchase-item-runtime.ts");
+  assert.match(source, /readResource\(call, "Measurement Profile"/);
+  assert.match(source, /readResource\(call, "Material Specification"/);
+  assert.match(source, /require_color/);
+  assert.match(source, /require_condition/);
+  assert.match(source, /require_length/);
+  assert.match(source, /require_width/);
+  assert.match(source, /require_piece_qty/);
+  assert.match(source, /track_bundle_qty/);
+  assert.match(source, /theoretical_kg_per_m/);
+  assert.match(source, /has_catch_weight/);
+  assert.doesNotMatch(source, /===\s*["']Nhôm cây\/lá["']/);
+  assert.doesNotMatch(source, /Geometry Profile|PB_RAY_RONG|PB_NHUA_RONG|CAT_LA_RONG/);
+});
+
+test("ui child preview routes Purchase through runtime while Sales stays on preserved implementation", () => {
+  const router = read("server/apps-src/alumdoor-worker/src/ui-child-preview.ts");
+  const purchase = read("server/apps-src/alumdoor-worker/src/purchase-child-preview.ts");
+  assert.match(router, /previewPurchaseChildRow/);
+  assert.match(router, /previewLegacyChildRow/);
+  assert.match(purchase, /readPurchaseItemRuntime/);
+  assert.match(purchase, /purchase_runtime: runtime/);
+  assert.match(purchase, /sequence: entry\.sequence/);
+  assert.match(purchase, /source: entry\.source/);
+  assert.doesNotMatch(purchase, /Nhôm cây\/lá|Tấm\/Kính|Thành phẩm theo m2|Hàng thường/);
+});
+
+test("purchase order grid treats server overrides as structural schema", () => {
+  const source = read("client/packages/vertical-alumdoor/src/AlumdoorPurchaseOrderItemsGrid.tsx");
+  const visibleStart = source.indexOf("export function purchaseFieldVisible");
+  const visibleEnd = source.indexOf("\n}\n", visibleStart);
+  const visibleFn = source.slice(visibleStart, visibleEnd + 2);
+  assert.match(visibleFn, /purchaseFieldOverride/);
+  assert.doesNotMatch(visibleFn, /_inventoryMode|inventory_mode|line\[fieldname\]|Nhôm|Ống/);
+  assert.match(source, /sequence/);
+  assert.match(source, /"condition"/);
+  assert.match(source, /"width_m"/);
+});
+
+test("receipt table uses the same overrides for common purchase fields", () => {
+  const source = read("client/packages/vertical-alumdoor/src/purchase-receipt-fifo/ReceiptLinesTable.tsx");
+  assert.match(source, /lineFieldVisible\(line, "length_m", false\)/);
+  assert.match(source, /lineFieldVisible\(line, "width_m", false\)/);
+  assert.match(source, /lineFieldVisible\(line, "condition", false\)/);
+  assert.match(source, /lineFieldVisible\(line, "color", false\)/);
+  assert.match(source, /lineFieldVisible\(line, "qty_bar", false\)/);
+  assert.match(source, /lineFieldVisible\(line, "actual_weight_kg", false\)/);
+  assert.doesNotMatch(source, /Nhôm cây\/lá|Ống\/trục/);
+});
+
+test("purchase master registry has dedicated Measurement and Material workbenches", () => {
+  const registry = read("client/packages/vertical-alumdoor/src/master-workspaces/registry.tsx");
+  const measurement = read("client/packages/vertical-alumdoor/src/master-workspaces/MeasurementProfileWorkbench.tsx");
+  const material = read("client/packages/vertical-alumdoor/src/master-workspaces/MaterialSpecificationWorkbench.tsx");
+  const item = read("client/packages/vertical-alumdoor/src/master-workspaces/ItemMasterWorkbench.tsx");
+  assert.match(registry, /doctype === "Measurement Profile"/);
+  assert.match(registry, /doctype === "Material Specification"/);
+  assert.match(measurement, /Purchase Order/);
+  assert.match(measurement, /Purchase Receipt/);
+  assert.match(material, /theoretical_kg_per_m/);
+  assert.match(material, /Không bắt khai chiều dài cây chuẩn/);
+  assert.match(item, /Runtime summary/);
+  assert.match(item, /Catch-weight chỉ làm động trục/);
+});
