@@ -2,14 +2,17 @@
 import { lazy, Suspense } from "react";
 import type { DoctypeWorkspaceExtension } from "@metaforge/views";
 import type { PricingMasterDoctype } from "./PricingMasterWorkbench.js";
+import type { DoorGeometryDoctype } from "./DoorGeometryWorkbench.js";
 
 const ItemMasterWorkbench = lazy(() => import("./ItemMasterWorkbench.js").then((module) => ({ default: module.ItemMasterWorkbench })));
 const PricingMasterWorkbench = lazy(() => import("./PricingMasterWorkbench.js").then((module) => ({ default: module.PricingMasterWorkbench })));
 const BomMasterWorkbench = lazy(() => import("./BomMasterWorkbench.js").then((module) => ({ default: module.BomMasterWorkbench })));
+const DoorGeometryWorkbench = lazy(() => import("./DoorGeometryWorkbench.js").then((module) => ({ default: module.DoorGeometryWorkbench })));
 
 type WorkspaceContext = Parameters<DoctypeWorkspaceExtension["resolve"]>[0];
 type WorkspaceResolution = ReturnType<DoctypeWorkspaceExtension["resolve"]>;
 const PRICING_MASTERS = new Set<PricingMasterDoctype>(["Item Price", "Pricing Scope", "Pricing Rule"]);
+const DOOR_GEOMETRY_MASTERS = new Set<DoorGeometryDoctype>(["Quy cách cửa", "Geometry Profile", "Cutting Policy"]);
 
 /**
  * Registry cho Danh mục Alumdoor có nghiệp vụ vượt quá CRUD thông thường.
@@ -52,6 +55,16 @@ export function resolveAlumdoorMasterWorkspace(context: WorkspaceContext): Works
       </Suspense>
     );
     return isNew ? { createSurface: "full", createDataSurface: "alumdoor-bom-master-create", suppressBulk: true, create: editor } : { hasDetail: true, suppressBulk: true, detail: editor };
+  }
+
+  if (DOOR_GEOMETRY_MASTERS.has(doctype as DoorGeometryDoctype)) {
+    const masterDoctype = doctype as DoorGeometryDoctype;
+    const editor = (
+      <Suspense fallback={<div className="grid h-full place-items-center text-sm text-muted-foreground">Đang mở cấu hình cửa…</div>}>
+        <DoorGeometryWorkbench key={decoded ? `alumdoor-door-geometry/${masterDoctype}/${decoded}` : `alumdoor-door-geometry/${masterDoctype}/new`} doctype={masterDoctype} name={decoded} base={base} listPath={listPath} onNavigate={onNavigate} onSaved={(savedName) => onNavigate(`${listPath}/${encodeURIComponent(savedName)}`)} onCancel={() => onNavigate(listPath)} />
+      </Suspense>
+    );
+    return isNew ? { createSurface: "full", createDataSurface: "alumdoor-door-geometry-create", suppressBulk: true, create: editor } : { hasDetail: true, suppressBulk: true, detail: editor };
   }
 
   return undefined;
