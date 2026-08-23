@@ -9,6 +9,8 @@ const PricingMasterWorkbench = lazy(() => import("./PricingMasterWorkbench.js").
 const BomMasterWorkbench = lazy(() => import("./BomMasterWorkbench.js").then((module) => ({ default: module.BomMasterWorkbench })));
 const DoorGeometryWorkbench = lazy(() => import("./DoorGeometryWorkbench.js").then((module) => ({ default: module.DoorGeometryWorkbench })));
 const MotorUpsMasterWorkbench = lazy(() => import("./MotorUpsMasterWorkbench.js").then((module) => ({ default: module.MotorUpsMasterWorkbench })));
+const MeasurementProfileWorkbench = lazy(() => import("./MeasurementProfileWorkbench.js").then((module) => ({ default: module.MeasurementProfileWorkbench })));
+const MaterialSpecificationWorkbench = lazy(() => import("./MaterialSpecificationWorkbench.js").then((module) => ({ default: module.MaterialSpecificationWorkbench })));
 
 type WorkspaceContext = Parameters<DoctypeWorkspaceExtension["resolve"]>[0];
 type WorkspaceResolution = ReturnType<DoctypeWorkspaceExtension["resolve"]>;
@@ -37,6 +39,24 @@ export function resolveAlumdoorMasterWorkspace(context: WorkspaceContext): Works
       </Suspense>
     );
     return isNew ? { createSurface: "full", createDataSurface: "alumdoor-item-master-create", suppressBulk: true, create: editor } : { hasDetail: true, suppressBulk: true, detail: editor };
+  }
+
+  if (doctype === "Measurement Profile") {
+    const editor = (
+      <Suspense fallback={<div className="grid h-full place-items-center text-sm text-muted-foreground">Đang mở Bộ theo dõi vật tư…</div>}>
+        <MeasurementProfileWorkbench key={decoded ? `alumdoor-measurement-profile/${decoded}` : "alumdoor-measurement-profile/new"} name={decoded} base={base} listPath={listPath} onNavigate={onNavigate} onSaved={(savedName) => onNavigate(`${listPath}/${encodeURIComponent(savedName)}`)} onCancel={() => onNavigate(listPath)} />
+      </Suspense>
+    );
+    return isNew ? { createSurface: "full", createDataSurface: "alumdoor-measurement-profile-create", suppressBulk: true, create: editor } : { hasDetail: true, suppressBulk: true, detail: editor };
+  }
+
+  if (doctype === "Material Specification") {
+    const editor = (
+      <Suspense fallback={<div className="grid h-full place-items-center text-sm text-muted-foreground">Đang mở Quy cách kỹ thuật vật tư…</div>}>
+        <MaterialSpecificationWorkbench key={decoded ? `alumdoor-material-specification/${decoded}` : "alumdoor-material-specification/new"} name={decoded} base={base} listPath={listPath} onNavigate={onNavigate} onSaved={(savedName) => onNavigate(`${listPath}/${encodeURIComponent(savedName)}`)} onCancel={() => onNavigate(listPath)} />
+      </Suspense>
+    );
+    return isNew ? { createSurface: "full", createDataSurface: "alumdoor-material-specification-create", suppressBulk: true, create: editor } : { hasDetail: true, suppressBulk: true, detail: editor };
   }
 
   if (PRICING_MASTERS.has(doctype as PricingMasterDoctype)) {
