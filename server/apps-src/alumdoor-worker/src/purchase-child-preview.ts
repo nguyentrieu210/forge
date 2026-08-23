@@ -127,6 +127,17 @@ export async function previewPurchaseChildRow(call: PlatformCall, args: Json): P
     ];
     for (const [name, value] of plan) setIfField(patch, fields, name, value);
 
+    // `standard_length_m` là fact kỹ thuật từ Material Specification. Chỉ dùng làm GỢI Ý lúc
+    // đổi Item và chỉ khi Measurement Profile yêu cầu chiều dài; người dùng vẫn sửa theo lô thật.
+    if (
+      changed === "item_code"
+      && runtimeField(runtime, "length_m")?.visible
+      && !positive(row.length_m)
+      && material?.standard_length_m
+    ) {
+      setIfField(patch, fields, "length_m", material.standard_length_m);
+    }
+
     const colorRule = runtimeField(runtime, "color");
     if (colorRule?.visible) {
       const allowedColors = await allowedColorNamesForGroup(call, text(item.item_group), "purchase");
@@ -164,9 +175,10 @@ export async function previewPurchaseChildRow(call: PlatformCall, args: Json): P
       factor = positive(match?.conversion_factor);
     }
 
-    const length = positive(row.length_m);
-    const pieces = positive(row.qty_bar);
-    const kgPerM = material?.theoretical_kg_per_m ?? positive(row.theoretical_kg_per_m);
+    const effectiveBeforeCalc = { ...row, ...patch };
+    const length = positive(effectiveBeforeCalc.length_m);
+    const pieces = positive(effectiveBeforeCalc.qty_bar);
+    const kgPerM = material?.theoretical_kg_per_m ?? positive(effectiveBeforeCalc.theoretical_kg_per_m);
     const theoreticalKg = length && pieces && kgPerM ? roundTo(length * pieces * kgPerM) : null;
     if (runtimeField(runtime, "theoretical_kg_per_m")?.visible && kgPerM) setIfField(patch, fields, "theoretical_kg_per_m", kgPerM);
     if (runtimeField(runtime, "theoretical_kg")?.visible) {
@@ -174,7 +186,7 @@ export async function previewPurchaseChildRow(call: PlatformCall, args: Json): P
       else clearIfField(clear, fields, "theoretical_kg");
     }
 
-    const actualKg = positive(row.actual_weight_kg);
+    const actualKg = positive(effectiveBeforeCalc.actual_weight_kg);
     if (runtime.tracking.catch_weight) {
       const pricedKg = surface === "receipt" ? actualKg : theoreticalKg;
       if (pricedKg && fields.has("qty")) patch.qty = pricedKg;
@@ -213,7 +225,7 @@ export async function previewPurchaseChildRow(call: PlatformCall, args: Json): P
         else clearIfField(clear, fields, "actual_kg_per_m");
       }
       if (runtimeField(runtime, "actual_kg_per_sqm")?.visible) {
-        const width = positive(row.width_m);
+        const width = positive(effective.width_m);
         const area = length && width && pieces ? length * width * pieces : null;
         if (actualKg && area) setIfField(patch, fields, "actual_kg_per_sqm", roundTo(actualKg / area));
         else clearIfField(clear, fields, "actual_kg_per_sqm");
