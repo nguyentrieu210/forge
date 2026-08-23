@@ -430,6 +430,7 @@
       "Danh mục"
     ],
     "items": [
+      "Quotation",
       "Sales Order",
       "Delivery Note",
       "Aluminium Lot",
@@ -440,8 +441,11 @@
       "action:tra-hang",
       "Purchase Order",
       "Purchase Receipt",
+      "Purchase Invoice",
       "Work Order",
+      "Sales Invoice",
       "Payment Entry",
+      "Credit Note",
       "Warranty Claim",
       "report:Đơn hàng theo khách",
       "report:Báo giá theo khách",
@@ -5291,7 +5295,7 @@
       "//": "HOÁ ĐƠN MUA — nơi CÔNG NỢ PHẢI TRẢ phát sinh. `credit_to` là tài khoản phải trả.",
       "name": "Purchase Invoice",
       "label": "Hoá đơn mua",
-      "menu": false,
+      "menu": true,
       "icon": "receipt-text",
       "group": "Mua hàng",
       "naming": "HDM-.YYYY.-####",

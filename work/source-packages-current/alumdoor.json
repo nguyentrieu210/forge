@@ -1,7 +1,7 @@
 {
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "2.35.0",
+  "version": "2.36.0",
   "metaContractVersion": 1,
   "platform_requires": "1.0.0",
   "requires": [
@@ -34106,6 +34106,13 @@
   ],
   "nav": [
     {
+      "key": "Quotation",
+      "label": "Báo giá",
+      "kind": "doctype",
+      "icon": "file-text",
+      "group": "Bán hàng"
+    },
+    {
       "key": "Sales Order",
       "label": "Đơn hàng",
       "kind": "doctype",
@@ -34117,13 +34124,6 @@
       "label": "Phiếu giao hàng",
       "kind": "doctype",
       "icon": "truck",
-      "group": "Bán hàng"
-    },
-    {
-      "key": "Quotation",
-      "label": "Báo giá",
-      "kind": "doctype",
-      "icon": "file-text",
       "group": "Bán hàng"
     },
     {
@@ -34310,6 +34310,13 @@
       "group": "Mua hàng"
     },
     {
+      "key": "Purchase Invoice",
+      "label": "Hoá đơn mua",
+      "kind": "doctype",
+      "icon": "receipt-text",
+      "group": "Mua hàng"
+    },
+    {
       "key": "action:nhap-nhom-fifo",
       "label": "Nhập nhôm FIFO theo đơn cũ",
       "kind": "experience",
@@ -34392,17 +34399,17 @@
       "group": "Sản xuất"
     },
     {
-      "key": "Payment Entry",
-      "label": "Phiếu thu / chi",
-      "kind": "doctype",
-      "icon": "wallet",
-      "group": "Công nợ"
-    },
-    {
       "key": "Sales Invoice",
       "label": "Hoá đơn bán hàng",
       "kind": "doctype",
       "icon": "receipt",
+      "group": "Công nợ"
+    },
+    {
+      "key": "Payment Entry",
+      "label": "Phiếu thu / chi",
+      "kind": "doctype",
+      "icon": "wallet",
       "group": "Công nợ"
     },
     {
