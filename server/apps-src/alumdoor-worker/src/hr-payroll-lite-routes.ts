@@ -71,4 +71,15 @@ function idempotency(value: unknown): string { const result = required(value, "K
 function date(value: unknown, label: string): string { const result = required(value, label); if (!/^\d{4}-\d{2}-\d{2}$/u.test(result) || Number.isNaN(Date.parse(`${result}T00:00:00Z`))) throw new Error(`${label} phải theo YYYY-MM-DD.`); return result; }
 function clock(value: unknown, label: string): string { const result = required(value, label); if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/u.test(result)) throw new Error(`${label} phải theo HH:mm.`); return result; }
 function integer(value: unknown, label: string, min: number, max: number): number { const result = Number(value); if (!Number.isSafeInteger(result) || result < min || result > max) throw new Error(`${label} không hợp lệ.`); return result; }
-function failure(error: unknown): Response { return Response.json({ error: error instanceof Error ? error.message : "Dữ liệu không hợp lệ." }, { status: 422 }); }
+/**
+ * Khoá phải là `message`, KHÔNG phải `error`.
+ *
+ * Tầng điều phối method chỉ đọc `body.message` (app-registry/method-dispatch.ts §!response.ok);
+ * trả khoá khác là mọi câu tiếng Việt ở nhóm route này bị vứt và thay bằng "App alumdoor
+ * returned 422" — người dùng thấy một mã lỗi trần, không biết thiếu ô nào. Đúng thứ bản review
+ * tổng mục #20 bắt được ở màn Cài đặt nhân sự.
+ */
+function failure(error: unknown): Response {
+  const message = error instanceof Error && error.message ? error.message : "Dữ liệu không hợp lệ.";
+  return Response.json({ message, error: message }, { status: 422 });
+}

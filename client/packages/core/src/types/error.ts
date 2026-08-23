@@ -51,6 +51,41 @@ const KIND_MESSAGE: Record<AppErrorKind, string> = {
   unknown: "Đã xảy ra lỗi không xác định.",
 };
 
+/**
+ * Vài câu lỗi nghiệp vụ của nhân vẫn là tiếng Anh, vì nhân phục vụ nhiều tenant.
+ *
+ * Người dùng cuối thì không đọc tiếng Anh. Dịch ở đây — chỗ DUY NHẤT mọi màn đều đi qua —
+ * thay vì rải bảng dịch vào từng màn (đếm 23/08/2026: 70 chỗ gọi `mapError`, rải là chắc chắn
+ * trôi dạt). Giữ nguyên tên mã hàng, kho, số dòng: đó là phần người dùng cần để đi sửa.
+ *
+ * Chỉ chép những câu ĐÃ QUAN SÁT THẤY khi soát, không đoán trước. Không khớp thì giữ nguyên
+ * câu gốc — thà tiếng Anh còn hơn dịch sai một câu mình chưa từng thấy.
+ */
+const LOI_NHAN_TIENG_VIET: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
+  [/^Insufficient stock for (.+?) in (.+)$/,
+    (m) => `Không đủ tồn mã ${m[1]} tại kho ${m[2]}.`],
+  [/^items\[(\d+)\]\.qty is required$/,
+    (m) => `Dòng ${m[1]}: chưa có SL. Ô này là hệ số nhân, để trống nghĩa là cần 0.`],
+  [/^decimal is required$/,
+    () => "Có ô số bị bỏ trống. Hãy điền số cho mọi dòng trước khi ghi sổ."],
+  [/^(.+?) row (\d+) matches multiple (.+?) rows for item (.+?); (.+?) is required$/,
+    (m) => `Dòng ${m[2]}: đơn có nhiều dòng cùng mã ${m[4]}, chứng từ này chưa mang khoá dòng nguồn nên không biết trừ vào dòng nào. Lập lại chứng từ từ đơn.`],
+  [/^BOM revision (\d+) already exists for (.+)$/,
+    (m) => `Mã ${m[2]} đã có định mức bản ${m[1]} đang hiệu lực. Tăng số bản (revision) hoặc tắt bản cũ trước.`],
+  [/^BOM (.+?) creates a circular manufacturing dependency$/,
+    (m) => `Định mức ${m[1]} tự chứa chính nó qua một mắt xích thành phần. Bỏ thành phần vòng lặp rồi ghi sổ lại.`],
+];
+
+/** Dịch câu lỗi của nhân sang tiếng Việt; không khớp mẫu nào thì trả nguyên văn. */
+function tiengViet(message: string): string {
+  const cau = message.trim();
+  for (const [mau, dich] of LOI_NHAN_TIENG_VIET) {
+    const khop = cau.match(mau);
+    if (khop) return dich(khop);
+  }
+  return message;
+}
+
 interface FrappeErrorData {
   exc_type?: string;
   exception?: string; // "frappe.exceptions.ValidationError: msg" hoặc traceback
@@ -161,7 +196,7 @@ export function mapError(e: unknown): AppError {
     kind,
     httpStatus: http,
     excType,
-    message: useServer ? serverText! : KIND_MESSAGE[kind],
+    message: useServer ? tiengViet(serverText!) : KIND_MESSAGE[kind],
     fieldErrors,
     raw: e,
   };
