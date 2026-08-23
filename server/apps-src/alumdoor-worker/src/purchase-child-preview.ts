@@ -16,6 +16,7 @@ const PURCHASE_DERIVED_FIELDS = [
   "theoretical_kg_per_m", "theoretical_kg", "actual_kg_per_m", "actual_kg_per_sqm",
   "total_length_m", "amount",
 ];
+const HIDDEN_RUNTIME_PERSISTED_FIELDS = new Set(["qty"]);
 
 function answer(value: unknown, status = 200): Response {
   return new Response(JSON.stringify(value), { status, headers: { "content-type": "application/json" } });
@@ -111,7 +112,14 @@ export async function previewPurchaseChildRow(call: PlatformCall, args: Json): P
     const overrides: Record<string, Json> = {};
     if (changed === "item_code") {
       for (const name of PURCHASE_DERIVED_FIELDS) clearIfField(clear, fields, name);
-      for (const entry of runtime.fields) if (!entry.visible) clearIfField(clear, fields, entry.fieldname);
+    }
+    // Catalog đổi sau khi chứng từ đã có dữ liệu: field bị tắt phải chết cả GIÁ TRỊ, không chỉ
+    // biến mất khỏi bảng. `qty` là ngoại lệ có chủ đích: catch-weight dùng một qty ẩn do server
+    // sở hữu để tính tiền, nên hidden không đồng nghĩa với stale.
+    for (const entry of runtime.fields) {
+      if (!entry.visible && !HIDDEN_RUNTIME_PERSISTED_FIELDS.has(entry.fieldname)) {
+        clearIfField(clear, fields, entry.fieldname);
+      }
     }
     applyRuntimeOverrides(overrides, fields, runtime);
 
@@ -154,7 +162,7 @@ export async function previewPurchaseChildRow(call: PlatformCall, args: Json): P
           link_filters: JSON.stringify([["Item Color", "name", "in", allowedColors.length ? allowedColors : ["__NO_ALLOWED_COLOR_CONFIG__"]]]),
         });
       }
-    } else if (changed === "item_code") {
+    } else {
       clearIfField(clear, fields, "color");
       clearIfField(clear, fields, "colour");
     }
