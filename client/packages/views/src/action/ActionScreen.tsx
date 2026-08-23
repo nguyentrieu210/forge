@@ -15,7 +15,7 @@ import { useMemo, useState, type ClipboardEvent, type ReactNode } from "react";
 import type { AppAction, AppActionCall, AppActionField, DocField, Fieldtype } from "@metaforge/core";
 import { actionFieldLabel, actionRequestValues, doorSalesSummary, isActionFieldVisible } from "./door-width-label.js";
 import {
-  Button, Input, Label, Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Button, ConfirmDialog, Input, Label, Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@metaforge/ui";
 import { useMetaForge } from "../container/provider.js";
 
@@ -302,9 +302,10 @@ export function ActionScreen({ action, onOpen }: ActionScreenProps) {
     setError(undefined);
   };
 
-  async function run(call: AppActionCall, phase: "preview" | "commit") {
+  async function run(call: AppActionCall, phase: "preview" | "commit", daXacNhan = false) {
     if (missing.length) { setError(`Còn thiếu: ${missing.slice(0, 8).join(", ")}${missing.length > 8 ? ` và ${missing.length - 8} ô khác` : ""}.`); return; }
-    if (phase === "commit" && call.confirm && !window.confirm(call.confirm)) return;
+    // Lời hỏi do CHÍNH hành động khai (`call.confirm`); chỉ đổi cách hỏi, không đổi việc hỏi.
+    if (phase === "commit" && call.confirm && !daXacNhan) { setXacNhanChay(call); return; }
     setBusy(phase);
     setError(undefined);
     try {
@@ -328,6 +329,9 @@ export function ActionScreen({ action, onOpen }: ActionScreenProps) {
     const spec = parseBulkTransactionSpec(field);
     return spec ? [{ field, spec }] : [];
   });
+
+  /** Hộp thoại của app thay window.confirm — hộp native khoá cả tab và lạc phong cách màn. */
+  const [xacNhanChay, setXacNhanChay] = useState<AppActionCall | null>(null);
 
   return (
     <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-4" data-action-screen={action.name}>
@@ -429,6 +433,11 @@ export function ActionScreen({ action, onOpen }: ActionScreenProps) {
             onOpen={onOpen}
           />
         : null}
+      <ConfirmDialog open={xacNhanChay !== null} onOpenChange={(mo) => { if (!mo) setXacNhanChay(null); }}
+        title="Xác nhận thao tác"
+        description={xacNhanChay?.confirm ?? ""}
+        confirmLabel="Thực hiện"
+        onConfirm={() => { const goi = xacNhanChay; setXacNhanChay(null); if (goi) void run(goi, "commit", true); }} />
     </div>
   );
 }

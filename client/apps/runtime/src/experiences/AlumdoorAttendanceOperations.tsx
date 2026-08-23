@@ -5,7 +5,7 @@ import {
   Save, Send, TriangleAlert, UserPlus, WalletCards,
 } from "lucide-react";
 import { useMetaForge } from "@metaforge/views/provider";
-import { Button } from "@metaforge/ui";
+import { Button, ConfirmDialog } from "@metaforge/ui";
 import qrcode from "qrcode-generator";
 
 export type AlumdoorAttendanceMode = "kiosk" | "today" | "month" | "exceptions" | "employees-lite" | "payroll-run" | "payroll-my-slips" | "hr-settings";
@@ -196,6 +196,8 @@ function KioskScreen({ onExit }: { onExit: () => void }) {
   /** Sai số của lần bấm "Dùng vị trí hiện tại" gần nhất, để cảnh báo tại chỗ. */
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
   const [qr, setQr] = useState<StationQr | null>(null); const [failure, setFailure] = useState(""); const [loading, setLoading] = useState(false);
+  /** Tạo lại QR là thu hồi mọi bản in đang dán ở cổng — hỏi bằng hộp thoại của app, không dùng window.confirm (khoá cả tab, lạc phong cách). */
+  const [xacNhanTaoLaiQr, setXacNhanTaoLaiQr] = useState(false);
   const [createKey, setCreateKey] = useState(() => idempotency("station"));
   const loadQr = useCallback(async (code: string) => {
     if (!code) return;
@@ -249,7 +251,8 @@ function KioskScreen({ onExit }: { onExit: () => void }) {
     finally { setLoading(false); }
   };
   const rotate = async () => {
-    if (!qr || !window.confirm("QR cũ sẽ ngừng dùng ngay. Tạo lại QR trạm?")) return;
+    if (!qr) return;
+    setXacNhanTaoLaiQr(false);
     setLoading(true);
     try { setQr(await adapter.callPost<StationQr>("alumdoor.attendance.rotate_station_qr", { station: qr.station })); setFailure(""); }
     catch (error) { setFailure(errorText(adapter, error)); }
@@ -260,7 +263,16 @@ function KioskScreen({ onExit }: { onExit: () => void }) {
     {!station ? <section className="rounded-xl border bg-card p-4"><h2 className="font-medium">Thiết lập trạm chấm công</h2><p className="mt-1 text-sm text-muted-foreground">Cấu hình giờ làm phải được lưu trước. Vị trí và bán kính được server kiểm tra mỗi lần quét.</p><p className="mt-1 text-sm text-muted-foreground">Lấy toạ độ bằng <strong>điện thoại, đứng đúng chỗ sẽ dán QR</strong>. Máy tính bàn định vị theo IP/WiFi nên lệch hàng trăm mét.</p>{gpsAccuracy !== null && <p className={`mt-2 text-sm ${gpsAccuracy > Number(radius || 0) ? "text-destructive" : "text-muted-foreground"}`}>{gpsAccuracy > Number(radius || 0) ? `Vị trí vừa lấy có sai số ±${gpsAccuracy} m, LỚN HƠN bán kính ${radius} m — toạ độ này không dùng được. Hãy lấy lại bằng điện thoại tại chỗ.` : `Vị trí vừa lấy có sai số ±${gpsAccuracy} m.`}</p>}<div className="mt-4 grid gap-3 md:grid-cols-2"><input className={inputClass} value={stationName} onChange={(event) => setStationName(event.target.value)} placeholder="Tên trạm, ví dụ Cổng xưởng" /><div className="flex gap-2"><input className={`${inputClass} min-w-0 flex-1`} inputMode="decimal" value={latitude} onChange={(event) => setLatitude(event.target.value)} placeholder="Vĩ độ" /><input className={`${inputClass} min-w-0 flex-1`} inputMode="decimal" value={longitude} onChange={(event) => setLongitude(event.target.value)} placeholder="Kinh độ" /></div><div className="flex gap-2"><input className={`${inputClass} min-w-0 flex-1`} type="number" min="10" max="500" value={radius} onChange={(event) => setRadius(event.target.value)} placeholder="Bán kính (m)" /><input className={`${inputClass} min-w-0 flex-1`} type="number" min="10" max="500" value={maxAccuracy} onChange={(event) => setMaxAccuracy(event.target.value)} placeholder="Sai số GPS tối đa (m)" /></div><div className="flex flex-wrap gap-2"><Button variant="outline" onClick={locate}><MapPin className="mr-2 size-4" />Dùng vị trí hiện tại</Button><Button onClick={() => void create()} disabled={loading || stationName.trim().length < 2 || !latitude || !longitude}><Save className="mr-2 size-4" />Tạo trạm</Button></div></div></section>}
     {!station && stations.length > 0 && <section className="rounded-xl border bg-card p-4"><h2 className="font-medium">Trạm đã tạo</h2><p className="mt-1 text-sm text-muted-foreground">Mở lại để in thêm QR, hoặc tạo lại QR để thu hồi bản in cũ.</p><ul className="mt-3 divide-y">{stations.map((row) => <li key={row.name} className="flex flex-wrap items-center justify-between gap-2 py-2"><div><div className="text-sm font-medium">{row.station_name || row.name}</div><div className="text-xs text-muted-foreground">{row.name} · QR phiên bản {row.secret_version ?? 1}{row.is_active ? "" : " · đã tắt"}</div></div><Button size="sm" variant="outline" onClick={() => { localStorage.setItem("alumdoor-attendance-print-station", row.name); setStation(row.name); }}>Mở QR</Button></li>)}</ul></section>
       : loading && !qr ? <Empty><Loader2 className="mx-auto mb-2 size-5 animate-spin" />Đang lấy QR trạm…</Empty>
-        : qr && <section className="mx-auto flex w-full max-w-xl flex-col items-center gap-4 rounded-xl border bg-white p-6 text-center text-slate-950 print:border-0 print:shadow-none"><div><h2 className="text-xl font-semibold">{qr.station_name}</h2><p className="mt-1 text-sm text-slate-600">Mã trạm: {qr.station}</p></div><StaticQr value={qr.token} label={`QR trạm ${qr.station_name}`} /><p className="text-sm text-slate-600">Phiên bản token: {qr.token_version}</p><div className="flex flex-wrap justify-center gap-2 print:hidden"><Button onClick={() => window.print()}><Printer className="mr-2 size-4" />In QR</Button><Button variant="outline" onClick={() => void rotate()} disabled={loading}>Tạo lại QR</Button><Button variant="ghost" onClick={() => { localStorage.removeItem("alumdoor-attendance-print-station"); setStation(""); setQr(null); void loadStations(); }}>Đổi trạm</Button></div></section>}
+        : qr && <section className="mx-auto flex w-full max-w-xl flex-col items-center gap-4 rounded-xl border bg-white p-6 text-center text-slate-950 print:border-0 print:shadow-none"><div><h2 className="text-xl font-semibold">{qr.station_name}</h2><p className="mt-1 text-sm text-slate-600">Mã trạm: {qr.station}</p></div><StaticQr value={qr.token} label={`QR trạm ${qr.station_name}`} /><p className="text-sm text-slate-600">Phiên bản token: {qr.token_version}</p><div className="flex flex-wrap justify-center gap-2 print:hidden"><Button onClick={() => window.print()}><Printer className="mr-2 size-4" />In QR</Button><Button variant="outline" onClick={() => setXacNhanTaoLaiQr(true)} disabled={loading}>Tạo lại QR</Button><Button variant="ghost" onClick={() => { localStorage.removeItem("alumdoor-attendance-print-station"); setStation(""); setQr(null); void loadStations(); }}>Đổi trạm</Button></div></section>}
+    <ConfirmDialog
+      open={xacNhanTaoLaiQr}
+      onOpenChange={setXacNhanTaoLaiQr}
+      title="Tạo lại QR trạm?"
+      description="Mọi bản in đang dán ở cổng sẽ ngừng quét được ngay. Phải in lại và dán đè trước khi ca sau vào làm."
+      confirmLabel="Tạo lại QR"
+      destructive
+      onConfirm={() => void rotate()}
+    />
   </Shell>;
 }
 

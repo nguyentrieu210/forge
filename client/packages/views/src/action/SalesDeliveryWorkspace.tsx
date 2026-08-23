@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AppActionField, DocField, Fieldtype } from "@metaforge/core";
-import { Button, Input, Label } from "@metaforge/ui";
+import { Button, ConfirmDialog, Input, Label } from "@metaforge/ui";
 import { useMetaForge } from "../container/provider.js";
 import type { ActionScreenProps } from "./ActionScreen.js";
 import { InventoryAllocationPreview, SourceDocumentSelector, SourceLineAllocator, type InventoryAllocationRow } from "./source-allocation.js";
@@ -97,7 +97,7 @@ export function SalesDeliveryWorkspace({ action, onOpen }: ActionScreenProps) {
 
   const create = async () => {
     if (!selected.size) { setError("Chọn ít nhất một Đơn bán còn hàng."); return; }
-    if (!window.confirm(`Tạo một Phiếu giao nháp từ ${selected.size} Đơn bán đã chọn?`)) return;
+    setXacNhanTao(false);
     setBusy("create"); setError(undefined);
     const requestId = ++requestSequence.current;
     try {
@@ -106,6 +106,9 @@ export function SalesDeliveryWorkspace({ action, onOpen }: ActionScreenProps) {
     } catch (caught) { if (requestId === requestSequence.current) setError(adapter.mapError(caught).message); }
     finally { if (requestId === requestSequence.current) setBusy(undefined); }
   };
+
+  /** Hộp thoại của app thay window.confirm — hộp native khoá cả tab và lạc phong cách màn. */
+  const [xacNhanTao, setXacNhanTao] = useState(false);
 
   return <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-3" data-action-screen={action.name} data-multi-sales-delivery>
     <header className="rounded-xl border bg-card px-4 py-4 sm:px-5"><p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">Kho giao hàng</p><h1 className="mt-0.5 text-xl font-semibold">Một phiếu giao · nhiều Đơn bán</h1><p className="mt-1 text-sm text-muted-foreground">Chọn đơn còn phải giao, soát dòng nguồn và lớp FIFO. Giá bán theo đơn; giá vốn theo sổ kho.</p><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{fields.map((field) => <FieldEditor key={field.fieldname} field={field} values={values} onChange={change} />)}</div></header>
@@ -122,8 +125,12 @@ export function SalesDeliveryWorkspace({ action, onOpen }: ActionScreenProps) {
         { key: "rate", label: "Giá bán theo SO", align: "right", render: (row) => fmt.currency ? fmt.currency(number(row.rate)) : fmt.number(number(row.rate)) },
       ]} />
       <InventoryAllocationPreview rows={inventoryRows(preview)} />
-      <div className="sticky bottom-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card/95 px-4 py-3 shadow-lg backdrop-blur"><div className="text-sm"><b>{selected.size}</b> đơn · <b>{lines.length}</b> dòng{busy === "preview" ? <span className="ml-2 text-muted-foreground">Đang tính lại…</span> : null}</div><Button type="button" disabled={!selected.size || Boolean(busy)} onClick={create}>{busy === "create" ? "Đang tạo…" : "Tạo một Phiếu giao nháp"}</Button></div>
+      <div className="sticky bottom-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card/95 px-4 py-3 shadow-lg backdrop-blur"><div className="text-sm"><b>{selected.size}</b> đơn · <b>{lines.length}</b> dòng{busy === "preview" ? <span className="ml-2 text-muted-foreground">Đang tính lại…</span> : null}</div><Button type="button" disabled={!selected.size || Boolean(busy)} onClick={() => setXacNhanTao(true)}>{busy === "create" ? "Đang tạo…" : "Tạo một Phiếu giao nháp"}</Button></div>
     </>}
     {result ? <section className="rounded-xl border bg-card px-4 py-4"><div className="flex flex-wrap items-center gap-3"><div><h2 className="font-semibold">Đã tạo {text(result.name)}</h2><p className="text-sm text-muted-foreground">Phiếu vẫn là nháp; mở phiếu để kiểm tra rồi submit qua bản xem trước FIFO lần cuối.</p></div>{text(result.name) && onOpen ? <Button className="ml-auto" onClick={() => onOpen("Delivery Note", text(result.name))}>Mở Phiếu giao</Button> : null}</div></section> : null}
+    <ConfirmDialog open={xacNhanTao} onOpenChange={setXacNhanTao}
+      title={`Tạo một Phiếu giao nháp từ ${selected.size} Đơn bán?`}
+      description="Phiếu tạo ra vẫn là nháp — chưa trừ kho. Mở phiếu để soát lớp FIFO rồi mới ghi sổ."
+      confirmLabel="Tạo phiếu giao" onConfirm={() => void create()} />
   </div>;
 }

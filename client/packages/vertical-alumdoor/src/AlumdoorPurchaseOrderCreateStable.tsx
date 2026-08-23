@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Eye, Loader2, PackagePlus, RefreshCw, Save, Send } from "lucide-react";
 import { applyContextPolicy, formatMoney, mapError, serializeCreateDocument, type Doc, type DocField, type DocTypeMeta } from "@metaforge/core";
 import type { FieldServices } from "@metaforge/controls";
-import { Button, toast } from "@metaforge/ui";
+import { Button, ConfirmDialog, toast } from "@metaforge/ui";
 import { useMetaForge } from "@metaforge/views/provider";
 import { salesItemSearchTerms } from "./sales-item-search.js";
 import {
@@ -248,6 +248,8 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
     }
   };
   const [dirty, setDirty] = useState(false);
+  /** Hộp thoại của app thay window.confirm: hộp native khoá cả tab và lạc phong cách màn. */
+  const [xacNhanBoThayDoi, setXacNhanBoThayDoi] = useState(false);
   const [previewPending, setPreviewPending] = useState(0);
   const [previewError, setPreviewErrorState] = useState("");
   const previewErrorRef = useRef("");
@@ -417,7 +419,7 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
   }, [loadItem, loadLastPurchaseRate, loadStandardLengthM]);
 
   const requestClose = useCallback(() => {
-    if (dirty && typeof window !== "undefined" && !window.confirm("Đơn mua có thay đổi chưa lưu. Bỏ các thay đổi này?")) return;
+    if (dirty) { setXacNhanBoThayDoi(true); return; }
     props.onCancel();
   }, [dirty, props]);
 
@@ -1029,7 +1031,7 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
     && !rows.some((row) => row._loading || text(row._error));
   const saveDisabled = interactionBusy || !canSave || !activeRows.length || rows.some((row) => row._loading || text(row._error));
 
-  return (
+  return (<>
     <div className="flex h-full min-h-0 flex-col bg-background" data-surface="alumdoor-purchase-order-stable">
       <div className="min-h-0 flex-1 overflow-auto">
         <div className="w-full space-y-3 px-3 py-3">
@@ -1127,5 +1129,9 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
         </div>
       </div>
     </div>
-  );
+    <ConfirmDialog open={xacNhanBoThayDoi} onOpenChange={setXacNhanBoThayDoi}
+      title="Bỏ thay đổi trên đơn mua?"
+      description="Dòng hàng, số lượng và đơn giá vừa nhập sẽ mất."
+      confirmLabel="Bỏ thay đổi" destructive onConfirm={() => props.onCancel()} />
+  </>);
 }

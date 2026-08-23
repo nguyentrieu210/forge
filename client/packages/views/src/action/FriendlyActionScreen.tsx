@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { AppActionField, DocField, Fieldtype } from "@metaforge/core";
-import { Button, Input, Label } from "@metaforge/ui";
+import { Button, ConfirmDialog, Input, Label } from "@metaforge/ui";
 import { useMetaForge } from "../container/provider.js";
 import { ActionScreen as BaseActionScreen, type ActionScreenProps } from "./ActionScreen.js";
 import { SalesDeliveryWorkspace } from "./SalesDeliveryWorkspace.js";
@@ -648,6 +648,8 @@ function SupplierDeliveryWorkspace({ action, onOpen }: ActionScreenProps) {
   const [result, setResult] = useState<unknown>();
   const [receiptError, setReceiptError] = useState<string>();
   const [receiptBusy, setReceiptBusy] = useState<"check" | "create">();
+  /** Hộp thoại của app thay window.confirm — hộp native khoá cả tab và lạc phong cách màn. */
+  const [xacNhanTaoPhieu, setXacNhanTaoPhieu] = useState(false);
 
   const supplier = text(values.supplier);
 
@@ -721,7 +723,7 @@ function SupplierDeliveryWorkspace({ action, onOpen }: ActionScreenProps) {
       setReceiptError(`Còn thiếu: ${requiredErrors.slice(0, 6).join(", ")}${requiredErrors.length > 6 ? ` và ${requiredErrors.length - 6} ô khác` : ""}.`);
       return;
     }
-    if (phase === "create" && !window.confirm(`Tạo một phiếu nhập nháp cho ${rows.length} dòng hàng của chuyến này?`)) return;
+    if (phase === "create") setXacNhanTaoPhieu(false);
     setReceiptBusy(phase);
     setReceiptError(undefined);
     try {
@@ -753,7 +755,7 @@ function SupplierDeliveryWorkspace({ action, onOpen }: ActionScreenProps) {
     { key: "commercial", label: "Giá & hóa đơn", hint: "Biến động giá · billing" },
   ];
 
-  return (
+  return (<>
     <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-3" data-action-screen={action.name} data-supplier-delivery-workspace>
       <header className="rounded-xl border bg-card px-4 py-4 sm:px-5">
         <div className="flex flex-wrap items-end justify-between gap-4">
@@ -836,7 +838,7 @@ function SupplierDeliveryWorkspace({ action, onOpen }: ActionScreenProps) {
           <div className="sticky bottom-2 z-10 flex flex-wrap items-center justify-end gap-2 rounded-xl border bg-card/95 p-3 shadow-lg backdrop-blur">
             {requiredErrors.length ? <span className="mr-auto text-xs text-muted-foreground">Còn thiếu {requiredErrors.length} ô bắt buộc</span> : <span className="mr-auto text-xs text-muted-foreground">Kiểm tra trước chỉ mô phỏng, chưa tăng tồn kho.</span>}
             <Button variant="outline" disabled={Boolean(receiptBusy)} onClick={() => runReceipt("check")}>{receiptBusy === "check" ? "Đang kiểm tra…" : "Kiểm tra cả chuyến"}</Button>
-            {preview != null ? <Button disabled={Boolean(receiptBusy)} onClick={() => runReceipt("create")}>{receiptBusy === "create" ? "Đang tạo…" : "Tạo 1 phiếu nhập"}</Button> : null}
+            {preview != null ? <Button disabled={Boolean(receiptBusy)} onClick={() => setXacNhanTaoPhieu(true)}>{receiptBusy === "create" ? "Đang tạo…" : "Tạo 1 phiếu nhập"}</Button> : null}
           </div>
         </div>
       ) : null}
@@ -844,7 +846,11 @@ function SupplierDeliveryWorkspace({ action, onOpen }: ActionScreenProps) {
       {tab === "history" ? <HistoryTab dashboard={dashboard} loading={dashboardBusy} error={dashboardError} onOpen={onOpen} /> : null}
       {tab === "commercial" ? <CommercialTab dashboard={dashboard} loading={dashboardBusy} error={dashboardError} onOpen={onOpen} /> : null}
     </div>
-  );
+      <ConfirmDialog open={xacNhanTaoPhieu} onOpenChange={setXacNhanTaoPhieu}
+        title={`Tạo một phiếu nhập nháp cho ${rows.length} dòng hàng của chuyến này?`}
+        description="Phiếu tạo ra vẫn là nháp — chưa vào kho. Mở phiếu để soát số cân thực tế rồi mới ghi sổ."
+        confirmLabel="Tạo phiếu nhập" onConfirm={() => void runReceipt("create")} />
+  </>);
 }
 
 export function ActionScreen(props: ActionScreenProps) {

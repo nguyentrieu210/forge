@@ -28,7 +28,7 @@ import {
   type DocTypeMeta,
 } from "@metaforge/core";
 import type { FieldServices } from "@metaforge/controls";
-import { Badge, Button, Table, Tabs, TabsContent, TabsList, TabsTrigger, toast } from "@metaforge/ui";
+import { Badge, Button, ConfirmDialog, Table, Tabs, TabsContent, TabsList, TabsTrigger, toast } from "@metaforge/ui";
 import { useMetaForge } from "@metaforge/views/provider";
 import { salesItemSearchTerms } from "../sales-item-search.js";
 import { AlumdoorSalesOrderField, fallbackField } from "../sales-order-v2/AlumdoorSalesOrderField.js";
@@ -169,6 +169,8 @@ export function AlumdoorPurchaseReceiptCreate(props: AlumdoorPurchaseReceiptCrea
   const [canWrite, setCanWrite] = useState(false);
   const [submitAllowed, setSubmitAllowed] = useState(false);
   const [dirty, setDirty] = useState(false);
+  /** Hộp thoại của app thay window.confirm: hộp native khoá cả tab và lạc phong cách màn. */
+  const [xacNhanBoThayDoi, setXacNhanBoThayDoi] = useState(false);
 
   /**
    * Phân bổ cước vận chuyển / thuế nhập khẩu vào các dòng của phiếu ĐÃ GHI SỔ.
@@ -431,7 +433,7 @@ export function AlumdoorPurchaseReceiptCreate(props: AlumdoorPurchaseReceiptCrea
   }, [adapter, businessContext, contextPolicies, hydrateLine, props.name, setHeaderState, setPreviewError]);
 
   const requestClose = useCallback(() => {
-    if (dirty && typeof window !== "undefined" && !window.confirm("Phiếu nhập có thay đổi chưa lưu. Bỏ các thay đổi này?")) return;
+    if (dirty) { setXacNhanBoThayDoi(true); return; }
     props.onCancel();
   }, [dirty, props]);
 
@@ -1067,7 +1069,7 @@ export function AlumdoorPurchaseReceiptCreate(props: AlumdoorPurchaseReceiptCrea
     || rows.some((row) => row._loading || text(row._error));
   const stampedOptions = selectOptions(childMeta, "is_stamped", ["Có", "Không"]).join("\n");
 
-  return (
+  return (<>
     <div className="flex h-full min-h-0 flex-col bg-background" data-surface="alumdoor-purchase-receipt-fifo">
       <div className="min-h-0 flex-1 overflow-auto">
         <div className="w-full space-y-3 px-3 py-3">
@@ -1417,5 +1419,9 @@ export function AlumdoorPurchaseReceiptCreate(props: AlumdoorPurchaseReceiptCrea
         </div>
       </div>
     </div>
-  );
+    <ConfirmDialog open={xacNhanBoThayDoi} onOpenChange={setXacNhanBoThayDoi}
+      title="Bỏ thay đổi trên phiếu nhập?"
+      description="Số cân, số cây và chiều dài vừa nhập sẽ mất. Phiếu nhập chưa lưu thì không có gì vào kho."
+      confirmLabel="Bỏ thay đổi" destructive onConfirm={() => props.onCancel()} />
+  </>);
 }
