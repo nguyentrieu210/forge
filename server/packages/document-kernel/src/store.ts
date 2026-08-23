@@ -49,16 +49,6 @@ export interface PaymentLedgerReader {
   getBaseOutstandingMinor(tenantId: string, voucherType: string, voucherNo: string): Promise<number>;
   /** Các dòng sổ cái gốc của đúng một lần ghi chứng từ; dùng để huỷ bằng đối dấu nguyên trạng. */
   getVoucherGlEntries(tenantId: string, voucherType: string, voucherNo: string, voucherRevision: number): Promise<GeneralLedgerEntry[]>;
-  /**
-   * Chứng từ của một đối tác còn dư nợ, CŨ TRƯỚC — để một khoản thu tự bù trừ theo thứ tự
-   * phát sinh thay vì nằm lại thành tiền trả trước không gán ai.
-   */
-  listOpenPartyVouchers(
-    tenantId: string,
-    voucherType: string,
-    partyType: string,
-    party: string,
-  ): Promise<Array<{ voucher_no: string; outstanding_minor: number }>>;
 }
 
 export interface StockLedgerReader {

@@ -170,33 +170,6 @@ export class InMemoryMutationStore implements MutationStore {
       .reduce((total, line) => total + line.base_amount_minor, 0);
   }
 
-  /** Xem `PaymentLedgerReader.listOpenPartyVouchers`. Thứ tự = ngày phát sinh khoản phải thu. */
-  async listOpenPartyVouchers(
-    tenantId: string,
-    voucherType: string,
-    partyType: string,
-    party: string,
-  ): Promise<Array<{ voucher_no: string; outstanding_minor: number }>> {
-    const gom = new Map<string, { outstanding_minor: number; first_posting_at: string }>();
-    for (const line of this.paymentEntries) {
-      if (line.against_voucher_type !== voucherType) continue;
-      if (line.party_type !== partyType || line.party !== party) continue;
-      const key = String(line.against_voucher_no);
-      const truoc = gom.get(key);
-      const at = String(line.posting_at ?? "");
-      if (truoc) {
-        truoc.outstanding_minor += line.amount_minor;
-        if (at && at < truoc.first_posting_at) truoc.first_posting_at = at;
-      } else {
-        gom.set(key, { outstanding_minor: line.amount_minor, first_posting_at: at });
-      }
-    }
-    return [...gom.entries()]
-      .filter(([, value]) => value.outstanding_minor > 0)
-      .sort((left, right) => left[1].first_posting_at.localeCompare(right[1].first_posting_at) || left[0].localeCompare(right[0]))
-      .map(([voucher_no, value]) => ({ voucher_no, outstanding_minor: value.outstanding_minor }));
-  }
-
   async getStockBalanceMicros(tenantId: string, itemCode: string, warehouse: string): Promise<number> {
     return this.stockEntries
       .filter((line) => line.item_code === itemCode && line.warehouse === warehouse)
