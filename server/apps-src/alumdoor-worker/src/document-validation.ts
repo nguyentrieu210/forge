@@ -39,6 +39,7 @@ import {
   type DoorFormulaPurpose,
   type SalesMode,
 } from "./door-formulas.js";
+import { resolveSalesMode } from "./sales-production-core.js";
 import { salesItemContext } from "./sales-item-context.js";
 import {
   allowedColorNamesForGroup,
@@ -105,6 +106,7 @@ import { accept, answer, refuse } from "./responses.js";
 
 export interface InventoryItem {
   item_code?: string;
+  item_name?: string;
   item_group?: string;
   door_type?: string;
   purchase_kg_per_m2?: number;
@@ -732,10 +734,7 @@ function calculateDoorBillableArea(
   if (customerGroup !== "Đại lý" && customerGroup !== "Lẻ") {
     return refuse(`${line}: khách hàng chưa có Nhóm giá Đại lý/Lẻ; không thể chọn đúng công thức đo và cắt.`);
   }
-  const rawSalesMode = String(row.sales_mode ?? "Trọn bộ").trim();
-  if (rawSalesMode !== "Tách món" && rawSalesMode !== "Trọn bộ") {
-    return refuse(`${line}: Cách bán phải là Tách món hoặc Trọn bộ.`);
-  }
+  const rawSalesMode = resolveSalesMode(row.sales_mode, item.item_code, item.item_name);
   try {
     // `ray_type` của DÒNG BÁN tham gia chọn chính sách: U75 và U100 có hai bộ hằng số trừ
     // khác nhau (cutting-policy.md §2.1). Trước đây trường này có trên dòng nhưng không ai

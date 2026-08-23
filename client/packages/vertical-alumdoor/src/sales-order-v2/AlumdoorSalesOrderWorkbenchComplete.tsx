@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, Eye, Factory, Loader2, Lock, RefreshCw, Save, Send, Truck, Undo2, UserPlus } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Eye, Factory, Loader2, Lock, Printer, RefreshCw, Save, Send, Truck, Undo2, UserPlus } from "lucide-react";
 import {
   applyContextPolicy,
   mapError,
@@ -1003,6 +1003,9 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
           ...(scope?.color_labels && typeof scope.color_labels === "object" ? scope.color_labels : {}),
         },
         _overrides: overrides,
+        /* Cờ xổ định mức của loại cửa — đọc từ `geometry_runtime` để `mayHaveBom` biết TRƯỚC
+           khi đi hỏi định mức, thay vì hỏi xong mới nhận `bom_applicable: false`. */
+        _showBomOnSales: (uiPreview.geometry_runtime as { show_bom_on_sales?: boolean } | undefined)?.show_bom_on_sales !== false,
         _loading: false,
         _error: "",
         _pricingError: "",
@@ -1097,8 +1100,14 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
           });
           if (abortIfStale()) return;
           const components = Array.isArray(bom.components) ? bom.components : [];
-          next._bomPreview = { ...bom, components };
-          next._bomComponentNames = components.length ? await loadBomComponentNames(components) : {};
+          /*
+           * `bom_applicable: false` = loại cửa này KHÔNG xổ định mức (cờ `show_bom_on_sales` trên
+           * Geometry Profile, hiện đang tắt cho Cửa Đức). Server đã quyết, client chỉ việc không
+           * dựng khối — không tự dò tên loại cửa, không tự đoán theo "có luật hay chưa".
+           */
+          const xoDinhMuc = bom.bom_applicable !== false;
+          next._bomPreview = xoDinhMuc ? { ...bom, components } : undefined;
+          next._bomComponentNames = xoDinhMuc && components.length ? await loadBomComponentNames(components) : {};
           if (abortIfStale()) return;
           next._bomError = "";
         } catch (error) {
@@ -1712,12 +1721,42 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
   return <>
     <div className="flex h-full min-h-0 flex-col bg-background" data-surface="alumdoor-sales-order-v2-complete">
       <div className="min-h-0 flex-1 overflow-auto">
-        <div className="w-full space-y-3 px-3 py-3">
-          {formReadOnly ? <div className="rounded-md border bg-muted/40 px-3 py-2 text-xs">Đơn đã ghi sổ/khóa hoặc tài khoản không có quyền sửa. Giá, BOM và số tiền chỉ hiển thị theo dữ liệu server.</div> : null}
+        <div className="w-full space-y-3 px-3 py-3" data-print-root>
+          {/*
+            * Phần đầu bản in — CHỈ hiện khi in (CSS `sales-v2-print-head`).
+            *
+            * Chép đúng đầu mẫu A4 cũ: logo, tiêu đề, khối thông tin khách hai cột. Phần bảng
+            * bên dưới thì KHÔNG dựng lại — nó chính là lưới của màn nhập, nên bản in luôn khớp
+            * với thứ người bán vừa nhìn, không phải bảng thứ hai chép tay rồi trôi dạt.
+            */}
+          <div data-section="sales-v2-print-head">
+            <div className="flex items-start justify-between gap-6">
+              <img src="/alumdoor-order-logo.png" alt="ALUMDOOR" style={{ width: "78mm", height: "auto" }} />
+              <img src="/alumdoor-company-header.png" alt="Thông tin công ty ALUMDOOR" style={{ width: "104mm", height: "auto" }} />
+            </div>
+            <div className="mt-3 text-center text-[18px] font-bold uppercase tracking-wide text-[#f15a24]">Đơn bán hàng</div>
+            <div className="mt-3 grid grid-cols-2 gap-x-8 gap-y-1 text-[11px]">
+              <div className="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1">
+                <span className="font-bold">Khách hàng:</span><span>{text(header.customer)}</span>
+                {text(header.contact_person) ? <><span className="font-bold">Người liên hệ:</span><span>{text(header.contact_person)}</span></> : null}
+                {text(header.phone) ? <><span className="font-bold">SĐT:</span><span>{text(header.phone)}</span></> : null}
+                <span className="font-bold">Địa chỉ:</span><span>{text(header.install_address)}</span>
+                {text(header.shipping_note) ? <><span className="font-bold">Ghi chú vận chuyển:</span><span>{text(header.shipping_note)}</span></> : null}
+              </div>
+              <div className="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1">
+                <span className="font-bold">Số đơn:</span><span>{text(header.name) || "(chưa lưu)"}</span>
+                <span className="font-bold">Ngày đặt hàng:</span><span>{text(header.transaction_date)}</span>
+                <span className="font-bold">Ngày giao hàng:</span><span>{text(header.delivery_date)}</span>
+                {text(header.payment_method) ? <><span className="font-bold">Thanh toán:</span><span>{text(header.payment_method)}</span></> : null}
+                <span className="font-bold">% VAT:</span><span>{quantity(header.vat_rate ?? 0)} %</span>
+              </div>
+            </div>
+          </div>
+          {formReadOnly ? <div className="rounded-md border bg-muted/40 px-3 py-2 text-xs print:hidden">Đơn đã ghi sổ/khóa hoặc tài khoản không có quyền sửa. Giá, BOM và số tiền chỉ hiển thị theo dữ liệu server.</div> : null}
           {headerError ? <div className="flex items-start justify-between gap-3 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive"><span className="flex items-start gap-2"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" />{headerError}</span><Button type="button" variant="outline" size="sm" className="h-7" disabled={busy} onClick={() => void refreshDocumentPreview("manual_retry")}>Thử lại</Button></div> : null}
 
           <fieldset disabled={formReadOnly || busy} className="contents">
-            <section className="rounded-lg border bg-card p-2.5" data-section="sales-v2-header-complete">
+            <section className="rounded-lg border bg-card p-2.5 print:hidden" data-section="sales-v2-header-complete">
               <div className="space-y-2">
                 <div className="grid gap-x-2 gap-y-2 md:grid-cols-2 xl:grid-cols-[minmax(280px,1.35fr)_minmax(165px,0.75fr)_minmax(210px,0.95fr)_minmax(175px,0.8fr)_minmax(175px,0.8fr)]">
                   {headerControl("customer", "Khách hàng", "Link", "Customer", false, true)}
@@ -1797,7 +1836,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
             <section className="rounded-lg border bg-card" data-section="sales-v2-summary-complete" aria-label="Tóm tắt đơn">
               <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-4 xl:grid-cols-9">
                 <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Dòng hàng</div><div className="mt-0.5 font-semibold tabular-nums">{activeLines.length}</div></div>
-                <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Diện tích cửa</div><div className="mt-0.5 font-semibold tabular-nums">{quantity(totalArea)} m²</div></div>
+                <div className="bg-card px-3 py-2 print:hidden"><div className="text-[10px] text-muted-foreground">Diện tích cửa</div><div className="mt-0.5 font-semibold tabular-nums">{quantity(totalArea)} m²</div></div>
                 <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Tiền hàng</div><div className="mt-0.5 font-semibold tabular-nums">{money(header.total_amount)} ₫</div></div>
                 <div className="bg-card px-3 py-2" title={discountBreakdown}><div className="text-[10px] text-muted-foreground">Chiết khấu</div><div className="mt-0.5 font-semibold tabular-nums text-destructive">−{money(discountTotal)} ₫</div></div>
                 <div className="bg-card px-3 py-2" title={surchargeTotal ? "Chỉ gồm các khoản làm TĂNG tiền phải trả" : "Đơn này không có khoản phụ thu nào"}><div className="text-[10px] text-muted-foreground">Phụ thu</div><div className="mt-0.5 font-semibold tabular-nums">+{money(surchargeTotal)} ₫</div></div>
@@ -1835,7 +1874,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
                 <div className="bg-card px-3 py-2"><div className="text-[10px] font-semibold text-muted-foreground">Còn phải thu</div><div className="mt-0.5 text-lg font-bold tabular-nums text-primary">{money(outstandingAmount)} ₫</div></div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 border-t px-3 py-2 text-[11px]">
+              <div className="flex flex-wrap items-center gap-2 border-t px-3 py-2 text-[11px] print:hidden">
                 {recalculating ? <span className="inline-flex items-center gap-1.5"><Loader2 className="size-3.5 animate-spin" /> Đang tính lại</span> : unresolvedLines || bomBlocked ? <span className="inline-flex items-center gap-1.5"><AlertTriangle className="size-3.5" />{unresolvedLines ? `${unresolvedLines} dòng chưa tính xong` : ""}{unresolvedLines && bomBlocked ? " · " : ""}{bomBlocked ? `${bomBlocked} dòng BOM còn thiếu vật tư thực tế` : ""}</span> : <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="size-3.5" /> Dữ liệu preview đã sẵn sàng</span>}
                 {catalogGapLines ? <Badge variant="outline" className="border-destructive/40 text-destructive">{catalogGapLines} dòng thiếu khai báo danh mục — mở dòng để xem sửa ở đâu</Badge> : null}
                 {giftRailViolations.length ? <Badge variant="outline" className="border-destructive/40 text-destructive" title={giftRailViolations.join(" · ")}>{giftRailViolations.length} dòng tặng ray dưới ngưỡng — không lưu được cho tới khi bỏ tick</Badge> : null}
@@ -1844,13 +1883,13 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
                 <span className="ml-auto text-muted-foreground">Bảng giá: <strong className="font-medium text-foreground">{text(header.selling_price_list) || "Chưa chọn"}</strong></span>
               </div>
 
-              {rules.length ? <details className="border-t px-3 py-2 text-[11px]"><summary className="cursor-pointer select-none font-medium">Chính sách giá đang áp · {rules.length} quy tắc</summary><div className="mt-2 flex flex-wrap gap-1.5">{rules.map((rule, index) => <Badge key={`${text(rule.rule_name)}-${index}`} variant="outline">{text(rule.rule_name)}</Badge>)}</div></details> : null}
+              {rules.length ? <details className="border-t px-3 py-2 text-[11px] print:hidden"><summary className="cursor-pointer select-none font-medium">Chính sách giá đang áp · {rules.length} quy tắc</summary><div className="mt-2 flex flex-wrap gap-1.5">{rules.map((rule, index) => <Badge key={`${text(rule.rule_name)}-${index}`} variant="outline">{text(rule.rule_name)}</Badge>)}</div></details> : null}
             </section>
           </fieldset>
         </div>
       </div>
 
-      <div className="shrink-0 border-t bg-card px-3 py-1.5 shadow-[0_-4px_14px_rgba(0,0,0,0.035)]">
+      <div className="shrink-0 border-t bg-card px-3 py-1.5 shadow-[0_-4px_14px_rgba(0,0,0,0.035)] print:hidden">
         <div className="flex w-full flex-wrap items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2"><span className="text-muted-foreground">{recalculating ? "Đang tính lại" : dirty ? "Có thay đổi chưa lưu" : docstatus === 1 ? "Đã ghi sổ" : "Nháp đã đồng bộ"}</span><strong className="tabular-nums">Còn phải thu: {money(outstandingAmount)} ₫</strong></div>
           <div className="flex flex-wrap items-center gap-1.5">
@@ -1861,6 +1900,11 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
             {isExisting ? <Button type="button" variant="outline" size="sm" onClick={() => props.onPreviewCreated(documentName)}><Eye className="size-3.5" /> In / xem</Button> : null}
             <Button type="button" variant="ghost" size="sm" onClick={requestClose}>{isExisting ? "Đóng" : "Hủy"}</Button>
             <Button type="button" variant="outline" size="sm" disabled={busy || formReadOnly} onClick={() => { const active = linesRef.current.filter((line) => text(line.item_code)); void Promise.all(active.map((line) => previewLine(line, "manual_refresh", {}, false))).finally(() => void refreshDocumentPreview("manual_refresh")); }}><RefreshCw className="size-3.5" /> Tính lại</Button>
+            {/* In thẳng MÀN NÀY: phần đầu bản in (logo + thông tin khách) chỉ hiện khi in, phần
+                bảng chính là lưới đang nhìn — nên bản in không bao giờ lệch với màn. */}
+            <Button type="button" variant="outline" size="sm" onClick={() => window.print()} title="In đơn — bản in lấy đúng bảng đang hiện trên màn">
+              <Printer className="size-3.5" /> In đơn
+            </Button>
             {docstatus === 0 ? <Button type="button" variant="outline" size="sm" disabled={persistenceBlocked || !canSave} onClick={() => void saveDraft(false)}>{saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />} Lưu nháp</Button> : null}
             {docstatus === 0 && canSubmit ? <Button type="button" size="sm" disabled={persistenceBlocked || approvalNeeded} title={approvalNeeded ? "Còn dòng giá/chiết khấu khác chính sách — cần duyệt trước khi ghi sổ. Lưu nháp vẫn được." : undefined} onClick={() => void submitOrder()}>{submitting ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />} Ghi sổ đơn</Button> : null}
             {docstatus === 0 && isExisting ? <Button type="button" variant="outline" size="sm" disabled={persistenceBlocked || !canSave} onClick={() => void saveDraft(true)}><Eye className="size-3.5" /> Lưu & xem</Button> : null}

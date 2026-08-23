@@ -192,8 +192,15 @@ export function AlumdoorWorkOrderComponentTable(props: AlumdoorWorkOrderComponen
               <TableHead className="min-w-40">Tên hàng</TableHead>
               <TableHead className="min-w-28">Màu</TableHead>
               <TableHead className="min-w-36">Quy cách</TableHead>
-              <TableHead className="min-w-24">ĐVT định mức</TableHead>
-              <TableHead className="text-right">Cần</TableHead>
+              {/*
+                24/08/2026: đổi nhãn cho hết mơ hồ. Hai cột này nói về TIÊU HAO KHO (Mét · Kg · m²)
+                chứ không phải số cấu kiện phải cắt — "ĐVT định mức" và "Cần" trống nghĩa nên người
+                đọc tưởng đây là "cần mấy cây". Số cây/lá nằm ở bảng BOM của panel bên cạnh
+                (`AlumdoorWorkOrderBomPanel.tsx`), cố ý KHÔNG ghép vào đây: bảng này ghép 3 nguồn
+                theo `row_id`, còn preview chỉ khoá được theo `item_code` — ghép sai rất dễ.
+              */}
+              <TableHead className="min-w-24">ĐVT kho</TableHead>
+              <TableHead className="text-right">Cần (kho)</TableHead>
               <TableHead className="text-right">Đã cấp</TableHead>
               <TableHead className="text-right">Đã dùng</TableHead>
               <TableHead className="text-right">Còn cấp</TableHead>

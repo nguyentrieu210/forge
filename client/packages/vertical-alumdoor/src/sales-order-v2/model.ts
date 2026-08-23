@@ -325,6 +325,13 @@ export interface BomPreviewComponent extends Json {
    */
   component_count?: number | null;
   component_count_uom?: string;
+  /*
+   * ĐVT ĐẾM giữ nguyên từ dòng định mức (Cây · Lá · Cái), server gửi từ
+   * `sales-production-core.ts:1356` và `:374`. Client chưa đọc nó bao giờ, nên khi Quy tắc BOM
+   * không khớp thì `component_count_uom` trống và cột ĐVT rơi thẳng xuống `uom` — vốn đã bị ĐVT BÁN
+   * của Item ghi đè thành "Mét"/"m2". Đó là chỗ hai cây ray hiện thành "2 Mét".
+   */
+  bom_count_uom?: string;
   cut_length_each_m?: number;
   /** Tên cột số đo đang giữ kích thước cắt (`height_m`, `width_pb_ray_m`…). Server quyết định. */
   cut_axis?: string;
@@ -346,6 +353,14 @@ export interface BomPreviewComponent extends Json {
   sales_uom_message?: string;
   note?: string;
   source_rule?: string;
+  /** Dòng chưa map được Quy tắc BOM (`bom-rule-sales-preview.ts:458`) — số dưới là snapshot BOM cũ. */
+  bom_rule_missing?: boolean;
+  /**
+   * Cảnh báo THIẾU CẤU HÌNH quy tắc ("Chưa map Quy tắc BOM cho X" —
+   * `bom-rule-sales-preview.ts:459`). Khác hẳn `note`: `note` là ghi chú kỹ thuật nội bộ (công thức,
+   * mã quy tắc) cố ý không hiện, còn cái này là việc người bán phải biết để báo lại.
+   */
+  bom_rule_warning?: string;
   rate?: number;
   gross_amount?: number;
   net_amount?: number;
@@ -407,6 +422,15 @@ export interface SalesLine extends Json {
   _colorLabels?: Record<string, string>;
   _overrides?: Record<string, FieldOverride>;
   _commercial?: CommercialPreview;
+  /**
+   * Loại cửa này có xổ định mức trên màn bán không — cờ `show_bom_on_sales` của Bộ quy cách hình
+   * học, server trả kèm trong `geometry_runtime` của lượt xem trước dòng.
+   *
+   * Giữ Ở DÒNG để `mayHaveBom` biết TRƯỚC khi gọi. Không có nó thì client vẫn gọi định mức rồi
+   * mới nhận `bom_applicable: false` — đủ lâu để dòng "Đang tính và xổ vật tư BOM…" kịp hiện ra
+   * cho một loại cửa vốn không xổ định mức.
+   */
+  _showBomOnSales?: boolean;
   _bomPreview?: BomPreview;
   _bomComponentNames?: Record<string, string>;
   _bomError?: string;
@@ -628,8 +652,10 @@ export function isFullSetSalesItem(line: Pick<SalesLine, "item_code">): boolean 
  * Backend đã tự trả `bom_applicable: false` kèm lý do đọc được cho dòng không có cấu thành,
  * nên hỏi rộng ra không sai — chỉ tốn một lượt đọc mặt hàng, và nó dừng trước khi liệt kê BOM.
  */
-export function mayHaveBom(line: Pick<SalesLine, "item_code"> & { sales_mode?: unknown; item_name?: unknown; _itemName?: unknown }): boolean {
+export function mayHaveBom(line: Pick<SalesLine, "item_code"> & { sales_mode?: unknown; item_name?: unknown; _itemName?: unknown; _showBomOnSales?: boolean }): boolean {
   if (!text(line.item_code)) return false;
+  // Bộ quy cách của loại cửa này đã tắt xổ định mức — không hỏi, để khỏi loé dòng "Đang tính…".
+  if (line._showBomOnSales === false) return false;
   if (text(line.sales_mode)) return true;
   if (isFullSetSalesItem(line)) return true;
   /*
@@ -650,14 +676,64 @@ export function fieldOverride(line: SalesLine, fieldname: string): FieldOverride
   return line._overrides?.[fieldname];
 }
 
+/**
+ * Ô/cột này có hiện không — SERVER LÀ TRỌNG TÀI.
+ *
+ * Thứ tự thẩm quyền, cố tình chỉ có ba nấc:
+ *
+ *  1. Server nói `hidden` (0 hay 1) → theo đúng, không bàn. Đo ngày 24/08: server phát `hidden`
+ *     tường minh cho MỌI trường số đo ở mọi mặt hàng, nên gần như luôn dừng ở nấc này.
+ *  2. Server có gửi override nhưng KHÔNG nói `hidden` (chỉ nhãn, chỉ `link_filters`…) → đó là
+ *     "không có ý kiến về việc hiện/ẩn", KHÔNG phải "hãy hiện". Bản trước coi mọi override là
+ *     lệnh hiện, nên một override chỉ để đổi nhãn cũng đủ kéo nguyên một cột lên bảng.
+ *  3. Không ai nói gì → cửa bán theo m² luôn cần Rộng/Cao/Số bộ; ngoài ra chỉ hiện khi dòng
+ *     THẬT SỰ có số. Số 0 không tính: nó là giá trị khởi tạo, không phải người bán đã nhập.
+ */
 export function fieldVisible(line: SalesLine, fieldname: string): boolean {
   const override = fieldOverride(line, fieldname);
   if (override?.hidden === true || override?.hidden === 1) return false;
-  if (override) return true;
+  if (override?.hidden === false || override?.hidden === 0) return true;
   if (fieldname === "width_m" || fieldname === "height_m" || fieldname === "set_count") {
     if (isAreaDoor(line)) return true;
   }
-  return line[fieldname] !== undefined && line[fieldname] !== null && line[fieldname] !== "";
+  const value = line[fieldname];
+  if (value === undefined || value === null || value === "") return false;
+  return typeof value === "number" ? value !== 0 : true;
+}
+
+/**
+ * Server có CẤM ô này không — khác hẳn `fieldVisible` là "server có CHO PHÉP không".
+ *
+ * Có những ô server chỉ gửi kèm cấu hình chứ không phát biểu gì về hiện/ẩn: ô Màu chẳng hạn,
+ * server gửi `link_filters` (danh sách màu được phép) mà không có `hidden`. Hỏi nó bằng
+ * `fieldVisible` là hiểu sai câu trả lời — "không nói gì" bị đọc thành "đừng hiện", và ô Màu
+ * biến mất khỏi mọi mặt hàng chưa kịp chọn màu.
+ *
+ * Những ô như thế mặc định là CÓ, chỉ tắt khi server nói thẳng `hidden` (ví dụ Trục: không có
+ * khái niệm màu nên server ẩn hẳn).
+ */
+export function fieldHidden(line: SalesLine, fieldname: string): boolean {
+  const override = fieldOverride(line, fieldname);
+  return override?.hidden === true || override?.hidden === 1;
+}
+
+/**
+ * Cửa này kéo tay — nên KHÔNG gợi ý motor và bình lưu điện.
+ *
+ * Cố ý là vị từ TRÌNH BÀY, không đụng `is_manual_pull`: ô đó nuôi `manual_pull_sales_basis` của
+ * Chính sách cắt, tức là nó ra TIỀN. Bật nó chỉ để giấu một panel gợi ý là đổi cả cơ sở tính tiền
+ * — cái giá quá đắt cho một việc thuần hiển thị.
+ *
+ * Dò theo TOKEN `_KT_` chứ không dò chuỗi con. Đo trên 404 mã ngày 24/08: token khớp đúng 6 mã
+ * cửa (2 Đức KT + 4 Úc KT); dò lỏng sẽ trúng oan `PKC_BANGKT_5P` (băng keo) và `PKC_VDAY_TDU_KTD`
+ * (thanh đáy Úc).
+ */
+export function laCuaKeoTay(line: Pick<SalesLine, "item_code" | "leaf_variant"> & { _itemName?: string }): boolean {
+  if (normalized(line.leaf_variant) === "keo tay") return true;
+  // `normalized` trả chữ THƯỜNG — mẫu phải viết thường, nếu không nó không bao giờ khớp.
+  const code = normalized(line.item_code).replace(/[^a-z0-9]/g, "_");
+  if (/(^|_)kt(_|$)/.test(code)) return true;
+  return normalized(line._itemName).includes("keo tay");
 }
 
 export function fieldRequired(line: SalesLine, fieldname: string): boolean {

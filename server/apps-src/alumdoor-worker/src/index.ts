@@ -39,6 +39,7 @@ import {
   type DoorFormulaPurpose,
   type SalesMode,
 } from "./door-formulas.js";
+import { resolveSalesMode } from "./sales-production-core.js";
 import { salesItemContext } from "./sales-item-context.js";
 import {
   allowedColorNamesForGroup,
@@ -2628,8 +2629,7 @@ async function calculateDoor(call: PlatformCall, args: Record<string, unknown>):
   if (customerGroup !== "Đại lý" && customerGroup !== "Lẻ") {
     return refuse("Cần Nhóm giá Đại lý/Lẻ; nếu chọn khách thì phải hoàn thiện Nhóm giá trên hồ sơ khách.");
   }
-  const rawMode = String(args.sales_mode ?? "Trọn bộ").trim();
-  if (rawMode !== "Tách món" && rawMode !== "Trọn bộ") return refuse("Cách bán phải là Tách món hoặc Trọn bộ.");
+  const rawMode = resolveSalesMode(args.sales_mode, itemCode, item.item_name);
   try {
     const policy = selectDoorPolicy(policies, doorType, String(item.item_group ?? ""), rayTypeOf(args.ray_type));
     const result = calculateDoorFormula(policy, {

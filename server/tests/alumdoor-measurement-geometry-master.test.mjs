@@ -108,9 +108,9 @@ test("static V2 metadata contains Geometry masters and moved ownership", async (
   const geometryProfile = (item.fields ?? []).find((field) => (typeof field === "string" ? field.split(":", 1)[0] : field.fieldname) === "geometry_profile");
   assert.ok(geometryProfile);
   assert.equal(typeof geometryProfile === "object" ? geometryProfile.options : "", "Geometry Profile");
-  // 10 = 9 cũ + "Trục" (24/08, tách khỏi "Ray và trục" vì trục không sơn màu — xem
-  // Measurement Profile.name="Trục" trong brief).
-  assert.equal(brief.fixtures.filter((row) => row.type === "Measurement Profile").length, 10);
+  // 11 = 9 cũ + "Trục" + "V4/V5" (24/08, tách khỏi "Ray và trục"/"Hàng thường" — xem
+  // Measurement Profile.name="Trục"/"V4/V5" trong brief).
+  assert.equal(brief.fixtures.filter((row) => row.type === "Measurement Profile").length, 11);
   assert.equal(brief.fixtures.filter((row) => row.type === "Geometry Field").length, 11);
   assert.equal(brief.fixtures.filter((row) => row.type === "Geometry Profile").length, 5);
   const geometryField = byName.get("Geometry Field");

@@ -55,6 +55,18 @@ export interface BomRuleMaster {
    * cho dữ liệu cũ và sẽ gỡ sau khi tầng nền chuyển xong.
    */
   component_count_source?: "Số lá" | "Cố định" | string;
+  /**
+   * CHIỀU DÀI CẮT MỖI CẤU KIỆN đến từ trục hình học nào — khai tên trường, không suy diễn.
+   *
+   * Luật `result_kind: "COUNT"` tự nó chỉ ra SỐ cấu kiện; công thức của nó (VD `Cao lưới × 16 − 1`)
+   * không chứa chiều dài. Nhưng thợ cần CẢ HAI trục: "47 cây" vô dụng nếu không kèm "cắt mỗi cây
+   * dài bao nhiêu". Trường này cho luật khai thẳng trục đó (VD `CAT_LA_RONG` cho lá cửa —
+   * mỗi lá chạy hết bề rộng cắt).
+   *
+   * Để trống = nguồn KHÔNG nói chiều dài cắt (VD lưới mắt võng: định mức chỉ cho số cây). Khi đó
+   * hệ im lặng thay vì bịa một con số — đúng luật "cấm đoán" của chủ xưởng.
+   */
+  cut_length_field?: string;
   rounding?: BomQuantityRounding | string;
   precision?: number;
   formula_json?: string | BomQuantityFormula;

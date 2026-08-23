@@ -776,6 +776,22 @@ function salesLineHasComposition(itemCode: string, args: Json, itemName = ""): b
     || isFullSetSalesItemCode(itemName) || isSplitSalesItemCode(itemName);
 }
 
+/**
+ * `sales_mode` bị ẩn toàn cục trên Sales/Quotation/Invoice Item (`hidden:true`) nên KHÔNG dòng
+ * bán nào tự gõ được — trước đây mọi nơi đọc field này đều rơi thẳng về mặc định "Trọn bộ" kể cả
+ * khi mã/tên hàng tự xưng TÁCH MÓN (vd `CLUOI_LUOI_MV_TM`, tên "... TÁCH MÓN"). Hậu quả: các mặt
+ * hàng tách-mã-riêng-cho-tách-món luôn tính giá/khối lượng theo công thức Trọn bộ.
+ *
+ * Cùng phép dò mã/tên đã dùng cho `salesLineHasComposition` — dò mã hàng trước (đáng tin hơn vì
+ * ổn định), rồi tên hàng. Field tường minh (khi có, ví dụ nhập tay qua API) vẫn thắng tuyệt đối.
+ */
+export function resolveSalesMode(explicit: unknown, itemCode: unknown, itemName: unknown): SalesMode {
+  const declared = text(explicit);
+  if (declared === "Trọn bộ" || declared === "Tách món") return declared;
+  if (isSplitSalesItemCode(itemCode) || isSplitSalesItemCode(itemName)) return "Tách món";
+  return "Trọn bộ";
+}
+
 function sameBomItem(left: unknown, right: unknown): boolean {
   const leftKey = bomItemKey(left);
   return Boolean(leftKey) && leftKey === bomItemKey(right);
@@ -893,8 +909,7 @@ export function buildSalesProductionLines(input: BuildInputs, options: { allow_m
     const width = finitePositive(row.width_m, `Dòng ${index + 1}: Rộng`);
     const height = finitePositive(row.height_m, `Dòng ${index + 1}: Cao`);
     const sets = positiveInteger(row.set_count ?? 1, `Dòng ${index + 1}: Số bộ`);
-    const salesMode = (text(row.sales_mode) || "Trọn bộ") as SalesMode;
-    if (salesMode !== "Trọn bộ" && salesMode !== "Tách món") throw new Error(`Dòng ${index + 1}: Cách bán không hợp lệ.`);
+    const salesMode = resolveSalesMode(row.sales_mode, itemCode, item.item_name);
     const chosen = choosePolicy(input.policies, doorType, itemGroup, text(row.ray_type));
     /**
      * Ước tính Kg nhôm là số THAM KHẢO: `estimated_weight_kg` khai nullable ở cả `SalesProductionLine`
@@ -1121,8 +1136,7 @@ export async function calculateSalesProductionLine(
     if (customerGroup !== "Đại lý" && customerGroup !== "Lẻ") {
       throw new Error("Cần Nhóm giá Đại lý/Lẻ để chọn đúng công thức.");
     }
-    const salesMode = (text(args.sales_mode) || "Trọn bộ") as SalesMode;
-    if (salesMode !== "Trọn bộ" && salesMode !== "Tách món") throw new Error("Cách bán không hợp lệ.");
+    const salesMode = resolveSalesMode(args.sales_mode, itemCode, item.item_name);
     const [policies, standards] = await Promise.all([
       listDocs<RawPolicy>(call, "Cutting Policy", [
         "name", "policy_name", "door_type", "item_group",
@@ -1365,7 +1379,7 @@ export async function previewDraftSalesBomRequirements(call: ProductionPlatformC
       source_warehouse: "",
       item_group: text(item.item_group),
       door_type: text(item.door_type),
-      sales_mode: text(args.sales_mode) || "Trọn bộ",
+      sales_mode: resolveSalesMode(args.sales_mode, itemCode, item.item_name),
       ...(Number(args.width_m) > 0 ? { width_m: Number(args.width_m) } : {}),
       ...(Number(args.height_m) > 0 ? { height_m: Number(args.height_m) } : {}),
       ...(args.mesh_height_m == null || args.mesh_height_m === "" ? {} : { mesh_height_m: Number(args.mesh_height_m) }),

@@ -243,6 +243,7 @@ interface CauKienVatLy {
   cut_length_each_m?: number;
   leaf_count?: number;
   component_count_error?: string;
+  cut_length_error?: string;
 }
 
 /**
@@ -300,6 +301,31 @@ function soCauKien(
   return { component_count: roundTo(moiBo * setCount), component_count_uom: dvt };
 }
 
+/**
+ * Luật `result_kind: "COUNT"` (VD "CEIL(Cao lưới ÷ 0,077) − 1") tự nó ĐÃ tính ra số cấu kiện —
+ * không phải chiều dài/diện tích nhân với một hằng `qty_per_set`. `soCauKien` không biết điều
+ * đó (nó chỉ đọc `component_count_source`/`qty_per_set`), nên trước đây một luật COUNT thật vẫn
+ * hiện "1" — con số hằng của nhánh "Cố định" mặc định, đúng kiểu 47 cây lưới hiện ra "1 Kg".
+ */
+function dungSoDem(rule: BomRuleMaster): boolean {
+  return text(rule.result_kind) === "COUNT";
+}
+
+/**
+ * Chiều dài cắt lấy từ trục mà LUẬT tự khai (`cut_length_field`).
+ *
+ * Chỉ dùng khi luật khai; không khai thì trả `undefined` và hệ im lặng. Khai mà trục đó chưa có
+ * số (người bán chưa nhập đủ kích thước) thì trả lỗi ĐỌC ĐƯỢC — không rơi về một con số nào.
+ */
+function daiCatTheoKhaiBao(rule: BomRuleMaster, values: Json): { cut_length_each_m: number } | { cut_length_error: string } | undefined {
+  const truc = text(rule.cut_length_field);
+  if (!truc) return undefined;
+  const raw = Number(values[truc]);
+  return Number.isFinite(raw) && raw > 0
+    ? { cut_length_each_m: roundTo(raw) }
+    : { cut_length_error: `Chưa tính được chiều dài cắt — thiếu ${truc}.` };
+}
+
 function cauKienVatLy(
   component: Json,
   rule: BomRuleMaster,
@@ -308,11 +334,29 @@ function cauKienVatLy(
 ): CauKienVatLy {
   const dem = soCauKien(component, rule, values, result.qty_per_set, result.set_count);
   const rongCat = dungSoLa(rule, component) ? rongCatMoiLa(rule, values) : null;
+  const daiKhaiBao = daiCatTheoKhaiBao(rule, values);
+  if (dungSoDem(rule)) {
+    const dvt = text(component.bom_count_uom) || text(component.uom) || dem.component_count_uom;
+    /*
+     * Luật đếm vẫn phải trả CHIỀU DÀI CẮT nếu luật có khai trục — trước đây nhánh này return sớm
+     * nên 47 cây lưới và 38 lá cửa ra màn hình KHÔNG kèm số cắt nào, thợ không biết cắt bao nhiêu.
+     */
+    /*
+     * `qty_per_set` phải được nhân ở đây như mọi nhánh khác. Bỏ qua nó là không diễn đạt được
+     * những định mức dạng "mỗi cây lưới kèm 2 con bọ" (bọ lưới song ngang, ĐM dòng 1171:
+     * `((CAO LƯỚI SN × 13 CÂY/M) − 1 CÂY) × 2 CON`) — làm tròn phải xảy ra TRƯỚC khi nhân đôi,
+     * nên không thể gộp số 2 vào chính công thức.
+     */
+    return Number.isFinite(result.result_per_piece)
+      ? { component_count: roundTo(result.result_per_piece * result.qty_per_set * result.set_count), component_count_uom: dvt, ...daiKhaiBao }
+      : { component_count: null, component_count_uom: dvt, component_count_error: "Chưa tính được số lượng — thiếu kích thước.", ...daiKhaiBao };
+  }
   return {
     ...dem,
-    ...(rongCat !== null ? { cut_length_each_m: rongCat }
+    // Luật khai trục thì trục đó THẮNG — nó là lời khai tường minh, hai nhánh dưới chỉ là suy ra.
+    ...(daiKhaiBao ?? (rongCat !== null ? { cut_length_each_m: rongCat }
       : text(rule.result_kind) === "LENGTH" && Number.isFinite(result.result_per_piece) ? { cut_length_each_m: result.result_per_piece }
-      : {}),
+      : {})),
   };
 }
 
@@ -516,6 +560,7 @@ export async function enrichSalesBomPreviewWithRules(
         ...(oCat ? { cut_axis: oCat } : {}),
         ...(vatLy.leaf_count === undefined ? {} : { leaf_count: vatLy.leaf_count }),
         ...(vatLy.component_count_error ? { component_count_error: vatLy.component_count_error } : {}),
+        ...(vatLy.cut_length_error ? { cut_length_error: vatLy.cut_length_error } : {}),
         /* LỚP TIÊU HAO KHO — mét/m²/kg, phục vụ xuất kho, dự trù và giá thành. */
         stock_consumption_qty: result.consumption_qty,
         stock_consumption_uom: result.consumption_uom,
@@ -540,7 +585,15 @@ export async function enrichSalesBomPreviewWithRules(
        * kiện cũng chưa biết — "2 cây ray" là một hằng số của luật, không phụ thuộc Cao PB.
        * Vẫn tính SL/ĐVT ở đây; chỉ chiều dài cắt để trống cho tới khi có đủ số đo.
        */
-      const dem = soCauKien(component, rule, values, Number(rule.qty_per_set), setCount);
+      /*
+       * Luật COUNT (VD số cây lưới, số con bọ mắt võng) không có "hằng số cấu kiện" đứng ngoài
+       * công thức như cách RAY/TRỤC có — công thức NÉM LỖI ở đây nghĩa là chính số cấu kiện
+       * cũng chưa biết được (khác `component_count_source: "Cố định"`, nơi số cây là hằng số độc
+       * lập với kích thước). Không lùi về `qty_per_set` — làm vậy hiện một số SAI cho thợ.
+       */
+      const dem = dungSoDem(rule)
+        ? { component_count: null, component_count_uom: text(component.bom_count_uom) || text(component.uom), component_count_error: "Chưa tính được số lượng — thiếu kích thước." }
+        : soCauKien(component, rule, values, Number(rule.qty_per_set), setCount);
       return {
         ...component,
         bom_rule_code: text(rule.rule_code),

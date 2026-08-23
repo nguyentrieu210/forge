@@ -19,6 +19,13 @@ export interface GeometryProfileRuntimeContract {
   profile_code: string;
   profile_name: string;
   fields: GeometryRuntimeField[];
+  /**
+   * Loại cửa này có xổ định mức vật tư ra màn bán hàng không.
+   *
+   * Bỏ trống = CÓ. Chỉ loại nào tick tắt mới ẩn, để thêm một Geometry Profile mới không vô tình
+   * mất khối định mức.
+   */
+  show_bom_on_sales: boolean;
 }
 
 function text(value: unknown): string {
@@ -121,5 +128,6 @@ async function readGeometryProfileRuntimeUncached(
     profile_code: text(profile.profile_code ?? profile.name) || name,
     profile_name: text(profile.profile_name) || name,
     fields,
+    show_bom_on_sales: profile.show_bom_on_sales === undefined ? true : on(profile.show_bom_on_sales),
   };
 }

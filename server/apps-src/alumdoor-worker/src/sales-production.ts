@@ -12,6 +12,7 @@ import {
   type SalesProductionLine,
 } from "./sales-production-core.js";
 import { enrichSalesBomPreviewWithRules } from "./bom-rule-sales-preview.js";
+import { readGeometryProfileRuntime } from "./geometry-profile-runtime.js";
 
 export {
   buildSalesProductionLines,
@@ -180,6 +181,37 @@ export async function previewDraftSalesBomRequirements(
   call: ProductionPlatformCall,
   args: Json,
 ): Promise<Response> {
+  /*
+   * Loại cửa có thể TẮT hẳn việc xổ định mức ra màn bán — cờ `show_bom_on_sales` trên Geometry
+   * Profile của chính loại đó.
+   *
+   * Cửa Đức chưa khai Quy tắc BOM nào: xổ ra chỉ được một bảng toàn dấu "?" kèm hàng chục dòng
+   * "Chưa map Quy tắc BOM cho …", không nói cho thợ biết thêm gì mà còn làm người bán tưởng đơn
+   * hỏng. Chủ xưởng chốt 24/08/2026.
+   *
+   * Chặn ở ĐÂY chứ không ở client: đây là quyết định nghiệp vụ theo loại cửa, và chặn sớm thì
+   * khỏi tốn lượt đọc BOM + Quy tắc BOM cho một khối sẽ không hiện.
+   */
+  const itemCode = text(args.item_code);
+  if (itemCode) {
+    const item = await readDoc<Json>(call, "Item", itemCode).catch(() => null);
+    const profileName = text(item?.geometry_profile);
+    if (profileName) {
+      const runtime = await readGeometryProfileRuntime(call, profileName).catch(() => null);
+      if (runtime && runtime.show_bom_on_sales === false) {
+        return new Response(JSON.stringify({
+          item_code: itemCode,
+          bom_applicable: false,
+          components: [],
+          actual_requirements: [],
+          missing_actual_component_keys: [],
+          actual_complete: true,
+          static_bom: false,
+          reason: `${runtime.profile_name}: bộ quy cách này đang tắt xổ định mức trên màn bán.`,
+        }), { status: 200, headers: { "content-type": "application/json" } });
+      }
+    }
+  }
   const core = await previewDraftSalesBomRequirementsCore(call, args);
   if (!core.ok) return core;
   const payload = (await core.json()) as Json;

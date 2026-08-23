@@ -46,10 +46,12 @@ import {
   fieldLabel,
   fieldReadonly,
   fieldRequired,
+  fieldHidden,
   fieldVisible,
   isAreaDoor,
   isDirectOrdinaryQuantityLine,
   isFullSetSalesItem,
+  laCuaKeoTay,
   mayHaveBom,
   lineAdjustmentAmount,
   lineAdjustmentSplit,
@@ -201,8 +203,18 @@ const DYNAMIC_HEADER_UNITS: Partial<Record<DynamicFieldName, string>> = {
   estimated_weight_kg: "kg",
 };
 
+/**
+ * Ô LUÔN LUÔN là số máy tính ra, không đời nào người bán gõ.
+ *
+ * `cut_width_m` ĐÃ RỜI danh sách này: với dòng bán theo Rộng cắt lá (Tách món của Lưới/Đài Loan,
+ * và mọi dòng Đại lý của Siêu Trường) thì chính nó là Ô NHẬP — khách đặt bề rộng cắt, hệ suy
+ * ngược ra phủ bì. Ép cứng ở đây là client cãi server: server gửi `read_only: 0` mà ô vẫn khoá,
+ * kết quả là không ô rộng nào gõ được và dòng không bao giờ ra SL.
+ *
+ * Giờ để `field_overrides.read_only` của server quyết — nó gửi `read_only: 1` cho dòng Trọn bộ
+ * (và ẩn luôn), `read_only: 0` cho dòng bán theo rộng cắt lá.
+ */
 const FORCE_READ_ONLY = new Set<DynamicFieldName>([
-  "cut_width_m",
   "leaf_count",
   "double_layer_leaf_count",
   "estimated_weight_kg",
@@ -347,29 +359,6 @@ function normalizeFieldValue(field: DocField, value: unknown): unknown {
   }
   if (field.fieldtype === "Check") return value ? 1 : 0;
   return text(value) || undefined;
-}
-
-/**
- * Gom các ô số đo về TRỤC của chúng.
- *
- * Cột rộng trên màn có thể mang tên `width_m`, `width_pb_ray_m` hay `width_pb_nhua_m` tuỳ loại
- * cửa và nhóm khách — và Geometry Profile còn đổi NHÃN của `width_m` thành "Rộng PB ray", nên
- * nhìn tiêu đề không suy ra được tên ô. Trong khi đó Quy tắc BOM luôn trả kích thước cắt dưới
- * tên chuẩn (`width_pb_ray_m`). Hai bên khớp nhau ở TRỤC chứ không ở tên, nên so trục.
- */
-/**
- * `width_pb_ray_m` và `width_pb_nhua_m` KHÔNG gộp chung một trục nữa (đã gộp tới 22/08 — sai
- * thật khi đơn có NHIỀU LOẠI CỬA nên cả hai cột cùng hiện: server luôn trả `cut_axis` là đúng
- * TÊN Ô một trong hai (`bom-rule-sales-preview.ts:TRUC_SANG_O`, không bao giờ là `width_m`), nên
- * gộp chung chỉ có tác dụng khiến V4/trục hiện trùng số ở CẢ HAI cột thay vì đúng một cột — dòng
- * 6D chụp lại đêm 24/08 là bằng chứng. Còn `width_m` (nếu tồn tại, cửa không tách ray/nhựa) vẫn
- * so khớp đúng tên nó, không cần một nhãn trục chung.
- */
-function trucSoDo(fieldname: string): string {
-  if (fieldname === "height_m") return "cao";
-  if (fieldname === "mesh_height_m") return "cao-luoi";
-  if (fieldname === "cut_width_m") return "rong-cat";
-  return fieldname;
 }
 
 function dynamicDisplayValue(fieldname: DynamicFieldName, value: unknown): string {
@@ -560,12 +549,12 @@ function BomBlock(props: {
           ? `BOM · ${text(preview?.bom_no)}`
           : "Chưa nhận được danh sách cấu thành BOM";
   const infoRow = (content: ReactNode, tone = "text-muted-foreground") => (
-    <TableRow className="border-b bg-muted/10 hover:bg-muted/10" data-section="sales-v2-bom-message">
+    <TableRow className="border-b bg-muted/10 hover:bg-muted/10 print:hidden" data-section="sales-v2-bom-message">
       <TableCell colSpan={props.colSpan} className={`border-l-2 border-primary/30 px-3 py-2 text-left text-xs ${tone}`}>{content}</TableCell>
     </TableRow>
   );
   return <Fragment>
-    {props.expanded && !components.length ? <TableRow className="border-b bg-background hover:bg-background" data-section="sales-v2-bom-block">
+    {props.expanded && !components.length ? <TableRow className="border-b bg-background hover:bg-background print:hidden" data-section="sales-v2-bom-block">
       <TableCell colSpan={props.colSpan} className="p-0">
         <button type="button" className="flex w-full items-center justify-between gap-3 border-l-2 border-primary/30 px-3 py-1.5 text-left hover:bg-muted/20" onClick={props.onToggle}>
           <span className="flex items-center gap-2 text-xs font-semibold">
@@ -594,9 +583,8 @@ function BomBlock(props: {
       /*
        * Bỏ hẳn `component.note` khỏi màn hình — nó là ghi chú NỘI BỘ (công thức, mã Quy tắc
        * BOM, và cả nguyên văn lỗi kỹ thuật khi công thức chưa tính được) chứ không phải thứ
-       * người bán cần đọc. "cắt X m/cây" ở dòng trên đã nói đủ quy cách; số cấu kiện chưa biết
-       * thì cột SL tự hiện dấu "?" đỏ kèm lý do khi rê chuột, không cần lặp lại ở đây.
-       * Chỉ giữ `sales_uom_message` — đó là cảnh báo THIẾU CẤU HÌNH thật (ĐVT bán chưa khai
+       * người bán cần đọc. "cắt X m/cây" ở dòng trên đã nói đủ quy cách.
+       * `sales_uom_message` thì giữ — đó là cảnh báo THIẾU CẤU HÌNH thật (ĐVT bán chưa khai
        * trên Item), việc người bán phải biết để báo lại, không phải chi tiết công thức.
        */
       const detail = text(component.sales_uom_message);
@@ -604,50 +592,75 @@ function BomBlock(props: {
       /*
        * SỐ CẤU KIỆN, không phải tiêu hao kho.
        *
-       * `component_count` là số cây/lá/cái thợ thật sự phải cắt. Chỉ lùi về `set_count` cho
-       * dòng chưa map được Quy tắc BOM — dòng đó không có lớp cấu kiện nào để đọc. Khi server
-       * trả `component_count: null` kèm lý do (ví dụ chưa tính được số lá) thì hiện dấu cảnh
-       * báo chứ KHÔNG hiện 1: một dòng lá ghi "1" là nói dối thợ.
+       * `component_count` là số cây/lá/cái thợ thật sự phải cắt. KHÔNG còn lùi về `set_count`
+       * (bỏ 24/08/2026): server gán `set_count = qty_per_set` — số cho MỘT bộ, chưa nhân số bộ —
+       * nên nó là con số SAI đội lốt số đúng, và dòng nào cũng có nó nên dấu "?" gần như không bao
+       * giờ xuất hiện. Thà để trống rồi hiện "?" đỏ kèm lý do bằng chữ, còn hơn in một số mà thợ
+       * cắt theo. `component_count: null` (server đã thử tính, chưa ra) cũng đi cùng đường đó:
+       * một dòng lá ghi "1" là nói dối thợ.
        */
       const countError = text(component.component_count_error);
       const componentCount = component.component_count === null
         ? undefined
-        : numberValue(component.component_count) ?? numberValue(component.set_count);
-      const componentUom = text(component.component_count_uom) || text(component.uom);
+        : numberValue(component.component_count);
+      /*
+       * ĐVT ĐẾM trước, ĐVT BÁN sau. `bom_count_uom` là ĐVT giữ nguyên từ dòng định mức
+       * (`sales-production-core.ts:1356`) — server CÓ gửi mà client chưa đọc bao giờ. Không có nó
+       * thì dòng chưa map Quy tắc BOM rơi thẳng xuống `uom`, vốn đã bị ĐVT BÁN của Item ghi đè
+       * thành "Mét"/"m2", nên hai cây ray hiện thành "2 Mét".
+       */
+      const componentUom = text(component.component_count_uom)
+        || text(component.bom_count_uom)
+        || text(component.uom);
+      /*
+       * Lý do phải NÓI RA BẰNG CHỮ, không giấu trong `title`.
+       *
+       * `bom_rule_warning` ("Chưa map Quy tắc BOM cho X" — `bom-rule-sales-preview.ts:459`) trước
+       * đây bị chặn nhầm cùng `note`: quyết định bỏ `note` là đúng với `note`, nhưng đây là cảnh
+       * báo THIẾU CẤU HÌNH, cùng loại với `sales_uom_message` chứ không phải chi tiết công thức.
+       * Rê chuột mới thấy nghĩa là không ai thấy.
+       */
+      const canhBao = [
+        countError,
+        text(component.bom_rule_warning),
+        /* Bỏ `set_count` xong thì số dòng hiện "?" tăng lên — mỗi dấu "?" phải kèm một câu đọc được. */
+        componentCount === undefined && !countError && !text(component.bom_rule_warning)
+          ? "Chưa có số cấu kiện"
+          : "",
+      ].filter(Boolean).join(" · ");
       const cutEach = numberValue(component.cut_length_each_m);
       const quyCachCat = cutEach === undefined
         ? ""
         : `${quantity(cutEach)} m/${(componentUom || "cái").toLocaleLowerCase("vi")}`;
       const tone = "bg-background";
       const frozen = `${tone} bg-clip-padding`;
-      return <TableRow key={`${itemCode}-${componentKey}-${index}`} className={`${tone} border-b hover:bg-muted/10`} data-section="sales-v2-bom-item-row">
+      return <TableRow key={`${itemCode}-${componentKey}-${index}`} className={`${tone} border-b hover:bg-muted/10 print:hidden`} data-section="sales-v2-bom-item-row">
         {index === 0 ? <TableCell rowSpan={components.length} style={{ width: props.widths.select, ...props.stickyStyle("select") }} className={`${frozen} border-l-2 border-l-primary/30 px-1 py-1.5 text-center align-middle`}><span className="font-semibold text-muted-foreground">BOM</span></TableCell> : null}
         <TableCell style={{ width: props.widths.index, ...props.stickyStyle("index") }} className={`${frozen} px-1 py-1.5 text-center align-middle font-mono tabular-nums`}>{props.lineNumber}.{index + 1}</TableCell>
         <TableCell style={{ width: props.widths.item_code, ...props.stickyStyle("item_code") }} className={`${frozen} truncate px-1.5 py-1.5 text-center font-mono text-[10px]`} title={itemCode}>{itemCode || "—"}</TableCell>
-        <TableCell style={{ width: props.widths.item_name, ...props.stickyStyle("item_name") }} className={`${frozen} px-1.5 py-1.5 text-center`}><div className="truncate font-medium" title={itemName}>{itemName || "—"}</div>{quyCachCat ? <div className="truncate text-[10px] font-medium text-foreground" title={`Quy cách cắt: ${quyCachCat}`}>cắt {quyCachCat}</div> : null}{detail ? <div className="truncate text-[9px] text-muted-foreground" title={detail}>{detail}</div> : null}</TableCell>
+        <TableCell style={{ width: props.widths.item_name, ...props.stickyStyle("item_name") }} className={`${frozen} px-1.5 py-1.5 text-center`}><div className="truncate font-medium" title={itemName}>{itemName || "—"}</div>{quyCachCat ? <div className="truncate text-[10px] font-medium text-foreground" title={`Quy cách cắt: ${quyCachCat}`}>cắt {quyCachCat}</div> : null}{canhBao ? <div className="text-[10px] font-medium leading-tight text-destructive" title={canhBao}>{canhBao}</div> : null}{detail ? <div className="truncate text-[9px] text-muted-foreground" title={detail}>{detail}</div> : null}</TableCell>
         <TableCell style={{ width: props.widths.color }} className={`${tone} px-1.5 py-1.5 text-center`}>{text(component.color) || "—"}</TableCell>
         {/* Cấu phần BOM không tự bán nên không có cách bán riêng — vẫn phải chiếm một ô, nếu
             không thì mọi cột sau nó lệch một nhịp so với dòng cha. */}
         {props.showPriceVariant ? <TableCell style={{ width: props.widths.price_variant }} className={`${tone} px-1.5 py-1.5 text-center text-muted-foreground`}>—</TableCell> : null}
-        {props.dynamicColumns.map((fieldname) => {
-          /*
-           * Ô số đo của dòng cấu kiện là KÍCH THƯỚC CẮT của chính nó, không phải số đo cửa cha.
-           *
-           * Server nói thẳng trục nào giữ số đó qua `cut_axis`, nên ở đây không dò xem ô nào
-           * tình cờ có giá trị nữa — cách dò cũ làm cây ray hiện được 2,9 ở cột Cao trong khi
-           * V4 và trục để trống cột Rộng, cùng một loại dữ liệu mà hai số phận khác nhau.
-           */
-          const laTrucCat = cutEach !== undefined
-            && Boolean(text(component.cut_axis))
-            && trucSoDo(text(component.cut_axis)) === trucSoDo(fieldname);
-          const componentValue = laTrucCat
-            ? dynamicDisplayValue(fieldname, cutEach)
-            : dynamicDisplayValue(fieldname, component[fieldname]);
-          return <TableCell key={fieldname} style={{ width: props.widths[fieldname] }} className={`${tone} px-1.5 py-1.5 text-center tabular-nums ${laTrucCat ? "text-foreground" : "text-muted-foreground"}`}>{componentValue || "—"}</TableCell>;
-        })}
+        {/*
+          * Dòng cấu kiện KHÔNG hiện ô số đo nào — các cột đó là số đo của CỬA CHA.
+          *
+          * Trước đây ô này vừa đổ `component[fieldname]` (số đo cửa cha rò xuống payload cấu kiện),
+          * vừa đổ chiều dài cắt vào đúng cột `cut_axis`. Hai thứ khác hẳn nhau nằm chung một cột:
+          * dòng cấu kiện rác hiện nguyên "3 · 3 · 3 · 2,97" của cửa cha như thể đó là quy cách của nó,
+          * còn lá yếm thì hiện "2,97" ở cột Rộng phủ bì ray — người đọc không phân biệt được số nào
+          * là số đo cửa, số nào là số cắt.
+          *
+          * Chiều dài cắt đã có chỗ đứng riêng và rõ nghĩa hơn: dòng "cắt 2,97 m/lá" ngay dưới tên
+          * hàng. Nên các cột số đo ở đây để trống, chỉ giữ ô cho khỏi lệch cột với dòng cha.
+          */}
+        {props.dynamicColumns.map((fieldname) => (
+          <TableCell key={fieldname} style={{ width: props.widths[fieldname] }} className={`${tone} px-1.5 py-1.5 text-center text-muted-foreground`}>—</TableCell>
+        ))}
         <TableCell style={{ width: props.widths.quantity }} className={`${tone} px-1.5 py-1.5 text-center font-semibold tabular-nums`}>
           {componentCount === undefined
-            ? <span className="text-destructive" title={countError || "Chưa xác định được số cấu kiện"}>?</span>
+            ? <span className="text-destructive" title={canhBao || "Chưa xác định được số cấu kiện"}>?</span>
             : quantity(componentCount)}
         </TableCell>
         <TableCell style={{ width: props.widths.uom }} className={`${tone} px-1.5 py-1.5 text-center`}>{componentUom || "—"}</TableCell>
@@ -669,7 +682,7 @@ function BomBlock(props: {
       </TableRow>;
     }) : null}
     {props.expanded && requirements.length ? (
-      <TableRow className="border-b bg-muted/10 hover:bg-muted/10" data-section="sales-v2-bom-actual">
+      <TableRow className="border-b bg-muted/10 hover:bg-muted/10 print:hidden" data-section="sales-v2-bom-actual">
         <TableCell colSpan={props.colSpan} className="border-l-2 border-primary/30 p-2.5">
           <details open={preview?.actual_complete === false} className="rounded-md border bg-card">
             <summary className="cursor-pointer select-none px-3 py-2 text-xs font-medium">Vật tư thực tế cần xác nhận {preview?.actual_complete === false ? "· còn thiếu" : "· đã đủ"}</summary>
@@ -890,13 +903,13 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
 
   const activeLines = useMemo(() => props.lines.filter((line) => text(line.item_code)), [props.lines]);
   const visibleDynamicField = useCallback((line: SalesLine, fieldname: DynamicFieldName): boolean => {
-    // Rộng cắt lá KHÔNG lên cột: nó là số của xưởng ở phần lớn dòng. Nhưng với Đại lý mua tách
-    // món (cửa Lưới/Đài Loan/Siêu Trường) nó lại là cơ sở tính tiền, nên nó xuất hiện trong
-    // khối "Vì sao ra con số này" của dòng chi tiết thay vì chiếm một cột cho mọi đơn.
-    if (fieldname === "cut_width_m") return false;
-    // "Có bắn bướm" rời khỏi cột: nó nay là Ô TICK nằm cạnh ô tick "Tặng ray" trong khối mô tả
-    // (chốt chủ xưởng 21/08/2026 — "bắn bướm là tick như … tick có ray ko ray của cửa đức").
-    // Một khái niệm chỉ được có ĐÚNG MỘT ô điều khiển, nếu không người bán không biết ô nào thật.
+    /*
+     * "Có bắn bướm" KHÔNG lên cột — đây là quyết định TRÌNH BÀY, không phải luật nghiệp vụ:
+     * chính bảng này đã vẽ nó thành ô tick trong khối mô tả (chốt chủ xưởng 21/08/2026 —
+     * "bắn bướm là tick như … tick có ray ko ray của cửa đức"). Một khái niệm chỉ được có ĐÚNG MỘT
+     * ô điều khiển. Server hiện cũng đang ẩn nó ở mọi mặt hàng, nên đây là lớp chặn thứ hai chứ
+     * không phải chỗ hai bên cãi nhau.
+     */
     if (fieldname === "has_butterfly_bracket") return false;
     // "Tổng số lá" tắt ở màn tạo đơn — số vẫn được tính và vẫn nằm trong payload lưu,
     // và vẫn đọc được ở khối "Vì sao ra con số này".
@@ -1350,7 +1363,7 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
                       hỏi trước khi hứa với khách: còn hàng không, và có giá chưa. */}
                   {availabilityStatus ? <div className="mt-0.5 line-clamp-2 text-[9px] leading-3 text-muted-foreground" title={availabilityStatus}>{availabilityStatus}</div> : null}
                 </TableCell>
-                <TableCell style={{ width: widths.color }} className={`${parentRowTone} px-1.5 py-1.5 text-center align-middle`}>{allowedColors.length && fieldVisible(line, "color") ? <GridField rowKey={line._key} columnId="color" disabled={props.readOnly}><AlumdoorSalesOrderField id={`sales-v2-complete-color-${line._key}`} field={colorField} value={line.color} onChange={(value) => props.onCommit(line._key, "color", text(value) || undefined)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} readOnly={props.readOnly} compact hideLabel className="[&_.mf-control]:!min-h-8 [&_input]:!text-center [&_button]:!h-8 [&_button]:!justify-center" /></GridField> : <div className="flex h-8 items-center justify-center truncate text-center text-muted-foreground">{text(line.color)}</div>}</TableCell>
+                <TableCell style={{ width: widths.color }} className={`${parentRowTone} px-1.5 py-1.5 text-center align-middle`}>{allowedColors.length && !fieldHidden(line, "color") ? <GridField rowKey={line._key} columnId="color" disabled={props.readOnly}><AlumdoorSalesOrderField id={`sales-v2-complete-color-${line._key}`} field={colorField} value={line.color} onChange={(value) => props.onCommit(line._key, "color", text(value) || undefined)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} readOnly={props.readOnly} compact hideLabel className="[&_.mf-control]:!min-h-8 [&_input]:!text-center [&_button]:!h-8 [&_button]:!justify-center" /></GridField> : <div className="flex h-8 items-center justify-center truncate text-center text-muted-foreground">{text(line.color)}</div>}</TableCell>
                 {showPriceVariant ? renderPriceVariantCell(line, parentRowTone) : null}
                 {dynamicColumns.map((fieldname) => renderDynamicCell(line, fieldname, parentRowTone))}
                 <TableCell style={{ width: widths.quantity }} className={`${parentRowTone} px-1.5 py-1.5 text-center align-middle`}><GridField rowKey={line._key} columnId="quantity" disabled={props.readOnly || fieldReadonly(line, quantityField)}><AlumdoorSalesOrderField id={`sales-v2-complete-qty-${line._key}`} field={quantityDocField} value={line[quantityField]} onChange={(value) => {
@@ -1499,8 +1512,8 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
                           · Cửa Úc kéo tay (`leaf_variant === "kéo tay"`) — vận hành tay, không có
                             mô-tơ nên cũng không cần bình lưu điện cho mô-tơ.
                         */}
-                        {isAreaDoor(line) && text(line.leaf_variant) !== "kéo tay" ? (
-                          <div className="mt-2">
+                        {isAreaDoor(line) && !laCuaKeoTay(line) ? (
+                          <div className="mt-2 print:hidden">
                             <AlumdoorMotorSuggestPanel
                               areaSqm={lineGiftRailArea(line)}
                               currentMotorItemCode={text(line.motor_model)}
@@ -1558,7 +1571,7 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
               ) : null}
 
               {expanded.has(line._key) && (explanation.length > 0 || gaps.length > 0 || warnings.length > 0) ? (
-                <TableRow className={`${commercialRowTone} border-b-2 border-border hover:bg-transparent`} data-section="sales-v2-explain-row">
+                <TableRow className={`${commercialRowTone} border-b-2 border-border hover:bg-transparent print:hidden`} data-section="sales-v2-explain-row">
                   <TableCell colSpan={columnCount} className="px-3 py-2 text-left align-top">
                     {gaps.length ? (
                       <div className="mb-2 rounded-md border border-destructive/30 bg-destructive/5 px-2.5 py-1.5">
@@ -1617,7 +1630,7 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
         </TableBody>
       </Table>
     </div>
-    <div className="flex min-h-10 flex-wrap items-center justify-between gap-2 border-t-2 border-border bg-muted/20 px-3 py-1.5">
+    <div className="flex min-h-10 flex-wrap items-center justify-between gap-2 border-t-2 border-border bg-muted/20 px-3 py-1.5 print:hidden">
       <div className="flex flex-wrap items-center gap-1.5">
         <Button type="button" variant="outline" size="sm" onClick={props.onAdd} disabled={props.readOnly}><Plus className="size-3.5" /> Thêm dòng</Button>
         <Button type="button" variant="outline" size="sm" onClick={props.onAddFive} disabled={props.readOnly}><Plus className="size-3.5" /> Thêm 5</Button>

@@ -152,6 +152,38 @@ export interface BomRequirementComponent extends Json {
   sales_uom_message?: string;
   note?: string;
   source_rule?: string;
+  /*
+   * LỚP CẤU KIỆN VẬT LÝ — "mấy cây, mấy lá, mỗi cái cắt bao nhiêu".
+   *
+   * Server ĐÃ trả đủ nhóm trường này từ 24/08/2026: đường `alumdoor.sales.preview_bom_requirements`
+   * đi qua lớp bọc `sales-production.ts:190` (`enrichSalesBomPreviewWithRules`) chứ không phải bản
+   * lõi, nên mỗi cấu phần đã kèm số cấu kiện do Quy tắc BOM tính. Client thì chưa khai nên TypeScript
+   * không nhìn thấy — cả nhóm bị vứt đi im lặng, y hệt loại hỏng mà
+   * docs/audits/ALUMDOOR-BAN-HANG-DANH-MUC-GAP-20260821.md §2 gọi tên: luật chạy đủ ở server, kết
+   * quả không tới người dùng.
+   *
+   * Đây là authority của cột SL/ĐVT trên bảng BOM. `qty`/`uom` ở trên là projection tương thích
+   * ngược mang nghĩa TIÊU HAO KHO (Kg · Mét · m²); đọc chúng vào cột SL chính là chỗ khiến hai cây
+   * ray hiện thành "5,8 Mét" thay vì "2 Cây".
+   *
+   * Khai giống hệt `../sales-order-v2/model.ts` (`BomPreviewComponent`, ~dòng 319-335) để hai làn
+   * bán và sản xuất đọc cùng một hợp đồng, không trôi dạt mỗi nơi một kiểu.
+   */
+  component_count?: number | null;
+  component_count_uom?: string;
+  cut_length_each_m?: number;
+  /** Tên cột số đo đang giữ kích thước cắt (`height_m`, `width_pb_ray_m`…). Server quyết định. */
+  cut_axis?: string;
+  leaf_count?: number;
+  /** Lý do KHÔNG tính được số cấu kiện. Có nó thì phải hiện, tuyệt đối không lùi về 1. */
+  component_count_error?: string;
+  /** LỚP TIÊU HAO KHO — mét/m²/kg cho xuất kho, dự trù và giá thành. */
+  stock_consumption_qty?: number;
+  stock_consumption_uom?: string;
+  /** Dòng chưa map được Quy tắc BOM (`bom-rule-sales-preview.ts:458`) — số dưới là snapshot cũ. */
+  bom_rule_missing?: boolean;
+  /** Cảnh báo THIẾU CẤU HÌNH quy tắc, khác hẳn `note` (ghi chú kỹ thuật nội bộ). */
+  bom_rule_warning?: string;
 }
 
 export interface BomActualRequirementLike extends Json {

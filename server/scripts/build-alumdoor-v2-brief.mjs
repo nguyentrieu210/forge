@@ -1798,6 +1798,17 @@ note("G3 · Warehouse: K36/K12 khai stock_role + mỗi kho có một kho đầu 
         { fieldname: "profile_name", fieldtype: "Data", label: "Tên bộ quy cách", required: true },
         { fieldname: "item_groups", fieldtype: "Table", options: "Geometry Profile Scope", label: "Nhóm hàng áp dụng" },
         { fieldname: "fields", fieldtype: "Table", options: "Geometry Profile Field", label: "Trường hiển thị", required: true },
+        {
+          "//": "Có xổ định mức vật tư ra màn bán hàng cho loại cửa này không.",
+          "//do": [
+            "Cửa Đức hiện chưa khai Quy tắc BOM nào: mở khối ra chỉ được một bảng toàn dấu '?' kèm",
+            "hàng chục dòng 'Chưa map Quy tắc BOM cho …' — không nói cho thợ biết thêm gì, chỉ tổ",
+            "làm người bán tưởng đơn hỏng. Chủ xưởng chốt 24/08/2026: ẩn hẳn cho Cửa Đức.",
+            "Để đây (mỗi loại cửa một bộ quy cách) thay vì gõ cứng tên loại cửa vào code, để ngày",
+            "khai xong định mức thì tự bật lại bằng một ô tick, không phải sửa code."
+          ],
+          fieldname: "show_bom_on_sales", fieldtype: "Check", label: "Xổ định mức trên màn bán", default: true,
+        },
         { fieldname: "note", fieldtype: "Small Text", label: "Ghi chú" },
         { fieldname: "disabled", fieldtype: "Check", label: "Ngừng dùng", default: false },
       ],
@@ -1951,6 +1962,18 @@ note("MASTER · Measurement Profile chỉ đo/tồn; Geometry Field/Profile sở
           "divide:Float Hệ số chia cuối",
           "final_add:Float Cộng/trừ cuối",
           "qty_per_set:Float*! Số lượng mỗi bộ",
+          // Đã có trong brief từ trước nhưng thiếu ở bộ sinh — sinh lại là MẤT trường. Khai lại cho khớp.
+          "component_count_source:Select(Cố định,Số lá) Số cấu kiện lấy từ",
+          {
+            "//": "Luật ĐẾM (result_kind COUNT) chỉ ra SỐ cấu kiện, công thức của nó không chứa chiều dài.",
+            "//do": [
+              "Thợ cần CẢ HAI trục: '47 cây lưới' vô dụng nếu không kèm 'cắt mỗi cây dài bao nhiêu'.",
+              "Trường này cho luật khai THẲNG trục hình học mang chiều dài cắt (VD CAT_LA_RONG cho lá",
+              "cửa — mỗi lá chạy hết bề rộng cắt). Để trống = nguồn không nói, hệ im lặng thay vì bịa số.",
+            ],
+            fieldname: "cut_length_field", label: "Trục chiều dài cắt", fieldtype: "Link",
+            options: "Geometry Field",
+          },
           "rounding:Select(NONE,ROUND,CEIL,FLOOR) Làm tròn",
           "precision:Int Số chữ số",
           "formula_json:Long Text Công thức canonical JSON",

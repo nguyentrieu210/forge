@@ -23,7 +23,16 @@
  * không tồn tại là điều `skills/forge-ui-change-routing/SKILL.md` §4.6 cấm thẳng.
  */
 import { AlertTriangle, ExternalLink, Info, Loader2, RefreshCw } from "lucide-react";
-import { Badge, Button } from "@metaforge/ui";
+import {
+  Badge,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@metaforge/ui";
 import {
   AlumdoorBomActualEditor,
   type BomActualComponentRow,
@@ -33,6 +42,7 @@ import {
   numberValue,
   quantity,
   text,
+  type BomRequirementComponent,
   type BomRequirementPreview,
   type WorkOrderActualComponent,
 } from "./model.js";
@@ -68,6 +78,75 @@ function normalizeActualRows(rows: WorkOrderActualComponent[]): BomActualCompone
       };
     })
     .filter((row) => Boolean(row.component_key) && Boolean(row.item_code));
+}
+
+/**
+ * Một dòng cấu kiện đọc theo NGÔN NGỮ XƯỞNG.
+ *
+ * Câu hỏi thợ hỏi khi cầm tờ lệnh là: *lấy bao nhiêu cây? bao nhiêu lá? cắt mỗi cây dài bao nhiêu?*
+ * Bảng nào không trả lời ngay được ba câu đó thì chưa đạt. Trước 24/08/2026 khối này in
+ * `row.qty` + `row.uom` — tức TIÊU HAO KHO — nên hai cây ray hiện thành "5,8 Mét" và tấm tôn hiện
+ * "8,91 m2": đúng số cho kế toán kho, vô nghĩa với người đứng máy cắt.
+ */
+interface CauKienDong {
+  key: string;
+  ten: string;
+  /** `undefined` = server KHÔNG nói được số cấu kiện. Phải hiện "?" đỏ, tuyệt đối không lùi về 1. */
+  soLuong: number | undefined;
+  dvt: string;
+  daiMoiCai: string;
+  tong: string;
+  ghiChu: string;
+  phu: string;
+}
+
+function docCauKien(row: BomRequirementComponent, index: number): CauKienDong {
+  /*
+   * SL/ĐVT lấy từ lớp cấu kiện vật lý, KHÔNG lấy từ `qty`/`uom`.
+   *
+   * `component_count === null` là câu trả lời có nghĩa của server ("đã thử tính, chưa ra") — khác
+   * hẳn `undefined` (dòng không có lớp cấu kiện nào). Cả hai đều phải ra "?" chứ không ra 1, vì một
+   * dòng lá ghi "1" là nói dối thợ. `numberValue(null)` trả 0 nên bắt buộc chặn `null` trước.
+   */
+  const soLuong = row.component_count === null ? undefined : numberValue(row.component_count);
+  const cutEach = numberValue(row.cut_length_each_m);
+
+  /*
+   * Cột "Tổng" là chỗ DUY NHẤT Kg/Mét/m² được xuất hiện. `stock_consumption_qty` là số chuẩn;
+   * `qty`/`uom` chỉ là projection tương thích ngược của CHÍNH đại lượng đó (xem chú thích
+   * `sales-production-core.ts:371-375`), nên lùi về nó không phải là đoán — là đọc cùng một con số
+   * dưới tên cũ. Dòng chưa map Quy tắc BOM chỉ còn `qty`, bỏ luôn thì mất cả số dự trù.
+   */
+  const tongSo = numberValue(row.stock_consumption_qty) ?? numberValue(row.qty ?? undefined);
+  const tongDvt = text(row.stock_consumption_uom) || text(row.uom) || text(row.stock_uom);
+
+  /*
+   * Ghi chú gộp cả ba nguồn lý do. `bom_rule_warning` ("Chưa map Quy tắc BOM cho X" —
+   * `bom-rule-sales-preview.ts:459`) là CẢNH BÁO THIẾU CẤU HÌNH, không phải `note` kỹ thuật nội bộ,
+   * nên nó phải ra màn. Khi không có số mà cũng không có lý do nào thì vẫn phải nói ra rằng "không
+   * biết" — im lặng ở đây là đúng kiểu hỏng mà audit 21/08 gọi tên.
+   */
+  const lyDo = [
+    text(row.component_count_error),
+    text(row.bom_rule_warning),
+    text(row.quantity_error),
+  ].filter(Boolean);
+  if (soLuong === undefined && !lyDo.length) {
+    lyDo.push("Server không trả về số cấu kiện cho dòng này — chưa có Quy tắc BOM khớp hoặc thiếu kích thước.");
+  }
+
+  const phu = [text(row.color), text(row.source_rule)].filter(Boolean).join(" · ");
+
+  return {
+    key: `${text(row.component_key)}-live-${index}`,
+    ten: text(row.item_code) || text(row.component_key) || `dòng ${index + 1}`,
+    soLuong,
+    dvt: text(row.component_count_uom),
+    daiMoiCai: cutEach === undefined ? "—" : `${quantity(cutEach)} m`,
+    tong: tongSo === undefined ? "—" : `${quantity(tongSo)} ${tongDvt}`.trim(),
+    ghiChu: lyDo.join(" · "),
+    phu,
+  };
 }
 
 export interface AlumdoorWorkOrderBomPanelProps {
@@ -199,25 +278,65 @@ export function AlumdoorWorkOrderBomPanel(props: AlumdoorWorkOrderBomPanelProps)
             ) : null}
 
             {components.length ? (
-              <details className="rounded-md border">
-                <summary className="cursor-pointer px-2.5 py-2 text-xs font-medium">
-                  {components.length} cấu phần máy tính định mức xổ ra (đối chiếu với ảnh chụp trên lệnh)
-                </summary>
-                <ul className="space-y-1 px-2.5 pb-2.5 text-[11px]">
-                  {components.map((row, index) => (
-                    <li key={`${text(row.component_key)}-live-${index}`} className="flex flex-wrap items-baseline gap-2">
-                      <span className="font-mono font-medium">{text(row.item_code) || text(row.component_key)}</span>
-                      <span className="tabular-nums">
-                        {row.qty == null ? "—" : quantity(row.qty)} {text(row.uom) || text(row.stock_uom)}
-                      </span>
-                      {text(row.color) ? <span className="text-muted-foreground">{text(row.color)}</span> : null}
-                      {text(row.source_rule) ? (
-                        <span className="text-muted-foreground">· {text(row.source_rule)}</span>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              </details>
+              /*
+               * Bảng này KHÔNG nằm trong `<details>` gập lại nữa (24/08/2026).
+               *
+               * "Mấy cây, mấy lá, cắt mỗi cái bao nhiêu" là câu hỏi ĐẦU TIÊN của người đứng máy,
+               * không phải chi tiết phụ để bấm ra xem. Giấu nó sau một mũi tên gập là lý do khối cũ
+               * bị đọc lướt qua rồi thợ đi hỏi lại bằng miệng.
+               */
+              <div className="overflow-hidden rounded-md border">
+                <div className="border-b bg-muted/30 px-2.5 py-2 text-xs font-medium">
+                  {components.length} cấu kiện máy tính định mức xổ ra (đối chiếu với ảnh chụp trên lệnh)
+                </div>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="min-w-44">Cấu kiện</TableHead>
+                        <TableHead className="w-16 text-right">SL</TableHead>
+                        <TableHead className="w-20">ĐVT</TableHead>
+                        <TableHead className="w-28 text-right">Dài mỗi cái</TableHead>
+                        <TableHead className="w-28 text-right">Tổng</TableHead>
+                        <TableHead className="min-w-48">Ghi chú</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {components.map((row, index) => {
+                        const dong = docCauKien(row, index);
+                        return (
+                          <TableRow key={dong.key} className={dong.soLuong === undefined ? "bg-destructive/5" : undefined}>
+                            <TableCell className="align-top">
+                              <div className="font-mono text-xs font-medium">{dong.ten}</div>
+                              {dong.phu ? (
+                                <div className="text-[10px] text-muted-foreground">{dong.phu}</div>
+                              ) : null}
+                            </TableCell>
+                            <TableCell className="text-right align-top text-xs font-semibold tabular-nums">
+                              {dong.soLuong === undefined
+                                ? <span className="text-destructive">?</span>
+                                : quantity(dong.soLuong)}
+                            </TableCell>
+                            <TableCell className="align-top text-xs">{dong.dvt || "—"}</TableCell>
+                            <TableCell className="text-right align-top text-xs tabular-nums">{dong.daiMoiCai}</TableCell>
+                            {/* Kg · Mét · m² chỉ được đứng ở đây — đây là số cho kho và giá thành, không phải số cho thợ. */}
+                            <TableCell className="text-right align-top text-xs tabular-nums text-muted-foreground">
+                              {dong.tong}
+                            </TableCell>
+                            <TableCell className="align-top text-[11px] leading-snug text-destructive">
+                              {dong.ghiChu || <span className="text-muted-foreground">—</span>}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+                <div className="border-t px-2.5 py-1.5 text-[10px] text-muted-foreground">
+                  “SL / ĐVT” là SỐ CẤU KIỆN phải cắt (`component_count`). Cột “Tổng” là tiêu hao kho
+                  (`stock_consumption_qty`) — số để lĩnh vật tư và tính giá thành, không phải số cây/lá.
+                </div>
+              </div>
             ) : null}
           </div>
         ) : null}

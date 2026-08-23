@@ -135,7 +135,9 @@ test("Alumdoor Sales Order print keeps the A4 structural contract", () => {
 test("Alumdoor Sales Order fixture renders door and ordinary rows through the real renderer", () => {
   const rendered = renderPrintFormat(print, fixture, "vi");
   const header = cells(section(rendered, "thead"), "th").map((cell) => cell.text);
-  assert.deepEqual(header, ["STT", "Mã hàng", "Tên hàng", "Màu", "Rộng (m)", "Cao (m)", "Số lượng", "ĐVT", "Khối lượng", "Đơn giá (VNĐ)", "CK (%)", "Thành tiền (VNĐ)"]);
+  // Nhãn cột chép theo MÀN NHẬP (chốt 24/08/2026): "Cao phủ bì" thay "Cao", "SL" thay "Số lượng"
+  // — người bán đọc bản in phải thấy đúng chữ vừa nhập, không phải một bộ từ vựng thứ hai.
+  assert.deepEqual(header, ["STT", "Mã hàng", "Tên hàng", "Màu", "Rộng (m)", "Cao phủ bì (m)", "SL", "ĐVT", "Khối lượng", "Đơn giá (VNĐ)", "CK (%)", "Thành tiền (VNĐ)"]);
   const tbody = section(rendered, "tbody");
   const rows = [...tbody.matchAll(/<tr\b(?![^>]*discount-row)[^>]*>([\s\S]*?)<\/tr>/gi)]
     .map((match) => cells(match[1], "td"));
