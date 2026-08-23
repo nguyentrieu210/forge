@@ -16,6 +16,8 @@ test("master workspace registry preserves generic and operational fallthrough", 
 
   assert.match(registry, /bridge\.get\("master_ui"\) === "generic"/);
   assert.match(registry, /doctype === "Item"/);
+  assert.match(registry, /doctype === "Geometry Profile"/);
+  assert.match(registry, /DoorGeometryWorkbench/);
   for (const doctype of ["Item Price", "Pricing Scope", "Pricing Rule"]) assert.match(registry, new RegExp(doctype));
   assert.match(registry, /return undefined/);
   assert.match(combined, /resolveAlumdoorMasterWorkspace\(context\) \?\? operationalWorkspaceExtension\.resolve\(context\)/);
@@ -29,6 +31,23 @@ test("Item workbench keeps an explicit route back to the full generic form", () 
   assert.match(item, /uom_conversions/);
   assert.match(item, /material_specification/);
   assert.match(item, /geometry_profile/);
+});
+
+test("Door Geometry workbench owns the configuration job without becoming a formula engine", () => {
+  const door = readFileSync(path.join(ROOT, "master-workspaces", "DoorGeometryWorkbench.tsx"), "utf8");
+  assert.match(door, /data-surface="alumdoor-door-geometry-workbench"/);
+  assert.match(door, /Trường nhập bán hàng/);
+  assert.match(door, /runtime_fieldname/);
+  assert.match(door, /role/);
+  assert.match(door, /required/);
+  assert.match(door, /visible/);
+  assert.match(door, /editable/);
+  assert.match(door, /sequence/);
+  assert.match(door, /Cutting Policy/);
+  assert.match(door, /Item đang sử dụng cấu hình/);
+  assert.match(door, /\?master_ui=generic/);
+  assert.doesNotMatch(door, /if\s*\(\s*doorType\s*===/);
+  assert.doesNotMatch(door, /Cửa Đài Loan|Cửa Đức|Cửa Lưới|Cửa Siêu Trường/);
 });
 
 test("pricing workbench validates scope and delegates preview to the server pricing engine", () => {
