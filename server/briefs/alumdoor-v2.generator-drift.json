@@ -32,9 +32,7 @@
     "BOM Rule|BOMR-CUA-TAM-LIEN-UC-PKDUC-VIS",
     "BOM Rule|BOMR-CUA-TAM-LIEN-UC-RT-RAY-U70-KRON",
     "BOM Rule|BOMR-CUA-TAM-LIEN-UC-RT-TR114-1-8",
-    "BOM Rule|BOMR-CUA-TAM-LIEN-UC-RT-TRUC34",
-    "Geometry Field|LOT_LONG_CAO",
-    "Geometry Field|LOT_LONG_RONG"
+    "BOM Rule|BOMR-CUA-TAM-LIEN-UC-RT-TRUC34"
   ],
   "fixtures_generator_sinh_brief_khong_co": [],
   "fixtures_hai_ben_khac_noi_dung": [
