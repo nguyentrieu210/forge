@@ -18,33 +18,71 @@ function callWith(records: Record<string, Json>) {
 }
 
 describe("alumdoor.ui.preview_child_row", () => {
-  it("hydrates and computes purchase aluminium barem on the server", async () => {
+  it("hydrates and computes purchase aluminium barem from Measurement Profile + Material Specification", async () => {
     const call = callWith({
       "resource/Item/AL-01": {
-        item_code: "AL-01", item_name: "Nhôm AL-01", is_purchase_item: 1, disabled: 0,
-        inventory_mode: "Nhôm cây/lá", stock_uom: "Kg", default_purchase_uom: "Kg",
-        material_specification: "SPEC-AL", standard_rate: 50,
+        item_code: "AL-01", item_name: "Nhôm AL-01", item_group: "Nan/lá cửa", is_purchase_item: 1, disabled: 0,
+        stock_uom: "Cây", default_purchase_uom: "Kg", measurement_profile: "Nhôm cây/lá",
+        material_specification: "SPEC-AL", has_catch_weight: 1, weight_uom: "Kg", standard_rate: 50,
       },
-      "resource/Material Specification/SPEC-AL": { theoretical_kg_per_m: 1.2 },
+      "resource/Measurement Profile/Nhôm cây/lá": {
+        profile_name: "Nhôm cây/lá", inventory_mode: "Nhôm cây/lá", stock_uom: "Cây",
+        track_dimension_lot: 1, require_color: 1, require_condition: 1, require_length: 1,
+        require_width: 0, require_piece_qty: 1, track_bundle_qty: 1, weight_tolerance_pct: 13,
+      },
+      "resource/Material Specification/SPEC-AL": { name: "SPEC-AL", theoretical_kg_per_m: 1.2 },
     });
     const res = await previewChildRow(call, {
       child_doctype: "Purchase Order Item",
-      child_fields: ["item_code", "inventory_mode", "stock_uom", "uom", "conversion_factor", "length_m", "qty_bar", "theoretical_kg_per_m", "theoretical_kg", "qty", "rate", "amount", "stock_qty"],
+      child_fields: ["item_code", "inventory_mode", "stock_uom", "uom", "conversion_factor", "length_m", "qty_bar", "theoretical_kg_per_m", "theoretical_kg", "qty", "rate", "amount", "stock_qty", "condition", "color"],
       row: { item_code: "AL-01", length_m: 6, qty_bar: 10 },
       parent: { currency: "VND" },
       changed_field: "item_code",
     });
     expect(res.status).toBe(200);
-    const body = await res.json() as { patch: Json };
+    const body = await res.json() as { patch: Json; field_overrides: Record<string, Json>; purchase_runtime?: Json };
     expect(body.patch.inventory_mode).toBe("Nhôm cây/lá");
+    expect(body.patch.stock_uom).toBe("Cây");
     expect(body.patch.uom).toBe("Kg");
-    expect(body.patch.conversion_factor).toBe(1);
+    expect(body.patch.conversion_factor).toBeCloseTo(10 / 72, 6);
     expect(body.patch.theoretical_kg_per_m).toBe(1.2);
     expect(body.patch.theoretical_kg).toBe(72);
     expect(body.patch.qty).toBe(72);
     expect(body.patch.rate).toBe(50);
     expect(body.patch.amount).toBe(3600);
-    expect(body.patch.stock_qty).toBe(72);
+    expect(body.patch.stock_qty).toBe(10);
+    expect(body.field_overrides.length_m?.reqd).toBe(1);
+    expect(body.field_overrides.qty_bar?.reqd).toBe(1);
+    expect(body.field_overrides.condition?.reqd).toBe(1);
+    expect(body.purchase_runtime).toBeTruthy();
+  });
+
+  it("keeps configured purchase fields visible even when their row values are empty", async () => {
+    const call = callWith({
+      "resource/Item/SHEET-01": {
+        item_code: "SHEET-01", item_name: "Tấm 01", is_purchase_item: 1, disabled: 0,
+        stock_uom: "Tấm", default_purchase_uom: "Tấm", measurement_profile: "Tấm/Kính",
+      },
+      "resource/Measurement Profile/Tấm/Kính": {
+        profile_name: "Tấm/Kính", inventory_mode: "Tấm/Kính", stock_uom: "Tấm",
+        track_dimension_lot: 1, require_color: 0, require_condition: 0, require_length: 1,
+        require_width: 1, require_piece_qty: 1, track_bundle_qty: 0,
+      },
+    });
+    const res = await previewChildRow(call, {
+      child_doctype: "Purchase Order Item",
+      child_fields: ["item_code", "length_m", "width_m", "qty_bar", "qty", "uom", "rate", "amount"],
+      row: { item_code: "SHEET-01" },
+      parent: {},
+      changed_field: "item_code",
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as { field_overrides: Record<string, Json> };
+    expect(body.field_overrides.length_m?.hidden).toBe(0);
+    expect(body.field_overrides.length_m?.reqd).toBe(1);
+    expect(body.field_overrides.width_m?.hidden).toBe(0);
+    expect(body.field_overrides.width_m?.reqd).toBe(1);
+    expect(body.field_overrides.qty_bar?.hidden).toBe(0);
   });
 
   it("hydrates an ordinary sales line, uses Item Price, and derives quantity from set count", async () => {
@@ -91,7 +129,6 @@ describe("alumdoor.ui.preview_child_row", () => {
     const res = await previewChildRow(call, {
       child_doctype: "Sales Order Item",
       child_fields: ["item_code", "inventory_mode", "stock_uom", "uom", "conversion_factor"],
-      // "Cái" belongs to the previous row/item and is not configured on TP-TD327.
       row: { item_code: "TP-TD327", uom: "Cái" },
       parent: { currency: "VND" },
       changed_field: "item_code",
