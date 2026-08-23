@@ -7,9 +7,10 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, "..", "..");
 const read = (path) => readFileSync(resolve(repoRoot, path), "utf8");
+const readSalesPreview = () => read("server/apps-src/alumdoor-worker/src/ui-child-preview-legacy.ts");
 
 test("sales child preview derives geometry visibility from Geometry Profile runtime", () => {
-  const source = read("server/apps-src/alumdoor-worker/src/ui-child-preview.ts");
+  const source = readSalesPreview();
   assert.match(source, /readGeometryProfileRuntime/);
   assert.match(source, /runtime_fieldname/);
   assert.match(source, /sequence/);
@@ -18,6 +19,12 @@ test("sales child preview derives geometry visibility from Geometry Profile runt
   assert.doesNotMatch(source, /function customerWidthField/);
   assert.doesNotMatch(source, /function salesWidthField/);
   assert.doesNotMatch(source, /function usesMeshHeight/);
+});
+
+test("sales child preview router preserves the catalog-driven sales module", () => {
+  const router = read("server/apps-src/alumdoor-worker/src/ui-child-preview.ts");
+  assert.match(router, /previewLegacyChildRow/);
+  assert.match(router, /PURCHASE_DOCTYPES/);
 });
 
 test("sales client no longer decides ray-vs-plastic width from door/customer names", () => {
@@ -31,7 +38,7 @@ test("sales client no longer decides ray-vs-plastic width from door/customer nam
 });
 
 test("geometry runtime keeps a stable schema even while row values are empty", () => {
-  const source = read("server/apps-src/alumdoor-worker/src/ui-child-preview.ts");
+  const source = readSalesPreview();
   assert.match(source, /applyGeometryRuntimeOverrides/);
   assert.match(source, /visible/);
   assert.match(source, /required/);
@@ -40,7 +47,7 @@ test("geometry runtime keeps a stable schema even while row values are empty", (
 });
 
 test("non-geometry sales rules remain explicitly outside Geometry Profile authority", () => {
-  const source = read("server/apps-src/alumdoor-worker/src/ui-child-preview.ts");
+  const source = readSalesPreview();
   assert.match(source, /has_butterfly_bracket/);
   assert.match(source, /ray_type/);
   assert.match(source, /deriveLinearSalesBasis/);
