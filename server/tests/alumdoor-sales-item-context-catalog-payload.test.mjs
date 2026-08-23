@@ -208,7 +208,19 @@ test("bán vượt tồn thì CHẶN; không so được thì nói 'không so đ
   assert.notEqual(unknown.body.shortage.severity, "ok");
 });
 
-test("quy cách kỹ thuật chưa khai Kg/m và chiều dài cây chuẩn thì báo đúng chỗ sửa", async () => {
+/**
+ * 23/08/2026 — thu hẹp lại còn ĐÚNG cảnh báo sửa được:
+ *
+ *  · Bỏ `SPEC_MISSING_STANDARD_LENGTH`: 78/78 quy cách trong danh mục đều trống ô này, và
+ *    `standard_length_m` không được PHÉP TÍNH nào đọc (chỉ chính cảnh báo cũ và một phép chiếu
+ *    xuống UI). Nhôm cũng không có "chiều dài chuẩn" — mỗi đợt giao một chiều dài khác.
+ *  · Bỏ `GEOMETRY_PROFILE_MISSING` cho hàng KHÔNG PHẢI CỬA: mọi nơi tiêu thụ đọc
+ *    `Cutting Policy.geometry_profile` (khoá theo `door_type`), không nơi nào đọc
+ *    `Item.geometry_profile`. Ray/trục không có loại cửa nên không bao giờ tắt được cảnh báo.
+ *
+ *  · GIỮ `SPEC_MISSING_KG_PER_M`: số này quy đổi Mét↔Kg, được đọc ở 39 chỗ, 36/78 còn thiếu.
+ */
+test("quy cách kỹ thuật chưa khai Kg/m thì báo đúng chỗ sửa", async () => {
   const records = new Map([
     ["Item:RT_TRUC114_18", rayItem()],
     ["Measurement Profile:Ống/trục", {
@@ -232,9 +244,10 @@ test("quy cách kỹ thuật chưa khai Kg/m và chiều dài cây chuẩn thì 
   assert.equal(body.spec_context.measurement_profile.track_dimension_lot, true);
 
   const codes = body.spec_context.coverage_gaps.map((gap) => gap.code);
-  assert.ok(codes.includes("SPEC_MISSING_STANDARD_LENGTH"));
   assert.ok(codes.includes("SPEC_MISSING_KG_PER_M"));
-  assert.ok(codes.includes("GEOMETRY_PROFILE_MISSING"));
+  // Hai cảnh báo KHÔNG được xuất hiện nữa — xem lý do ở chú thích đầu test.
+  assert.equal(codes.includes("SPEC_MISSING_STANDARD_LENGTH"), false);
+  assert.equal(codes.includes("GEOMETRY_PROFILE_MISSING"), false, "ray/trục không có loại cửa nên không đòi bộ hình học của cửa");
   for (const gap of body.spec_context.coverage_gaps) assert.ok(gap.where.length > 0, `${gap.code} thiếu chỗ sửa`);
   // Không cái nào trong số này được chặn bán — chúng là cảnh báo.
   assert.ok(body.readiness.warnings.some((entry) => entry.code === "SPEC_MISSING_KG_PER_M"));

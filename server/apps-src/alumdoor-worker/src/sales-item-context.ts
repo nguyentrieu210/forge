@@ -729,14 +729,27 @@ async function readCatalogExtras(
       where: itemFix(itemCode, "Bộ theo dõi vật tư"),
     });
   }
-  if (!geometryName) {
+  /**
+   * Hai danh mục này ĐÒI ĐÚNG LOẠI MẶT HÀNG, không đòi tất cả.
+   *
+   * Bộ quy cách hình học là của CỬA — cả 5 bộ trong danh mục đều là GP-CUA-*, và
+   * `raySpecificGeometry` chỉ tra nó theo `door_type`. Quy cách kỹ thuật thì ngược lại: nó giữ
+   * Kg/m của cây vật tư, thứ mà một cánh cửa thành phẩm không có.
+   *
+   * Trước 23/08/2026 cả hai đều hỏi vô điều kiện, nên màn bán hàng treo thường trực hai câu
+   * không bao giờ tắt được: cửa CDL_DLM_1LY bị đòi quy cách cây, ray RT_RAY_HOP_TD_U100 bị đòi
+   * bộ hình học của cửa. Cảnh báo không sửa được dạy người ta bỏ qua MỌI cảnh báo — kể cả câu
+   * thật nằm ngay bên cạnh.
+   */
+  const laCua = Boolean(doorType);
+  if (laCua && !geometryName) {
     gaps.push({
       code: "GEOMETRY_PROFILE_MISSING",
       label: "Mặt hàng chưa có bộ quy cách hình học",
       where: itemFix(itemCode, "Bộ quy cách hình học"),
     });
   }
-  if (!specName) {
+  if (!laCua && !specName) {
     gaps.push({
       code: "SPEC_NOT_LINKED",
       label: "Mặt hàng chưa gắn quy cách kỹ thuật",
@@ -744,13 +757,15 @@ async function readCatalogExtras(
     });
   } else if (spec) {
     const specWhere = `Danh mục → Quy cách kỹ thuật vật tư → ${specName}`;
-    if (positive(spec.standard_length_m) === null) {
-      gaps.push({
-        code: "SPEC_MISSING_STANDARD_LENGTH",
-        label: "Chiều dài cây chuẩn chưa khai",
-        where: `${specWhere} → Chiều dài chuẩn (m)`,
-      });
-    }
+    /*
+     * KHÔNG hỏi "Chiều dài cây chuẩn" nữa. Soát 23/08/2026: 78/78 quy cách đều trống, và
+     * `standard_length_m` chỉ được đọc ở đúng hai chỗ — chính cảnh báo này và một phép chiếu
+     * xuống UI. Không phép tính nào dùng tới. Nhôm thì càng không có "chiều dài chuẩn": mỗi
+     * đợt giao một chiều dài khác nhau, nên hệ số quy đổi nằm trên DÒNG chứ không trên hồ sơ.
+     * Một câu hỏi không ai trả lời được và không ai cần câu trả lời thì không phải cảnh báo.
+     *
+     * Kg/m thì GIỮ: nó là số quy đổi Mét↔Kg, được đọc ở 39 chỗ, và 36/78 còn thiếu là gap thật.
+     */
     if (positive(spec.theoretical_kg_per_m) === null) {
       gaps.push({
         code: "SPEC_MISSING_KG_PER_M",

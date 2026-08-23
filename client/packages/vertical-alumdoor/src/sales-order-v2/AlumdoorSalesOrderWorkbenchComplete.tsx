@@ -359,6 +359,11 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
   const [deliveryNotesLoaded, setDeliveryNotesLoaded] = useState(false);
   const [unsubmitting, setUnsubmitting] = useState(false);
   const [confirmUnsubmit, setConfirmUnsubmit] = useState(false);
+  /**
+   * Ô đầu đơn đang bị chặn — vẽ viền đỏ để MẮT tìm thấy, không chỉ cuộn tới rồi thôi.
+   * Toast biến mất sau vài giây; viền thì ở lại cho tới khi người bán điền xong.
+   */
+  const [oLoi, setOLoi] = useState("");
   /** Bản xem trước của lệnh sản xuất sắp phát; `null` = chưa hỏi. Kèm `_warehouse` đã chốt. */
   const [productionPreview, setProductionPreview] = useState<Json | null>(null);
   const [productionBusy, setProductionBusy] = useState(false);
@@ -1291,9 +1296,11 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
     const validationError = validate();
     if (validationError) {
       toast.error(validationError.message);
+      setOLoi(text(validationError.focus));
       if (validationError.focus) focusHeaderField(validationError.focus);
       return null;
     }
+    setOLoi("");
     if (!meta) return null;
     const document = buildDocument();
     const finalProjection = await requestDocumentPreview(document, "items", linesRef.current);
@@ -1584,7 +1591,10 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
       field={headerField(fieldname, label, fieldtype, options)}
       label={label}
       value={header[fieldname]}
-      onChange={(value) => setHeaderField(fieldname, fieldValueForServer(headerField(fieldname, label, fieldtype, options).fieldtype, value), preview)}
+      onChange={(value) => {
+        if (oLoi === fieldname) setOLoi("");
+        setHeaderField(fieldname, fieldValueForServer(headerField(fieldname, label, fieldtype, options).fieldtype, value), preview);
+      }}
       registry={registry}
       services={["install_province", "install_ward"].includes(fieldname)
         ? readOnlyAdministrativeServices
@@ -1596,6 +1606,8 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
       readOnly={formReadOnly || busy || readOnly}
       compact
       className={`[&_.mf-control]:!min-h-8 [&_input]:!h-8 [&_button]:!h-8 ${
+        oLoi === fieldname ? "[&_.mf-control]:!ring-2 [&_.mf-control]:!ring-destructive [&_input]:!border-destructive [&_button]:!border-destructive " : ""
+      }${
         ["install_address", "manual_note", "shipping_note"].includes(fieldname)
           ? "[&_textarea]:!h-8 [&_textarea]:!min-h-8 [&_textarea]:!resize-none [&_textarea]:!py-1"
           : ""

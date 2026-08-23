@@ -114,7 +114,14 @@ export function SalesDeliveryWorkspace({ action, onOpen }: ActionScreenProps) {
     <header className="rounded-xl border bg-card px-4 py-4 sm:px-5"><p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">Kho giao hàng</p><h1 className="mt-0.5 text-xl font-semibold">Một phiếu giao · nhiều Đơn bán</h1><p className="mt-1 text-sm text-muted-foreground">Chọn đơn còn phải giao, soát dòng nguồn và lớp FIFO. Giá bán theo đơn; giá vốn theo sổ kho.</p><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{fields.map((field) => <FieldEditor key={field.fieldname} field={field} values={values} onChange={change} />)}</div></header>
     {error ? <div className="rounded-xl border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">{error}</div> : null}
     {!customer ? <div className="rounded-xl border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">Chọn Khách hàng để tải các Đơn bán đã ghi sổ còn số lượng phải giao.</div> : <>
-      <SourceDocumentSelector documents={documents.map((row) => ({ id: text(row.sales_order), label: text(row.sales_order), secondary: `${formatDate(row.transaction_date)} · hẹn ${formatDate(row.delivery_date)}`, meta: text(row.disabled_reason) || `${fmt.number(number(row.outstanding_lines))} dòng còn giao`, disabled: Boolean(text(row.disabled_reason)) }))} selected={selected} onToggle={toggle} onSelectAll={(ids) => setSelected(new Set(ids))} empty={busy === "preview" ? "Đang tải Đơn bán…" : "Không có Đơn bán còn phải giao."} />
+      <SourceDocumentSelector documents={documents.map((row) => ({ id: text(row.sales_order), label: text(row.sales_order), secondary: `${formatDate(row.transaction_date)} · hẹn ${formatDate(row.delivery_date)}`, meta: text(row.disabled_reason) || `${fmt.number(number(row.outstanding_lines))} dòng còn giao`, disabled: Boolean(text(row.disabled_reason)) }))} selected={selected} onToggle={toggle} onSelectAll={(ids) => setSelected(new Set(ids))} empty={busy === "preview"
+          ? "Đang tải Đơn bán…"
+          /* Danh sách rỗng VÌ LỖI thì phải nói là lỗi. Trước 23/08/2026 một ngày giao sai định
+             dạng cũng hiện "Không có Đơn bán còn phải giao" — người bán đi tìm đơn thay vì sửa
+             ô ngày ngay bên trên. */
+          : error
+            ? "Chưa tải được danh sách Đơn bán — xem lỗi phía trên rồi thử lại."
+            : "Không có Đơn bán còn phải giao."} />
       <SourceLineAllocator rows={lines} rowKey={(row, index) => `${text(row.sales_order)}:${text(row.sales_order_row_id)}:${index}`} title="Dòng Đơn bán được đưa vào Phiếu giao" description="Dòng được giữ riêng theo khóa nguồn; chỉ gom cách trình bày khi quy cách kho thật sự giống nhau." columns={[
         { key: "source", label: "Đơn / dòng", render: (row) => <span><b>{text(row.sales_order)}</b><span className="ml-1 text-xs text-muted-foreground">{text(row.sales_order_row_id)}</span></span> },
         { key: "item", label: "Mặt hàng", render: (row) => <span>{text(row.item_code)}<span className="ml-1 text-xs text-muted-foreground">{text(row.color)} {text(row.material_specification)}</span></span> },
