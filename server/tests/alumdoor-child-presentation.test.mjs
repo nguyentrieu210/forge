@@ -64,9 +64,11 @@ test("presentation helper migrates every Alumdoor child DocType without changing
   const brief = sourceBrief();
   const before = new Map(brief.doctypes.filter((dt) => dt.child === true).map((dt) => [dt.name, dt.fields.map((field) => typeof field === "string" ? field.split(":")[0].trim() : field.fieldname)]));
   const result = applyAlumdoorChildPresentation(brief);
-  // 40 từ 23/08/2026: thêm `Sales Invoice Tax` để hoá đơn giữ được VAT của đơn hàng.
+  // 41 từ 23/08/2026: thêm `Sales Invoice Tax` (hoá đơn giữ VAT của đơn) và
+  // `Payment Reference` (phiếu thu/chi gán được vào từng hoá đơn — thiếu nó thì MỌI phiếu
+  // đều thành tiền trả trước không gán ai, và từng hoá đơn treo nguyên dù đã thu đủ).
   // Mọi child mới phải tự động đi qua cùng một chính sách trình bày.
-  assert.equal(result.migrated, 40);
+  assert.equal(result.migrated, 41);
   for (const dt of brief.doctypes.filter((value) => value.child === true)) {
     assert.deepEqual(dt.fields.map((field) => field.fieldname), before.get(dt.name), `${dt.name} field order changed`);
     assert.ok(dt.fields.every((field) => ["quick", "expanded", "internal"].includes(field.surface)), `${dt.name} has missing surface`);
@@ -184,8 +186,8 @@ test("all child doctypes own presentation while conditional required fields stay
   const pkg = compileWithUiPolicies(brief);
   const children = pkg.doctypes.filter((doctype) => doctype.is_child === true);
   // Khoá số lượng để child mới không lọt khỏi hợp đồng UI mà không có kiểm thử.
-  // 40 từ 23/08/2026: thêm `Sales Invoice Tax` để hoá đơn giữ được VAT của đơn hàng.
-  assert.equal(children.length, 40);
+  // 41 từ 23/08/2026: thêm `Sales Invoice Tax` và `Payment Reference` (xem test đầu file).
+  assert.equal(children.length, 41);
   const missing = children
     .filter((doctype) => !doctype.viewPolicy?.form?.enabled || !doctype.viewPolicy?.quickEntry?.enabled)
     .map((doctype) => doctype.name);

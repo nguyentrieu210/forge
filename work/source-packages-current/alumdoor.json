@@ -1,7 +1,7 @@
 {
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "2.34.0",
+  "version": "2.35.0",
   "metaContractVersion": 1,
   "platform_requires": "1.0.0",
   "requires": [
@@ -11582,6 +11582,27 @@
           "idx": 12
         },
         {
+          "fieldname": "references",
+          "label": "Hoá đơn đối trừ",
+          "fieldtype": "Table",
+          "options": "Payment Reference",
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": false,
+          "idx": 13
+        },
+        {
+          "fieldname": "allow_unallocated",
+          "label": "Ghi nhận phần dư là tiền trả trước",
+          "fieldtype": "Check",
+          "valueSource": "user",
+          "editMode": "immutable_after_submit",
+          "surface": "expanded",
+          "serverEnforced": false,
+          "idx": 14
+        },
+        {
           "fieldname": "note",
           "label": "Ghi chú",
           "fieldtype": "Small Text",
@@ -11589,7 +11610,7 @@
           "editMode": "immutable_after_submit",
           "surface": "expanded",
           "serverEnforced": false,
-          "idx": 13
+          "idx": 15
         }
       ],
       "viewPolicy": {
@@ -11616,6 +11637,8 @@
             "paid_from",
             "paid_to",
             "reference_no",
+            "references",
+            "allow_unallocated",
             "note"
           ]
         },
@@ -11630,6 +11653,134 @@
             "received_amount",
             "paid_from",
             "paid_to"
+          ]
+        },
+        "kanban": {
+          "enabled": false
+        },
+        "calendar": {
+          "enabled": false
+        },
+        "gantt": {
+          "enabled": false
+        },
+        "chart": {
+          "enabled": false
+        },
+        "mobile": {}
+      },
+      "permissions": [
+        {
+          "role": "Chủ xưởng",
+          "read": true,
+          "write": true,
+          "create": true,
+          "print": true,
+          "email": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "Kế toán",
+          "read": true,
+          "write": true,
+          "create": true,
+          "print": true,
+          "email": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "Kinh doanh",
+          "read": true,
+          "print": true,
+          "email": true,
+          "report": true,
+          "export": true
+        },
+        {
+          "role": "System Manager",
+          "read": true,
+          "write": true,
+          "create": true,
+          "submit": true,
+          "cancel": true,
+          "amend": true,
+          "print": true,
+          "email": true,
+          "report": true,
+          "export": true
+        }
+      ],
+      "revision": 1
+    },
+    {
+      "name": "Payment Reference",
+      "kind": "child_table",
+      "label": "Hoá đơn đối trừ",
+      "module": "Alumdoor",
+      "is_child": true,
+      "is_tree": false,
+      "is_single": false,
+      "is_submittable": false,
+      "track_changes": true,
+      "allow_rename": false,
+      "fields": [
+        {
+          "label": "Loại chứng từ",
+          "fieldname": "reference_doctype",
+          "fieldtype": "Select",
+          "options": "Sales Invoice\nPurchase Invoice",
+          "required": true,
+          "default": "Sales Invoice",
+          "surface": "quick",
+          "valueSource": "default",
+          "editMode": "editable",
+          "serverEnforced": false,
+          "idx": 1
+        },
+        {
+          "label": "Số hoá đơn",
+          "fieldname": "reference_name",
+          "fieldtype": "Data",
+          "required": true,
+          "surface": "quick",
+          "valueSource": "user",
+          "editMode": "editable",
+          "serverEnforced": false,
+          "idx": 2
+        },
+        {
+          "label": "Số tiền trừ vào hoá đơn này",
+          "fieldname": "allocated_amount",
+          "fieldtype": "Currency",
+          "required": true,
+          "surface": "quick",
+          "valueSource": "user",
+          "editMode": "editable",
+          "serverEnforced": false,
+          "idx": 3
+        }
+      ],
+      "viewPolicy": {
+        "list": {
+          "enabled": false,
+          "columns": []
+        },
+        "form": {
+          "enabled": true,
+          "fields": [
+            "reference_doctype",
+            "reference_name",
+            "allocated_amount"
+          ]
+        },
+        "quickEntry": {
+          "enabled": true,
+          "fields": [
+            "reference_doctype",
+            "reference_name",
+            "allocated_amount"
           ]
         },
         "kanban": {

@@ -296,6 +296,36 @@ export class D1MutationStore implements MutationStore {
     return Number(row?.total ?? 0);
   }
 
+  /**
+   * Hoá đơn còn dư nợ của một đối tác, CŨ TRƯỚC.
+   *
+   * Gom thẳng trên `payment_ledger_entries` chứ không đọc từng chứng từ rồi cộng ngoài SQL:
+   * một khách có vài trăm hoá đơn thì cách kia là vài trăm lượt đọc cho mỗi phiếu thu.
+   * `MIN(posting_at)` là ngày phát sinh khoản phải thu — dòng đối trừ về sau không được phép
+   * kéo hoá đơn cũ lên đầu hàng đợi.
+   */
+  async listOpenPartyVouchers(
+    tenantId: string,
+    voucherType: string,
+    partyType: string,
+    party: string,
+  ): Promise<Array<{ voucher_no: string; outstanding_minor: number }>> {
+    const rows = await this.writer.prepare(
+      `SELECT against_voucher_no AS voucher_no,
+              SUM(amount_minor) AS outstanding_minor,
+              MIN(posting_at) AS first_posting_at
+         FROM payment_ledger_entries
+        WHERE tenant_id=?1 AND against_voucher_type=?2 AND party_type=?3 AND party=?4
+        GROUP BY against_voucher_no
+       HAVING SUM(amount_minor) > 0
+        ORDER BY first_posting_at ASC, against_voucher_no ASC`,
+    ).bind(tenantId, voucherType, partyType, party).all<{ voucher_no: string; outstanding_minor: number }>();
+    return (rows.results ?? []).map((row) => ({
+      voucher_no: String(row.voucher_no),
+      outstanding_minor: Number(row.outstanding_minor ?? 0),
+    }));
+  }
+
   async getBaseOutstandingMinor(tenantId: string, voucherType: string, voucherNo: string): Promise<number> {
     const row = await this.writer.prepare(
       `SELECT COALESCE(SUM(base_amount_minor),0) AS total FROM payment_ledger_entries

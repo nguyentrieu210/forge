@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "2.34.0",
+  "version": "2.35.0",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -10197,6 +10197,8 @@
         "paid_from:Link(Account)! Tài khoản GHI CÓ (thu: phải thu · chi: ngân hàng)",
         "paid_to:Link(Account)! Tài khoản GHI NỢ (thu: ngân hàng · chi: phải trả)",
         "reference_no:Data Số chứng từ ngân hàng",
+        "references:Table(Payment Reference) Hoá đơn đối trừ",
+        "allow_unallocated:Check Ghi nhận phần dư là tiền trả trước",
         "note:Small Text Ghi chú"
       ],
       "permissions": {
@@ -10205,6 +10207,56 @@
         "Kinh doanh": "r"
       },
       "//do": "Một doctype cho CẢ THU LẪN CHI, đúng như nhân nền tảng: `payment_type` quyết định chiều. THU: paid_from = phải thu, paid_to = ngân hàng. CHI thì NGƯỢC LẠI — paid_from = ngân hàng, paid_to = phải trả. Khai nhầm chiều là bút toán ngược dấu mà không có gì báo."
+    },
+    {
+      "name": "Payment Reference",
+      "label": "Hoá đơn đối trừ",
+      "child": true,
+      "//": "Mot dong = mot hoa don ma phieu thu/chi nay tru vao. Thieu bang nay thi MOI phieu deu thanh tien tra truoc khong gan ai, va tung hoa don treo nguyen du da thu du (soat 23/08/2026: PT-2026-0015 / HD-2026-0008).",
+      "fields": [
+        {
+          "fieldname": "reference_doctype",
+          "label": "Loại chứng từ",
+          "fieldtype": "Select",
+          "options": "Sales Invoice\nPurchase Invoice",
+          "required": true,
+          "default": "Sales Invoice",
+          "surface": "quick"
+        },
+        {
+          "fieldname": "reference_name",
+          "label": "Số hoá đơn",
+          "fieldtype": "Data",
+          "required": true,
+          "surface": "quick"
+        },
+        {
+          "fieldname": "allocated_amount",
+          "label": "Số tiền trừ vào hoá đơn này",
+          "fieldtype": "Currency",
+          "required": true,
+          "surface": "quick"
+        }
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kế toán": "rwc",
+        "Kinh doanh": "r"
+      },
+      "form": {
+        "fields": [
+          "reference_doctype",
+          "reference_name",
+          "allocated_amount"
+        ]
+      },
+      "quickEntry": {
+        "fields": [
+          "reference_doctype",
+          "reference_name",
+          "allocated_amount"
+        ]
+      }
     },
     {
       "//": "Một dòng định mức: hết bao nhiêu vật tư cho MỘT đơn vị thành phẩm.",

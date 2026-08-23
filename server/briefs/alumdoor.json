@@ -4337,6 +4337,8 @@
         "paid_from:Link(Account)! Tài khoản GHI CÓ (thu: phải thu · chi: ngân hàng)",
         "paid_to:Link(Account)! Tài khoản GHI NỢ (thu: ngân hàng · chi: phải trả)",
         "reference_no:Data Số chứng từ ngân hàng",
+        "references:Table(Payment Reference) Hoá đơn đối trừ",
+        "allow_unallocated:Check Ghi nhận phần dư là tiền trả trước",
         "note:Small Text Ghi chú"
       ],
       "permissions": {
@@ -4345,6 +4347,22 @@
         "Kinh doanh": "r"
       },
       "//do": "Một doctype cho CẢ THU LẪN CHI, đúng như nhân nền tảng: `payment_type` quyết định chiều. THU: paid_from = phải thu, paid_to = ngân hàng. CHI thì NGƯỢC LẠI — paid_from = ngân hàng, paid_to = phải trả. Khai nhầm chiều là bút toán ngược dấu mà không có gì báo."
+    },
+    {
+      "name": "Payment Reference",
+      "label": "Hoá đơn đối trừ",
+      "child": true,
+      "//": "Mot dong = mot hoa don ma phieu thu/chi nay tru vao. Thieu bang nay thi MOI phieu deu thanh tien tra truoc khong gan ai, va tung hoa don treo nguyen du da thu du (soat 23/08/2026: PT-2026-0015 / HD-2026-0008).",
+      "fields": [
+        "reference_doctype:Select(Sales Invoice,Purchase Invoice)!=(Sales Invoice) Loại chứng từ",
+        "reference_name:Data! Số hoá đơn",
+        "allocated_amount:Currency! Số tiền trừ vào hoá đơn này"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kế toán": "rwc",
+        "Kinh doanh": "r"
+      }
     },
     {
       "//": "Một dòng định mức: hết bao nhiêu vật tư cho MỘT đơn vị thành phẩm.",
