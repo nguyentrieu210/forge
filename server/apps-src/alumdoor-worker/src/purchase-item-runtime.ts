@@ -41,6 +41,7 @@ export interface PurchaseMaterialRuntime {
   profile_system: string | null;
   section_code: string | null;
   theoretical_kg_per_m: number | null;
+  standard_length_m: number | null;
   thickness_mm: number | null;
   width_m: number | null;
   effective_width_m: number | null;
@@ -151,6 +152,7 @@ export async function readPurchaseItemRuntime(
       profile_system: text(specification.profile_system) || null,
       section_code: text(specification.section_code) || null,
       theoretical_kg_per_m: positive(specification.theoretical_kg_per_m),
+      standard_length_m: positive(specification.standard_length_m),
       thickness_mm: positive(specification.thickness_mm),
       width_m: positive(specification.width_m),
       effective_width_m: positive(specification.effective_width_m),
