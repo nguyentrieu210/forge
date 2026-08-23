@@ -9,6 +9,8 @@ export interface FieldOverride {
   reqd?: number | boolean;
   read_only?: number | boolean;
   label?: string;
+  /** Server-owned presentation order; geometry profiles populate this from `sequence`. */
+  sequence?: number;
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -544,27 +546,22 @@ export function isAreaDoor(line: SalesLine): boolean {
 
 export type SalesWidthInputField = "width_pb_ray_m" | "width_pb_nhua_m";
 
-export function salesWidthInputField(line: SalesLine, customerGroup: string): SalesWidthInputField | undefined {
-  const doorType = normalized(line._context?.door_type ?? line.door_type);
-  const itemGroup = normalized(line._context?.item_group ?? line.item_group);
-  const alwaysUsesPbRay = [
-    "cua uc",
-    "cua tam lien uc",
-    "cua luoi",
-    "cua dai loan",
-    "cua sieu truong",
-  ].includes(doorType)
-    || [
-      "cua tam lien uc",
-      "cua luoi",
-      "cua dai loan",
-      "cua dai loan inox",
-      "cua keo dai loan",
-      "cua sieu truong",
-    ].includes(itemGroup);
-  if (alwaysUsesPbRay) return "width_pb_ray_m";
-  if (text(customerGroup) === "Lẻ") return "width_pb_ray_m";
-  if (text(customerGroup) === "Đại lý") return "width_pb_nhua_m";
+/**
+ * Compatibility helper for existing Sales TSX callers.
+ *
+ * The client no longer knows which customer/door uses which width. `ui-child-preview` resolves
+ * that from Cutting Policy + Geometry Profile and marks exactly one measured-width field as
+ * visible/required/editable. This helper only reads that server decision.
+ */
+export function salesWidthInputField(line: SalesLine, _customerGroup = ""): SalesWidthInputField | undefined {
+  for (const fieldname of ["width_pb_ray_m", "width_pb_nhua_m"] as const) {
+    const override = fieldOverride(line, fieldname);
+    if (!override) continue;
+    const hidden = override.hidden === true || override.hidden === 1;
+    const required = override.reqd === true || override.reqd === 1;
+    const readonly = override.read_only === true || override.read_only === 1;
+    if (!hidden && required && !readonly) return fieldname;
+  }
   return undefined;
 }
 
@@ -1267,9 +1264,6 @@ export function linePriceExplanation(line: SalesLine): PriceExplanationRow[] {
     if (text(value)) rows.push({ key, label, value, ...(tone ? { tone } : {}) });
   };
   const explain = linePriceExplain(line);
-
-  push("item_price", "Dòng giá",
-    text(explain?.item_price) || text(line._commercial?.item_price) || text(line._context?.item_price));
 
   /**
    * Cách bán chỉ được nêu khi nó THẬT SỰ là một lựa chọn.
