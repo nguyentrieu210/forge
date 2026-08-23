@@ -123,9 +123,34 @@ function copyDeliveryLine(order: SalesOrderDoc, line: Json, index: number, outst
   };
 }
 
+/**
+ * Kho chính DUY NHẤT của xưởng, hoặc "" khi không có/có nhiều hơn một.
+ *
+ * Cùng luật đã áp lúc ghi sổ đơn bán (`soleMainWarehouse` trong commercial-sales-order-controller):
+ * có đúng một kho vai trò "Kho chính" thì tự điền, còn 0 hay ≥2 thì KHÔNG đoán — chọn hộ kho là
+ * chọn hộ chỗ hàng đi ra.
+ */
+async function soleMainWarehouse(call: PlatformCall): Promise<string> {
+  try {
+    const rows = await listDocs<Json>(call, "Warehouse", ["name", "stock_role", "disabled", "is_group"], []);
+    const chinh = rows.filter((row) => {
+      if (row.disabled === true || row.disabled === 1) return false;
+      if (row.is_group === true || row.is_group === 1) return false;
+      return text(row.stock_role).normalize("NFC") === "Kho chính";
+    });
+    return chinh.length === 1 ? text(chinh[0]!.name) : "";
+  } catch { return ""; }
+}
+
 async function buildPlan(call: PlatformCall, args: Json): Promise<Json> {
   const customer = text(args.customer);
-  const warehouse = text(args.warehouse);
+  /**
+   * Ô "Kho xuất" trên màn để trống nghĩa là "theo từng dòng đơn". Nhưng đơn ghi sổ TRƯỚC
+   * 23/08/2026 chưa được tự điền kho, nên dòng cũng trống và cả màn xuất kho thành đường cụt:
+   * "DH-2026-0001 dòng items-1 chưa có Kho xuất." Lùi về kho chính duy nhất thay vì bắt người
+   * dùng đi sửa từng đơn đã ghi sổ.
+   */
+  const warehouse = text(args.warehouse) || await soleMainWarehouse(call);
   const postingAt = text(args.posting_at) || new Date().toISOString();
   if (!customer) throw new Error("Cần chọn Khách hàng.");
   if (Number.isNaN(Date.parse(postingAt))) throw new Error("Ngày/giờ giao hàng không hợp lệ.");
@@ -214,7 +239,21 @@ async function previewStock(call: PlatformCall, plan: Json): Promise<unknown> {
   if (!response.ok) {
     const payload = await response.json().catch(() => ({})) as { message?: unknown; exception?: unknown };
     const detail = text(payload.message ?? payload.exception);
-    throw new Error(`Không xem trước được FIFO kho (HTTP ${response.status})${detail ? `: ${detail}` : "."}`);
+    /**
+     * Thiếu tồn là câu trả lời NGHIỆP VỤ, không phải sự cố kỹ thuật.
+     *
+     * Trước 23/08/2026 màn xuất kho trả nguyên "Không xem trước được FIFO kho (HTTP 417):
+     * Insufficient stock for CDL_DLM_1LY in Kho xưởng" — nửa Anh nửa Việt, kèm một mã HTTP
+     * mà thủ kho không có việc gì phải biết. Điều họ cần biết là: hàng chưa có, phải sản
+     * xuất xong mới giao được.
+     */
+    // Mã hàng không có khoảng trắng; TÊN KHO thì có ("Kho xưởng"), nên chỉ dừng ở dấu nháy
+    // hoặc dấu phẩy — cắt ở khoảng trắng là ra "Kho" cụt đuôi.
+    const thieuTon = /Insufficient stock for (\S+) in ([^"',]+)/.exec(detail);
+    if (thieuTon) {
+      throw new Error(`${thieuTon[2]!.trim()} chưa có tồn mã ${thieuTon[1]} để giao. Hãy phát lệnh sản xuất và nhập kho thành phẩm trước.`);
+    }
+    throw new Error(`Không xem trước được tồn kho${detail ? `: ${detail}` : "."}`);
   }
   return ((await response.json()) as { message?: unknown }).message ?? null;
 }
@@ -241,12 +280,32 @@ export async function handleBulkSalesDelivery(request: Request, platform: Fetche
     if (!selected.size) return responseJson({ ...plan, items: [], inventory_preview: null,
       message: "Chọn một hoặc nhiều Đơn bán còn hàng để xem phân bổ." });
     if (!Array.isArray(plan.items) || !plan.items.length) throw new Error("Các Đơn bán đã chọn không còn số lượng phải giao.");
-    const inventoryPreview = await previewStock(call, plan);
+    /**
+     * XEM TRƯỚC không được chết vì thiếu tồn.
+     *
+     * Thiếu tồn là câu trả lời cần BÀY RA cùng danh sách đơn và dòng hàng, chứ không phải lý do
+     * để nuốt cả gói dữ liệu: màn hình mất luôn danh sách đơn và hiện "Không có Đơn bán còn phải
+     * giao" — sai sự thật, vì đơn vẫn còn nguyên phải giao (ảnh chụp của chủ xưởng 23/08/2026).
+     *
+     * Lúc TẠO PHIẾU thì vẫn ném như cũ: không có hàng thì không xuất kho được.
+     */
+    let inventoryPreview: unknown = null;
+    let stockWarning = "";
+    try {
+      inventoryPreview = await previewStock(call, plan);
+    } catch (error) {
+      if (create) throw error;
+      stockWarning = error instanceof Error ? error.message : "Không xem trước được tồn kho.";
+    }
     const fingerprint = await sha256(JSON.stringify({ customer: plan.customer, company: plan.company, currency: plan.currency,
       posting_at: plan.posting_at, sales_orders: [...selected].sort(), items: plan.items }));
     const deliveryKey = `multi-so:${fingerprint}`;
     const result = { ...plan, inventory_preview: inventoryPreview, delivery_batch_key: deliveryKey,
-      line_count: plan.items.length, message: `${selected.size} Đơn bán sẽ tạo một Phiếu giao nháp; FIFO được tính lại khi submit.` };
+      line_count: plan.items.length,
+      ...(stockWarning ? { stock_warning: stockWarning } : {}),
+      message: stockWarning
+        ? stockWarning
+        : `${selected.size} Đơn bán sẽ tạo một Phiếu giao nháp; FIFO được tính lại khi submit.` };
     if (!create) return responseJson(result);
     const existing = await existingDelivery(call, deliveryKey);
     if (existing) return responseJson({ ...result, doctype: "Delivery Note", name: existing.name,

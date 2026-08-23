@@ -170,6 +170,25 @@ export class D1MetadataStore implements MetadataStore {
        ON CONFLICT(tenant_id,name) DO UPDATE SET doc_type=excluded.doc_type,is_default=excluded.is_default,disabled=excluded.disabled,
        revision=excluded.revision,format_json=excluded.format_json,modified_by=excluded.modified_by,modified_at=excluded.modified_at`,
     ).bind(tenantId, format.name, format.doc_type, format.is_default ? 1 : 0, format.disabled ? 1 : 0, revision, JSON.stringify(normalized), actor, now).run();
+    /**
+     * "Mặc định" phải là DUY NHẤT cho mỗi DocType.
+     *
+     * Bộ chọn bản in chạy `ORDER BY is_default DESC, name LIMIT 1`. Hai mẫu cùng cắm cờ mặc
+     * định thì hoà, và người thắng do THỨ TỰ TÊN quyết định — một chi tiết không ai chọn.
+     * Đo 23/08/2026: `Standard Sales Order` (S) đứng trước `Đơn bán hàng ALUMDOOR` (Đ) theo
+     * byte UTF-8, nên in đơn bán ra bản chung 379 ký tự thay vì mẫu của xưởng. Báo giá in
+     * đúng chỉ vì nó tình cờ có một mẫu duy nhất.
+     *
+     * Ai vừa cắm cờ thì người đó giữ; các mẫu còn lại của cùng DocType hạ cờ. Không đổi
+     * `revision` của chúng: hạ cờ không phải sửa nội dung mẫu, và bơm revision sẽ làm hỏng
+     * phép kiểm phiên bản của người đang mở mẫu đó.
+     */
+    if (format.is_default && !format.disabled) {
+      await this.db.prepare(
+        `UPDATE print_formats SET is_default=0
+          WHERE tenant_id=?1 AND doc_type=?2 AND name<>?3 AND is_default=1`,
+      ).bind(tenantId, format.doc_type, format.name).run();
+    }
     return normalized;
   }
 
@@ -179,9 +198,23 @@ export class D1MetadataStore implements MetadataStore {
       `INSERT OR IGNORE INTO doctype_definitions(tenant_id,doctype,module,is_custom,is_submittable,is_child,revision,metadata_json,disabled,modified_by,modified_at)
        SELECT ?1,doctype,module,is_custom,is_submittable,is_child,revision,metadata_json,disabled,?2,?3 FROM doctype_definitions WHERE tenant_id='__standard__'`,
     ).bind(tenantId, actor, now).run();
+    /**
+     * Mẫu in chuẩn KHÔNG được giành cờ mặc định của mẫu tenant đã có.
+     *
+     * `INSERT OR IGNORE` chỉ bỏ qua khi TRÙNG TÊN, nên chạy provisioning sau lúc cài app sẽ
+     * chèn `Standard Sales Order` với `is_default=1` bên cạnh `Đơn bán hàng ALUMDOOR` cũng
+     * `is_default=1`. Bộ chọn hoà cờ rồi rơi về so tên, và bản in của xưởng thua vì chữ Đ đứng
+     * sau chữ S theo byte UTF-8 — đúng cách tenant demo mất bản in đơn bán (soát 23/08/2026).
+     */
     const formats = await this.db.prepare(
       `INSERT OR IGNORE INTO print_formats(tenant_id,name,doc_type,is_default,disabled,revision,format_json,modified_by,modified_at)
-       SELECT ?1,name,doc_type,is_default,disabled,revision,format_json,?2,?3 FROM print_formats WHERE tenant_id='__standard__'`,
+       SELECT ?1,chuan.name,chuan.doc_type,
+              CASE WHEN EXISTS (
+                SELECT 1 FROM print_formats da
+                 WHERE da.tenant_id=?1 AND da.doc_type=chuan.doc_type AND da.is_default=1 AND da.disabled=0
+              ) THEN 0 ELSE chuan.is_default END,
+              chuan.disabled,chuan.revision,chuan.format_json,?2,?3
+         FROM print_formats chuan WHERE chuan.tenant_id='__standard__'`,
     ).bind(tenantId, actor, now).run();
     const roles = await this.provisionStandardRoles(tenantId, now);
     return { doctypes: doctypes.meta?.changes ?? 0, print_formats: formats.meta?.changes ?? 0, roles };
@@ -286,7 +319,17 @@ export class InMemoryMetadataStore implements MetadataStore {
       .map(([, format]) => structuredClone(format))
       .sort((left, right) => Number(Boolean(right.is_default)) - Number(Boolean(left.is_default)) || left.name.localeCompare(right.name));
   }
-  async putPrintFormat(tenantId: string, format: PrintFormatMeta): Promise<PrintFormatMeta> { this.formats.set(this.key(tenantId, format.name), structuredClone(format)); return structuredClone(format); }
+  async putPrintFormat(tenantId: string, format: PrintFormatMeta): Promise<PrintFormatMeta> {
+    this.formats.set(this.key(tenantId, format.name), structuredClone(format));
+    // Cùng bất biến với bản D1: mặc định là DUY NHẤT cho mỗi DocType. Xem chú thích ở đó.
+    if (format.is_default && !format.disabled) {
+      for (const [key, khac] of this.formats) {
+        if (!key.startsWith(`${tenantId}:`) || khac.doc_type !== format.doc_type || khac.name === format.name) continue;
+        if (khac.is_default) this.formats.set(key, { ...khac, is_default: false });
+      }
+    }
+    return structuredClone(format);
+  }
   async provisionStandardCatalog(_tenantId: string, _actor: string, _now: string): Promise<{ doctypes: number; print_formats: number; roles: number }> { return { doctypes: 0, print_formats: 0, roles: 0 }; }
   
   // Resolution is shared with the D1 store so both allocate identical names; only
