@@ -169,7 +169,8 @@ export async function previewPurchaseChildRow(call: PlatformCall, args: Json): P
 
     const stockUom = text(runtime.stock_uom);
     const preferredUom = text(runtime.purchase_uom) || stockUom;
-    const transactionUom = text(row.uom) || preferredUom;
+    // Đổi Item phải về UOM của Item mới; không giữ UOM rác của mã trước nếu caller chưa dọn row.
+    const transactionUom = changed === "item_code" ? preferredUom : text(row.uom) || preferredUom;
     setIfField(patch, fields, "uom", transactionUom);
 
     // Catch-weight purchase axis is intentionally dynamic. A stale/static Item conversion for
@@ -184,8 +185,10 @@ export async function previewPurchaseChildRow(call: PlatformCall, args: Json): P
     }
 
     const effectiveBeforeCalc = { ...row, ...patch };
-    const length = positive(effectiveBeforeCalc.length_m);
-    const pieces = positive(effectiveBeforeCalc.qty_bar);
+    // Giá trị của field đã bị catalog ẩn không được tiếp tục tham gia phép tính chỉ vì row cũ
+    // vẫn còn mang nó trong request. Đây là phần server tương ứng với stale-value cleanup ở trên.
+    const length = runtimeField(runtime, "length_m")?.visible ? positive(effectiveBeforeCalc.length_m) : null;
+    const pieces = runtimeField(runtime, "qty_bar")?.visible ? positive(effectiveBeforeCalc.qty_bar) : null;
     const kgPerM = material?.theoretical_kg_per_m ?? positive(effectiveBeforeCalc.theoretical_kg_per_m);
     const theoreticalKg = length && pieces && kgPerM ? roundTo(length * pieces * kgPerM) : null;
     if (runtimeField(runtime, "theoretical_kg_per_m")?.visible && kgPerM) setIfField(patch, fields, "theoretical_kg_per_m", kgPerM);
@@ -194,7 +197,7 @@ export async function previewPurchaseChildRow(call: PlatformCall, args: Json): P
       else clearIfField(clear, fields, "theoretical_kg");
     }
 
-    const actualKg = positive(effectiveBeforeCalc.actual_weight_kg);
+    const actualKg = runtimeField(runtime, "actual_weight_kg")?.visible ? positive(effectiveBeforeCalc.actual_weight_kg) : null;
     if (runtime.tracking.catch_weight) {
       const pricedKg = surface === "receipt" ? actualKg : theoreticalKg;
       if (pricedKg && fields.has("qty")) patch.qty = pricedKg;
@@ -233,7 +236,7 @@ export async function previewPurchaseChildRow(call: PlatformCall, args: Json): P
         else clearIfField(clear, fields, "actual_kg_per_m");
       }
       if (runtimeField(runtime, "actual_kg_per_sqm")?.visible) {
-        const width = positive(effective.width_m);
+        const width = runtimeField(runtime, "width_m")?.visible ? positive(effective.width_m) : null;
         const area = length && width && pieces ? length * width * pieces : null;
         if (actualKg && area) setIfField(patch, fields, "actual_kg_per_sqm", roundTo(actualKg / area));
         else clearIfField(clear, fields, "actual_kg_per_sqm");
