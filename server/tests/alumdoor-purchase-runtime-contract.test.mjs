@@ -19,6 +19,7 @@ test("purchase runtime reads Measurement Profile and Material Specification as s
   assert.match(source, /require_piece_qty/);
   assert.match(source, /track_bundle_qty/);
   assert.match(source, /theoretical_kg_per_m/);
+  assert.match(source, /standard_length_m/);
   assert.match(source, /has_catch_weight/);
   assert.doesNotMatch(source, /===\s*["']Nhôm cây\/lá["']/);
   assert.doesNotMatch(source, /Geometry Profile|PB_RAY_RONG|PB_NHUA_RONG|CAT_LA_RONG/);
@@ -33,6 +34,8 @@ test("ui child preview routes Purchase through runtime while Sales stays on pres
   assert.match(purchase, /purchase_runtime: runtime/);
   assert.match(purchase, /sequence: entry\.sequence/);
   assert.match(purchase, /source: entry\.source/);
+  assert.match(purchase, /material\?\.standard_length_m/);
+  assert.match(purchase, /changed === "item_code"/);
   assert.doesNotMatch(purchase, /Nhôm cây\/lá|Tấm\/Kính|Thành phẩm theo m2|Hàng thường/);
 });
 
@@ -69,7 +72,8 @@ test("purchase master registry has dedicated Measurement and Material workbenche
   assert.match(measurement, /Purchase Order/);
   assert.match(measurement, /Purchase Receipt/);
   assert.match(material, /theoretical_kg_per_m/);
-  assert.match(material, /Không bắt khai chiều dài cây chuẩn/);
+  assert.match(material, /standard_length_m/);
+  assert.match(material, /chỉ là gợi ý đầu vào/);
   assert.match(item, /Runtime summary/);
   assert.match(item, /Catch-weight chỉ làm động trục/);
 });
