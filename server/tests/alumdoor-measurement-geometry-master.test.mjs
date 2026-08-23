@@ -50,20 +50,24 @@ test("Measurement Profile does not own door geometry or technical kg/m", () => {
   }
 });
 
-test("Geometry Field keeps ray cover and plastic cover as separate canonical dimensions", () => {
+test("Geometry Field keeps physical dimensions separate and owns only runtime binding metadata", () => {
   assert.equal(assertGeometryCatalog(), true);
-  // 8 kích thước dài + 1 đại lượng dẫn xuất. Đếm suông thì lần thêm sau chỉ báo "9 != 8" mà không
-  // nói được gì, nên chốt luôn RANH GIỚI: trường có trục hình học thật thì phải là kích thước đo
-  // được trên cửa, còn `billable_area_sqm` là số máy tính ra nên đi trục OTHER.
-  assert.equal(GEOMETRY_FIELDS.length, 9);
+  // 10 kích thước/đại lượng hình học + billable_area_sqm. Hai ô lọt lòng đã có bằng chứng nguồn
+  // và đã tồn tại trong brief soạn tay; canonical catalog phải giữ chúng để generator không xoá.
+  assert.equal(GEOMETRY_FIELDS.length, 11);
   const linear = GEOMETRY_FIELDS.filter((row) => row.axis !== "OTHER");
-  assert.equal(linear.length, 8, "kích thước dài phải giữ nguyên 8");
+  assert.equal(linear.length, 10);
   assert.ok(linear.every((row) => ["WIDTH", "HEIGHT", "LENGTH"].includes(row.axis)));
   assert.equal(geometryFieldByCode("billable_area_sqm")?.axis, "OTHER");
   assert.equal(geometryFieldByCode("billable_area_sqm")?.uom, "m2");
-  assert.equal(geometryFieldByCode("PB_RAY_RONG")?.name, "Rộng phủ bì ray");
-  assert.equal(geometryFieldByCode("PB_NHUA_RONG")?.name, "Rộng phủ bì nhựa");
-  assert.notEqual(geometryFieldByCode("PB_RAY_RONG")?.code, geometryFieldByCode("PB_NHUA_RONG")?.code);
+  assert.equal(geometryFieldByCode("PB_CAO")?.runtimeFieldname, "height_m");
+  assert.equal(geometryFieldByCode("PB_RAY_RONG")?.runtimeFieldname, "width_pb_ray_m");
+  assert.equal(geometryFieldByCode("PB_NHUA_RONG")?.runtimeFieldname, "width_pb_nhua_m");
+  assert.equal(geometryFieldByCode("CAT_LA_RONG")?.runtimeFieldname, "cut_width_m");
+  assert.equal(geometryFieldByCode("LUOI_CAO")?.runtimeFieldname, "mesh_height_m");
+  assert.equal(geometryFieldByCode("RAY_DAI")?.runtimeFieldname, "", "không ép output ray vào SalesLine.length_m");
+  assert.equal(geometryFieldByCode("V4_DAI")?.runtimeFieldname, "", "không ép output V4 vào SalesLine.length_m");
+  assert.equal(geometryFieldByCode("TRUC_DAI")?.runtimeFieldname, "", "không ép output trục vào SalesLine.length_m");
 });
 
 test("Geometry Profile owns field visibility/role but no formulas", () => {
@@ -71,6 +75,8 @@ test("Geometry Profile owns field visibility/role but no formulas", () => {
   const germany = GEOMETRY_PROFILES.find((row) => row.code === "GP-CUA-DUC");
   assert.ok(germany);
   assert.deepEqual(germany.itemGroups, ["Cửa CN Đức"]);
+  assert.ok(germany.fields.some((row) => row.geometryField === "LOT_LONG_CAO" && row.role === "INPUT"));
+  assert.ok(germany.fields.some((row) => row.geometryField === "LOT_LONG_RONG" && row.role === "INPUT"));
   assert.ok(germany.fields.some((row) => row.geometryField === "PB_RAY_RONG" && row.role === "INPUT"));
   assert.ok(germany.fields.some((row) => row.geometryField === "PB_NHUA_RONG" && row.role === "INPUT"));
   assert.ok(germany.fields.some((row) => row.geometryField === "CAT_LA_RONG" && row.role === "CALCULATED"));
@@ -80,7 +86,6 @@ test("Geometry Profile owns field visibility/role but no formulas", () => {
 
 test("item import source is compatible with Cây stock / Kg purchase invariant", async () => {
   const source = await readFile(resolve(repoRoot, "server/scripts/build-alumdoor-item-only-import.mjs"), "utf8");
-  // This test intentionally accepts the branch only after the overlay has been written.
   assert.match(source, /const stockUom = kgTarget\s*\? "Cây"/);
   assert.match(source, /default_purchase_uom: kgTarget \? "Kg" : stockUom/);
   assert.match(source, /has_batch_no: Boolean\(kgTarget\)/);
@@ -91,9 +96,6 @@ test("item import source is compatible with Cây stock / Kg purchase invariant",
 
 test("static V2 metadata contains Geometry masters and moved ownership", async () => {
   const brief = JSON.parse(await readFile(resolve(repoRoot, "server/briefs/alumdoor-v2.json"), "utf8"));
-  // Chốt này mục từ lâu — brief đã đi qua 2.4.x → 2.8.0 mà nó vẫn ghi 2.4.0, nên test đỏ âm thầm
-  // trong nhóm lỗi nền. Điều test này thật sự cần là các DocType hình học CÓ MẶT, không phải app
-  // đứng ở phiên bản nào; giữ chốt version chỉ để nó đỏ đúng lúc metadata đổi.
   assert.equal(brief.version, alumdoorBriefVersion());
   const byName = new Map(brief.doctypes.map((row) => [row.name, row]));
   for (const name of ["Geometry Field", "Geometry Profile", "Geometry Profile Scope", "Geometry Profile Field"]) {
@@ -106,13 +108,7 @@ test("static V2 metadata contains Geometry masters and moved ownership", async (
   const geometryProfile = (item.fields ?? []).find((field) => (typeof field === "string" ? field.split(":", 1)[0] : field.fieldname) === "geometry_profile");
   assert.ok(geometryProfile);
   assert.equal(typeof geometryProfile === "object" ? geometryProfile.options : "", "Geometry Profile");
-  // 9 chứ không phải 7. "Ray và trục" (33 mã RT_) và "Nan/lá cửa" (14 mã) trước đây chỉ sống ở
-  // tầng `documents` của D1, không có trong brief — nên cài lên tenant MỚI là 47 mã mất bộ đo,
-  // im lặng. Đã khai vào brief ngày 23/08.
   assert.equal(brief.fixtures.filter((row) => row.type === "Measurement Profile").length, 9);
-  // 8 kích thước dài + billable_area_sqm + LOT_LONG_CAO/LOT_LONG_RONG. Hai ô lọt lòng thêm
-  // 22/08/2026 khi đọc được bảng quy đổi lọt lòng ↔ phủ bì trong sheet GHI CHÚ: khách đo lọt
-  // lòng, xưởng cắt theo phủ bì, không có hai ô này thì phải nhẩm tay.
   assert.equal(brief.fixtures.filter((row) => row.type === "Geometry Field").length, 11);
   assert.equal(brief.fixtures.filter((row) => row.type === "Geometry Profile").length, 5);
   const geometryField = byName.get("Geometry Field");
