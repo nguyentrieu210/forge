@@ -10,6 +10,7 @@ type Json = Record<string, unknown>;
 type ProfileScope = Json & { item_group?: string };
 type ProfileField = Json & { geometry_field?: string; role?: string; required?: number | boolean; visible?: number | boolean; editable?: number | boolean; sequence?: number | string };
 type GeometryProfileDoc = Json & { name?: string; modified?: string; profile_code?: string; profile_name?: string; item_groups?: ProfileScope[]; fields?: ProfileField[]; note?: string; disabled?: number | boolean };
+type GeometryFieldDoc = Doc & { field_code?: string; field_name?: string; runtime_fieldname?: string; uom?: string; axis?: string; modified?: string; disabled?: number | boolean };
 type SlatDoc = Json & { name?: string; modified?: string; ma?: string; dong_cua?: string; doi?: string; buoc_la_m?: number | string; be_rong_nan_mm?: number | string; tru_mot_la?: number | boolean; rong_toi_da_mm?: number | string; trong_luong_kg_m2?: number | string; nguon?: string; ghi_chu?: string; disabled?: number | boolean };
 type GeometryRule = Json & { rule_code?: string; target_field?: string; source_field?: string; operator?: string; operand_m?: number | string; customer_group?: string; ray_type?: string; has_butterfly_bracket?: number | boolean; priority?: number | string; sequence?: number | string; note?: string };
 type LeafVariant = Json & { variant_label?: string; addend?: number | string; note?: string };
@@ -22,7 +23,7 @@ type CuttingPolicyDoc = Json & {
   leaf_formula?: string; leaf_height_deduction_m?: number | string; leaf_divisor_source?: string; leaf_divisor_const?: number | string; leaf_rounding?: string; minus_one_threshold?: number | string;
   leaf_variants?: LeafVariant[]; geometry_rules?: GeometryRule[]; note?: string;
 };
-type Options = { geometryFields: Doc[]; geometryProfiles: Doc[]; itemGroups: Doc[] };
+type Options = { geometryFields: GeometryFieldDoc[]; geometryProfiles: Doc[]; itemGroups: Doc[] };
 
 export interface DoorGeometryWorkbenchProps {
   doctype: DoorGeometryDoctype;
@@ -56,6 +57,9 @@ function positive(value: unknown): number | undefined { const parsed = Number(va
 function finite(value: unknown): number | undefined { const parsed = Number(value); return text(value) !== "" && Number.isFinite(parsed) ? parsed : undefined; }
 function arrayRows<T extends Json>(value: unknown): T[] { return Array.isArray(value) ? value.filter((row): row is T => Boolean(row) && typeof row === "object") : []; }
 function docName(row: Doc): string { return text(row.name); }
+function geometryFieldFor(options: Options, fieldName: string): GeometryFieldDoc | undefined {
+  return options.geometryFields.find((row) => docName(row) === fieldName || text(row.field_code) === fieldName);
+}
 function emptyDoc(doctype: DoorGeometryDoctype): SlatDoc | GeometryProfileDoc | CuttingPolicyDoc {
   if (doctype === "Quy cách cửa") return { ma: "", dong_cua: "Cửa Đức", doi: "", buoc_la_m: "", tru_mot_la: 0, disabled: 0 };
   if (doctype === "Geometry Profile") return { profile_code: "", profile_name: "", item_groups: [], fields: [], disabled: 0 };
@@ -87,12 +91,17 @@ export function DoorGeometryWorkbench({ doctype, name, base, listPath, onNavigat
     void (async () => {
       try {
         const optional = (dt: string, pageLength: number) => adapter.getList(dt, { fields: ["name"], orderBy: "name asc", pageLength }).catch(() => [] as Doc[]);
+        const geometryFieldQuery = adapter.getList("Geometry Field", {
+          fields: ["name", "field_code", "field_name", "runtime_fieldname", "uom", "axis", "modified", "disabled"],
+          orderBy: "field_name asc",
+          pageLength: 100,
+        }).catch(() => optional("Geometry Field", 100));
         const [geometryFields, geometryProfiles, itemGroups, loaded] = await Promise.all([
-          optional("Geometry Field", 100), optional("Geometry Profile", 100), optional("Item Group", 300),
+          geometryFieldQuery, optional("Geometry Profile", 100), optional("Item Group", 300),
           name ? adapter.getDoc(doctype, name).then((result) => result.doc as Json) : Promise.resolve(emptyDoc(doctype) as Json),
         ]);
         if (!active) return;
-        setOptions({ geometryFields, geometryProfiles, itemGroups });
+        setOptions({ geometryFields: geometryFields as GeometryFieldDoc[], geometryProfiles, itemGroups });
         const hydrated = { ...emptyDoc(doctype), ...loaded } as SlatDoc | GeometryProfileDoc | CuttingPolicyDoc;
         if (doctype === "Geometry Profile") {
           const profile = hydrated as GeometryProfileDoc;
@@ -123,9 +132,19 @@ export function DoorGeometryWorkbench({ doctype, name, base, listPath, onNavigat
       if (text(slat.be_rong_nan_mm) === "") result.push("Bề rộng nan đang để trống. Đây không phải ước số chia lá; thiếu nguồn thì giữ trống, không lấy `buoc_la_m × 1000` điền hộ.");
       if (text(slat.rong_toi_da_mm) === "" || text(slat.trong_luong_kg_m2) === "") result.push("Ngưỡng rộng tối đa / trọng lượng kg/m² có thể chưa có nguồn theo từng mã. Workbench không coi ô trống này là lỗi bắt buộc.");
     }
+    if (doctype === "Geometry Profile") {
+      for (const row of arrayRows<ProfileField>(profile.fields)) {
+        const key = text(row.geometry_field);
+        if (!key) continue;
+        const runtime = text(geometryFieldFor(options, key)?.runtime_fieldname);
+        if ((row.visible === undefined || yes(row.visible)) && text(row.role) === "INPUT" && !runtime) {
+          result.push(`${key}: là ô người bán nhập nhưng chưa có runtime_fieldname; Sales chưa thể render field này từ catalog.`);
+        }
+      }
+    }
     if (doctype === "Cutting Policy") result.push("Cutting Policy chỉ sở hữu hình học/chia lá/cơ sở đo. Giá bán nằm ở Pricing; lượng vật tư nằm ở BOM/BOM Rule.");
     return result;
-  }, [doctype, name, slat]);
+  }, [doctype, name, options, profile.fields, slat]);
 
   const validate = (): string | null => {
     if (doctype === "Quy cách cửa") {
@@ -141,6 +160,7 @@ export function DoorGeometryWorkbench({ doctype, name, base, listPath, onNavigat
       if (!text(profile.profile_name)) return "Cần khai Tên bộ quy cách hình học.";
       if (!fields.length) return "Bộ quy cách phải có ít nhất một trường hình học.";
       const seen = new Set<string>();
+      const runtimeSeen = new Map<string, string>();
       for (const [index, row] of fields.entries()) {
         const field = text(row.geometry_field);
         if (!field) return `Dòng trường ${index + 1}: chưa chọn Trường hình học.`;
@@ -149,6 +169,12 @@ export function DoorGeometryWorkbench({ doctype, name, base, listPath, onNavigat
         if (!PROFILE_ROLES.includes(text(row.role))) return `Dòng ${index + 1}: Vai trò không hợp lệ.`;
         if (text(row.role) === "CALCULATED" && yes(row.editable)) return `Dòng ${index + 1} (${field}): trường Tự tính không được cho nhập tay.`;
         if (yes(row.required) && !yes(row.visible)) return `Dòng ${index + 1} (${field}): trường Bắt buộc phải được Hiện trên form.`;
+        const runtime = text(geometryFieldFor(options, field)?.runtime_fieldname);
+        if (runtime) {
+          const previous = runtimeSeen.get(runtime);
+          if (previous && previous !== field) return `${previous} và ${field} cùng bind vào runtime field ${runtime}.`;
+          runtimeSeen.set(runtime, field);
+        }
       }
       return null;
     }
@@ -221,7 +247,12 @@ function ProfileEditor({ doc, options, patch, openDoc }: { doc: GeometryProfileD
   const fields = arrayRows<ProfileField>(doc.fields);
   const patchGroup = (index: number, next: Json) => patch({ item_groups: groups.map((row, i) => i === index ? { ...row, ...next } : row) });
   const patchField = (index: number, next: Json) => patch({ fields: fields.map((row, i) => i === index ? { ...row, ...next } : row) });
-  return <><section className="rounded-xl border bg-card p-4"><div className="grid gap-3 md:grid-cols-4"><Field label="Mã bộ quy cách"><input className={fieldClass} value={text(doc.profile_code)} onChange={(e) => patch({ profile_code: e.target.value.toUpperCase() })} /></Field><Field label="Tên bộ quy cách" className="md:col-span-2"><input className={fieldClass} value={text(doc.profile_name)} onChange={(e) => patch({ profile_name: e.target.value })} /></Field><Check label="Ngừng dùng" checked={yes(doc.disabled)} onChange={(checked) => patch({ disabled: checked ? 1 : 0 })} /><Field label="Ghi chú" className="md:col-span-4"><textarea className={textAreaClass} value={text(doc.note)} onChange={(e) => patch({ note: e.target.value })} /></Field></div></section><section className="rounded-xl border bg-card"><div className="flex items-center justify-between border-b px-4 py-3"><div><h3 className="font-medium">Nhóm hàng áp dụng</h3><p className="text-xs text-muted-foreground">Dùng để gom các Item cửa cùng bộ kích thước.</p></div><Button size="sm" variant="outline" onClick={() => patch({ item_groups: [...groups, { item_group: "" }] })}><Plus className="size-4" /> Thêm</Button></div><div className="space-y-2 p-3">{groups.length ? groups.map((row, index) => <div key={text(row.row_id) || index} className="flex gap-2"><SelectDocs value={text(row.item_group)} rows={options.itemGroups} onChange={(value) => patchGroup(index, { item_group: value })} /><Button size="sm" variant="ghost" onClick={() => patch({ item_groups: groups.filter((_, i) => i !== index) })}><Trash2 className="size-4" /></Button></div>) : <div className="py-4 text-center text-sm text-muted-foreground">Chưa giới hạn theo nhóm hàng.</div>}</div></section><section className="rounded-xl border bg-card"><div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3"><div><h3 className="font-medium">Các kích thước trên form cửa</h3><p className="text-xs text-muted-foreground">INPUT = người bán nhập; CALCULATED = Cutting Policy tính; INFO = chỉ hiển thị.</p></div><div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => openDoc("Geometry Field")}><ExternalLink className="size-4" /> Danh mục trường</Button><Button size="sm" variant="outline" onClick={() => patch({ fields: [...fields, { geometry_field: "", role: "INPUT", required: 0, visible: 1, editable: 1, sequence: (fields.length + 1) * 10 }] })}><Plus className="size-4" /> Thêm trường</Button></div></div><div className="overflow-x-auto"><table className="w-full min-w-[900px] text-sm"><thead><tr className="border-b bg-muted/30 text-left text-xs text-muted-foreground"><th className="p-3">Trường hình học</th><th className="p-3 w-40">Vai trò</th><th className="p-3 w-28">Bắt buộc</th><th className="p-3 w-28">Hiện</th><th className="p-3 w-28">Cho nhập</th><th className="p-3 w-28">Thứ tự</th><th className="w-14" /></tr></thead><tbody>{fields.map((row, index) => <tr key={text(row.row_id) || index} className="border-b"><td className="p-2"><SelectDocs value={text(row.geometry_field)} rows={options.geometryFields} onChange={(value) => patchField(index, { geometry_field: value })} /></td><td className="p-2"><NativeSelect value={text(row.role) || "INPUT"} values={PROFILE_ROLES} labels={ROLE_LABEL} onChange={(value) => patchField(index, { role: value, editable: value === "CALCULATED" ? 0 : value === "INPUT" ? 1 : row.editable })} /></td><td className="p-2 text-center"><input type="checkbox" checked={yes(row.required)} onChange={(e) => patchField(index, { required: e.target.checked ? 1 : 0, ...(e.target.checked ? { visible: 1 } : {}) })} /></td><td className="p-2 text-center"><input type="checkbox" checked={row.visible === undefined ? true : yes(row.visible)} onChange={(e) => patchField(index, { visible: e.target.checked ? 1 : 0 })} /></td><td className="p-2 text-center"><input type="checkbox" disabled={text(row.role) === "CALCULATED"} checked={yes(row.editable)} onChange={(e) => patchField(index, { editable: e.target.checked ? 1 : 0 })} /></td><td className="p-2"><input className={fieldClass} type="number" step="10" value={text(row.sequence)} onChange={(e) => patchField(index, { sequence: e.target.value })} /></td><td className="p-2"><Button size="sm" variant="ghost" onClick={() => patch({ fields: fields.filter((_, i) => i !== index) })}><Trash2 className="size-4" /></Button></td></tr>)}</tbody></table></div></section></>;
+  return <><section className="rounded-xl border bg-card p-4"><div className="grid gap-3 md:grid-cols-4"><Field label="Mã bộ quy cách"><input className={fieldClass} value={text(doc.profile_code)} onChange={(e) => patch({ profile_code: e.target.value.toUpperCase() })} /></Field><Field label="Tên bộ quy cách" className="md:col-span-2"><input className={fieldClass} value={text(doc.profile_name)} onChange={(e) => patch({ profile_name: e.target.value })} /></Field><Check label="Ngừng dùng" checked={yes(doc.disabled)} onChange={(checked) => patch({ disabled: checked ? 1 : 0 })} /><Field label="Ghi chú" className="md:col-span-4"><textarea className={textAreaClass} value={text(doc.note)} onChange={(e) => patch({ note: e.target.value })} /></Field></div></section><section className="rounded-xl border bg-card"><div className="flex items-center justify-between border-b px-4 py-3"><div><h3 className="font-medium">Nhóm hàng áp dụng</h3><p className="text-xs text-muted-foreground">Dùng để gom các Item cửa cùng bộ kích thước.</p></div><Button size="sm" variant="outline" onClick={() => patch({ item_groups: [...groups, { item_group: "" }] })}><Plus className="size-4" /> Thêm</Button></div><div className="space-y-2 p-3">{groups.length ? groups.map((row, index) => <div key={text(row.row_id) || index} className="flex gap-2"><SelectDocs value={text(row.item_group)} rows={options.itemGroups} onChange={(value) => patchGroup(index, { item_group: value })} /><Button size="sm" variant="ghost" onClick={() => patch({ item_groups: groups.filter((_, i) => i !== index) })}><Trash2 className="size-4" /></Button></div>) : <div className="py-4 text-center text-sm text-muted-foreground">Chưa giới hạn theo nhóm hàng.</div>}</div></section><section className="rounded-xl border bg-card"><div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3"><div><h3 className="font-medium">Các kích thước trên form cửa</h3><p className="text-xs text-muted-foreground">INPUT = người bán nhập; CALCULATED = Cutting Policy tính; INFO = chỉ hiển thị. Runtime field là binding toàn cục của Geometry Field.</p></div><div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => openDoc("Geometry Field")}><ExternalLink className="size-4" /> Danh mục trường</Button><Button size="sm" variant="outline" onClick={() => patch({ fields: [...fields, { geometry_field: "", role: "INPUT", required: 0, visible: 1, editable: 1, sequence: (fields.length + 1) * 10 }] })}><Plus className="size-4" /> Thêm trường</Button></div></div><div className="overflow-x-auto"><table className="w-full min-w-[1120px] text-sm"><thead><tr className="border-b bg-muted/30 text-left text-xs text-muted-foreground"><th className="p-3">Trường hình học</th><th className="p-3 min-w-48">Runtime field</th><th className="p-3 w-40">Vai trò</th><th className="p-3 w-28">Bắt buộc</th><th className="p-3 w-28">Hiện</th><th className="p-3 w-28">Cho nhập</th><th className="p-3 w-28">Thứ tự</th><th className="w-14" /></tr></thead><tbody>{fields.map((row, index) => {
+          const key = text(row.geometry_field);
+          const master = geometryFieldFor(options, key);
+          const runtime = text(master?.runtime_fieldname);
+          return <tr key={text(row.row_id) || index} className="border-b"><td className="p-2"><div className="flex gap-1"><SelectDocs value={key} rows={options.geometryFields} onChange={(value) => patchField(index, { geometry_field: value })} />{key ? <Button size="sm" variant="ghost" title="Mở Geometry Field để sửa binding toàn cục" onClick={() => openDoc("Geometry Field", docName(master ?? ({ name: key } as Doc)))}><ExternalLink className="size-4" /></Button> : null}</div>{master ? <div className="mt-1 text-[11px] text-muted-foreground">{text(master.field_name) || key} · {text(master.axis) || "—"} · {text(master.uom) || "—"}</div> : null}</td><td className="p-2"><code className={`inline-block rounded px-2 py-1 text-xs ${runtime ? "bg-muted" : "bg-amber-500/10 text-amber-700 dark:text-amber-300"}`}>{runtime || "chưa bind"}</code></td><td className="p-2"><NativeSelect value={text(row.role) || "INPUT"} values={PROFILE_ROLES} labels={ROLE_LABEL} onChange={(value) => patchField(index, { role: value, editable: value === "CALCULATED" ? 0 : value === "INPUT" ? 1 : row.editable })} /></td><td className="p-2 text-center"><input type="checkbox" checked={yes(row.required)} onChange={(e) => patchField(index, { required: e.target.checked ? 1 : 0, ...(e.target.checked ? { visible: 1 } : {}) })} /></td><td className="p-2 text-center"><input type="checkbox" checked={row.visible === undefined ? true : yes(row.visible)} onChange={(e) => patchField(index, { visible: e.target.checked ? 1 : 0 })} /></td><td className="p-2 text-center"><input type="checkbox" disabled={text(row.role) === "CALCULATED"} checked={yes(row.editable)} onChange={(e) => patchField(index, { editable: e.target.checked ? 1 : 0 })} /></td><td className="p-2"><input className={fieldClass} type="number" step="10" value={text(row.sequence)} onChange={(e) => patchField(index, { sequence: e.target.value })} /></td><td className="p-2"><Button size="sm" variant="ghost" onClick={() => patch({ fields: fields.filter((_, i) => i !== index) })}><Trash2 className="size-4" /></Button></td></tr>;
+        })}</tbody></table></div><div className="border-t px-4 py-3 text-xs text-muted-foreground">`runtime_fieldname` được sửa ở Geometry Field để mọi Geometry Profile dùng cùng một binding. Workbench này chỉ đọc và kiểm tra, tránh tạo hai nguồn sự thật.</div></section></>;
 }
 
 function CuttingEditor({ doc, options, patch, openDoc }: { doc: CuttingPolicyDoc; options: Options; patch: (next: Json) => void; openDoc: (dt: string, target?: string) => void }) {
