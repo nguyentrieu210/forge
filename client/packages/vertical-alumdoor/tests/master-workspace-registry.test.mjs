@@ -64,6 +64,11 @@ test("door geometry workbench keeps slat divisor, geometry and cutting policy as
   assert.match(door, /Geometry Profile/);
   assert.match(door, /Cutting Policy chỉ sở hữu hình học/);
   assert.match(door, /geometry_rules/);
+  assert.match(door, /runtime_fieldname/);
+  assert.match(door, /Runtime field/);
+  assert.match(door, /Sales chưa thể render field này từ catalog/);
+  assert.match(door, /cùng bind vào runtime field/);
+  assert.match(door, /tránh tạo hai nguồn sự thật/);
 });
 
 test("motor UPS workbench delegates selection to the existing server method", () => {
