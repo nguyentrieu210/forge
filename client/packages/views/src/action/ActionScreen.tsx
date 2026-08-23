@@ -120,6 +120,15 @@ const RESULT_LABELS: Record<string, string> = {
   door_type: "Loại cửa",
   price_variant: "Mã giá",
   delivered_qty: "Đã giao",
+  // 8 cột cuối còn lộ tiếng Anh trên bảng xem trước "Đơn hàng → Hoá đơn" (soát 23/08/2026).
+  formula_policy: "Chính sách công thức",
+  width_basis: "Cơ sở tính rộng",
+  leaf_height_deduction_m: "Trừ cao chia lá (m)",
+  leaf_divisor_m: "Ước số chia lá (m)",
+  leaf_rounding: "Cách làm tròn lá",
+  estimated_minutes: "Phút công ước tính",
+  formula_version: "Phiên bản công thức",
+  formula_explanation: "Diễn giải phép tính",
 };
 
 const TABLE_TITLES: Record<string, string> = {

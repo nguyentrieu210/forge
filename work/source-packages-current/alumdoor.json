@@ -1,7 +1,7 @@
 {
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "2.36.0",
+  "version": "2.37.0",
   "metaContractVersion": 1,
   "platform_requires": "1.0.0",
   "requires": [
@@ -10573,6 +10573,19 @@
           "idx": 2
         },
         {
+          "label": "Dòng đơn hàng nguồn",
+          "fieldname": "sales_order_row_id",
+          "fieldtype": "Data",
+          "read_only": true,
+          "hidden": true,
+          "description": "Khóa hoá đơn theo đúng dòng đơn, không cộng nhầm hai dòng cùng mã nhưng khác màu/kích thước.",
+          "surface": "internal",
+          "editMode": "hidden",
+          "serverEnforced": true,
+          "valueSource": "formula",
+          "idx": 3
+        },
+        {
           "label": "Kiểu tính",
           "fieldname": "inventory_mode",
           "fieldtype": "Data",
@@ -10582,7 +10595,7 @@
           "editMode": "hidden",
           "serverEnforced": true,
           "valueSource": "formula",
-          "idx": 3
+          "idx": 4
         },
         {
           "label": "Bộ theo dõi",
@@ -10595,7 +10608,7 @@
           "editMode": "hidden",
           "serverEnforced": true,
           "valueSource": "formula",
-          "idx": 4
+          "idx": 5
         },
         {
           "label": "ĐVT tồn",
@@ -10608,7 +10621,7 @@
           "editMode": "hidden",
           "serverEnforced": true,
           "valueSource": "formula",
-          "idx": 5
+          "idx": 6
         },
         {
           "label": "Diện tích tính tối thiểu",
@@ -10621,7 +10634,7 @@
           "editMode": "hidden",
           "serverEnforced": true,
           "valueSource": "formula",
-          "idx": 6
+          "idx": 7
         },
         {
           "label": "Màu / mã sơn",
@@ -10632,7 +10645,7 @@
           "valueSource": "user",
           "editMode": "editable",
           "serverEnforced": false,
-          "idx": 7
+          "idx": 8
         },
         {
           "label": "Rộng (m)",
@@ -10642,7 +10655,7 @@
           "valueSource": "user",
           "editMode": "editable",
           "serverEnforced": false,
-          "idx": 8
+          "idx": 9
         },
         {
           "label": "Cao (m)",
@@ -10652,7 +10665,7 @@
           "valueSource": "user",
           "editMode": "editable",
           "serverEnforced": false,
-          "idx": 9
+          "idx": 10
         },
         {
           "label": "Số bộ",
@@ -10663,7 +10676,7 @@
           "valueSource": "default",
           "editMode": "editable",
           "serverEnforced": false,
-          "idx": 10
+          "idx": 11
         },
         {
           "label": "Cách bán",
@@ -10676,7 +10689,7 @@
           "editMode": "hidden",
           "serverEnforced": true,
           "valueSource": "default",
-          "idx": 11
+          "idx": 12
         },
         {
           "label": "Mã giá",
@@ -10687,7 +10700,7 @@
           "editMode": "hidden",
           "serverEnforced": true,
           "valueSource": "user",
-          "idx": 12
+          "idx": 13
         },
         {
           "label": "Có bản bướm",
@@ -10697,7 +10710,7 @@
           "valueSource": "user",
           "editMode": "editable",
           "serverEnforced": false,
-          "idx": 13
+          "idx": 14
         },
         {
           "label": "Cao lưới (m)",
@@ -10707,7 +10720,7 @@
           "valueSource": "user",
           "editMode": "editable",
           "serverEnforced": false,
-          "idx": 14
+          "idx": 15
         },
         {
           "label": "Công thức đã áp",
@@ -10721,7 +10734,7 @@
           "editMode": "hidden",
           "serverEnforced": true,
           "valueSource": "formula",
-          "idx": 15
+          "idx": 16
         },
         {
           "label": "Cơ sở rộng",
@@ -10734,7 +10747,7 @@
           "editMode": "hidden",
           "serverEnforced": true,
           "valueSource": "formula",
-          "idx": 16
+          "idx": 17
         },
         {
           "label": "Rộng cắt lá (m)",
@@ -10746,7 +10759,7 @@
           "editMode": "hidden",
           "serverEnforced": true,
           "valueSource": "formula",
-          "idx": 17
+          "idx": 18
         },
         {
           "label": "Diện tích tính tiền (m2)",
@@ -10759,7 +10772,7 @@
           "editMode": "hidden",
           "serverEnforced": true,
           "valueSource": "formula",
-          "idx": 18
+          "idx": 19
         },
         {
           "label": "ĐVT bán",
@@ -10773,7 +10786,7 @@
           "valueSource": "user",
           "editMode": "editable",
           "serverEnforced": false,
-          "idx": 19
+          "idx": 20
         },
         {
           "label": "SL tính tiền",
@@ -10786,7 +10799,7 @@
           "valueSource": "user",
           "editMode": "editable",
           "serverEnforced": false,
-          "idx": 20
+          "idx": 21
         },
         {
           "label": "Hệ số về ĐVT tồn",
@@ -10799,7 +10812,7 @@
           "editMode": "hidden",
           "serverEnforced": true,
           "valueSource": "formula",
-          "idx": 21
+          "idx": 22
         },
         {
           "label": "SL quy đổi tồn",
@@ -10812,7 +10825,7 @@
           "editMode": "hidden",
           "serverEnforced": true,
           "valueSource": "formula",
-          "idx": 22
+          "idx": 23
         },
         {
           "label": "Đơn giá",
@@ -10826,7 +10839,7 @@
           "valueSource": "user",
           "editMode": "editable",
           "serverEnforced": false,
-          "idx": 23
+          "idx": 24
         },
         {
           "label": "Thành tiền",
@@ -10839,7 +10852,7 @@
           "valueSource": "formula",
           "editMode": "readonly",
           "serverEnforced": true,
-          "idx": 24
+          "idx": 25
         }
       ],
       "viewPolicy": {

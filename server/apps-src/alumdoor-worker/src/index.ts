@@ -1209,7 +1209,10 @@ async function loadQuotation(call: PlatformCall, name: string): Promise<Quotatio
  */
 export function orderLines(quote: QuotationDoc): Array<Record<string, unknown>> {
   return (quote.items ?? []).map((line, index) => {
-    const sourceRow = String(line.row_id ?? "").trim();
+    // API chứng từ trả khoá dòng con dưới tên `name` (D1 lưu là `row_id`), CÙNG một giá trị.
+    // Chỉ đọc `row_id` là luôn rỗng: đơn có HAI DÒNG CÙNG MÃ thì nhân không phân biệt nổi
+    // và từ chối cả chứng từ. Không bịa khoá từ số thứ tự — `name` là khoá THẬT của dòng.
+    const sourceRow = String(line.row_id ?? line.name ?? "").trim();
     const copied: Record<string, unknown> = {
       row_id: `R${index + 1}`,
       ...(sourceRow ? { quotation_item: sourceRow } : {}),
@@ -2031,7 +2034,10 @@ export function outstandingBillingLines(
      * nhân thật là chứng từ cũ chưa có khóa dòng. Bỏ trống thì nhân tự suy theo mã hàng khi
      * mã đó chỉ xuất hiện một lần, đúng đường lùi mà `resolveSourceLine` đã thiết kế sẵn.
      */
-    const sourceRow = String(line.row_id ?? "").trim();
+    // API chứng từ trả khoá dòng con dưới tên `name` (D1 lưu là `row_id`), CÙNG một giá trị.
+    // Chỉ đọc `row_id` là luôn rỗng: đơn có HAI DÒNG CÙNG MÃ thì nhân không phân biệt nổi
+    // và từ chối cả chứng từ. Không bịa khoá từ số thứ tự — `name` là khoá THẬT của dòng.
+    const sourceRow = String(line.row_id ?? line.name ?? "").trim();
     const rowKey = sourceRow ? `row:${sourceRow}` : "";
     const legacyKey = `item:${code}`;
     let consumed = 0;

@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "2.36.0",
+  "version": "2.37.0",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -9809,6 +9809,17 @@
           "fieldtype": "Data",
           "read_only": true,
           "hidden": true,
+          "surface": "internal",
+          "editMode": "hidden",
+          "serverEnforced": true
+        },
+        {
+          "label": "Dòng đơn hàng nguồn",
+          "fieldname": "sales_order_row_id",
+          "fieldtype": "Data",
+          "read_only": true,
+          "hidden": true,
+          "description": "Khóa hoá đơn theo đúng dòng đơn, không cộng nhầm hai dòng cùng mã nhưng khác màu/kích thước.",
           "surface": "internal",
           "editMode": "hidden",
           "serverEnforced": true

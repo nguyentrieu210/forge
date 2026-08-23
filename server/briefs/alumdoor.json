@@ -4240,6 +4240,14 @@
           "link_filters": "{\"is_sales_item\":1,\"disabled\":0}"
         },
         "item_name:Data~- Tên hàng",
+        {
+          "fieldname": "sales_order_row_id",
+          "fieldtype": "Data",
+          "label": "Dòng đơn hàng nguồn",
+          "read_only": true,
+          "hidden": true,
+          "description": "Khóa hoá đơn theo đúng dòng đơn, không cộng nhầm hai dòng cùng mã nhưng khác màu/kích thước."
+        },
         "inventory_mode:Data~- Kiểu tính",
         "measurement_profile:Link(Measurement Profile)~- Bộ theo dõi",
         "stock_uom:Link(UOM)~- ĐVT tồn",
