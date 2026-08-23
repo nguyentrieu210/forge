@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "2.32.0",
+  "version": "2.34.0",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -10251,8 +10251,8 @@
           "label": "SL",
           "fieldname": "qty",
           "fieldtype": "Float",
-          "required": true,
-          "surface": "quick"
+          "surface": "quick",
+          "required": true
         },
         {
           "label": "Quy tắc BOM",

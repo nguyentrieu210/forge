@@ -1,7 +1,7 @@
 {
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "2.32.0",
+  "version": "2.34.0",
   "metaContractVersion": 1,
   "platform_requires": "1.0.0",
   "requires": [
@@ -11745,8 +11745,8 @@
           "label": "SL",
           "fieldname": "qty",
           "fieldtype": "Float",
-          "required": true,
           "surface": "quick",
+          "required": true,
           "in_list_view": true,
           "in_standard_filter": false,
           "valueSource": "user",
