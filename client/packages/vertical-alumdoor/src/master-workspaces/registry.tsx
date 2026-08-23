@@ -1,0 +1,52 @@
+/** @jsxImportSource react */
+import { lazy, Suspense } from "react";
+import type { DoctypeWorkspaceExtension } from "@metaforge/views";
+
+const ItemMasterWorkbench = lazy(() => import("./ItemMasterWorkbench.js").then((module) => ({ default: module.ItemMasterWorkbench })));
+
+type WorkspaceContext = Parameters<DoctypeWorkspaceExtension["resolve"]>[0];
+type WorkspaceResolution = ReturnType<DoctypeWorkspaceExtension["resolve"]>;
+
+/**
+ * Registry cho Danh mục Alumdoor có nghiệp vụ vượt quá CRUD thông thường.
+ *
+ * Luật quan trọng nhất: KHÔNG match thì trả undefined để DoctypeWorkspace generic xử lý.
+ * Workbench riêng là ngoại lệ có chủ đích, không phải hệ form thứ hai thay thế nền tảng.
+ *
+ * `?master_ui=generic` là cửa thoát có chủ đích cho từng record/new route. Nó cho người dùng
+ * mở form metadata đầy đủ khi workbench chưa surfacing một field hiếm, đồng thời giúp rollout
+ * từng cụm mà không biến việc chưa làm xong thành chỗ cụt.
+ */
+export function resolveAlumdoorMasterWorkspace(context: WorkspaceContext): WorkspaceResolution {
+  const { doctype, isNew, decoded, bridge, base, listPath, onNavigate } = context;
+  if (bridge.get("master_ui") === "generic") return undefined;
+
+  if (doctype !== "Item" || (!isNew && !decoded)) return undefined;
+
+  const editor = (
+    <Suspense fallback={<div className="grid h-full place-items-center text-sm text-muted-foreground">Đang mở hồ sơ mặt hàng…</div>}>
+      <ItemMasterWorkbench
+        key={decoded ? `alumdoor-item-master/${decoded}` : "alumdoor-item-master/new"}
+        name={decoded}
+        base={base}
+        listPath={listPath}
+        onNavigate={onNavigate}
+        onSaved={(savedName) => onNavigate(`${listPath}/${encodeURIComponent(savedName)}`)}
+        onCancel={() => onNavigate(listPath)}
+      />
+    </Suspense>
+  );
+
+  return isNew
+    ? {
+        createSurface: "full",
+        createDataSurface: "alumdoor-item-master-create",
+        suppressBulk: true,
+        create: editor,
+      }
+    : {
+        hasDetail: true,
+        suppressBulk: true,
+        detail: editor,
+      };
+}
