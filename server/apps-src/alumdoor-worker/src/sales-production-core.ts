@@ -19,7 +19,7 @@ import {
   type BomActualRequirement,
 } from "./bom-actual-components.js";
 
-export type ProductionPlatformCall = ((path: string, init?: RequestInit) => Promise<Response>) & { via?: string };
+export type ProductionPlatformCall = ((path: string, init?: RequestInit) => Promise<Response>) & { via?: string; tenantKey?: string };
 
 type Json = Record<string, unknown>;
 
@@ -364,6 +364,14 @@ async function enrichSalesBomComponents(
     return [{
       ...composition,
       set_count: setCount,
+      /*
+       * ĐVT ĐẾM của định mức, giữ lại trước khi ĐVT bán ghi đè lên `uom`.
+       *
+       * Định mức khai cây ray là "Cây", tấm tôn là "Lá" — đó là đơn vị thợ đếm. Còn `uom`
+       * bên dưới là ĐVT BÁN của Item ("Mét", "m2"), dùng để ra tiền và ra tồn. Hai thứ khác
+       * nhau, và trước đây cái sau đè mất cái trước nên màn bán hiện "2 Mét" cho hai cây ray.
+       */
+      ...(text(composition.uom) ? { bom_count_uom: text(composition.uom) } : {}),
       uom: configuredSalesUom,
       qty: calculated.qty,
       ...(configuredSalesUom ? {} : {
@@ -1324,6 +1332,15 @@ export async function previewDraftSalesBomRequirements(call: ProductionPlatformC
         ...(Number(row.cut_width_m) > 0 ? { cut_width_m: Number(row.cut_width_m) } : {}),
         ...(Number(row.length_m) > 0 ? { length_m: Number(row.length_m) } : {}),
         stock_uom: text(row.stock_uom) || text(row.uom),
+        /*
+         * ĐVT ĐẾM và cơ sở số lượng của dòng định mức phải đi tiếp.
+         *
+         * Định mức khai "2 Cây", "1 Lá" — đó là đơn vị thợ đếm và là thứ cột SL phải hiện.
+         * Trước đây hai ô này dừng lại ở đây, nên xuống tới màn bán chỉ còn ĐVT BÁN của Item
+         * ("Mét", "m2") và hai cây ray hiện thành "2 Mét".
+         */
+        ...(text(row.uom) ? { bom_count_uom: text(row.uom) } : {}),
+        ...(text(row.qty_basis) ? { qty_basis: text(row.qty_basis) } : {}),
         qty: Number(row.qty) || 0,
         note: text(row.note) || text(row.source_note),
         source_rule: "BOM tĩnh",

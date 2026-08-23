@@ -1,4 +1,5 @@
-export type ColorScopePlatformCall = ((path: string, init?: RequestInit) => Promise<Response>) & { via?: string };
+export type ColorScopePlatformCall = ((path: string, init?: RequestInit) => Promise<Response>)
+  & { via?: string; tenantKey?: string };
 export type ColorUsage = "purchase" | "sales" | "internal";
 
 type Json = Record<string, unknown>;
@@ -23,6 +24,40 @@ type Json = Record<string, unknown>;
 
 const colorListCache = new WeakMap<object, Promise<Json[]>>();
 const finishListCache = new WeakMap<object, Promise<Json[]>>();
+
+/**
+ * NHỚ ĐỆM DANH MỤC GIỮA CÁC LƯỢT GỌI, có hạn dùng.
+ *
+ * Hai `WeakMap` ở trên chỉ sống trong MỘT lượt request (khoá là chính hàm `call`), nên mỗi lần
+ * người bán chọn một mặt hàng là đọc lại từ đầu: danh sách màu và bề mặt đều bị nền tảng từ chối
+ * trả bảng con, nên phải đọc thêm từng tài liệu lẻ. Đo thực tế: ~24 màu + 4 bề mặt ≈ 30 lượt đọc,
+ * mỗi lượt ~43 ms và KHÔNG chạy song song thật — cộng lại ~1,3 s chỉ để dựng một danh sách màu
+ * gần như không bao giờ đổi.
+ *
+ * Hạn dùng ngắn là điểm cân bằng: sửa một màu trong danh mục thì chậm nhất 30 giây là màn bán
+ * thấy, còn thao tác chọn mặt hàng — vốn lặp liên tục — thì đi thẳng vào ô nhớ.
+ *
+ * Khoá gồm tenant nên hai tenant không thấy dữ liệu của nhau. Thiếu `tenantKey` thì KHÔNG nhớ
+ * đệm: thà chậm còn hơn trộn danh mục giữa các tenant.
+ */
+const CATALOG_TTL_MS = 30_000;
+const catalogCache = new Map<string, { at: number; value: Promise<Json[]> }>();
+
+async function cachedCatalog(
+  call: ColorScopePlatformCall,
+  kind: string,
+  load: () => Promise<Json[]>,
+): Promise<Json[]> {
+  const tenant = text(call.tenantKey);
+  if (!tenant) return load();
+  const key = `${tenant}${kind}`;
+  const hit = catalogCache.get(key);
+  if (hit && Date.now() - hit.at < CATALOG_TTL_MS) return hit.value;
+  const pending = load();
+  catalogCache.set(key, { at: Date.now(), value: pending });
+  void pending.catch(() => catalogCache.delete(key));
+  return pending;
+}
 const groupLineageCache = new WeakMap<object, Map<string, Promise<string[]>>>();
 
 function text(value: unknown): string {
@@ -44,7 +79,7 @@ async function readResource(call: ColorScopePlatformCall, doctype: string, name:
 async function listColors(call: ColorScopePlatformCall): Promise<Json[]> {
   const hit = colorListCache.get(call);
   if (hit) return hit;
-  const pending = (async () => {
+  const pending = cachedCatalog(call, "|color", async () => {
     const query = new URLSearchParams({
       fields: JSON.stringify(["name", "color_code", "disabled", "usage_scope"]),
       limit_page_length: "500",
@@ -60,7 +95,7 @@ async function listColors(call: ColorScopePlatformCall): Promise<Json[]> {
       const document = name ? await readResource(call, "Item Color", name) : null;
       return { ...summary, ...(document ?? {}) };
     }));
-  })();
+  });
   colorListCache.set(call, pending);
   void pending.catch(() => colorListCache.delete(call));
   return pending;
@@ -69,7 +104,7 @@ async function listColors(call: ColorScopePlatformCall): Promise<Json[]> {
 async function listFinishes(call: ColorScopePlatformCall): Promise<Json[]> {
   const hit = finishListCache.get(call);
   if (hit) return hit;
-  const pending = (async () => {
+  const pending = cachedCatalog(call, "|finish", async () => {
     const query = new URLSearchParams({
       fields: JSON.stringify(["name", "finish_code", "finish_name", "requires_color", "applies_to_all_groups", "disabled", "usage_scope"]),
       limit_page_length: "100",
@@ -83,7 +118,7 @@ async function listFinishes(call: ColorScopePlatformCall): Promise<Json[]> {
       const document = name ? await readResource(call, "Surface Finish", name) : null;
       return { ...summary, ...(document ?? {}) };
     }));
-  })();
+  });
   finishListCache.set(call, pending);
   void pending.catch(() => finishListCache.delete(call));
   return pending;
@@ -269,20 +304,42 @@ export async function allowedColorNamesForGroup(
   return [...names].sort((left, right) => left.localeCompare(right, "vi"));
 }
 
+/**
+ * Tên đọc được của từng mã màu, để ô chọn thôi hiện mã thô.
+ *
+ * Giá trị lưu vẫn là MÃ (`VAN_GO`) vì đó là khoá của Item Color và là thứ mọi chốt chặn đối
+ * chiếu. Chỉ phần hiện lên màn đổi sang `color_name` ("VÂN GỖ") — người bán đọc tên, hệ thống
+ * vẫn ghi mã. Mã nào chưa đặt tên thì giữ nguyên mã, không bịa.
+ */
+export async function colorLabels(
+  call: ColorScopePlatformCall,
+  codes: string[],
+): Promise<Record<string, string>> {
+  const nhan: Record<string, string> = {};
+  await Promise.all([...new Set(codes.filter(Boolean))].map(async (code) => {
+    const doc = await readResource(call, "Item Color", code).catch(() => null);
+    const ten = text(doc?.color_name);
+    if (ten && ten !== code) nhan[code] = ten;
+  }));
+  return nhan;
+}
+
 export async function colorScopeForItem(
   call: ColorScopePlatformCall,
   itemCode: string,
   usage: ColorUsage = "internal",
-): Promise<{ item_group: string; allowed_colors: string[] }> {
+): Promise<{ item_group: string; allowed_colors: string[]; color_labels: Record<string, string> }> {
   const code = text(itemCode);
   if (!code) throw new Error("Cần chọn mặt hàng để lấy danh sách màu.");
   const item = await readResource(call, "Item", code);
   if (!item) throw new Error(`Mặt hàng ${code} không tồn tại hoặc không còn được truy cập.`);
   const itemGroup = text(item.item_group);
   if (!itemGroup) throw new Error(`Mặt hàng ${code} chưa có Nhóm hàng.`);
+  const allowed = await allowedColorNamesForGroup(call, itemGroup, usage, code);
   return {
     item_group: itemGroup,
-    allowed_colors: await allowedColorNamesForGroup(call, itemGroup, usage, code),
+    allowed_colors: allowed,
+    color_labels: await colorLabels(call, allowed),
   };
 }
 
@@ -305,6 +362,7 @@ export async function finishColorContextForItem(
   item_group: string;
   allowed_finishes: Array<{ code: string; name: string; requires_color: boolean }>;
   allowed_colors: string[];
+  color_labels: Record<string, string>;
   colors_by_finish: Record<string, string[]>;
 }> {
   const code = text(itemCode);
@@ -328,10 +386,12 @@ export async function finishColorContextForItem(
   const allColors = new Set<string>();
   for (const names of Object.values(colorsByFinish)) for (const name of names) allColors.add(name);
 
+  const sortedColors = [...allColors].sort((left, right) => left.localeCompare(right, "vi"));
   return {
     item_group: itemGroup,
     allowed_finishes: allowedFinishes,
-    allowed_colors: [...allColors].sort((left, right) => left.localeCompare(right, "vi")),
+    allowed_colors: sortedColors,
+    color_labels: await colorLabels(call, sortedColors),
     colors_by_finish: colorsByFinish,
   };
 }

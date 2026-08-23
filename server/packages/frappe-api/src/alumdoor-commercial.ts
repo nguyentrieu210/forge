@@ -124,11 +124,18 @@ export async function previewSalesCommercialLine(args: FrappeArgs, context: Frap
   const facts: Record<string, unknown> = {
     ...line,
     item_group: item.data.item_group,
+    door_type: item.data.door_type,
     ...(effectiveArea === undefined ? {} : {
       billable_area_sqm: effectiveArea,
       area_sqm: effectiveArea,
       sqm2: effectiveArea,
     }),
+    /*
+     * Diện tích MỘT BỘ — phụ thu "Vận chuyển cửa nhỏ" (< 8 m²) so theo kích thước của TỪNG cửa,
+     * không phải tổng diện tích cả dòng (dòng 2 bộ × 3,5 m² = 7 m²/bộ vẫn dưới ngưỡng, nhưng cả
+     * dòng đã 14 m² — so nhầm trục sẽ để lọt một bộ đáng ra phải chịu phí vận chuyển).
+     */
+    ...(previewAreaPerSet === undefined ? {} : { area_per_set_sqm: previewAreaPerSet }),
   };
   const requestedDiscount = Number(line.discount_percentage);
   // P0-2: nhóm giá của khách quyết định có chiết khấu đại lý hay không.
@@ -184,7 +191,28 @@ export async function previewSalesCommercialLine(args: FrappeArgs, context: Frap
     // Bậc tra theo diện tích MỘT BỘ. `effectiveArea` là qty của dòng m², tức ĐÃ nhân số bộ —
     // đưa thẳng nó xuống là đơn 2 bộ cửa 3,5m² ăn nhầm bậc 7m².
     ...(previewAreaPerSet === undefined ? {} : { areaPerSetSqm: previewAreaPerSet }),
-    ...(Number.isFinite(Number(line.length_m)) ? { lengthM: Number(line.length_m) } : {}),
+    /*
+     * `lengthM` cho phụ thu tính theo mét (`adjustment_basis: LENGTH_M` — ví dụ sơn ray).
+     *
+     * `line.length_m` là chiều dài CẮT MỖI CÂY do BOM gán cho dòng cấu kiện — không tồn tại
+     * trên một dòng bán ĐỘC LẬP. Ray bán riêng (Tách món, ĐVT "Mét") thì chính `qty` của dòng
+     * đã LÀ tổng số mét bán — không có con số nào khác để nói "chiều dài" ở đây. Thiếu nhánh
+     * lùi này thì luật phụ thu sơn ray không bao giờ tính ra tiền: cơ sở đọc được `undefined`,
+     * hạ xuống 0, và bị coi là "không đủ điều kiện" dù mọi điều kiện màu/phạm vi đã khớp.
+     */
+    ...(Number.isFinite(Number(line.length_m))
+      ? { lengthM: Number(line.length_m) }
+      : normalizedUom === "mét" || normalizedUom === "met" || normalizedUom === "m"
+        ? { lengthM: qty }
+        /*
+         * Trọn bộ tick "Sơn ray": ray không phải dòng bán độc lập nên không có `length_m`/`qty`
+         * mét riêng — chiều dài để tính LENGTH_M là `ray_paint_length_m` mà client đã ghi lại
+         * từ đúng lượt xem BOM (`alumdoor.sales.ray_paint_surcharge`). Phải khớp NGUYÊN VẸN với
+         * `optionalPositiveFacts` (đường lưu), nếu không xem trước và lưu ra hai số khác nhau.
+         */
+        : Number(line.ray_painted) && Number.isFinite(Number(line.ray_paint_length_m)) && Number(line.ray_paint_length_m) > 0
+          ? { lengthM: Number(line.ray_paint_length_m) }
+          : {}),
     ...(Number.isFinite(Number(line.set_count)) ? { setCount: Number(line.set_count) } : {}),
   };
   let resolved = await resolveCommercialLine(kernelContext, resolveInput);
@@ -272,6 +300,19 @@ export async function previewSalesCommercialLine(args: FrappeArgs, context: Frap
     rate: resolved.selling_rate,
     amount: resolved.net_before_tax,
     net_amount: resolved.net_before_tax,
+
+    /**
+     * PHẦN TRĂM CHÍNH SÁCH — để màn bán nói được "15%", KHÔNG phải để điền vào ô nhập.
+     *
+     * Chiết khấu 15% cửa Đức chảy qua LUẬT GIÁ (số tiền trên m², vì 15% tính trên đơn giá chỉ
+     * lá kể cả khi bán bản tặng ray). Ô `discount_percentage` trên dòng là chiết khấu NHẬP TAY;
+     * điền 15 vào đó là trừ hai lần, và kernel chặn thẳng — "chiết khấu bị trừ hai lần cho cùng
+     * một chính sách". Nên con số này chỉ để hiển thị, cạnh khoản tiền đã giảm.
+     *
+     * Lấy từ chính `defaultAlumdoorDiscountPercent` mà khâu ghi sổ dùng, nên hai nơi không thể
+     * nói hai con số khác nhau.
+     */
+    policy_discount_percentage: expectedDiscount,
 
     // ── THÊM MỚI 2026-08-21 · tất cả optional, không trường cũ nào đổi nghĩa ────────────────
     ...(chosenPrice === null ? {} : {

@@ -78,6 +78,7 @@ import {
   linePriceVariantOptions,
   linePriceVariantRequired,
   linePricedQuantity,
+  lineRayPaintToggle,
   priceVariantLabel,
   priceVariantOptionLabel,
   priceVariantOptionLabels,
@@ -348,6 +349,29 @@ function normalizeFieldValue(field: DocField, value: unknown): unknown {
   return text(value) || undefined;
 }
 
+/**
+ * Gom các ô số đo về TRỤC của chúng.
+ *
+ * Cột rộng trên màn có thể mang tên `width_m`, `width_pb_ray_m` hay `width_pb_nhua_m` tuỳ loại
+ * cửa và nhóm khách — và Geometry Profile còn đổi NHÃN của `width_m` thành "Rộng PB ray", nên
+ * nhìn tiêu đề không suy ra được tên ô. Trong khi đó Quy tắc BOM luôn trả kích thước cắt dưới
+ * tên chuẩn (`width_pb_ray_m`). Hai bên khớp nhau ở TRỤC chứ không ở tên, nên so trục.
+ */
+/**
+ * `width_pb_ray_m` và `width_pb_nhua_m` KHÔNG gộp chung một trục nữa (đã gộp tới 22/08 — sai
+ * thật khi đơn có NHIỀU LOẠI CỬA nên cả hai cột cùng hiện: server luôn trả `cut_axis` là đúng
+ * TÊN Ô một trong hai (`bom-rule-sales-preview.ts:TRUC_SANG_O`, không bao giờ là `width_m`), nên
+ * gộp chung chỉ có tác dụng khiến V4/trục hiện trùng số ở CẢ HAI cột thay vì đúng một cột — dòng
+ * 6D chụp lại đêm 24/08 là bằng chứng. Còn `width_m` (nếu tồn tại, cửa không tách ray/nhựa) vẫn
+ * so khớp đúng tên nó, không cần một nhãn trục chung.
+ */
+function trucSoDo(fieldname: string): string {
+  if (fieldname === "height_m") return "cao";
+  if (fieldname === "mesh_height_m") return "cao-luoi";
+  if (fieldname === "cut_width_m") return "rong-cat";
+  return fieldname;
+}
+
 function dynamicDisplayValue(fieldname: DynamicFieldName, value: unknown): string {
   if (value == null || value === "") return "";
   if (fieldname === "has_butterfly_bracket") return Number(value) ? "Có" : "Không";
@@ -376,7 +400,12 @@ function surchargeRuleNames(line: SalesLine): string[] {
     ? line._commercial!.pricing_rule_snapshots!
     : [];
   return [...new Set(snapshots
-    .filter((snapshot) => text(snapshot.effect_type).toUpperCase() === "ADJUSTMENT")
+    /*
+     * Chiết khấu đại lý 15% cũng khai `effect_type: "ADJUSTMENT"` (đi đường LUẬT SỐ TIỀN, số
+     * âm — xem `lineDiscountNeedsApproval`), nên lọc theo mỗi `effect_type` là gộp nhầm chiết
+     * khấu vào ô "Phụ thu". Chỉ ADJUSTMENT mang số tiền DƯƠNG mới thật sự là phụ thu.
+     */
+    .filter((snapshot) => text(snapshot.effect_type).toUpperCase() === "ADJUSTMENT" && Number(snapshot.amount_minor ?? 0) > 0)
     .map((snapshot) => pricingRuleLabel(snapshot.rule_name))
     .filter(Boolean))];
 }
@@ -549,6 +578,7 @@ function BomBlock(props: {
       </TableCell>
     </TableRow> : null}
     {props.expanded && props.line._bomError ? infoRow(<span className="flex items-start gap-2"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" />{props.line._bomError}</span>, "text-foreground") : null}
+    {props.expanded && text(preview?.bom_self_reference_warning) ? infoRow(<span className="flex items-start gap-2"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" />{text(preview?.bom_self_reference_warning)}</span>, "text-destructive") : null}
     {props.expanded && props.line._loading && !components.length ? infoRow(<span className="flex items-center gap-2"><Loader2 className="size-3.5 animate-spin" />Đang tính và xổ vật tư BOM…</span>) : null}
     {props.expanded && !props.line._loading && !props.line._bomError && !components.length && !requirements.length && !text(preview?.bom_no)
       ? pendingFields.length
@@ -561,35 +591,78 @@ function BomBlock(props: {
     {props.expanded ? components.map((component, index) => {
       const itemCode = text(component.item_code);
       const itemName = text(props.line._bomComponentNames?.[itemCode]) || itemCode;
-      const detail = text(component.sales_uom_message) || text(component.note);
+      /*
+       * Bỏ hẳn `component.note` khỏi màn hình — nó là ghi chú NỘI BỘ (công thức, mã Quy tắc
+       * BOM, và cả nguyên văn lỗi kỹ thuật khi công thức chưa tính được) chứ không phải thứ
+       * người bán cần đọc. "cắt X m/cây" ở dòng trên đã nói đủ quy cách; số cấu kiện chưa biết
+       * thì cột SL tự hiện dấu "?" đỏ kèm lý do khi rê chuột, không cần lặp lại ở đây.
+       * Chỉ giữ `sales_uom_message` — đó là cảnh báo THIẾU CẤU HÌNH thật (ĐVT bán chưa khai
+       * trên Item), việc người bán phải biết để báo lại, không phải chi tiết công thức.
+       */
+      const detail = text(component.sales_uom_message);
       const componentKey = text(component.component_key) || itemCode || `component-${index + 1}`;
-      const salesQuantity = numberValue(component.set_count) ?? numberValue(props.line.set_count);
-      const measuredQuantity = component.qty == null ? undefined : numberValue(component.qty);
+      /*
+       * SỐ CẤU KIỆN, không phải tiêu hao kho.
+       *
+       * `component_count` là số cây/lá/cái thợ thật sự phải cắt. Chỉ lùi về `set_count` cho
+       * dòng chưa map được Quy tắc BOM — dòng đó không có lớp cấu kiện nào để đọc. Khi server
+       * trả `component_count: null` kèm lý do (ví dụ chưa tính được số lá) thì hiện dấu cảnh
+       * báo chứ KHÔNG hiện 1: một dòng lá ghi "1" là nói dối thợ.
+       */
+      const countError = text(component.component_count_error);
+      const componentCount = component.component_count === null
+        ? undefined
+        : numberValue(component.component_count) ?? numberValue(component.set_count);
+      const componentUom = text(component.component_count_uom) || text(component.uom);
+      const cutEach = numberValue(component.cut_length_each_m);
+      const quyCachCat = cutEach === undefined
+        ? ""
+        : `${quantity(cutEach)} m/${(componentUom || "cái").toLocaleLowerCase("vi")}`;
       const tone = "bg-background";
       const frozen = `${tone} bg-clip-padding`;
       return <TableRow key={`${itemCode}-${componentKey}-${index}`} className={`${tone} border-b hover:bg-muted/10`} data-section="sales-v2-bom-item-row">
         {index === 0 ? <TableCell rowSpan={components.length} style={{ width: props.widths.select, ...props.stickyStyle("select") }} className={`${frozen} border-l-2 border-l-primary/30 px-1 py-1.5 text-center align-middle`}><span className="font-semibold text-muted-foreground">BOM</span></TableCell> : null}
         <TableCell style={{ width: props.widths.index, ...props.stickyStyle("index") }} className={`${frozen} px-1 py-1.5 text-center align-middle font-mono tabular-nums`}>{props.lineNumber}.{index + 1}</TableCell>
         <TableCell style={{ width: props.widths.item_code, ...props.stickyStyle("item_code") }} className={`${frozen} truncate px-1.5 py-1.5 text-center font-mono text-[10px]`} title={itemCode}>{itemCode || "—"}</TableCell>
-        <TableCell style={{ width: props.widths.item_name, ...props.stickyStyle("item_name") }} className={`${frozen} px-1.5 py-1.5 text-center`}><div className="truncate font-medium" title={itemName}>{itemName || "—"}</div>{detail ? <div className="truncate text-[9px] text-muted-foreground" title={detail}>{detail}</div> : null}</TableCell>
+        <TableCell style={{ width: props.widths.item_name, ...props.stickyStyle("item_name") }} className={`${frozen} px-1.5 py-1.5 text-center`}><div className="truncate font-medium" title={itemName}>{itemName || "—"}</div>{quyCachCat ? <div className="truncate text-[10px] font-medium text-foreground" title={`Quy cách cắt: ${quyCachCat}`}>cắt {quyCachCat}</div> : null}{detail ? <div className="truncate text-[9px] text-muted-foreground" title={detail}>{detail}</div> : null}</TableCell>
         <TableCell style={{ width: props.widths.color }} className={`${tone} px-1.5 py-1.5 text-center`}>{text(component.color) || "—"}</TableCell>
         {/* Cấu phần BOM không tự bán nên không có cách bán riêng — vẫn phải chiếm một ô, nếu
             không thì mọi cột sau nó lệch một nhịp so với dòng cha. */}
         {props.showPriceVariant ? <TableCell style={{ width: props.widths.price_variant }} className={`${tone} px-1.5 py-1.5 text-center text-muted-foreground`}>—</TableCell> : null}
         {props.dynamicColumns.map((fieldname) => {
-          // API bán hàng đã chiếu quy cách từ dòng cha sang từng phần con rồi
-          // tính lại theo Item con; bảng chỉ hiển thị snapshot đó.
-          const componentValue = dynamicDisplayValue(fieldname, component[fieldname]);
-          return <TableCell key={fieldname} style={{ width: props.widths[fieldname] }} className={`${tone} px-1.5 py-1.5 text-center tabular-nums text-muted-foreground`}>{componentValue || "—"}</TableCell>;
+          /*
+           * Ô số đo của dòng cấu kiện là KÍCH THƯỚC CẮT của chính nó, không phải số đo cửa cha.
+           *
+           * Server nói thẳng trục nào giữ số đó qua `cut_axis`, nên ở đây không dò xem ô nào
+           * tình cờ có giá trị nữa — cách dò cũ làm cây ray hiện được 2,9 ở cột Cao trong khi
+           * V4 và trục để trống cột Rộng, cùng một loại dữ liệu mà hai số phận khác nhau.
+           */
+          const laTrucCat = cutEach !== undefined
+            && Boolean(text(component.cut_axis))
+            && trucSoDo(text(component.cut_axis)) === trucSoDo(fieldname);
+          const componentValue = laTrucCat
+            ? dynamicDisplayValue(fieldname, cutEach)
+            : dynamicDisplayValue(fieldname, component[fieldname]);
+          return <TableCell key={fieldname} style={{ width: props.widths[fieldname] }} className={`${tone} px-1.5 py-1.5 text-center tabular-nums ${laTrucCat ? "text-foreground" : "text-muted-foreground"}`}>{componentValue || "—"}</TableCell>;
         })}
-        <TableCell style={{ width: props.widths.quantity }} className={`${tone} px-1.5 py-1.5 text-center tabular-nums`}>{salesQuantity === undefined ? "—" : quantity(salesQuantity)}</TableCell>
-        <TableCell style={{ width: props.widths.uom }} className={`${tone} px-1.5 py-1.5 text-center`}>{text(component.uom) || "—"}</TableCell>
+        <TableCell style={{ width: props.widths.quantity }} className={`${tone} px-1.5 py-1.5 text-center font-semibold tabular-nums`}>
+          {componentCount === undefined
+            ? <span className="text-destructive" title={countError || "Chưa xác định được số cấu kiện"}>?</span>
+            : quantity(componentCount)}
+        </TableCell>
+        <TableCell style={{ width: props.widths.uom }} className={`${tone} px-1.5 py-1.5 text-center`}>{componentUom || "—"}</TableCell>
         {props.showStockConversion ? (
           <TableCell style={{ width: props.widths.stock_conversion }} className={`${tone} px-1.5 py-1.5 text-center tabular-nums text-muted-foreground`}>
             {component.stock_qty == null ? "—" : `${quantity(component.stock_qty)} ${text(component.stock_uom)}`.trim()}
           </TableCell>
         ) : null}
-        <TableCell style={{ width: props.widths.priced_qty }} className={`${tone} px-1.5 py-1.5 text-center font-semibold tabular-nums text-primary`}>{measuredQuantity === undefined ? "—" : quantity(measuredQuantity)}</TableCell>
+        {/*
+          Cột "Khối lượng" của dòng cấu kiện KHÔNG hiện số — thừa với dòng "tiêu hao ..." đã có
+          sẵn dưới tên hàng (`componentRuleNote`), và người bán/thợ cắt đọc SL + Quy cách cắt là
+          đủ. Tổng tiêu hao vẫn còn trong dữ liệu (`stock_consumption_qty`) cho kho/giá thành
+          đọc qua API, chỉ không chiếm thêm một ô nhìn trùng ở đây nữa.
+        */}
+        <TableCell style={{ width: props.widths.priced_qty }} className={`${tone} px-1.5 py-1.5 text-center text-muted-foreground`}>—</TableCell>
         <TableCell style={{ width: props.widths.rate }} className={`${tone} px-1.5 py-1.5 text-center text-muted-foreground`}>—</TableCell>
         <TableCell style={{ width: props.widths.gross_amount }} className={`${tone} px-1.5 py-1.5 text-center text-muted-foreground`}>—</TableCell>
         <TableCell style={{ width: props.widths.actions }} className={`${tone} px-1 py-1.5`} />
@@ -784,6 +857,24 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
     props.onCommit(line._key, "has_butterfly_bracket", value);
   }, [props.onCommit, props.onPatch]);
 
+  /**
+   * Ô tick "Sơn ray" — bỏ tick thì ray về THÔ và server dừng gọi phụ thu (xem
+   * `previewLine`: điều kiện gọi `alumdoor.sales.ray_paint_surcharge` đòi cả hai
+   * `ray_painted` và `ray_color`). Bỏ tick nên xoá luôn màu đã chọn, để không giữ một màu ẩn
+   * mà không ai nhìn thấy rồi tính nhầm nếu người bán tick lại sau.
+   */
+  const setRayPainted = useCallback((line: SalesLine, next: boolean) => {
+    const value = next ? 1 : 0;
+    const patch = next ? { ray_painted: value } : { ray_painted: value, ray_color: undefined };
+    props.onPatch(line._key, patch);
+    props.onCommit(line._key, "ray_painted", value);
+  }, [props.onCommit, props.onPatch]);
+
+  const setRayColor = useCallback((line: SalesLine, next: string | undefined) => {
+    props.onPatch(line._key, { ray_color: next });
+    props.onCommit(line._key, "ray_color", next);
+  }, [props.onCommit, props.onPatch]);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     try { window.localStorage.setItem(COLUMN_WIDTH_STORAGE_KEY, JSON.stringify(widths)); } catch { /* optional preference */ }
@@ -873,9 +964,18 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
   const allSelected = props.lines.length > 0 && props.selectedKeys.size === props.lines.length;
   const partlySelected = props.selectedKeys.size > 0 && !allSelected;
 
+  /**
+   * Đơn vị đứng riêng một cột (`DYNAMIC_HEADER_UNITS`), nên đơn vị ghim sẵn trong nhãn server
+   * gửi lên phải gỡ ra, nếu không tiêu đề lặp đơn vị hai lần.
+   *
+   * Trước đây chỉ gỡ đúng chữ `(m)` — vì cột mẫu ban đầu chỉ tình cờ mang unit viết tắt đó.
+   * Master Geometry Field lưu đơn vị đầy đủ (`"Mét"`, không phải `"m"`), nên MỌI cột hình học
+   * đều đang lặp đơn vị (`"Cao phủ bì (Mét)"` rồi lại `"(m)"` ở dòng dưới) — chỉ là không ai để
+   * ý cho tới khi một nhãn mới ("Cao (mua vào)") khiến người dùng nhìn kỹ tiêu đề hơn.
+   */
   const dynamicHeaderLabel = (fieldname: DynamicFieldName): string => {
     const contextual = activeLines.map((line) => fieldLabel(line, props.childMeta, fieldname, "")).find(Boolean);
-    return text(contextual).replace(/\s*\(m\)\s*$/i, "").replace(/\s+/g, " ") || DYNAMIC_FALLBACK_LABELS[fieldname];
+    return text(contextual).replace(/\s*\((m|mét|kg|m2|m²)\)\s*$/i, "").replace(/\s+/g, " ") || DYNAMIC_FALLBACK_LABELS[fieldname];
   };
 
   const stickyLeft = (id: ColumnId) => {
@@ -1169,7 +1269,7 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
             const directOrdinaryQuantity = isDirectOrdinaryQuantityLine(line);
             const allowedColors = line._allowedColors ?? [];
             const allowedUoms = Array.isArray(line._context?.allowed_uoms) ? line._context!.allowed_uoms! : [];
-            const colorField = selectField(childFieldByName.get("color"), "color", "Màu", allowedColors);
+            const colorField = selectField(childFieldByName.get("color"), "color", "Màu", allowedColors, line._colorLabels);
             const uomField = selectField(childFieldByName.get("uom"), "uom", "ĐVT", allowedUoms);
             const quantityDocField = fieldFromMeta(props.childMeta, quantityField, quantityField === "set_count" ? "Số bộ" : "Số lượng", quantityField === "set_count" ? "Int" : "Float");
             const rowError = text(line._error) || text(line._pricingError);
@@ -1194,6 +1294,18 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
             const promoLabels = promoChips(line);
             const railToggle = lineGiftRailToggle(line);
             const butterflyToggle = lineButterflyToggle(line);
+            const rayToggle = lineRayPaintToggle(line);
+            const raySurcharge = line._raySurcharge;
+            /*
+             * Màu ray KHÔNG dùng lại `allowedColors` của chính cửa: đó là phạm vi Bề mặt của
+             * mặt hàng cửa, còn ray thuộc nhóm "Ray và trục" — phạm vi khác. Chưa có đường lấy
+             * đúng phạm vi ray cho một dòng Trọn bộ (ray là cấu kiện ẩn trong BOM, không phải
+             * mặt hàng độc lập), nên để Link mở toàn danh mục Màu thay vì Select rỗng.
+             */
+            const rayColorField: DocField = {
+              ...(childFieldByName.get("ray_color") ?? fallbackField("ray_color", "Màu ray", "Link", "Item Color")),
+              fieldname: "ray_color", label: "Màu ray", fieldtype: "Link", options: "Item Color",
+            } as DocField;
             /* Quà "tặng ray" chỉ được kể MỘT LẦN. Server trả nó về trong `benefit_items`, còn ô
                tick ngay cạnh đã mang đúng chữ "Tặng ray" — in cả hai ra đúng cái lỗi chủ xưởng
                chụp lại. Giữ ô tick (vì nó còn BẤM được), và mượn số lượng của quà đặt cạnh nó. */
@@ -1238,7 +1350,7 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
                       hỏi trước khi hứa với khách: còn hàng không, và có giá chưa. */}
                   {availabilityStatus ? <div className="mt-0.5 line-clamp-2 text-[9px] leading-3 text-muted-foreground" title={availabilityStatus}>{availabilityStatus}</div> : null}
                 </TableCell>
-                <TableCell style={{ width: widths.color }} className={`${parentRowTone} px-1.5 py-1.5 text-center align-middle`}>{allowedColors.length ? <GridField rowKey={line._key} columnId="color" disabled={props.readOnly}><AlumdoorSalesOrderField id={`sales-v2-complete-color-${line._key}`} field={colorField} value={line.color} onChange={(value) => props.onCommit(line._key, "color", text(value) || undefined)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} readOnly={props.readOnly} compact hideLabel className="[&_.mf-control]:!min-h-8 [&_input]:!text-center [&_button]:!h-8 [&_button]:!justify-center" /></GridField> : <div className="flex h-8 items-center justify-center truncate text-center text-muted-foreground">{text(line.color)}</div>}</TableCell>
+                <TableCell style={{ width: widths.color }} className={`${parentRowTone} px-1.5 py-1.5 text-center align-middle`}>{allowedColors.length && fieldVisible(line, "color") ? <GridField rowKey={line._key} columnId="color" disabled={props.readOnly}><AlumdoorSalesOrderField id={`sales-v2-complete-color-${line._key}`} field={colorField} value={line.color} onChange={(value) => props.onCommit(line._key, "color", text(value) || undefined)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} readOnly={props.readOnly} compact hideLabel className="[&_.mf-control]:!min-h-8 [&_input]:!text-center [&_button]:!h-8 [&_button]:!justify-center" /></GridField> : <div className="flex h-8 items-center justify-center truncate text-center text-muted-foreground">{text(line.color)}</div>}</TableCell>
                 {showPriceVariant ? renderPriceVariantCell(line, parentRowTone) : null}
                 {dynamicColumns.map((fieldname) => renderDynamicCell(line, fieldname, parentRowTone))}
                 <TableCell style={{ width: widths.quantity }} className={`${parentRowTone} px-1.5 py-1.5 text-center align-middle`}><GridField rowKey={line._key} columnId="quantity" disabled={props.readOnly || fieldReadonly(line, quantityField)}><AlumdoorSalesOrderField id={`sales-v2-complete-qty-${line._key}`} field={quantityDocField} value={line[quantityField]} onChange={(value) => {
@@ -1281,7 +1393,7 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
                           <div className="min-w-0 truncate text-[11px] font-semibold text-primary" title={auxiliaryDescription}>{auxiliaryDescription}</div>
                         )}
 
-                        {ruleNames.length || promoLabels.length || benefits.length || railToggle || butterflyToggle ? (
+                        {ruleNames.length || promoLabels.length || benefits.length || railToggle || butterflyToggle || rayToggle ? (
                           <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 rounded-md border border-primary/25 bg-primary/5 px-2 py-1">
                             <span className="shrink-0 text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">Khuyến mại &amp; phụ thu</span>
                             {promoLabels.map((label) => <Badge key={label} variant="secondary" className="max-w-[220px] truncate text-[9px]" title={label}>{label}</Badge>)}
@@ -1335,6 +1447,38 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
                                   : <span className="text-[9px] text-muted-foreground">Rộng cắt lá {quantity(line.cut_width_m)} m</span>}
                               </span>
                             ) : null}
+                            {/* Ô TICK "Sơn ray" — chỉ ở dòng Trọn bộ diện tích. Không tick = ray
+                                THÔ, không phụ thu. Tick mở ô chọn màu ray ngay cạnh; chọn màu gọi
+                                `alumdoor.sales.ray_paint_surcharge` thật (Pricing Scope + Pricing
+                                Rule + mét ray thật của chính đơn), không phải số ước lượng tĩnh. */}
+                            {rayToggle ? (
+                              <span className="inline-flex items-center gap-1.5">
+                                <Checkbox
+                                  id={`sales-v2-complete-ray-painted-${line._key}`}
+                                  checked={rayToggle.checked}
+                                  disabled={props.readOnly}
+                                  onCheckedChange={(value) => setRayPainted(line, value === true)}
+                                  aria-label={`Sơn ray cho dòng ${rowIndex + 1}`}
+                                />
+                                <label htmlFor={`sales-v2-complete-ray-painted-${line._key}`} className="cursor-pointer text-[10px] font-semibold" title="Không tick = ray để mộc (THÔ), không tính phụ thu sơn.">
+                                  Sơn ray
+                                </label>
+                                {rayToggle.checked ? (
+                                  <span className="inline-flex items-center gap-1">
+                                    <span className="w-44"><GridField rowKey={line._key} columnId="ray_color" disabled={props.readOnly}><AlumdoorSalesOrderField id={`sales-v2-complete-ray-color-${line._key}`} field={rayColorField} value={line.ray_color} onChange={(value) => setRayColor(line, text(value) || undefined)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} readOnly={props.readOnly} compact hideLabel className="[&_.mf-control]:!min-h-6 [&_.mf-control]:!w-full [&_input]:!h-6 [&_input]:!text-[10px] [&_button]:!h-6 [&_button]:!w-full [&_button]:!justify-start" /></GridField></span>
+                                    {!rayToggle.color ? (
+                                      <span className="text-[9px] text-muted-foreground">chưa chọn màu — chưa tính phụ thu</span>
+                                    ) : raySurcharge === undefined ? (
+                                      <span className="text-[9px] text-muted-foreground">đang tính…</span>
+                                    ) : raySurcharge.surcharge_minor ? (
+                                      <span className="text-[9px] font-medium">phụ thu {money(raySurcharge.surcharge_minor)} ₫ · {quantity(raySurcharge.total_length_m)} m × {money(raySurcharge.rate_per_meter)} ₫/m</span>
+                                    ) : (
+                                      <span className="text-[9px] text-muted-foreground" title={text(raySurcharge.reason)}>không phụ thu</span>
+                                    )}
+                                  </span>
+                                ) : null}
+                              </span>
+                            ) : null}
                           </div>
                         ) : null}
 
@@ -1347,14 +1491,24 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
                           </div>
                         ) : null}
 
-                        <div className="mt-2">
-                          <AlumdoorMotorSuggestPanel
-                            areaSqm={lineGiftRailArea(line)}
-                            currentMotorItemCode={text(line.motor_model)}
-                            disabled={props.readOnly}
-                            onAccept={(_kind, suggestion) => props.onAddSuggestedItem(line._key, suggestion.item_code)}
-                          />
-                        </div>
+                        {/*
+                          Gợi ý Motor/Bình lưu điện chỉ có ý nghĩa cho một BỘ CỬA hoàn chỉnh có
+                          thể lắp mô-tơ — không phải cho:
+                          · dòng lá/ray bán rời (Tách món) — `isAreaDoor` đã tự loại vì inventory_mode
+                            của Nan/lá cửa không phải "Thành phẩm theo m2";
+                          · Cửa Úc kéo tay (`leaf_variant === "kéo tay"`) — vận hành tay, không có
+                            mô-tơ nên cũng không cần bình lưu điện cho mô-tơ.
+                        */}
+                        {isAreaDoor(line) && text(line.leaf_variant) !== "kéo tay" ? (
+                          <div className="mt-2">
+                            <AlumdoorMotorSuggestPanel
+                              areaSqm={lineGiftRailArea(line)}
+                              currentMotorItemCode={text(line.motor_model)}
+                              disabled={props.readOnly}
+                              onAccept={(_kind, suggestion) => props.onAddSuggestedItem(line._key, suggestion.item_code)}
+                            />
+                          </div>
+                        ) : null}
 
                         {discountNeedsApproval || (!discountNeedsApproval && needsApproval) || rowError ? (
                           <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-0.5">
@@ -1368,7 +1522,14 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
                   </TableCell>
                   <TableCell style={{ width: widths.priced_qty }} className="overflow-hidden bg-background/70 px-1 py-1 text-center align-middle">
                     <div className="text-[9px] font-semibold uppercase text-muted-foreground">Chiết khấu</div>
-                    <div className="mx-auto mt-0.5 w-[64px] max-w-full"><GridField rowKey={line._key} columnId="discount_percentage" disabled={props.readOnly || fieldReadonly(line, "discount_percentage")}><AlumdoorSalesOrderField id={`sales-v2-complete-discount-${line._key}`} field={discountField} value={line.discount_percentage ?? policyDiscount} onChange={(value) => props.onPatch(line._key, { discount_percentage: value == null || value === "" ? 0 : Number(value) })} onCommit={() => props.onCommit(line._key, "discount_percentage", line.discount_percentage ?? policyDiscount)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} readOnly={props.readOnly || fieldReadonly(line, "discount_percentage")} compact hideLabel className="w-full max-w-full [&_.mf-control]:!min-h-7 [&_.mf-control]:!w-full [&_input]:!h-7 [&_input]:!w-full [&_input]:!text-center [&_input]:text-[10px] [&_input]:tabular-nums" /></GridField></div>
+                    <div className="mx-auto mt-0.5 w-[64px] max-w-full"><GridField rowKey={line._key} columnId="discount_percentage" disabled={props.readOnly || fieldReadonly(line, "discount_percentage")}><AlumdoorSalesOrderField id={`sales-v2-complete-discount-${line._key}`} field={discountField} value={line.discount_percentage ?? policyDiscount} onChange={(value) => props.onPatch(line._key, { discount_percentage: value == null || value === "" ? 0 : Number(value) })} /*
+                      Rời ô mà KHÔNG gõ gì thì không ghi gì — trước đây chỗ này ghi luôn
+                      `policyDiscount` vào dòng. Nay ô hiện sẵn 15% của chính sách, nên hành vi
+                      cũ sẽ biến con số chỉ-để-xem thành chiết khấu NHẬP TAY, và kernel chặn ghi
+                      sổ: "chiết khấu bị trừ hai lần cho cùng một chính sách". Chỉ ghi đúng cái
+                      người bán tự gõ.
+                    */
+                    onCommit={() => props.onCommit(line._key, "discount_percentage", line.discount_percentage)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} readOnly={props.readOnly || fieldReadonly(line, "discount_percentage")} compact hideLabel className="w-full max-w-full [&_.mf-control]:!min-h-7 [&_.mf-control]:!w-full [&_input]:!h-7 [&_input]:!w-full [&_input]:!text-center [&_input]:text-[10px] [&_input]:tabular-nums" /></GridField></div>
                     {/* Sau bản vá P0, chiết khấu đại lý 15% KHÔNG còn nằm ở `discount_amount` mà
                         nằm trong `adjustment_amount` mang dấu ÂM. Ô này phải gom cả hai đường,
                         nếu không khách nhìn thấy "Chiết khấu 0 ₫" trong khi tiền đã giảm đúng.
@@ -1386,7 +1547,7 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
                         một dòng có khoản giảm lớn hơn phụ thu in ra "−…" ngay dưới nhãn "Phụ thu"
                         — cùng một khoản tiền vừa bị gọi là phụ thu vừa mang dấu trừ. */}
                     <div className="mt-1 whitespace-nowrap text-[11px] font-medium tabular-nums">+{money(adjustmentSplit.surcharge)} ₫</div>
-                    <div className="mt-0.5 truncate text-[9px] text-muted-foreground" title={surchargeNames.join(" · ")}>{surchargeNames.length ? surchargeNames.join(" · ") : adjustmentSplit.surcharge ? "Phụ thu khác" : "Không có phụ thu"}</div>
+                    <div className="mt-0.5 whitespace-normal break-words text-[9px] leading-tight text-muted-foreground">{surchargeNames.length ? surchargeNames.join(" · ") : adjustmentSplit.surcharge ? "Phụ thu khác" : "Không có phụ thu"}</div>
                   </TableCell>
                   <TableCell style={{ width: widths.gross_amount }} className="overflow-hidden bg-primary/5 px-1 py-1 text-center align-middle">
                     <div className="text-[9px] font-semibold uppercase text-muted-foreground">Tiền phải thu</div>

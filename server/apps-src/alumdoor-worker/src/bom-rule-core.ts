@@ -44,6 +44,17 @@ export interface BomRuleMaster {
   divide?: number;
   final_add?: number;
   qty_per_set?: number;
+  /**
+   * SỐ CẤU KIỆN đến từ đâu — thuộc về Quy tắc BOM, không thuộc về Định mức.
+   *
+   * `"Số lá"`  → số lá do công thức chia lá của Quy cách cửa tính, thay đổi theo từng đơn.
+   * `"Cố định"`/để trống → lấy `qty_per_set`.
+   *
+   * Định mức chỉ nói "bộ này gồm món gì, cố định mấy món". Còn "mấy món khi động" là việc của
+   * luật. Ô `qty_basis` trên dòng định mức là di sản của tầng nền, đang được đọc như đường lui
+   * cho dữ liệu cũ và sẽ gỡ sau khi tầng nền chuyển xong.
+   */
+  component_count_source?: "Số lá" | "Cố định" | string;
   rounding?: BomQuantityRounding | string;
   precision?: number;
   formula_json?: string | BomQuantityFormula;

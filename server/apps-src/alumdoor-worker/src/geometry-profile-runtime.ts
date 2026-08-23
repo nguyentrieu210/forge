@@ -1,6 +1,6 @@
 type Json = Record<string, unknown>;
 
-export type GeometryRuntimeCall = (path: string, init?: RequestInit) => Promise<Response>;
+export type GeometryRuntimeCall = ((path: string, init?: RequestInit) => Promise<Response>) & { tenantKey?: string };
 
 export interface GeometryRuntimeField {
   geometry_field: string;
@@ -43,12 +43,39 @@ async function readResource(call: GeometryRuntimeCall, doctype: string, name: st
  * Geometry Profile sở hữu role/visible/required/editable/sequence; Geometry Field sở hữu label,
  * UOM, axis và runtime_fieldname. Cutting Policy tiếp tục là authority của phép tính.
  */
+/**
+ * NHỚ ĐỆM theo tenant + tên profile, có hạn dùng.
+ *
+ * Một Geometry Profile kéo theo tới 7 lượt đọc Geometry Field riêng lẻ (~43 ms/lượt). Dựng lại
+ * từ đầu ở MỖI lần người bán gõ một ký tự kích thước là phí — bộ Geometry Profile gần như không
+ * đổi giữa hai lần gõ liên tiếp. Thiếu `tenantKey` thì không nhớ đệm.
+ */
+const RUNTIME_TTL_MS = 30_000;
+const runtimeCache = new Map<string, { at: number; value: Promise<GeometryProfileRuntimeContract | null> }>();
+
 export async function readGeometryProfileRuntime(
   call: GeometryRuntimeCall,
   geometryProfileName: string,
 ): Promise<GeometryProfileRuntimeContract | null> {
   const name = text(geometryProfileName);
   if (!name) return null;
+  const tenant = text(call.tenantKey);
+  if (tenant) {
+    const key = `${tenant}|${name}`;
+    const hit = runtimeCache.get(key);
+    if (hit && Date.now() - hit.at < RUNTIME_TTL_MS) return hit.value;
+    const pending = readGeometryProfileRuntimeUncached(call, name);
+    runtimeCache.set(key, { at: Date.now(), value: pending });
+    void pending.catch(() => runtimeCache.delete(key));
+    return pending;
+  }
+  return readGeometryProfileRuntimeUncached(call, name);
+}
+
+async function readGeometryProfileRuntimeUncached(
+  call: GeometryRuntimeCall,
+  name: string,
+): Promise<GeometryProfileRuntimeContract | null> {
   const profile = await readResource(call, "Geometry Profile", name);
   if (!profile) return null;
 
@@ -65,9 +92,20 @@ export async function readGeometryProfileRuntime(
   const fields = childRows.map((row): GeometryRuntimeField => {
     const geometryField = text(row.geometry_field);
     const master = fieldByName.get(geometryField);
+    /*
+     * `label_override` thắng tên gốc của Trường hình học.
+     *
+     * Tên trên Geometry Field là DÙNG CHUNG cho mọi Geometry Profile tham chiếu nó — đổi ở đó
+     * là đổi cho tất cả. Nhưng có Profile MƯỢN một trục cho mục đích khác với Profile còn lại
+     * (một bên dùng đúng nghĩa gốc, bên kia chỉ mượn trục đó nuôi một phép tính khác) — đổi
+     * thẳng tên gốc sẽ đúng cho Profile này và sai cho Profile kia. Danh sách profile/trục nào
+     * mượn tên gì là dữ liệu, khai trong Geometry Profile — hàm này không biết và không cần
+     * biết, nó chỉ đọc `label_override` nếu có.
+     */
+    const ten = text(row.label_override) || text(master?.field_name) || geometryField;
     return {
       geometry_field: geometryField,
-      label: text(master?.field_name) || geometryField,
+      label: ten,
       runtime_fieldname: text(master?.runtime_fieldname) || null,
       role: text(row.role),
       visible: on(row.visible),

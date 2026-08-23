@@ -436,10 +436,23 @@ function trustedCommercialFacts(
     width_m: line.width_m,
     height_m: line.height_m,
     billable_area_sqm: line.billable_area_sqm,
-    area_per_set_sqm: line.area_per_set_sqm,
+    /*
+     * Diện tích MỘT BỘ đã QUY VỀ đúng bậc (`areaTierBasisSqm`), không phải trường thô
+     * `line.area_per_set_sqm` client có thể chưa gửi/gửi cũ. Phải khớp nguyên vẹn với
+     * `optionalPositiveFacts.areaPerSetSqm` và với `alumdoor-commercial.ts` (đường xem trước),
+     * nếu không phụ thu "Vận chuyển cửa nhỏ" (< 8 m²) xem trước một bậc, lưu ra bậc khác.
+     */
+    area_per_set_sqm: areaTierBasisSqm(line as unknown as {
+      area_per_set_sqm?: unknown;
+      billable_area_sqm?: unknown;
+      set_count?: unknown;
+    }),
     length_m: line.length_m,
     set_count: line.set_count,
     has_butterfly_bracket: line.has_butterfly_bracket,
+    sales_mode: line.sales_mode,
+    ray_painted: line.ray_painted,
+    ray_color: line.ray_color,
   };
 }
 
@@ -450,7 +463,23 @@ function optionalPositiveFacts(line: SalesItem): {
   setCount?: number;
 } {
   const area = finitePositive(line.billable_area_sqm);
-  const length = finitePositive(line.length_m);
+  /*
+   * `length_m` là chiều dài CẮT MỖI CÂY do BOM gán — không có trên dòng bán ĐỘC LẬP. Ray bán
+   * riêng (ĐVT "Mét") thì `qty` của dòng CHÍNH LÀ tổng số mét, không có con số nào khác để nói
+   * "chiều dài" ở đây. Thiếu nhánh lùi này thì phụ thu tính theo mét (ví dụ sơn ray) không bao
+   * giờ ra tiền — không phải vì điều kiện không khớp, mà vì cơ sở tính đọc ra rỗng rồi hạ về 0
+   * trong im lặng. Phải khớp NGUYÊN VẸN với `alumdoor-commercial.ts` (đường xem trước), nếu
+   * không giá xem trước và giá ghi sổ sẽ ra hai số khác nhau cho cùng một dòng.
+   */
+  const normalizedUom = String(line.uom ?? "").normalize("NFC").trim().toLocaleLowerCase("vi").replace(/\s+/g, "");
+  /*
+   * Trọn bộ tick "Sơn ray": phải khớp NGUYÊN VẸN với `alumdoor-commercial.ts` (đường xem
+   * trước) — cùng thứ tự nhánh lùi, cùng trường `ray_paint_length_m`. Khác đi là xem trước một
+   * đằng, lưu một nẻo cho đúng dòng có phụ thu sơn ray.
+   */
+  const length = finitePositive(line.length_m)
+    ?? (normalizedUom === "mét" || normalizedUom === "met" || normalizedUom === "m" ? finitePositive(line.qty) : undefined)
+    ?? (Number(line.ray_painted) ? finitePositive(line.ray_paint_length_m) : undefined);
   const sets = finitePositive(line.set_count);
   // `areaSqm` (cả dòng) và `areaPerSetSqm` (một bộ) là HAI trục khác nhau và không thay nhau
   // được: phụ thu theo m² tính trên cả dòng, còn bậc giá tra theo một bộ.

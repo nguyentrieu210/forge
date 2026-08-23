@@ -72,6 +72,7 @@ import {
   type CommercialPreview,
   type FieldOverride,
   type Json,
+  type RayPaintSurchargeResult,
   type SalesItemContext,
   type SalesLine,
   type UomGap,
@@ -122,6 +123,25 @@ type AdjustmentSplit = {
  * scale, quy đổi bằng đúng tỉ lệ tổng của chính dòng đó (`adjustment_amount / Σ amount_minor`),
  * nên kết quả đúng với mọi scale.
  */
+/**
+ * Chuyển `field_overrides` ra sớm, ngay khi lượt preview ô con trả về.
+ *
+ * Trả lại chính promise gốc để nhóm `Promise.all` phía sau không đổi hình dạng — đây thuần tuý
+ * là một cửa sổ nhìn trộm, không phải một lượt gọi thứ hai.
+ */
+function withEarlyOverrides(
+  promise: Promise<Json>,
+  apply: (overrides: Record<string, FieldOverride>) => void,
+): Promise<Json> {
+  void promise.then((payload) => {
+    const raw = payload?.field_overrides;
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return;
+    const overrides = raw as Record<string, FieldOverride>;
+    if (Object.keys(overrides).length) apply(overrides);
+  }).catch(() => { /* lỗi thật do lượt chờ chính báo, đây chỉ là nhìn trộm */ });
+  return promise;
+}
+
 function splitLineAdjustments(lines: SalesLine[], headerSurcharge: number): AdjustmentSplit {
   let surcharge = 0;
   let reduction = 0;
@@ -930,12 +950,23 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
            */
           ...(text(row.price_variant) ? { price_variant: text(row.price_variant) } : {}),
         }),
-        adapter.callPost<Json>("alumdoor.ui.preview_child_row", {
+        /*
+         * Ô đo nào hiện, và nó tên gì — chỉ server quyết được, nên nhãn "Rộng PB ray" phải chờ
+         * lượt này. Nhưng KHÔNG chờ cả nhóm: `allowed_colors` và `item_context` chậm ngang ngửa
+         * (đo được 3,7 s và 1,7 s), nên gộp vào `Promise.all` là bắt tiêu đề cột đợi con chậm
+         * nhất — người bán kịp gõ xong số đo trước khi cột kịp đổi tên, và tưởng hệ đổi ý.
+         *
+         * Nên overrides được áp NGAY khi nó về; `next` phía dưới ghi lại đúng giá trị đó.
+         */
+        withEarlyOverrides(adapter.callPost<Json>("alumdoor.ui.preview_child_row", {
           child_doctype: childMeta.name,
           child_fields: childFields,
           row,
           parent,
           changed_field: changedField,
+        }), (early) => {
+          if (abortIfStale()) return;
+          patchLine(row._key, { _overrides: early }, false);
         }),
         adapter.callPost<Json>("alumdoor.catalog.allowed_colors", { item_code: itemCode, usage_scope: "sales" }),
         loadItemName(itemCode),
@@ -967,6 +998,10 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
         _context: context,
         _itemName: itemName,
         _allowedColors: allowedColors,
+        _colorLabels: {
+          ...(colors.color_labels && typeof colors.color_labels === "object" ? colors.color_labels as Record<string, string> : {}),
+          ...(scope?.color_labels && typeof scope.color_labels === "object" ? scope.color_labels : {}),
+        },
         _overrides: overrides,
         _loading: false,
         _error: "",
@@ -1028,7 +1063,19 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
           const netAmount = numberValue(commercial.net_before_tax ?? commercial.net_amount ?? commercial.amount);
           if (sellingRate !== undefined) next.rate = sellingRate;
           if (grossAmount !== undefined) next.amount = grossAmount;
-          if (discountPercentage !== undefined) next.discount_percentage = discountPercentage;
+          /*
+           * SỐ 0 TỪ MÁY TÍNH GIÁ KHÔNG PHẢI Ý ĐỊNH CỦA NGƯỜI BÁN.
+           *
+           * Máy trả `discount_percentage: 0` khi không có luật chiết khấu PHẦN TRĂM nào khớp —
+           * mà chiết khấu 15% cửa Đức lại đi đường luật giá theo SỐ TIỀN, nên nó luôn trả 0.
+           * Ghi số 0 ấy vào dòng làm hai việc hỏng cùng lúc: ô "%" mất đường lui về mức chính
+           * sách (`0 ?? 15` vẫn là 0, nên màn cứ hiện 0% dù khách đã được giảm), và lúc ghi sổ
+           * con số 0 bị hiểu là "người bán cố ý bỏ chiết khấu" nên đòi duyệt.
+           *
+           * Chỉ ghi khi máy thật sự tính ra một mức phần trăm. Còn 0 thì để ô trống, và ô sẽ
+           * tự hiện mức chính sách.
+           */
+          if (discountPercentage) next.discount_percentage = discountPercentage;
           if (discountAmount !== undefined) next.discount_amount = discountAmount;
           if (adjustmentAmount !== undefined) next.adjustment_amount = adjustmentAmount;
           if (netAmount !== undefined) next.net_amount = netAmount;
@@ -1065,6 +1112,41 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
         next._bomComponentNames = {};
         next._bomError = "";
       }
+
+      /**
+       * Phụ thu sơn ray — chỉ hỏi khi dòng THẬT SỰ cần: Trọn bộ, diện tích, đã tick sơn ray và
+       * đã chọn màu. Dùng lại đúng `cleanLine(candidate)` như lời gọi BOM ngay trên — server tự
+       * xổ lại BOM của chính dòng này để cộng mét ray, không cần client tính hình học lần hai.
+       */
+      const rayColor = text(candidate.ray_color);
+      const rayPainted = Boolean(numberValue(candidate.ray_painted));
+      if (bomEligible && isAreaDoor(candidate) && rayPainted && rayColor) {
+        try {
+          const surcharge = await adapter.callPost<RayPaintSurchargeResult>("alumdoor.sales.ray_paint_surcharge", {
+            ...cleanLine(candidate),
+            ray_color: rayColor,
+          });
+          if (abortIfStale()) return;
+          next._raySurcharge = surcharge;
+          /*
+           * Mét ray đi vào LƯU ĐƠN THẬT, không chỉ hiển thị. `ray_paint_length_m` round-trip
+           * qua dòng bán y hệt các trường hình học khác (width_m, height_m…) — server SAVE
+           * (`commercial-sales-order-controller.ts`) đọc lại đúng con số này làm cơ sở
+           * `LENGTH_M` cho luật giá "Sơn ray Trọn bộ", không tính lại BOM lần hai ở đó.
+           */
+          next.ray_paint_length_m = numberValue(surcharge.total_length_m) ?? 0;
+        } catch (error) {
+          if (abortIfStale()) return;
+          next._raySurcharge = undefined;
+          next.ray_paint_length_m = 0;
+        }
+      } else {
+        next._raySurcharge = undefined;
+        // Bỏ tick / chưa chọn màu ⇒ không phụ thu. Xoá về 0 để không giữ một mét cũ từ lần
+        // tick trước — nếu không, tick lại rồi chưa kịp có kết quả mới vẫn ăn phụ thu cũ.
+        next.ray_paint_length_m = 0;
+      }
+
       if (abortIfStale()) return;
       const nextLines = patchLine(row._key, next, false);
       if (refreshTotals) await refreshDocumentPreview("items", nextLines);
@@ -1173,8 +1255,20 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
       return;
     }
     const latest = linesRef.current.find((line) => line._key === key) ?? current;
-    const resolvedValue = latest[fieldname] !== undefined ? latest[fieldname] : value;
-    const patch = { [fieldname]: resolvedValue } as Partial<SalesLine>;
+    /*
+     * GIÁ TRỊ VỪA CHỌN THẮNG giá trị đang nằm trên dòng.
+     *
+     * Trước đây chỗ này lấy `latest[fieldname]` trước, chỉ lùi về `value` khi ô còn trống. Ô nào
+     * ghi thẳng bằng `onCommit` mà không `onPatch` trước — ô Màu là một — vì thế chỉ đặt được
+     * ĐÚNG MỘT LẦN: lần sau `latest.color` đã có giá trị cũ nên giá trị cũ luôn thắng, người bán
+     * bấm chọn màu khác mà ô không nhúc nhích, phải F5 mới chọn lại được.
+     *
+     * Mọi caller đều truyền giá trị thật (ô số đo truyền giá trị gõ mới nhất lúc xả hàng đợi,
+     * ô tick truyền đúng giá trị vừa patch), nên tin `value` là đúng ở mọi đường. Nó cũng khôi
+     * phục được thao tác XOÁ màu: `undefined` nay nghĩa là "bỏ trống", không còn bị hiểu thành
+     * "giữ nguyên giá trị cũ".
+     */
+    const patch = { [fieldname]: value } as Partial<SalesLine>;
     patchLine(key, { ...patch, _loading: true }, false);
     void previewLine({ ...latest, ...patch } as SalesLine, fieldname, patch);
   }, [markDocumentChanged, patchLine, previewLine, refreshDocumentPreview]);

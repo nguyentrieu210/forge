@@ -91,6 +91,11 @@ export function selectField(
   fieldname: string,
   label: string,
   values: string[],
+  /**
+   * Tên hiển thị cho từng giá trị. Giá trị LƯU vẫn là mã — ô màu ghi `VAN_GO` như cũ, chỉ
+   * người đọc thấy "VÂN GỖ". Mã nào chưa có tên thì tự hiện mã, không cần khai đủ.
+   */
+  optionLabels?: Record<string, string>,
 ): DocField {
   const unique = [...new Set(values.filter(Boolean))];
   return {
@@ -99,6 +104,7 @@ export function selectField(
     label,
     fieldtype: "Select",
     options: ["", ...unique].join("\n"),
+    ...(optionLabels && Object.keys(optionLabels).length ? { optionLabels } : {}),
   } as DocField;
 }
 

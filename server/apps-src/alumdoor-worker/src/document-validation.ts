@@ -540,7 +540,13 @@ export async function validatePurchaseMeasurement(
      * xuất phải có và phải khớp. Nhờ vậy gọi API thẳng không thể lưu một TL kg/m² giả khác
      * với bốn số nguồn mà người dùng nhìn thấy trên phiếu.
      */
-    const isAreaItem = item.inventory_mode === "Tấm/Kính" || item.inventory_mode === "Thành phẩm theo m2";
+    /*
+     * "Tấm/Kính" và "Nan/lá cửa" cùng cơ chế theo dõi diện tích (đã tách tên 24/08 để lá cửa
+     * không còn bị gọi nhầm là kính) — cả hai vẫn cần chốt cân nặng thực tế như nhau.
+     */
+    const isAreaItem = item.inventory_mode === "Tấm/Kính"
+      || item.inventory_mode === "Nan/lá cửa"
+      || item.inventory_mode === "Thành phẩm theo m2";
     const hasActualWeight = row.actual_weight_kg !== undefined
       && row.actual_weight_kg !== null
       && row.actual_weight_kg !== "";

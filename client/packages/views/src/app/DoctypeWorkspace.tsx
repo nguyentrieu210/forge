@@ -71,18 +71,42 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
    * có thể đang cần; cái bị bỏ là LỐI VÀO từ màn doctype này.
    */
 
+  /**
+   * `?master_ui=generic` là cửa thoát MỘT CHIỀU do các workbench nghiệp vụ tự thêm nút để vào
+   * (xem `resolveAlumdoorMasterWorkspace`). Form generic ở đây không biết workbench nào tồn tại
+   * cho doctype hiện tại, nên chỉ cần trả `bridge` về trạng thái sạch — nếu có workbench, nó tự
+   * xuất hiện lại; nếu không, đây là no-op vô hại.
+   */
+  const isGenericEscapeHatch = bridge.get("master_ui") === "generic";
+
   const detail = extension?.detail ?? (decoded ? (
-    <FormContainer
-      key={`${doctype}/${decoded}`}
-      doctype={doctype}
-      name={decoded}
-      onSaved={() => {}}
-      onDeleted={() => onNavigate(listPath)}
-      onDuplicate={() => onNavigate(`${listPath}/new`)}
-      onRenamed={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
-      onPrint={() => onNavigate(printBase === "/print" ? buildPrintPath(doctype, decoded) : `${printBase}/${encodeURIComponent(doctype)}/${encodeURIComponent(decoded)}`)}
-      onClose={() => onNavigate(listPath)}
-    />
+    <div className="flex h-full min-h-0 flex-col">
+      {isGenericEscapeHatch ? (
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b bg-muted/40 px-4 py-2 text-sm">
+          <span className="text-muted-foreground">Đang xem form đầy đủ.</span>
+          <button
+            type="button"
+            className="font-medium text-primary underline-offset-2 hover:underline"
+            onClick={() => bridge.set({ master_ui: null })}
+          >
+            Quay lại giao diện rút gọn
+          </button>
+        </div>
+      ) : null}
+      <div className="min-h-0 flex-1">
+        <FormContainer
+          key={`${doctype}/${decoded}`}
+          doctype={doctype}
+          name={decoded}
+          onSaved={() => {}}
+          onDeleted={() => onNavigate(listPath)}
+          onDuplicate={() => onNavigate(`${listPath}/new`)}
+          onRenamed={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
+          onPrint={() => onNavigate(printBase === "/print" ? buildPrintPath(doctype, decoded) : `${printBase}/${encodeURIComponent(doctype)}/${encodeURIComponent(decoded)}`)}
+          onClose={() => onNavigate(listPath)}
+        />
+      </div>
+    </div>
   ) : isTree ? (
     <div className="grid h-full place-items-center bg-card px-6 text-center text-sm text-muted-foreground">{t("common.choose_prefix")} {displayTitle.toLocaleLowerCase("vi")}</div>
   ) : null);

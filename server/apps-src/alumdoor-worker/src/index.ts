@@ -66,6 +66,7 @@ import {
   syncPaintJobsFromCut,
   validateProductionRequest,
 } from "./sales-production.js";
+import { computeRayPaintSurcharge } from "./ray-paint-surcharge.js";
 import {
   attendanceChallenge,
   attendanceResolveStation,
@@ -131,7 +132,15 @@ function platformCaller(request: Request, env: Env): PlatformCall {
       });
       return env.PLATFORM ? env.PLATFORM.fetch(outbound) : fetch(outbound);
     },
-    { via: env.PLATFORM ? "binding" : "fetch" },
+    {
+      via: env.PLATFORM ? "binding" : "fetch",
+      /*
+       * Khoá nhớ đệm theo TENANT. `base` là địa chỉ gọi ngược nền tảng cấp cho đúng tenant này,
+       * nên hai tenant không bao giờ đụng chung ô nhớ. Danh mục ít đổi (màu, bề mặt) dùng nó để
+       * khỏi đọc lại vài chục tài liệu lẻ cho mỗi lượt chọn mặt hàng.
+       */
+      tenantKey: base,
+    },
   );
 }
 
@@ -2810,6 +2819,7 @@ export default {
         if (method === "alumdoor.ui.preview_document") return await previewDocument(call, args);
         if (method === "alumdoor.sales.production_line_context") return await calculateSalesProductionLine(call, args);
         if (method === "alumdoor.sales.preview_bom_requirements") return await previewDraftSalesBomRequirements(call, args);
+        if (method === "alumdoor.sales.ray_paint_surcharge") return answer(await computeRayPaintSurcharge(call, args));
         if (method === "alumdoor.sales.preview_production") return await previewSalesProduction(call, args);
         if (method === "alumdoor.sales.create_production") return await createSalesProduction(call, args);
         if (method === "alumdoor.door.calculate") return await calculateDoor(call, args);

@@ -21,6 +21,14 @@ type LinearSalesBasis = "RAY" | "TRUC";
 const SALES_DOCTYPES = new Set(["Quotation Item", "Sales Order Item", "Delivery Note Item", "Sales Invoice Item"]);
 const PURCHASE_DOCTYPES = new Set(["Supplier Quotation Item", "Purchase Order Item", "Purchase Receipt Item", "Purchase Invoice Item"]);
 const AREA_UOMS = new Set(["m2", "m²", "sqm"]);
+/*
+ * Hai `inventory_mode` cùng cơ chế theo dõi (Dài×Rộng ra diện tích, tồn theo m²) nhưng KHÁC
+ * mặt hàng thật: "Tấm/Kính" là tấm/kính, "Nan/lá cửa" là lá cửa cán từ tôn/nhôm. Trước 24/08
+ * hai thứ dùng CHUNG chữ "Tấm/Kính" nên lá cửa bị gọi nhầm là kính; đã tách tên nhưng CƠ CHẾ
+ * nhập liệu (Rộng cắt lá × Cao cắt lá) vẫn giống hệt nhau, nên các chỗ tính diện tích vẫn nhận
+ * cả hai — chỉ nhãn/danh tính dữ liệu là tách riêng.
+ */
+const SHEET_AREA_MODES = new Set(["Tấm/Kính", "Nan/lá cửa"]);
 const METRE_UOMS = new Set(["m", "mét", "met", "meter", "metre"]);
 const SET_UOMS = new Set(["bộ", "bo", "set"]);
 const PIECE_UOMS = new Set(["cây", "cay", "lá", "la", "đoạn", "doan"]);
@@ -302,6 +310,18 @@ function salesQuantity(row: Json, item: Json, formula: Json | null): { derived: 
     }
     if (PIECE_UOMS.has(uom)) return { derived: true, ...(pieces ? { quantity: roundTo(pieces) } : {}), policy: "PIECES" };
   }
+  /*
+   * Tấm/Kính (ví dụ Nan/lá cửa bán Tách món): hàng cán/cắt theo tấm, KHÔNG có Geometry
+   * Profile/BOM như cửa — `isAreaFinishedProduct` không nhận diện mode này nên trước đây rơi
+   * thẳng xuống DIRECT, buộc người bán tự gõ tay diện tích, không có ô Rộng/Cao cắt lá nào cả.
+   * Diện tích = Rộng × Cao cắt lá, đơn giản hơn cửa vì không qua Cutting Policy/BOM.
+   */
+  if (SHEET_AREA_MODES.has(text(item.inventory_mode)) && AREA_UOMS.has(uom)) {
+    const width = positive(row.width_m);
+    const height = positive(row.height_m);
+    if (width && height) return { derived: true, quantity: roundTo(width * height * sets), policy: "AREA" };
+    return { derived: true, policy: "AREA_POLICY" };
+  }
   return { derived: false, policy: "DIRECT" };
 }
 
@@ -336,7 +356,7 @@ function applyAverageWeight(patch: Json, clear: Set<string>, fields: Set<string>
   const width = positive(row.width_m);
   const height = positive(row.height_m);
   const sets = positive(row.set_count);
-  const isArea = ["Tấm/Kính", "Thành phẩm theo m2"].includes(text(row.inventory_mode));
+  const isArea = SHEET_AREA_MODES.has(text(row.inventory_mode)) || text(row.inventory_mode) === "Thành phẩm theo m2";
   const totalArea = isArea && width && height && sets ? width * height * sets : null;
   const totalLength = bars && length ? bars * length : length;
   if (fields.has("total_length_m")) {
@@ -618,6 +638,21 @@ async function previewSales(call: PlatformCall, args: Json, row: Json, parent: J
   }
   if (linear === "RAY") fieldOverride(overrides, fields, "height_m", { hidden: 0, reqd: 1, label: "Cao (m)", depends_on: null, mandatory_depends_on: null });
   if (linear === "TRUC" || isWidthQuantitySalesItem(item)) fieldOverride(overrides, fields, "width_m", { hidden: 0, reqd: 1, label: "Rộng (m)", depends_on: null, mandatory_depends_on: null });
+  /*
+   * Tấm/Kính, Nan/lá cửa bán theo diện tích: Rộng cắt lá + Cao PB là hai ô nhập trực tiếp
+   * (không qua Cutting Policy như cửa), diện tích tự nhân — xem `salesQuantity` nhánh
+   * `SHEET_AREA_MODES` ở trên.
+   *
+   * CHỈ Rộng là "cắt" — đúng công thức chốt `docs/ALUMDOOR-LUAT-DO-VA-GIA.md` §4 (bảng chủ
+   * xưởng 29/07/2026): Đài Loan/Lưới/Siêu Trường Tách món bán theo "Cao PB × Rộng cắt", không
+   * phải "Cao cắt × Rộng cắt" — Rộng đã trừ khe hở lắp ráp (PB ray − 0,03, có bản bướm − 0,035)
+   * vì lá/ray là hàng cắt rời, còn Cao vẫn đo nguyên theo phủ bì của bộ cửa. Gọi cả hai là "cắt
+   * lá" (bản trước 24/08) là sai công thức tài liệu.
+   */
+  if (SHEET_AREA_MODES.has(text(item.inventory_mode)) && AREA_UOMS.has(normalizedUom(finalForFields.uom))) {
+    fieldOverride(overrides, fields, "width_m", { hidden: 0, reqd: 1, label: "Rộng cắt lá (m)", depends_on: null, mandatory_depends_on: null });
+    fieldOverride(overrides, fields, "height_m", { hidden: 0, reqd: 1, label: "Cao PB (m)", depends_on: null, mandatory_depends_on: null });
+  }
   if (isOrdinaryQuantitySalesItem(item)) fieldOverride(overrides, fields, "qty", { read_only: 1, label: "SL tính giá", read_only_depends_on: null });
   if (quantity.policy === "LENGTH_X_PIECES" || (text(item.inventory_mode) === "Nhôm cây/lá" && quantity.policy === "PIECES")) {
     fieldOverride(overrides, fields, "length_m", { reqd: quantity.policy === "LENGTH_X_PIECES" ? 1 : 0, label: "Dài một cây/đoạn (m)" });
@@ -757,7 +792,7 @@ async function previewPurchase(call: PlatformCall, args: Json, row: Json, fields
   if (!aluminum) {
     for (const name of ["length_m", "qty_bundle", "qty_bar", "so_no", "total_length_m", "actual_kg_per_m", "material_specification", "theoretical_kg_per_m", "theoretical_kg", "is_stamped"]) clearIfField(clear, fields, name);
   }
-  if (!["Tấm/Kính", "Thành phẩm theo m2"].includes(inventoryMode)) clearIfField(clear, fields, "actual_kg_per_sqm");
+  if (!SHEET_AREA_MODES.has(inventoryMode) && inventoryMode !== "Thành phẩm theo m2") clearIfField(clear, fields, "actual_kg_per_sqm");
 
   fieldOverride(overrides, fields, "material_specification", {
     hidden: aluminum ? 0 : 1,

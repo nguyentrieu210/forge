@@ -172,6 +172,8 @@ export interface ColorScope extends Json {
   requires_color?: boolean;
   allowed_finishes?: Array<{ code?: string; name?: string; requires_color?: boolean }>;
   allowed_colors?: string[];
+  /** Mã màu → tên đọc được. Giá trị lưu vẫn là mã. */
+  color_labels?: Record<string, string>;
   colors_by_finish?: Record<string, string[]>;
 }
 
@@ -274,6 +276,13 @@ export interface CommercialPreview extends Json {
   priced_qty?: string | number;
   gross_amount?: string | number;
   discount_percentage?: string | number;
+  /**
+   * Phần trăm chiết khấu theo CHÍNH SÁCH (ví dụ cửa Đức 15%) — chỉ để hiển thị.
+   *
+   * KHÔNG được đổ vào ô `discount_percentage` của dòng: khoản đó đã được luật giá trừ rồi,
+   * điền thêm là trừ hai lần và kernel chặn không cho ghi sổ.
+   */
+  policy_discount_percentage?: number;
   discount_amount?: string | number;
   discount_basis_item_price?: string;
   discount_basis_rate?: string | number;
@@ -307,6 +316,23 @@ export interface BomPreviewComponent extends Json {
   cut_width_m?: number;
   length_m?: number;
   set_count?: number;
+  /**
+   * LỚP CẤU KIỆN VẬT LÝ — "mấy cây, mấy lá, mỗi cái cắt bao nhiêu".
+   *
+   * Đây là authority của cột SL/ĐVT trên bảng BOM. `set_count`/`qty`/`uom` bên dưới là
+   * projection tương thích ngược mang nghĩa TIÊU HAO KHO; đọc chúng vào cột SL chính là
+   * chỗ hỏng cũ khiến cây ray hiện "2 / Mét / 5,8" và tấm tôn hiện "1 / m2 / 8,91".
+   */
+  component_count?: number | null;
+  component_count_uom?: string;
+  cut_length_each_m?: number;
+  /** Tên cột số đo đang giữ kích thước cắt (`height_m`, `width_pb_ray_m`…). Server quyết định. */
+  cut_axis?: string;
+  leaf_count?: number;
+  component_count_error?: string;
+  /** LỚP TIÊU HAO KHO — mét/m²/kg cho xuất kho, dự trù và giá thành. */
+  stock_consumption_qty?: number;
+  stock_consumption_uom?: string;
   uom?: string;
   stock_uom?: string;
   stock_qty?: number | null;
@@ -338,10 +364,24 @@ export interface BomPreview extends Json {
   actual_requirements?: BomActualRequirement[];
   missing_actual_component_keys?: string[];
   actual_complete?: boolean;
+  /** Định mức khai chính mặt hàng cha làm cấu phần — server đã loại, đây là lời giải thích. */
+  bom_self_reference_warning?: string;
+}
+
+export interface RayPaintSurchargeResult extends Json {
+  applicable?: boolean;
+  total_length_m?: number;
+  rate_per_meter?: number;
+  surcharge_minor?: number;
+  matched_rule?: string | null;
+  ray_components?: Array<{ item_code: string; length_m: number }>;
+  reason?: string;
 }
 
 export interface SalesLine extends Json {
   _key: string;
+  /** Kết quả gần nhất của `alumdoor.sales.ray_paint_surcharge` — ước tính hiển thị. */
+  _raySurcharge?: RayPaintSurchargeResult;
   /**
    * CÁCH BÁN của dòng — chọn dòng giá nào, không phải giảm bao nhiêu.
    *
@@ -363,6 +403,8 @@ export interface SalesLine extends Json {
   _itemName?: string;
   _context?: SalesItemContext;
   _allowedColors?: string[];
+  /** Mã màu → tên đọc được (`VAN_GO` → `VÂN GỖ`). Giá trị lưu vẫn là mã. */
+  _colorLabels?: Record<string, string>;
   _overrides?: Record<string, FieldOverride>;
   _commercial?: CommercialPreview;
   _bomPreview?: BomPreview;
@@ -715,7 +757,18 @@ export function pricingRuleLabel(value: unknown): string {
 }
 
 /** % chiết khấu mà policy server thực sự chọn, độc lập với % sale đang override trên dòng. */
+/**
+ * Phần trăm chiết khấu THEO CHÍNH SÁCH của dòng.
+ *
+ * Hỏi server trước (`policy_discount_percentage` — cùng hàm mà khâu ghi sổ dùng), rồi mới lùi về
+ * đọc snapshot luật `DISCOUNT_PERCENT`. Phải theo thứ tự đó: chiết khấu 15% cửa Đức khai bằng
+ * SỐ TIỀN trên m² chứ không bằng phần trăm (15% tính trên đơn giá chỉ lá kể cả khi bán bản tặng
+ * ray), nên tìm trong snapshot sẽ không thấy gì và ô chiết khấu đứng yên ở 0 trong khi tiền đã
+ * giảm đủ — người bán tưởng khách chưa được giảm.
+ */
 export function linePolicyDiscountPercentage(line: SalesLine): number {
+  const theoChinhSach = numberValue(line._commercial?.policy_discount_percentage);
+  if (theoChinhSach !== undefined) return theoChinhSach;
   const snapshots = Array.isArray(line._commercial?.pricing_rule_snapshots)
     ? line._commercial!.pricing_rule_snapshots!
     : [];
@@ -731,11 +784,35 @@ export function linePolicyDiscountRule(line: SalesLine): string {
   return pricingRuleLabel(snapshots.find((snapshot) => text(snapshot.effect_type).toUpperCase() === "DISCOUNT_PERCENT")?.rule_name);
 }
 
+/**
+ * Một dòng chính sách được coi là "đã có khoản giảm" nếu nó giảm phần trăm, giảm số tuyệt đối,
+ * hoặc là ADJUSTMENT mang số tiền ÂM — bản sao ở client của
+ * `commercial-selling/src/controllers.ts:hasAlumdoorDiscountEffect`. Chiết khấu 15% cửa Đức đi
+ * qua đường LUẬT SỐ TIỀN (ADJUSTMENT âm trên đơn giá), không phải luật phần trăm, nên
+ * `discount_percentage` của dòng THẬT SỰ là 0 dù tiền đã giảm đúng — hai nơi phải cùng một câu
+ * trả lời, nếu không server coi là "đã đủ chính sách" còn client vẫn tô đỏ "cần duyệt".
+ */
+function hasAlumdoorDiscountEffect(snapshot: PricingRuleSnapshot): boolean {
+  const effect = text(snapshot.effect_type).toUpperCase();
+  if (effect === "DISCOUNT_PERCENT" || effect === "DISCOUNT_AMOUNT") return true;
+  return effect === "ADJUSTMENT" && Number(snapshot.amount_minor ?? 0) < 0;
+}
+
 /** Sale được nhập override; khác policy thì vẫn preview nhưng phải hiện cảnh báo/cần duyệt. */
 export function lineDiscountNeedsApproval(line: SalesLine): boolean {
   if (!text(line.item_code) || !line._commercial) return false;
-  const entered = numberValue(line.discount_percentage ?? line._commercial.discount_percentage) ?? 0;
   const allowed = linePolicyDiscountPercentage(line);
+  const snapshots = Array.isArray(line._commercial.pricing_rule_snapshots) ? line._commercial.pricing_rule_snapshots! : [];
+  const policySatisfiedByMoney = allowed > 0 && snapshots.some(hasAlumdoorDiscountEffect);
+  /*
+   * Người bán CHƯA tự gõ gì vào ô % (rỗng/undefined — server chỉ ghi vào `discount_percentage`
+   * khi nó thật sự khác 0, xem `AlumdoorSalesOrderWorkbenchComplete.tsx`), và chính sách đã áp
+   * đủ qua đường số tiền ⇒ không có gì để duyệt. Người bán CÓ gõ (kể cả gõ đúng 0 để cố tình bỏ
+   * chiết khấu) thì vẫn so như cũ, vì đó là ý định thật của họ.
+   */
+  const enteredRaw = line.discount_percentage;
+  if (enteredRaw === undefined && policySatisfiedByMoney) return false;
+  const entered = numberValue(enteredRaw ?? line._commercial.discount_percentage) ?? 0;
   return Math.abs(entered - allowed) > 0.000001;
 }
 
@@ -1129,6 +1206,21 @@ export function lineButterflyToggle(line: SalesLine): { checked: boolean } | und
   const override = fieldOverride(line, "has_butterfly_bracket");
   if (!override || override.hidden === true || override.hidden === 1) return undefined;
   return { checked: numberValue(line.has_butterfly_bracket) === 1 };
+}
+
+/**
+ * Ô tick "Sơn ray" — chỉ có ở dòng Trọn bộ diện tích. Tách món đã có ô Màu riêng cho chính
+ * mặt hàng ray, nên ô này không lặp lại ở đó.
+ *
+ * Không tick = ray để mộc (THÔ), không phụ thu — server không cần nói gì thêm vì đây là quy
+ * ước tĩnh, không phải quyết định nghiệp vụ như "bắn bướm" (schema tự khai qua `depends_on`
+ * `sales_mode == 'Trọn bộ'`, đọc lại nguyên văn ở đây thay vì đợi field_overrides).
+ */
+export function lineRayPaintToggle(line: SalesLine): { checked: boolean; color: string } | undefined {
+  if (!isAreaDoor(line)) return undefined;
+  const salesMode = text(line.sales_mode) || "Trọn bộ";
+  if (salesMode !== "Trọn bộ") return undefined;
+  return { checked: numberValue(line.ray_painted) === 1, color: text(line.ray_color) };
 }
 
 /**
