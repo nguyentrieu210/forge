@@ -1,12 +1,13 @@
 import { registerVerticalWorkspace } from "@metaforge/views";
-import { alumdoorWorkspaceExtension } from "./workspace-extension.js";
+import { alumdoorWorkspaceExtension } from "./combined-workspace-extension.js";
 
 /**
- * Vertical AlumDoor: màn tác nghiệp riêng của xưởng nhôm (đơn bán, mua hàng, BOM, sản xuất).
+ * Vertical AlumDoor: màn tác nghiệp riêng của xưởng nhôm (đơn bán, mua hàng, BOM, sản xuất)
+ * cộng các Master Workbench chỉ dành cho những danh mục vượt quá CRUD thông thường.
  *
- * Trước đây 7325 dòng này nằm trong `@metaforge/views`, tức là app thứ hai dựng từ package
- * dùng chung vẫn kéo theo cả xưởng nhôm. Nay là package riêng, và nạp package NÀY chính là
- * hành động bật vertical lên — app nào cần thì import, app nào không thì không mang theo.
+ * Generic runtime vẫn là mặc định. `combined-workspace-extension` chỉ compose hai lớp override:
+ * master-workspaces trước, operational workspaces sau; cả hai đều fall-through về generic khi
+ * không nhận route hiện tại.
  */
 registerVerticalWorkspace("alumdoor", alumdoorWorkspaceExtension);
 
