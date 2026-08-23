@@ -57,16 +57,20 @@ describe("alumdoor.ui.preview_child_row", () => {
     expect(body.purchase_runtime).toBeTruthy();
   });
 
-  it("keeps configured purchase fields visible even when their row values are empty", async () => {
+  it("keeps configured purchase fields visible when empty and defaults length from Material Specification", async () => {
     const call = callWith({
       "resource/Item/SHEET-01": {
         item_code: "SHEET-01", item_name: "Tấm 01", is_purchase_item: 1, disabled: 0,
         stock_uom: "Tấm", default_purchase_uom: "Tấm", measurement_profile: "Tấm/Kính",
+        material_specification: "SPEC-SHEET",
       },
       "resource/Measurement Profile/Tấm/Kính": {
         profile_name: "Tấm/Kính", inventory_mode: "Tấm/Kính", stock_uom: "Tấm",
         track_dimension_lot: 1, require_color: 0, require_condition: 0, require_length: 1,
         require_width: 1, require_piece_qty: 1, track_bundle_qty: 0,
+      },
+      "resource/Material Specification/SPEC-SHEET": {
+        name: "SPEC-SHEET", standard_length_m: 2.4,
       },
     });
     const res = await previewChildRow(call, {
@@ -77,7 +81,8 @@ describe("alumdoor.ui.preview_child_row", () => {
       changed_field: "item_code",
     });
     expect(res.status).toBe(200);
-    const body = await res.json() as { field_overrides: Record<string, Json> };
+    const body = await res.json() as { patch: Json; field_overrides: Record<string, Json> };
+    expect(body.patch.length_m).toBe(2.4);
     expect(body.field_overrides.length_m?.hidden).toBe(0);
     expect(body.field_overrides.length_m?.reqd).toBe(1);
     expect(body.field_overrides.width_m?.hidden).toBe(0);
@@ -146,6 +151,7 @@ describe("alumdoor.ui.preview_child_row", () => {
         is_sales_item: 1, disabled: 0, inventory_mode: "Thành phẩm theo m2", stock_uom: "Bộ",
         default_sales_uom: "m2", uom_conversions: [],
       },
+      "resource/Item Price/Bán lẻ:MOTOR-01": {},
       "resource/Item Price/Bán lẻ:DUC-01": {
         name: "Bán lẻ:DUC-01", price_list: "Bán lẻ", item_code: "DUC-01", uom: "m2", rate: 1626000, currency: "VND", disabled: 0,
       },
