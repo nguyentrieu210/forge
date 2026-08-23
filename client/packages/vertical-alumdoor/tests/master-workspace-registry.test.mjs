@@ -15,8 +15,13 @@ test("master workspace registry preserves generic and operational fallthrough", 
   const index = readFileSync(path.join(ROOT, "index.ts"), "utf8");
 
   assert.match(registry, /bridge\.get\("master_ui"\) === "generic"/);
-  assert.match(registry, /doctype === "Item"/);
-  for (const doctype of ["Item Price", "Pricing Scope", "Pricing Rule"]) assert.match(registry, new RegExp(doctype));
+  for (const doctype of [
+    "Item",
+    "Item Price", "Pricing Scope", "Pricing Rule",
+    "Bill of Materials",
+    "Quy cách cửa", "Geometry Profile", "Cutting Policy",
+    "Ngưỡng chọn Motor",
+  ]) assert.match(registry, new RegExp(doctype));
   assert.match(registry, /return undefined/);
   assert.match(combined, /resolveAlumdoorMasterWorkspace\(context\) \?\? operationalWorkspaceExtension\.resolve\(context\)/);
   assert.match(index, /\.\/combined-workspace-extension\.js/);
@@ -40,4 +45,33 @@ test("pricing workbench validates scope and delegates preview to the server pric
   assert.match(pricing, /RATE_OVERRIDE/);
   assert.match(pricing, /ADJUSTMENT/);
   assert.match(pricing, /\?master_ui=generic/);
+});
+
+test("BOM workbench keeps qty separate from qty basis and refuses to normalize temporary rows", () => {
+  const bom = readFileSync(path.join(ROOT, "master-workspaces", "BomMasterWorkbench.tsx"), "utf8");
+  assert.match(bom, /qty_basis không thay thế SL/);
+  assert.match(bom, /_tam_dien_1/);
+  assert.match(bom, /source_value_status/);
+  assert.match(bom, /Form đầy đủ \/ Ghi sổ/);
+  assert.match(bom, /BOM Rule/);
+});
+
+test("door geometry workbench keeps slat divisor, geometry and cutting policy as separate authorities", () => {
+  const door = readFileSync(path.join(ROOT, "master-workspaces", "DoorGeometryWorkbench.tsx"), "utf8");
+  assert.match(door, /buoc_la_m/);
+  assert.match(door, /be_rong_nan_mm/);
+  assert.match(door, /AL552/);
+  assert.match(door, /Geometry Profile/);
+  assert.match(door, /Cutting Policy chỉ sở hữu hình học/);
+  assert.match(door, /geometry_rules/);
+});
+
+test("motor UPS workbench delegates selection to the existing server method", () => {
+  const motor = readFileSync(path.join(ROOT, "master-workspaces", "MotorUpsMasterWorkbench.tsx"), "utf8");
+  const panel = readFileSync(path.join(ROOT, "AlumdoorMotorSuggestPanel.tsx"), "utf8");
+  assert.match(motor, /Diện tích cửa/);
+  assert.match(motor, /Tải motor/);
+  assert.match(motor, /AlumdoorMotorSuggestPanel/);
+  assert.match(panel, /alumdoor\.motor\.suggest/);
+  assert.match(motor, /cận MỞ/);
 });
