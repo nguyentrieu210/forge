@@ -8,6 +8,7 @@ const ItemMasterWorkbench = lazy(() => import("./ItemMasterWorkbench.js").then((
 const PricingMasterWorkbench = lazy(() => import("./PricingMasterWorkbench.js").then((module) => ({ default: module.PricingMasterWorkbench })));
 const BomMasterWorkbench = lazy(() => import("./BomMasterWorkbench.js").then((module) => ({ default: module.BomMasterWorkbench })));
 const DoorGeometryWorkbench = lazy(() => import("./DoorGeometryWorkbench.js").then((module) => ({ default: module.DoorGeometryWorkbench })));
+const MotorUpsMasterWorkbench = lazy(() => import("./MotorUpsMasterWorkbench.js").then((module) => ({ default: module.MotorUpsMasterWorkbench })));
 
 type WorkspaceContext = Parameters<DoctypeWorkspaceExtension["resolve"]>[0];
 type WorkspaceResolution = ReturnType<DoctypeWorkspaceExtension["resolve"]>;
@@ -65,6 +66,15 @@ export function resolveAlumdoorMasterWorkspace(context: WorkspaceContext): Works
       </Suspense>
     );
     return isNew ? { createSurface: "full", createDataSurface: "alumdoor-door-geometry-create", suppressBulk: true, create: editor } : { hasDetail: true, suppressBulk: true, detail: editor };
+  }
+
+  if (doctype === "Ngưỡng chọn Motor") {
+    const editor = (
+      <Suspense fallback={<div className="grid h-full place-items-center text-sm text-muted-foreground">Đang mở bảng ngưỡng Motor / UPS…</div>}>
+        <MotorUpsMasterWorkbench key={decoded ? `alumdoor-motor-ups/${decoded}` : "alumdoor-motor-ups/new"} name={decoded} base={base} listPath={listPath} onNavigate={onNavigate} onSaved={(savedName) => onNavigate(`${listPath}/${encodeURIComponent(savedName)}`)} onCancel={() => onNavigate(listPath)} />
+      </Suspense>
+    );
+    return isNew ? { createSurface: "full", createDataSurface: "alumdoor-motor-ups-create", suppressBulk: true, create: editor } : { hasDetail: true, suppressBulk: true, detail: editor };
   }
 
   return undefined;
