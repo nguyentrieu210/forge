@@ -371,6 +371,22 @@ function aggregateMaterialRows(rows: DebtRow[]): Json[] {
   }).sort((left, right) => numeric(right.remaining_bars) - numeric(left.remaining_bars) || String(left.material).localeCompare(String(right.material), "vi"));
 }
 
+/**
+ * Lượng dùng để ĐO TIẾN ĐỘ của một dòng mua — theo đơn vị của chính dòng đó.
+ *
+ * Trước 23/08/2026 mọi thứ quy ra "cây" (`qty_bar`). Nhôm thì đúng, nhưng ray/trục và phụ
+ * kiện mua theo Kg KHÔNG có số cây, nên đã đặt = 0 và đã nhận = 0 — phép trừ ra 0 và trạng
+ * thái nhảy XANH "Đã giao đủ" cho một đơn chưa hề có hàng về. Soát tenant hôm đó: 7/8 đơn
+ * mua là RT_RAYHOP theo Kg, tức gần như toàn bộ bảng đang nói dối.
+ *
+ * Có số cây thì đếm cây (xưởng đếm cây khi nhận nhôm); không có thì đếm theo ĐVT mua. Hai
+ * vế đặt và nhận luôn dùng CÙNG một cơ sở nên phép trừ vẫn có nghĩa.
+ */
+function luongTheoDoi(row: Json): number {
+  const cay = numeric(row.qty_bar);
+  return cay > 0 ? cay : numeric(row.qty);
+}
+
 function allocationByOrder(timelines: Timeline[]): Map<string, { bars: number; receipts: Set<string>; byRow: Map<string, number> }> {
   const map = new Map<string, { bars: number; receipts: Set<string>; byRow: Map<string, number> }>();
   for (const timeline of timelines) {
@@ -380,7 +396,7 @@ function allocationByOrder(timelines: Timeline[]): Map<string, { bars: number; r
     for (const row of timeline.rows ?? []) {
       const receipt = text(row.purchase_receipt);
       if (!receipt) continue;
-      const qty = numeric(row.qty);
+      const qty = luongTheoDoi(row);
       current.bars += qty;
       current.receipts.add(receipt);
       const rowId = text(row.purchase_order_row);
@@ -398,7 +414,7 @@ function receiptByOrder(receipts: PurchaseDoc[]): Map<string, { bars: number; re
       const order = text(item.purchase_order ?? receipt.against_purchase_order);
       if (!order) continue;
       const current = map.get(order) ?? { bars: 0, receipts: new Set<string>(), byMaterial: new Map<string, number>() };
-      const bars = numeric(item.qty_bar);
+      const bars = luongTheoDoi(item);
       current.bars += bars;
       current.receipts.add(receipt.name);
       const key = materialKey(item);
@@ -414,7 +430,7 @@ function buildOrderRows(orders: PurchaseDoc[], receipts: PurchaseDoc[], timeline
   const canonical = allocationByOrder(timelines);
   const timelineByOrder = new Map(timelines.map((timeline) => [text(timeline.name), timeline]));
   return orders.map((order) => {
-    const orderedBars = (order.items ?? []).reduce((sum, item) => sum + numeric(item.qty_bar), 0);
+    const orderedBars = (order.items ?? []).reduce((sum, item) => sum + luongTheoDoi(item), 0);
     const canonicalRow = canonical.get(order.name);
     const fallbackRow = fallback.get(order.name);
     const receivedBars = canonicalRow ? canonicalRow.bars : fallbackRow?.bars ?? 0;
@@ -425,7 +441,18 @@ function buildOrderRows(orders: PurchaseDoc[], receipts: PurchaseDoc[], timeline
     const settled = windows.length > 0 && windows.every((window) => text(window.status) === "Settled");
     const remainingBars = settled ? 0 : nominalRemaining;
     const dueAge = remainingBars > EPSILON && scheduleDate ? ageDays(scheduleDate) : null;
-    let status = settled ? "Đã đối soát" : remainingBars <= EPSILON ? "Đã giao đủ" : receivedBars > EPSILON ? "Đang giao" : "Chưa giao";
+    /**
+     * Không đo được thì KHÔNG được nói "Đã giao đủ".
+     *
+     * `remaining = ordered - received`, nên một đơn không đo nổi lượng đặt cũng cho remaining = 0
+     * và trạng thái nhảy xanh y như đơn đã về đủ hàng. Xanh sai còn tệ hơn không màu: người mua
+     * hàng tin bảng rồi thôi không đi đòi.
+     */
+    const doDuoc = orderedBars > EPSILON;
+    let status = settled ? "Đã đối soát"
+      : !doDuoc ? "Chưa đo được"
+      : remainingBars <= EPSILON ? "Đã giao đủ"
+      : receivedBars > EPSILON ? "Đang giao" : "Chưa giao";
     if (!settled && remainingBars > EPSILON && dueAge != null && dueAge > 0) status = "Quá hạn";
     const shortageVariance = settled
       ? windows.reduce((sum, window) => sum + numeric(window.shortage_variance), 0)
@@ -460,7 +487,7 @@ function buildOrderLineRows(orders: PurchaseDoc[], receipts: PurchaseDoc[], time
       && (timelineByOrder.get(order.name)?.windows ?? []).every((window) => text(window.status) === "Settled");
     for (const [index, item] of (order.items ?? []).entries()) {
       const rowId = text(item.row_id) || `ROW-${index + 1}`;
-      const orderedBars = numeric(item.qty_bar);
+      const orderedBars = luongTheoDoi(item);
       const byRow = canonical.get(order.name)?.byRow;
       const receivedBars = byRow?.has(rowId)
         ? byRow.get(rowId) ?? 0
