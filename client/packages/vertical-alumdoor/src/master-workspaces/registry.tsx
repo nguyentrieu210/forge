@@ -1,11 +1,14 @@
 /** @jsxImportSource react */
 import { lazy, Suspense } from "react";
 import type { DoctypeWorkspaceExtension } from "@metaforge/views";
+import type { PricingMasterDoctype } from "./PricingMasterWorkbench.js";
 
 const ItemMasterWorkbench = lazy(() => import("./ItemMasterWorkbench.js").then((module) => ({ default: module.ItemMasterWorkbench })));
+const PricingMasterWorkbench = lazy(() => import("./PricingMasterWorkbench.js").then((module) => ({ default: module.PricingMasterWorkbench })));
 
 type WorkspaceContext = Parameters<DoctypeWorkspaceExtension["resolve"]>[0];
 type WorkspaceResolution = ReturnType<DoctypeWorkspaceExtension["resolve"]>;
+const PRICING_MASTERS = new Set<PricingMasterDoctype>(["Item Price", "Pricing Scope", "Pricing Rule"]);
 
 /**
  * Registry cho Danh mục Alumdoor có nghiệp vụ vượt quá CRUD thông thường.
@@ -20,33 +23,47 @@ type WorkspaceResolution = ReturnType<DoctypeWorkspaceExtension["resolve"]>;
 export function resolveAlumdoorMasterWorkspace(context: WorkspaceContext): WorkspaceResolution {
   const { doctype, isNew, decoded, bridge, base, listPath, onNavigate } = context;
   if (bridge.get("master_ui") === "generic") return undefined;
+  if (!isNew && !decoded) return undefined;
 
-  if (doctype !== "Item" || (!isNew && !decoded)) return undefined;
+  if (doctype === "Item") {
+    const editor = (
+      <Suspense fallback={<div className="grid h-full place-items-center text-sm text-muted-foreground">Đang mở hồ sơ mặt hàng…</div>}>
+        <ItemMasterWorkbench
+          key={decoded ? `alumdoor-item-master/${decoded}` : "alumdoor-item-master/new"}
+          name={decoded}
+          base={base}
+          listPath={listPath}
+          onNavigate={onNavigate}
+          onSaved={(savedName) => onNavigate(`${listPath}/${encodeURIComponent(savedName)}`)}
+          onCancel={() => onNavigate(listPath)}
+        />
+      </Suspense>
+    );
+    return isNew
+      ? { createSurface: "full", createDataSurface: "alumdoor-item-master-create", suppressBulk: true, create: editor }
+      : { hasDetail: true, suppressBulk: true, detail: editor };
+  }
 
-  const editor = (
-    <Suspense fallback={<div className="grid h-full place-items-center text-sm text-muted-foreground">Đang mở hồ sơ mặt hàng…</div>}>
-      <ItemMasterWorkbench
-        key={decoded ? `alumdoor-item-master/${decoded}` : "alumdoor-item-master/new"}
-        name={decoded}
-        base={base}
-        listPath={listPath}
-        onNavigate={onNavigate}
-        onSaved={(savedName) => onNavigate(`${listPath}/${encodeURIComponent(savedName)}`)}
-        onCancel={() => onNavigate(listPath)}
-      />
-    </Suspense>
-  );
+  if (PRICING_MASTERS.has(doctype as PricingMasterDoctype)) {
+    const pricingDoctype = doctype as PricingMasterDoctype;
+    const editor = (
+      <Suspense fallback={<div className="grid h-full place-items-center text-sm text-muted-foreground">Đang mở danh mục giá…</div>}>
+        <PricingMasterWorkbench
+          key={decoded ? `alumdoor-pricing/${pricingDoctype}/${decoded}` : `alumdoor-pricing/${pricingDoctype}/new`}
+          doctype={pricingDoctype}
+          name={decoded}
+          base={base}
+          listPath={listPath}
+          onNavigate={onNavigate}
+          onSaved={(savedName) => onNavigate(`${listPath}/${encodeURIComponent(savedName)}`)}
+          onCancel={() => onNavigate(listPath)}
+        />
+      </Suspense>
+    );
+    return isNew
+      ? { createSurface: "full", createDataSurface: "alumdoor-pricing-master-create", suppressBulk: true, create: editor }
+      : { hasDetail: true, suppressBulk: true, detail: editor };
+  }
 
-  return isNew
-    ? {
-        createSurface: "full",
-        createDataSurface: "alumdoor-item-master-create",
-        suppressBulk: true,
-        create: editor,
-      }
-    : {
-        hasDetail: true,
-        suppressBulk: true,
-        detail: editor,
-      };
+  return undefined;
 }
