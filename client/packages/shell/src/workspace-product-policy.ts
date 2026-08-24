@@ -10,6 +10,7 @@ const SIDEBAR_GROUPS = new Set(["dieu hanh", "ban hang", "kho", "mua hang", "san
 const ALUMDOOR_SALES_WORKSPACE_KEYS = new Set(["Sales Order", "Delivery Note", "action:don-ban-thanh-phieu-xuat"]);
 const ALUMDOOR_PURCHASE_ROUTE_ALIASES = new Set(["action:don-mua-thanh-phieu-nhap", "action:nhap-nhom-fifo"]);
 const ALUMDOOR_NAV_SENTINELS = new Set(["action:don-ban-thanh-phieu-xuat", "action:giao-nhieu-don-fifo", "action:nhap-nhom-fifo", "action:cat-nhom", "Cutting Policy"]);
+const PURE_FRAPPE_ALUMDOOR_KEYS = ["Configured Product", "Alumdoor Item", "Door System"];
 const HR_GROUPS = new Set(["nhan su", "vong doi nhan su", "cham cong qr", "nhan su & tien luong"]);
 const HR_KEY_ORDER = ["Employee", "AlumDoor Pay Profile", "AlumDoor Attendance Day", "AlumDoor Attendance Device", "AlumDoor QR Station", "AlumDoor Attendance Policy", "alumdoor-attendance:scan", "alumdoor-attendance:today", "alumdoor-attendance:month", "alumdoor-attendance:exceptions"];
 const HR_KEYS = new Set(HR_KEY_ORDER);
@@ -23,14 +24,29 @@ const MASTER_AFFINITY: Record<string, string[]> = {
 
 function catalog(item: NavItem): boolean { return item.key === "__catalog" || normalized(item.group).startsWith("ung dung · "); }
 
+function hasLegacyAlumdoorNavigation(items: NavItem[]): boolean {
+  return items.some((item) => ALUMDOOR_NAV_SENTINELS.has(item.key));
+}
+
+function hasPureFrappeAlumdoorNavigation(items: NavItem[]): boolean {
+  const keys = new Set(items.map((item) => item.key));
+  return PURE_FRAPPE_ALUMDOOR_KEYS.every((key) => keys.has(key));
+}
+
 /** Product identity is determined from manifest navigation too, so alternate hosts work before DOM branding is applied. */
-function isAlumdoorProduct(items: NavItem[]): boolean { return isAlumdoorSurface() || items.some((item) => ALUMDOOR_NAV_SENTINELS.has(item.key)); }
+function isAlumdoorProduct(items: NavItem[]): boolean {
+  return isAlumdoorSurface() || hasLegacyAlumdoorNavigation(items) || hasPureFrappeAlumdoorNavigation(items);
+}
 
 /** Product-specific sidebar filtering/sorting kept outside the generic shell composition. */
 export function productNavigation(items: NavItem[]): NavItem[] {
   const alumdoor = isAlumdoorProduct(items);
+  const legacyAlumdoor = hasLegacyAlumdoorNavigation(items);
   const visible = items.filter((item) => {
-    if (!alumdoor) return !catalog(item);
+    // Alumdoor Frappe thuần dùng manifest đã permission-filter ở server làm nguồn thật.
+    // Whitelist bên dưới chỉ thuộc brief Alumdoor cũ; áp nó cho manifest mới sẽ làm mất
+    // mọi nhóm mới như Cấu hình cửa/Giá bán và các DocType Bán hàng mới.
+    if (!alumdoor || !legacyAlumdoor) return !catalog(item);
     if (item.key === "catalog") return false;
     const group = normalized(item.group);
     if (HR_GROUPS.has(group)) return HR_KEYS.has(item.key);
