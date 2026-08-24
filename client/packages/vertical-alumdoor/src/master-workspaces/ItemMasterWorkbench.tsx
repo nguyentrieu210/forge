@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { AlertTriangle, ArrowLeft, Boxes, ExternalLink, Link2, Loader2, Plus, Ruler, Save, Trash2 } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Boxes, ExternalLink, ImagePlus, Link2, Loader2, Plus, Ruler, Save, Trash2, X } from "lucide-react";
 import type { Doc } from "@metaforge/core";
 import { Badge, Button, toast } from "@metaforge/ui";
 import { useMetaForge } from "@metaforge/views/provider";
@@ -15,6 +15,7 @@ interface ItemDoc extends Json {
   item_code?: string;
   item_name?: string;
   item_group?: string;
+  item_image?: string;
   description?: string;
   is_stock_item?: number | boolean;
   is_purchase_item?: number | boolean;
@@ -192,6 +193,17 @@ export function ItemMasterWorkbench({ name, base, listPath, onNavigate, onSaved,
 
       {tab === "basic" ? <section className="rounded-xl border bg-card p-4"><div className="mb-3 flex items-center gap-2"><Boxes className="size-4" /><h3 className="font-medium">Danh tính mặt hàng</h3></div><div className="grid gap-3 md:grid-cols-4">
         <Field label="Mã hàng"><input className={fieldClass} disabled={Boolean(name)} value={text(doc.item_code)} onChange={(e) => patch({ item_code: e.target.value })} /></Field><Field label="Tên hàng" className="md:col-span-2"><input className={fieldClass} value={text(doc.item_name)} onChange={(e) => patch({ item_name: e.target.value })} /></Field><Field label="Nhóm hàng"><OptionSelect value={doc.item_group} values={options.groups} onChange={(value) => patch({ item_group: value })} /></Field>
+        {fieldNames.has("item_image") ? <Field label="Ảnh mặt hàng" className="md:col-span-4"><AnhMatHang
+          value={text(doc.item_image)}
+          onChange={(url) => patch({ item_image: url })}
+          onUpload={async (file) => {
+            const ten = text(doc.name);
+            const kq = await adapter.uploadFile(file, { isPrivate: 0, doctype: "Item", ...(ten ? { docname: ten } : {}), fieldname: "item_image" });
+            const url = text(kq?.file_url);
+            if (!url) throw new Error("Máy chủ không trả về đường dẫn tệp");
+            return url;
+          }}
+        /></Field> : null}
         <div className="grid gap-2 md:col-span-4 md:grid-cols-4"><Check label="Quản lý tồn" checked={checked(doc.is_stock_item)} onChange={(value) => patch({ is_stock_item: value ? 1 : 0 })} /><Check label="Cho phép mua" checked={checked(doc.is_purchase_item)} onChange={(value) => patch({ is_purchase_item: value ? 1 : 0 })} /><Check label="Cho phép bán" checked={checked(doc.is_sales_item)} onChange={(value) => patch({ is_sales_item: value ? 1 : 0 })} /><Check label="Ngưng dùng" checked={checked(doc.disabled)} onChange={(value) => patch({ disabled: value ? 1 : 0 })} /></div>
         {fieldNames.has("description") ? <Field label="Mô tả" className="md:col-span-4"><textarea className="min-h-20 w-full rounded-md border bg-background p-3 text-sm" value={text(doc.description)} onChange={(e) => patch({ description: e.target.value })} /></Field> : null}
       </div></section> : null}
@@ -213,3 +225,35 @@ export function ItemMasterWorkbench({ name, base, listPath, onNavigate, onSaved,
     </div></main>
   </div>;
 }
+
+/**
+ * Ô ẢNH MẶT HÀNG.
+ *
+ * Tải xong chỉ ghi `file_url` vào nháp — ảnh chỉ thật sự gắn vào hồ sơ khi bấm Lưu, giống mọi
+ * ô khác trên màn này. Mặt hàng CHƯA lưu thì không gửi `docname`: nền tảng vẫn nhận tệp, và
+ * gửi một tên chưa tồn tại mới là thứ làm hỏng lượt tải.
+ */
+function AnhMatHang({ value, onChange, onUpload }: { value: string; onChange: (url: string) => void; onUpload: (file: File) => Promise<string> }) {
+  const [dangTai, setDangTai] = useState(false);
+  const chon = async (file: File | undefined) => {
+    if (!file) return;
+    setDangTai(true);
+    try { onChange(await onUpload(file)); toast.success("Đã tải ảnh — bấm Lưu để ghi vào hồ sơ."); }
+    catch (error) { toast.error(error instanceof Error ? error.message : "Không tải được ảnh."); }
+    finally { setDangTai(false); }
+  };
+  return <div className="flex items-center gap-3">
+    <div className="grid size-20 shrink-0 place-items-center overflow-hidden rounded-md border bg-muted/30">
+      {value ? <img src={value} alt="Ảnh mặt hàng" className="size-full object-contain" /> : <ImagePlus className="size-6 text-muted-foreground" />}
+    </div>
+    <div className="flex flex-wrap items-center gap-2">
+      <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border bg-background px-3 py-1.5 text-sm hover:bg-muted/40">
+        {dangTai ? <Loader2 className="size-3.5 animate-spin" /> : <ImagePlus className="size-3.5" />}
+        {value ? "Đổi ảnh" : "Tải ảnh lên"}
+        <input type="file" accept="image/*" className="hidden" disabled={dangTai} onChange={(e) => { void chon(e.target.files?.[0]); e.target.value = ""; }} />
+      </label>
+      {value ? <Button variant="ghost" size="sm" onClick={() => onChange("")}><X className="size-3.5" /> Gỡ ảnh</Button> : null}
+    </div>
+  </div>;
+}
+

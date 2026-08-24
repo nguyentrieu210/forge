@@ -30,7 +30,8 @@ import {
 import type { FieldServices } from "@metaforge/controls";
 import { Badge, Button, ConfirmDialog, Table, Tabs, TabsContent, TabsList, TabsTrigger, toast } from "@metaforge/ui";
 import { useMetaForge } from "@metaforge/views/provider";
-import { salesItemSearchTerms } from "../sales-item-search.js";
+import type { Filters } from "@metaforge/core";
+import { taoTimMatHangCucBo } from "../item-picker.js";
 import { AlumdoorSalesOrderField, fallbackField } from "../sales-order-v2/AlumdoorSalesOrderField.js";
 import {
   beginPurchaseOrderPreview,
@@ -233,28 +234,26 @@ export function AlumdoorPurchaseReceiptCreate(props: AlumdoorPurchaseReceiptCrea
   /* Danh mục nền tảng — ô chọn Mặt hàng dùng lại đúng picker của màn mua     */
   /* ---------------------------------------------------------------------- */
 
+  const timMua = useMemo(() => taoTimMatHangCucBo(adapter, [["is_purchase_item", "=", 1], ["disabled", "=", 0]] as Filters), [adapter]);
   const receiptServices = useMemo<FieldServices>(() => ({
     ...services,
     searchLink: async (doctype, query, options) => {
       if (!services.searchLink) return [];
       if (doctype !== "Item") return services.searchLink(doctype, query, options);
-      const terms = salesItemSearchTerms(text(query));
-      const batches = await Promise.allSettled(terms.map((term) => services.searchLink!(doctype, term, {
-        ...options,
-        filters: mergePurchaseItemFilters(options?.filters),
-        pageLength: Math.max(options?.pageLength ?? 10, 100),
-      })));
-      const merged = new Map<string, { value: string; label?: string; description?: string }>();
-      let firstFailure: unknown;
-      let fulfilled = 0;
-      for (const batch of batches) {
-        if (batch.status === "fulfilled") {
-          fulfilled += 1;
-          for (const option of batch.value) if (option.value && !merged.has(option.value)) merged.set(option.value, option);
-        } else if (firstFailure === undefined) firstFailure = batch.reason;
+      /*
+       * Tìm TẠI CHỖ trên danh mục mua đã nạp sẵn: một vòng mạng cho cả phiên, khớp thông minh
+       * hơn (gõ liền không dấu vẫn ra), gõ trật thì ra RỖNG, và kèm ảnh cho ô chọn vẽ.
+       * Nạp hỏng thì lui về đường server cũ để người mua không mất ô tìm kiếm.
+       */
+      try {
+        return await timMua.tim(query, Math.max(options?.pageLength ?? 10, 100));
+      } catch {
+        return services.searchLink(doctype, text(query), {
+          ...options,
+          filters: mergePurchaseItemFilters(options?.filters),
+          pageLength: Math.max(options?.pageLength ?? 10, 100),
+        });
       }
-      if (!fulfilled) throw firstFailure ?? new Error("Không tải được danh sách mặt hàng mua.");
-      return [...merged.values()].slice(0, 100);
     },
   }), [services]);
 

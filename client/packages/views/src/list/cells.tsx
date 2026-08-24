@@ -136,7 +136,7 @@ export function renderCell(value: unknown, col: ListColumn, fmt?: BoundFormatter
 }
 
 /** Avatar ảnh cho cột tiêu đề (nếu doctype có image_field). */
-export function RowAvatar({ src, alt, size = "size-8" }: { src?: string; alt: string; size?: string }) {
+export function RowAvatar({ src, alt, size = "size-16" }: { src?: string; alt: string; size?: string }) {
   const initial = (alt || "?").trim().charAt(0).toUpperCase();
   // Frappe trả file_url tính từ GỐC SITE ("/files/x.jpg"), còn app chạy dưới "/kho/" — dùng thẳng
   // là trình duyệt gọi ra ngoài phạm vi app và nhận 404, ảnh không bao giờ hiện.

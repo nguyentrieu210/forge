@@ -44,12 +44,14 @@ type DynamicFieldName =
   | "qty";
 
 const DYNAMIC_FIELD_ORDER: DynamicFieldName[] = [
-  "material_specification", "color", "condition", "length_m", "width_m",
+  // "material_specification" (Quy cách) đã ẩn theo chốt chủ xưởng 24/08/2026 — quy cách vẫn
+  // lưu trên dòng và vẫn là nguồn của Dài cây / Kg barem, chỉ không chiếm một cột nữa.
+  "color", "condition", "length_m", "width_m",
   "qty_bar", "qty_bundle", "theoretical_kg_per_m", "theoretical_kg", "is_stamped", "so_no", "qty",
 ];
 const DYNAMIC_FALLBACK_LABELS: Record<DynamicFieldName, string> = {
   material_specification: "Quy cách", color: "Màu", condition: "Tình trạng", length_m: "Dài cây",
-  width_m: "Rộng", theoretical_kg_per_m: "Kg/m", qty_bundle: "Số bó", qty_bar: "Số cây/lá/tấm",
+  width_m: "Rộng", theoretical_kg_per_m: "Kg barem", qty_bundle: "Số bó", qty_bar: "Số cây/lá/tấm",
   theoretical_kg: "Kg đặt", is_stamped: "Dập", so_no: "Số SO NCC", qty: "SL",
 };
 const DYNAMIC_TYPES: Record<DynamicFieldName, DocField["fieldtype"]> = {
@@ -59,9 +61,10 @@ const DYNAMIC_TYPES: Record<DynamicFieldName, DocField["fieldtype"]> = {
 };
 const DYNAMIC_OPTIONS: Partial<Record<DynamicFieldName, string>> = { material_specification: "Material Specification", color: "Item Color" };
 const DYNAMIC_WIDTHS: Record<DynamicFieldName, string> = {
-  material_specification: "w-36", color: "w-28", condition: "w-28", length_m: "w-24", width_m: "w-24",
-  theoretical_kg_per_m: "w-24", qty_bundle: "w-20", qty_bar: "w-24", theoretical_kg: "w-28",
-  is_stamped: "w-20", so_no: "w-28", qty: "w-24",
+  material_specification: "w-32", color: "w-24", condition: "w-24", length_m: "w-20", width_m: "w-20",
+  theoretical_kg_per_m: "w-20", qty_bundle: "w-16", qty_bar: "w-20", theoretical_kg: "w-24",
+  // "Dập" nay là ô tick nên chỉ cần đủ chỗ cho cái ô vuông.
+  is_stamped: "w-14", so_no: "w-24", qty: "w-20",
 };
 
 export interface AlumdoorPurchaseOrderItemsGridProps {
@@ -182,7 +185,17 @@ export function AlumdoorPurchaseOrderItemsGrid(props: AlumdoorPurchaseOrderItems
 
   const itemField = useMemo<DocField>(() => ({ ...fieldFromMeta(props.childMeta, "item_code", "Mã hàng", "Link", "Item"), fieldname: "item_code", label: "Mã hàng", fieldtype: "Link", options: "Item", allow_create: false, link_filters: JSON.stringify({ is_purchase_item: 1, disabled: 0 }) } as DocField), [props.childMeta]);
   const head = (className: string, label: ReactNode, key?: string) => <TableHead key={key} className={`bg-primary px-1.5 text-center font-semibold leading-tight text-primary-foreground whitespace-normal ${className}`}><div className="flex min-h-10 items-center justify-center py-1">{label}</div></TableHead>;
+  /**
+   * Vài nhãn do CLIENT chốt, không lấy theo server.
+   *
+   * `theoretical_kg_per_m` server đặt "Kg/m" — đọc trên giấy thì không phân biệt được với Kg
+   * cân thực tế. Chủ xưởng chốt 24/08/2026 gọi là "Kg barem" (số suy từ định mức), nên nhãn
+   * này phải thắng nhãn server chứ không chỉ làm giá trị lui.
+   */
+  const NHAN_CHOT: Partial<Record<DynamicFieldName, string>> = { theoretical_kg_per_m: "Kg barem" };
   const dynamicHeaderLabel = (fieldname: DynamicFieldName): string => {
+    const chot = NHAN_CHOT[fieldname];
+    if (chot) return chot;
     const contextual = activeLines.filter((line) => purchaseFieldVisible(line, fieldname)).map((line) => purchaseFieldLabel(line, props.childMeta, fieldname)).find(Boolean);
     return text(contextual).replace(/\s*\([^)]*\)\s*$/i, "").replace(/\s+/g, " ") || DYNAMIC_FALLBACK_LABELS[fieldname];
   };
@@ -195,20 +208,41 @@ export function AlumdoorPurchaseOrderItemsGrid(props: AlumdoorPurchaseOrderItems
   const renderDynamicCell = (line: PurchaseLine, key: string, fieldname: DynamicFieldName, rowTone: string) => {
     if (!purchaseFieldVisible(line, fieldname)) return <TableCell key={fieldname} className={`${rowTone} px-1.5 py-1`}><ReadOnlyCell>—</ReadOnlyCell></TableCell>;
     if (fieldname === "material_specification") { const value = text(line._materialSpecification ?? line.material_specification); return <TableCell key={fieldname} className={`${rowTone} px-1.5 py-1`}><ReadOnlyCell strong title={value}>{value || "—"}</ReadOnlyCell></TableCell>; }
+    /*
+     * "Dập" là câu hỏi CÓ/KHÔNG, nên vẽ bằng ô tick chứ không phải hộp chọn — chốt chủ xưởng
+     * 24/08/2026. Trường vẫn là `Select("Có
+Không")` nên GIÁ TRỊ LƯU không đổi (`"Có"` /
+     * `"Không"`): không đụng lược đồ, không phải chuyển dữ liệu cũ, và mọi chỗ đọc sau vẫn thấy
+     * đúng chuỗi nó vẫn luôn thấy.
+     */
+    if (fieldname === "is_stamped") {
+      const daDap = text(line.is_stamped) === "Có";
+      const khoa = props.readOnly || purchaseFieldReadonly(line, "is_stamped");
+      return <TableCell key={fieldname} className={`${rowTone} px-1.5 py-1`}>
+        <div className="flex h-8 items-center justify-center">
+          <Checkbox
+            checked={daDap}
+            disabled={khoa}
+            onCheckedChange={(checked) => props.onCommit(key, "is_stamped", checked === true ? "Có" : "Không")}
+            aria-label="Dập"
+          />
+        </div>
+      </TableCell>;
+    }
     if (fieldname === "theoretical_kg_per_m") return <TableCell key={fieldname} className={`${rowTone} px-1.5 py-1`}><ReadOnlyCell>{quantity(line.theoretical_kg_per_m)}</ReadOnlyCell></TableCell>;
     if (fieldname === "theoretical_kg") return <TableCell key={fieldname} className={`${rowTone} px-1.5 py-1`}><ReadOnlyCell strong>{quantity(line.theoretical_kg)}</ReadOnlyCell></TableCell>;
     return <TableCell key={fieldname} className={`${rowTone} px-1.5 py-1`}>{editor(line, key, fieldname)}</TableCell>;
   };
-  const columnCount = 5 + dynamicColumns.length + 4;
+  const columnCount = 4 + dynamicColumns.length + 4;
   const deleteSelected = () => { for (const key of selected) props.onDelete(key); setSelected(new Set()); };
 
   return <section className="overflow-hidden rounded-lg border-2 border-border bg-card" data-section="purchase-order-dedicated-grid">
-    <div className="overflow-x-auto"><Table unwrapped className="min-w-[1120px] table-fixed text-center text-[11px] [&_td]:border-r-[1.5px] [&_td]:border-border/90 [&_td:last-child]:border-r-0 [&_th]:border-r-[1.5px] [&_th]:border-border/90 [&_th:last-child]:border-r-0">
+    <div className="overflow-x-auto"><Table unwrapped className="min-w-[920px] table-fixed text-center text-[11px] [&_td]:border-r-[1.5px] [&_td]:border-border/90 [&_td:last-child]:border-r-0 [&_th]:border-r-[1.5px] [&_th]:border-border/90 [&_th:last-child]:border-r-0">
       <TableHeader className="sticky top-0 z-30 border-b-[3px] border-primary/70 bg-primary"><TableRow className="border-b-[3px] border-primary/70 bg-primary hover:bg-primary">
         {head("w-10", <Checkbox className="border-primary-foreground/80 bg-background data-[state=checked]:border-primary-foreground" checked={allSelected} disabled={props.readOnly} onCheckedChange={(checked) => setSelected(checked ? new Set(allKeys) : new Set())} aria-label="Chọn tất cả dòng mua" />)}
-        {head("w-12", "STT")}{head("w-44", "Mã hàng")}{head("w-48", "Tên hàng")}{head("w-32", "Nhóm hàng")}
+        {head("w-10", "STT")}{head("w-32", "Mã hàng")}{head("w-40", "Tên hàng")}
         {dynamicColumns.map((fieldname) => head(DYNAMIC_WIDTHS[fieldname], ["length_m", "width_m"].includes(fieldname) ? <span>{dynamicHeaderLabel(fieldname)}<br/><span className="text-[9px] font-medium opacity-90">(m)</span></span> : dynamicHeaderLabel(fieldname), fieldname))}
-        {head("w-20", "ĐVT")}{head("w-28", <span>Đơn giá<br/><span className="text-[9px] font-medium opacity-90">(VNĐ)</span></span>)}{head("w-32", <span>Thành tiền<br/><span className="text-[9px] font-medium opacity-90">(VNĐ)</span></span>)}{head("w-20", "")}
+        {head("w-16", "ĐVT")}{head("w-24", <span>Đơn giá<br/><span className="text-[9px] font-medium opacity-90">(VNĐ)</span></span>)}{head("w-28", <span>Thành tiền<br/><span className="text-[9px] font-medium opacity-90">(VNĐ)</span></span>)}{head("w-16", "")}
       </TableRow></TableHeader>
       <TableBody>{props.lines.map((line, index) => {
         const key = purchaseLineKey(line, index); const itemName = text(line._itemName ?? line.item_name); const itemGroup = text(line._itemGroup ?? line.item_group); const rowTone = text(line.item_code) ? "bg-primary/[0.035]" : (index % 2 === 0 ? "bg-card" : "bg-muted/20"); const rateField = fieldFromMeta(props.childMeta, "rate", "Đơn giá", "Currency");
@@ -217,7 +251,6 @@ export function AlumdoorPurchaseOrderItemsGrid(props: AlumdoorPurchaseOrderItems
           <TableCell className={`${rowTone} px-1 text-center font-mono tabular-nums`}>{index + 1}</TableCell>
           <TableCell className={`${rowTone} px-1.5 py-1`}><AlumdoorSalesOrderField id={`purchase-grid-${key}-item_code`} field={itemField} value={line.item_code} onChange={(value) => props.onCommit(key, "item_code", normalizeFieldValue(itemField, value))} registry={props.registry} services={props.services} parentDoctype={props.childMeta.name} docValues={line} roles={props.roles} readOnly={props.readOnly} compact hideLabel className="w-full max-w-full [&_.mf-control]:!min-h-8 [&_.mf-control]:!w-full [&_input]:!h-8 [&_input]:!w-full [&_input]:!px-2 [&_button]:!h-8 [&_button]:!max-w-full [&_button]:!justify-center [&_button]:!px-2" /></TableCell>
           <TableCell className={`${rowTone} px-1.5 py-1`}><ReadOnlyCell strong title={itemName}>{line._loading ? <Loader2 className="size-3.5 animate-spin" /> : itemName || "—"}</ReadOnlyCell></TableCell>
-          <TableCell className={`${rowTone} px-1.5 py-1`}><ReadOnlyCell title={itemGroup}>{itemGroup || "—"}</ReadOnlyCell></TableCell>
           {dynamicColumns.map((fieldname) => renderDynamicCell(line, key, fieldname, rowTone))}
           <TableCell className={`${rowTone} px-1.5 py-1`}><ReadOnlyCell strong>{text(line.uom) || "—"}</ReadOnlyCell></TableCell>
           <TableCell className={`${rowTone} px-1.5 py-1`}>{(() => { const changeBps = props.priceHistoryByItem?.get(text(line.item_code)); const changePct = typeof changeBps === "number" ? changeBps / 100 : undefined; return <>{line._lastPurchaseRate !== undefined || changePct !== undefined ? <div className="mb-0.5 truncate text-center text-[9px] leading-tight text-muted-foreground" title="Giá tham khảo lần mua gần nhất — máy không tự lấy làm giá.">{line._lastPurchaseRate !== undefined ? <>Giá gần nhất: {money(line._lastPurchaseRate)}</> : null}{changePct !== undefined ? <span className={changePct > 0 ? "text-destructive" : changePct < 0 ? "text-emerald-600" : ""}> ({changePct > 0 ? "+" : ""}{changePct.toFixed(1)}%)</span> : null}</div> : null}<AlumdoorSalesOrderField id={`purchase-grid-${key}-rate`} field={rateField} value={line.rate} onChange={(value) => patchAndBuffer(key, "rate", rateField, value)} onCommit={() => flushCommit(key, "rate")} registry={props.registry} services={props.services} parentDoctype={props.childMeta.name} docValues={line} roles={props.roles} readOnly={props.readOnly || props.priceLocked} compact hideLabel className="w-full max-w-full [&_.mf-control]:!min-h-8 [&_.mf-control]:!w-full [&_input]:!h-8 [&_input]:!w-full [&_input]:!text-center" /></>; })()}</TableCell>

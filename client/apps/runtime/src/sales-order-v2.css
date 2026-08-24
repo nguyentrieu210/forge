@@ -71,142 +71,131 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * BẢN IN ĐƠN BÁN HÀNG = CHÍNH MÀN NHẬP.
+ * TỜ IN ĐƠN BÁN HÀNG (`AlumdoorSalesOrderPrintSheet`).
  *
- * Chủ xưởng chốt 24/08/2026: phần đầu (logo, tiêu đề, khối thông tin khách) giữ nguyên như mẫu
- * cũ; phần dưới lấy Y NGUYÊN bảng của màn nhập — màn hiện cột gì, số gì thì in đúng thế.
- *
- * Vì vậy KHÔNG dựng lại bảng bằng mẫu in viết tay nữa: mẫu viết tay phải chép lại luật chọn cột
- * (phủ bì ray hay nhựa, có cột Cao lưới / Rộng cắt lá hay không) — chép là trôi dạt, và đã trôi
- * thật: bản in từng bung CẢ HAI cột phủ bì cho một cửa chỉ đo một chiều.
- *
- * Cách làm: in chính màn, che mọi thứ ngoài vùng `[data-print-root]`. Dùng visibility thay vì
- * display để không phá layout của bảng đang cuộn ngang.
+ * Tờ in là MỘT KHỐI RIÊNG, không phải màn nhập đem đi in. Nhờ vậy chỗ này chỉ còn hai việc:
+ * ẩn phần còn lại của ứng dụng, và tạo dáng cho đúng khối này. Không còn luật nào phải đi
+ * gỡ bề rộng cột, viền hai lớp hay ô tick của lưới nhập nữa.
  * ───────────────────────────────────────────────────────────────────────────── */
+.ad-p-sheet { display: none; }
+
 @media print {
-  /* 24/08/2026 — chủ xưởng chốt khổ A4 DỌC. Bộ cột nhiều nhất hiện nay (14 cột: phủ bì,
-   * cao phủ bì, tổng số lá, quy ra tồn…) vẫn vừa nhờ khối co chữ ngay bên dưới. */
-  @page { size: A4 portrait; margin: 9mm 8mm; }
+  @page { size: A4 portrait; margin: 8mm; }
+
+  /* Bỏ HẲN mọi nhánh không dính tới tờ in. `visibility:hidden` không đủ: phần tử bị ẩn VẪN
+     chiếm chỗ, đẩy tờ in lệch và chừa cả trang trắng ở đầu. */
+  body:has(.ad-p-sheet) *:not(:has(.ad-p-sheet)):not(.ad-p-sheet):not(.ad-p-sheet *) {
+    display: none !important;
+  }
+  /* Chuỗi TỔ TIÊN của tờ in: vỏ ứng dụng / hộp thoại có thể đang `position`, `transform`,
+     `max-width`, `overflow:auto`, hoặc là một ô flex hẹp — tờ in sẽ ăn theo bề ngang cái
+     khung đó chứ không phải bề ngang tờ giấy, và bị cắt cụt bên phải. Trả hết về block trần. */
+  body:has(.ad-p-sheet),
+  body:has(.ad-p-sheet) *:has(.ad-p-sheet) {
+    display: block !important;
+    position: static !important;
+    overflow: visible !important;
+    width: auto !important; min-width: 0 !important; max-width: none !important;
+    height: auto !important; min-height: 0 !important; max-height: none !important;
+    margin: 0 !important; padding: 0 !important; border: 0 !important;
+    transform: none !important; inset: auto !important;
+    background: #fff !important;
+  }
 
   html, body { background: #fff !important; }
 
-  /* Che toàn bộ vỏ ứng dụng: sidebar, thanh trên, nút bấm… */
-  body * { visibility: hidden !important; }
-  [data-print-root], [data-print-root] * { visibility: visible !important; }
-
-  [data-print-root] {
-    position: absolute !important;
-    inset: 0 auto auto 0;
-    width: 100% !important;
-    max-width: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-  }
-
-  /* Bảng phải bung hết, không cuộn ngang, không dính bóng đổ. */
-  [data-print-root] * {
-    overflow: visible !important;
-    box-shadow: none !important;
-  }
-  [data-print-root] table { width: 100% !important; table-layout: auto !important; }
-  [data-print-root] th, [data-print-root] td { white-space: normal !important; }
-
-  /* Ô nhập in ra thành số trần, không viền hộp. */
-  [data-print-root] input,
-  [data-print-root] button,
-  [data-print-root] [role="combobox"] {
-    border: 0 !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-    -webkit-appearance: none !important;
-    appearance: none !important;
-  }
-
-  /* ── A4 DỌC: co bảng hàng cho vừa bề ngang 194mm ──────────────────────────
-   * Bảng của màn nhập vốn tính cho màn hình rộng. Khi in dọc phải hạ cỡ chữ và
-   * đệm ô, đồng thời BỎ chiều rộng cột đã nhớ trên trình duyệt (`table-fixed`
-   * + `<col style="width">` + `style="width:max(100%,…px)"`) — nếu không bảng
-   * giữ nguyên bề ngang màn hình rồi tràn khỏi mép giấy.
-   * Số cột do TSX quyết định (`dynamicColumns`), ở đây KHÔNG đụng tới. */
-  [data-print-root] [data-section="sales-v2-lines-complete"] {
-    border-width: 1px !important;
-  }
-  [data-print-root] [data-section="sales-v2-lines-complete"] table {
-    table-layout: auto !important;
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: 100% !important;
-    font-size: 7pt !important;
-  }
-  [data-print-root] [data-section="sales-v2-lines-complete"] colgroup col {
-    width: auto !important;
-  }
-  [data-print-root] [data-section="sales-v2-lines-complete"] th,
-  [data-print-root] [data-section="sales-v2-lines-complete"] td {
-    padding: 1.5pt 2pt !important;
-    line-height: 1.2 !important;
-    word-break: break-word !important;
-  }
-  [data-print-root] [data-section="sales-v2-lines-complete"] thead th {
-    font-size: 6.2pt !important;
-    background: #f2f2f2 !important;
-    color: #111 !important;
-    border-color: #333 !important;
-    box-shadow: none !important;
-    position: static !important;
-  }
-
-  /* Cột đầu (ô tick chọn dòng) và cột cuối (nút nhân bản/xoá) là thao tác, không phải
-   * nội dung đơn. KHÔNG dùng `display:none` cho ô/`<col>`: dòng thương mại bên dưới là
-   * một ô `colSpan` trải hết bảng, bỏ hẳn ô sẽ lệch cột giữa hai dòng của cùng một mặt
-   * hàng. Thay vào đó bóp về bề ngang 0 và giấu phần bên trong — số cột không đổi,
-   * các cột tiền vẫn thẳng hàng. */
-  [data-print-root] [data-section="sales-v2-lines-complete"] thead tr > th:first-child,
-  [data-print-root] [data-section="sales-v2-lines-complete"] thead tr > th:last-child,
-  [data-print-root] [data-section="sales-v2-lines-complete"] tr[data-sales-row] > td:first-child,
-  [data-print-root] [data-section="sales-v2-lines-complete"] tr[data-sales-row] > td:last-child {
-    width: 0 !important;
-    max-width: 0 !important;
-    padding: 0 !important;
-    border-right-width: 0 !important;
-  }
-  [data-print-root] [data-section="sales-v2-lines-complete"] thead tr > th:first-child > *,
-  [data-print-root] [data-section="sales-v2-lines-complete"] thead tr > th:last-child > *,
-  [data-print-root] [data-section="sales-v2-lines-complete"] tr[data-sales-row] > td:first-child > *,
-  [data-print-root] [data-section="sales-v2-lines-complete"] tr[data-sales-row] > td:last-child > * {
-    display: none !important;
-  }
-
-  /* Khối tổng: in ra như bảng số, không phải các thẻ card có nền. */
-  [data-print-root] [data-section="sales-v2-summary-complete"] {
-    border-width: 1px !important;
-    box-shadow: none !important;
-    font-size: 8pt !important;
-  }
-  [data-print-root] [data-section="sales-v2-summary-complete"] > div:first-child > div {
-    background: transparent !important;
-    padding: 2pt 4pt !important;
-  }
-
-  tr, td, th { break-inside: avoid; page-break-inside: avoid; }
-  thead { display: table-header-group; }
-}
-
-/* Phần đầu bản in chỉ tồn tại khi in. */
-[data-section="sales-v2-print-head"] { display: none; }
-@media print {
-  [data-section="sales-v2-print-head"] { display: block !important; }
-}
-
-@media print {
-  /* Vùng in nằm trong khung cuộn dọc của màn; khung cha phải mở ra, nếu không bản in bị
-     cắt đúng bằng chiều cao màn hình. `[data-print-root] *` ở trên không với tới CHA. */
-  [data-surface="alumdoor-sales-order-v2-complete"],
-  [data-surface="alumdoor-sales-order-v2-complete"] > div {
-    overflow: visible !important;
-    height: auto !important;
-    min-height: 0 !important;
+  .ad-p-sheet {
     display: block !important;
+    width: 100%;
+    color: #111;
+    font-family: "Times New Roman", Times, serif;
   }
+
+  /* ── Đầu tờ: logo trái, khối công ty phải ── */
+  .ad-p-head { display: flex !important; align-items: center; justify-content: space-between; gap: 10px; }
+  .ad-p-logo { height: 112px; width: auto; max-width: 78mm; object-fit: contain; }
+  .ad-p-co { flex: 1 1 auto; text-align: right; font-size: 8pt; line-height: 1.45; }
+  .ad-p-co-cap { color: #f15a24; font-weight: 700; font-size: 7.5pt; margin-bottom: 2px; }
+
+  /* Tiêu đề phải NỔI ngang logo: cam đậm, chữ dày hơn, giãn chữ và có gạch chân cùng màu. */
+  .ad-p-title {
+    text-transform: uppercase;
+    text-align: center; color: #f15a24; font-size: 21pt; font-weight: 900;
+    letter-spacing: 1.6px; margin: 8px 0 10px;
+  }
+
+
+  /* ── Thông tin khách: hai cột, giá trị gạch chấm như dòng điền tay ── */
+  .ad-p-info { display: grid !important; grid-template-columns: 1fr 1fr; gap: 1px 18px; font-size: 8pt; margin-bottom: 7px; }
+  .ad-p-info-row { display: flex !important; gap: 6px; line-height: 1.6; }
+  .ad-p-k { font-weight: 700; flex: 0 0 auto; min-width: 88px; }
+  .ad-p-v { flex: 1 1 auto; border-bottom: 1px dotted #bbb; min-height: 1.4em; }
+
+  /* ── Bảng hàng: phẳng, viền 1px đều, cột tự căn theo nội dung ── */
+  .ad-p-table { width: 100%; border-collapse: collapse; table-layout: auto; font-size: 6.8pt; }
+  .ad-p-table th, .ad-p-table td {
+    border: 1px solid #333; padding: 2px; vertical-align: middle;
+    overflow-wrap: break-word; word-break: normal;
+  }
+  /* Đầu bảng nền CAM thương hiệu, chữ trắng (chốt chủ xưởng 24/08/2026).
+     `print-color-adjust` bắt buộc: mặc định trình duyệt BỎ nền khi in để tiết kiệm mực. */
+  .ad-p-table thead th {
+    background: #f15a24 !important; color: #fff !important;
+    text-align: center; font-weight: 700;
+    font-size: 6.2pt; line-height: 1.2; text-transform: uppercase;
+    border-color: #c2451a !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .ad-p-u { display: block; font-weight: 400; font-size: 5.5pt; color: #fff; }
+  /* Số tiền và số đo KHÔNG được gãy dòng — "7.470.000" tách thành "7.470.00" + "0" là đọc sai. */
+  .ad-p-nowrap { white-space: nowrap; }
+  .ad-p-c { text-align: center; }
+  .ad-p-r { text-align: right; }
+  .ad-p-code { font-weight: 700; }
+  .ad-p-strong { font-weight: 700; }
+  .ad-p-name-col { text-align: left; }
+  .ad-p-prod { font-weight: 700; text-align: center; }
+  /* Mô tả xuống dòng riêng dưới tên hàng, chữ nhỏ hơn và xám. */
+  .ad-p-spec { display: block; margin-top: 1pt; font-size: 6pt; line-height: 1.25; color: #555; text-align: center; }
+  .ad-p-sub td { background: #fcfcfc; font-style: italic; padding: 1.5pt 3pt; }
+  /* Dòng cấu kiện BOM của hàng trọn bộ: chữ nhỏ, thụt vào, không đậm — nó là phụ lục
+     của dòng hàng phía trên, không phải một mặt hàng bán. */
+  .ad-p-bom td { background: #fff; font-size: 6pt; padding: 1pt 3pt; color: #333; }
+  .ad-p-bom td.ad-p-code { font-weight: 400; }
+  /* Tên cấu kiện đậm, quy cách cắt xuống dòng riêng chữ nhỏ — y như lưới nhập. */
+  .ad-p-bom-name { font-weight: 700; text-align: center; }
+  .ad-p-bom-cut { font-size: 5.6pt; color: #555; text-align: center; }
+  /* Dòng 2: các mẩu "Chiết khấu 15%: −1.120.500", "Phụ thu: +0", diễn giải — cách nhau
+     bằng khoảng trắng rộng, KHÔNG gãy giữa một mẩu. */
+  .ad-p-part { display: inline-block; margin: 0 6pt; white-space: nowrap; }
+  /* Nhãn "Tiền phải trả:" dán sát mép phải của ô trải, ngay cạnh con số ở ô cuối.
+     Cùng cỡ chữ với Thành tiền và cùng màu cam thương hiệu để nổi lên.
+     KHÔNG dùng vàng thật: chữ vàng in trên giấy trắng gần như không đọc được. */
+  .ad-p-payable-label {
+    float: right; font-style: normal; font-weight: 700;
+    font-size: 6.8pt; color: #f15a24; white-space: nowrap;
+  }
+  .ad-p-sub td.ad-p-payable {
+    font-style: normal; font-weight: 700; font-size: 6.8pt; color: #f15a24;
+  }
+
+  /* ── Tổng kết: chú thích trái, khối số dồn phải ── */
+  /* Bỏ khối "Bằng chữ" (chốt chủ xưởng) — khối số dồn hẳn về phải. */
+  .ad-p-sum { display: flex !important; justify-content: flex-end; margin-top: 8px; }
+  .ad-p-totals { width: 72mm; font-size: 8.5pt; }
+  .ad-p-totals > div { display: flex !important; justify-content: space-between; padding: 2px 0; }
+  .ad-p-totals > div > span:first-child { font-weight: 700; }
+  .ad-p-totals > div > span:last-child { font-variant-numeric: tabular-nums; }
+  .ad-p-totals .ad-p-em > span { color: #f15a24; font-weight: 700; }
+  .ad-p-sep { border-top: 1px solid #999; margin: 3px 0; padding: 0 !important; height: 0; }
+
+  /* ── Chữ ký ── */
+  .ad-p-sign { display: grid !important; grid-template-columns: repeat(3, 1fr); text-align: center; margin-top: 14px; font-size: 8.5pt; }
+  .ad-p-sign b { display: block; margin-bottom: 46px; }
+  .ad-p-sign i { font-size: 8pt; color: #555; font-style: normal; }
+  .ad-p-sign, .ad-p-sum { break-inside: avoid; page-break-inside: avoid; }
+
+  .ad-p-table thead { display: table-header-group; }
+  .ad-p-table tr { break-inside: avoid; page-break-inside: avoid; }
 }

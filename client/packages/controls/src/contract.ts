@@ -29,7 +29,7 @@ export interface FieldServices {
    * đọc nổi và cũng không kiểm tra được đúng sai.
    */
   fmt?: BoundFormatters;
-  searchLink?: (doctype: string, txt: string, opts?: LinkSearchOpts) => Promise<Array<{ value: string; description?: string }>>;
+  searchLink?: (doctype: string, txt: string, opts?: LinkSearchOpts) => Promise<Array<{ value: string; description?: string; label?: string; /** Ảnh minh hoạ cho dòng gợi ý — có thì ô chọn vẽ ảnh, không có thì không chừa chỗ. */ image?: string }>>;
   /** upload file → trả file_url (dùng cho Attach/Attach Image). */
   uploadFile?: (file: File, opts: { isPrivate?: 0 | 1; doctype?: string; docname?: string; fieldname?: string }) => Promise<{ file_url: string; name: string }>;
   /**

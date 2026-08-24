@@ -544,6 +544,69 @@ export function money(value: unknown): string {
   return formatMoney(value, { style: "plain" });
 }
 
+const CHU_SO = ["không", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
+
+/** Chữ của một chữ số. Bọc lại vì `noUncheckedIndexedAccess` coi mọi phép index là có thể rỗng. */
+function chuSo(n: number): string {
+  return CHU_SO[n] ?? "";
+}
+
+/** Đọc một nhóm ba chữ số. `dayDu` = false cho nhóm đầu tiên (không đọc "không trăm"). */
+function docNhomBa(nhom: number, dayDu: boolean): string {
+  const tram = Math.floor(nhom / 100);
+  const chuc = Math.floor((nhom % 100) / 10);
+  const donVi = nhom % 10;
+  const phan: string[] = [];
+  if (tram > 0 || dayDu) phan.push(`${chuSo(tram)} trăm`);
+  if (chuc === 0) {
+    if (donVi > 0 && (tram > 0 || dayDu)) phan.push("lẻ", chuSo(donVi));
+    else if (donVi > 0) phan.push(chuSo(donVi));
+  } else if (chuc === 1) {
+    phan.push("mười");
+    // 11 → "mười một"; 15 → "mười lăm" (không phải "mười năm").
+    if (donVi === 5) phan.push("lăm");
+    else if (donVi > 0) phan.push(chuSo(donVi));
+  } else {
+    phan.push(`${chuSo(chuc)} mươi`);
+    // 21 → "hai mươi mốt"; 25 → "hai mươi lăm".
+    if (donVi === 1) phan.push("mốt");
+    else if (donVi === 4) phan.push("tư");
+    else if (donVi === 5) phan.push("lăm");
+    else if (donVi > 0) phan.push(chuSo(donVi));
+  }
+  return phan.join(" ");
+}
+
+const HANG = ["", " nghìn", " triệu", " tỷ"];
+
+/**
+ * Đọc số tiền thành chữ để in dòng "Bằng chữ" trên đơn bán hàng.
+ *
+ * Làm tròn về đồng — hoá đơn giấy không có phần lẻ. Vượt 999 tỷ thì trả lại chuỗi số
+ * để không đọc sai: mốc "nghìn tỷ" đọc theo nhóm bốn hàng, viết cho đủ không đáng
+ * so với việc đơn bán cửa cuốn không bao giờ chạm ngưỡng đó.
+ */
+export function docSoTienBangChu(value: unknown): string {
+  const so = Math.round(Math.abs(numberValue(value) ?? 0));
+  if (so === 0) return "Không đồng.";
+  if (so >= 1e12) return `${so.toLocaleString("vi-VN")} đồng.`;
+
+  const nhom: number[] = [];
+  for (let con = so; con > 0; con = Math.floor(con / 1000)) nhom.push(con % 1000);
+
+  const phan: string[] = [];
+  for (let i = nhom.length - 1; i >= 0; i -= 1) {
+    const giaTri = nhom[i] ?? 0;
+    if (giaTri === 0) continue;
+    // Nhóm đầu đọc gọn ("bảy triệu"), các nhóm sau đọc đủ ("không trăm hai mươi").
+    phan.push(docNhomBa(giaTri, phan.length > 0) + (HANG[i] ?? ""));
+  }
+
+  const chu = phan.join(" ");
+  const am = (numberValue(value) ?? 0) < 0 ? "Âm " : "";
+  return `${am}${chu.charAt(0).toLocaleUpperCase("vi")}${chu.slice(1)} đồng.`;
+}
+
 export function quantity(value: unknown): string {
   const parsed = Number(value);
   return Number.isFinite(parsed)

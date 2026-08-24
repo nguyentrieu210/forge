@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 import { type ChangeEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import { Check, ChevronsUpDown, Loader2, Plus } from "lucide-react";
-import { buildLinkFilters, linkDisplay } from "@metaforge/core";
+import { buildLinkFilters, linkDisplay, sanitizeImageUrl, withAppBase } from "@metaforge/core";
 import {
   ControlRegistry,
   PricingRuleConditionsControl,
@@ -106,6 +106,24 @@ export function RuntimeTextAreaControl(props: FieldControlProps) {
 
 /** Keep a named legacy escape hatch for consumers that intentionally want the old control. */
 export const LegacyRuntimeTextAreaControl = LegacyTextAreaControl;
+
+const APP_BASE_LINK: string = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? "/";
+
+/**
+ * ẢNH TRONG DÒNG GỢI Ý CỦA Ô CHỌN.
+ *
+ * `searchLink` được phép trả thêm `image`. Không có ảnh thì KHÔNG chừa chỗ, nên mọi doctype
+ * khác hiện y như cũ.
+ *
+ * `file_url` server trả tính từ GỐC SITE ("/files/x.jpg") còn app chạy dưới base khác — dùng
+ * thẳng là 404. Xử lý y như `RowAvatar` ở danh sách và ô Attach Image.
+ */
+function LinkOptionImage({ src, alt }: { src?: string; alt: string }) {
+  if (!src) return null;
+  const an = sanitizeImageUrl(withAppBase(src, APP_BASE_LINK));
+  if (!an) return null;
+  return <img src={an} alt={alt} className="mr-2 size-14 shrink-0 rounded-md border border-border/70 bg-muted/40 object-contain" loading="lazy" />;
+}
 
 export function RuntimeLinkControl(props: FieldControlProps) {
   const t = useT();
@@ -234,6 +252,7 @@ export function RuntimeLinkControl(props: FieldControlProps) {
                 return (
                 <CommandItem key={option.value} value={option.value} onSelect={() => { props.onChange(option.value); setPickedDesc(picked); setOpen(false); }}>
                   <Check className={cn("mr-2 size-4 shrink-0", option.value === value ? "opacity-100" : "opacity-0")} />
+                  <LinkOptionImage src={(option as { image?: string }).image} alt={String(display.primary)} />
                   <span className="flex min-w-0 flex-col">
                     <span className="truncate">{display.primary}</span>
                     {display.secondary ? <span className="truncate text-xs text-muted-foreground">{display.secondary}</span> : null}

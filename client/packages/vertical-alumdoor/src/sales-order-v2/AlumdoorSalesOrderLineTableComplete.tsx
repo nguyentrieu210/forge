@@ -100,24 +100,17 @@ import {
   text,
   type SalesLine,
 } from "./model.js";
+import {
+  DYNAMIC_FALLBACK_LABELS,
+  DYNAMIC_HEADER_UNITS,
+  dynamicDisplayValue,
+  dynamicFieldVisible,
+  resolveDynamicColumns,
+  type DynamicFieldName,
+} from "./print-columns.js";
 
-type DynamicFieldName =
-  | "width_pb_ray_m"
-  | "width_pb_nhua_m"
-  | "width_m"
-  | "height_m"
-  | "mesh_height_m"
-  | "cut_width_m"
-  | "leaf_variant"
-  | "ray_type"
-  | "has_butterfly_bracket"
-  | "motor_model"
-  | "length_m"
-  | "qty_bar"
-  | "leaf_count"
-  | "single_layer_leaf_count"
-  | "double_layer_leaf_count"
-  | "estimated_weight_kg";
+// Bộ cột thông số + luật chọn cột nay nằm ở `print-columns.ts` — dùng chung với bản in.
+
 
 type ColumnId =
   | "select"
@@ -135,43 +128,7 @@ type ColumnId =
   | "gross_amount"
   | "actions";
 
-const DYNAMIC_FIELD_ORDER: DynamicFieldName[] = [
-  "width_pb_ray_m",
-  "width_pb_nhua_m",
-  "width_m",
-  "height_m",
-  "mesh_height_m",
-  "cut_width_m",
-  "ray_type",
-  "has_butterfly_bracket",
-  "leaf_variant",
-  "motor_model",
-  "length_m",
-  "qty_bar",
-  "leaf_count",
-  "single_layer_leaf_count",
-  "double_layer_leaf_count",
-  "estimated_weight_kg",
-];
 
-const DYNAMIC_FALLBACK_LABELS: Record<DynamicFieldName, string> = {
-  width_pb_ray_m: "Rộng PB ray",
-  width_pb_nhua_m: "Rộng PB nhựa",
-  width_m: "Rộng",
-  height_m: "Cao PB",
-  mesh_height_m: "Cao lưới",
-  cut_width_m: "Rộng cắt lá",
-  leaf_variant: "Kiểu lá",
-  ray_type: "Loại ray",
-  has_butterfly_bracket: "Bản bướm",
-  motor_model: "Mô tơ",
-  length_m: "Dài / cây",
-  qty_bar: "Số cây/lá",
-  leaf_count: "Số lá",
-  single_layer_leaf_count: "Lá một lớp",
-  double_layer_leaf_count: "Lá hai lớp",
-  estimated_weight_kg: "KL dự kiến",
-};
 
 const DYNAMIC_FALLBACK_TYPES: Record<DynamicFieldName, DocField["fieldtype"]> = {
   width_pb_ray_m: "Float",
@@ -192,16 +149,6 @@ const DYNAMIC_FALLBACK_TYPES: Record<DynamicFieldName, DocField["fieldtype"]> = 
   estimated_weight_kg: "Float",
 };
 
-const DYNAMIC_HEADER_UNITS: Partial<Record<DynamicFieldName, string>> = {
-  width_pb_ray_m: "m",
-  width_pb_nhua_m: "m",
-  width_m: "m",
-  height_m: "m",
-  mesh_height_m: "m",
-  cut_width_m: "m",
-  length_m: "m",
-  estimated_weight_kg: "kg",
-};
 
 /**
  * Ô LUÔN LUÔN là số máy tính ra, không đời nào người bán gõ.
@@ -361,17 +308,41 @@ function normalizeFieldValue(field: DocField, value: unknown): unknown {
   return text(value) || undefined;
 }
 
-function dynamicDisplayValue(fieldname: DynamicFieldName, value: unknown): string {
-  if (value == null || value === "") return "";
-  if (fieldname === "has_butterfly_bracket") return Number(value) ? "Có" : "Không";
-  if ([
-    // Hai cột phủ bì cũng là số đo mét — thiếu chúng ở đây thì in thô "2.97" thay vì "2,97",
-    // lạc lõng giữa các cột còn lại. Lộ ra khi dòng cấu kiện bắt đầu mang kích thước cắt.
-    "width_pb_ray_m", "width_pb_nhua_m",
-    "width_m", "height_m", "mesh_height_m", "cut_width_m", "length_m", "qty_bar",
-    "leaf_count", "single_layer_leaf_count", "double_layer_leaf_count", "estimated_weight_kg",
-  ].includes(fieldname)) return quantity(value);
-  return text(value);
+
+/**
+ * KHUYẾN MẠI & PHỤ THU CỦA MỘT DÒNG, DIỄN ĐẠT BẰNG CHỮ.
+ *
+ * Trên màn, những thứ này là ô tick + thẻ badge + ô chọn màu. Bản in không dùng lại lớp giao
+ * diện đó (in ra thành mớ hộp rỗng), nhưng PHẢI nói đúng cùng nội dung — nên nội dung nằm ở
+ * đây, một chỗ, và cả hai bên cùng gọi.
+ *
+ * "Ray thô (không sơn)" khi KHÔNG tick là có chủ ý: đó là thứ khách cần biết mình đang mua,
+ * không phải chi tiết nội bộ.
+ */
+export function moTaKhuyenMai(line: SalesLine): string[] {
+  const benefits = Array.isArray(line._commercial?.benefit_items) ? line._commercial!.benefit_items! : [];
+  const railToggle = lineGiftRailToggle(line);
+  const butterflyToggle = lineButterflyToggle(line);
+  const rayToggle = lineRayPaintToggle(line);
+  const raySurcharge = line._raySurcharge;
+  const giftRailBenefit = railToggle
+    ? benefits.find((benefit) => /GIFT[-_]?RAIL/i.test(text(benefit.source_rule)))
+    : undefined;
+  const shownBenefits = giftRailBenefit ? benefits.filter((benefit) => benefit !== giftRailBenefit) : benefits;
+  return [
+    ...promoChips(line),
+    ...appliedRuleNames(line),
+    ...shownBenefits.map((benefit) => `${text(benefit.label) || "Tặng kèm"} ${quantity(benefit.qty)} ${text(benefit.uom)}`.trim()),
+    ...(railToggle?.checked
+      ? [giftRailBenefit ? `Tặng ray ${quantity(giftRailBenefit.qty)} ${text(giftRailBenefit.uom)}`.trim() : "Tặng ray"]
+      : []),
+    ...(butterflyToggle?.checked ? ["Có bắn bướm"] : []),
+    ...(rayToggle
+      ? rayToggle.checked
+        ? [`Sơn ray${rayToggle.color ? ` ${text(rayToggle.color)}` : ""}${raySurcharge?.surcharge_minor ? ` · phụ thu ${money(raySurcharge.surcharge_minor)} ₫` : ""}`]
+        : ["Ray thô (không sơn)"]
+      : []),
+  ].filter((phan) => phan.length > 0);
 }
 
 function appliedRuleNames(line: SalesLine): string[] {
@@ -384,7 +355,7 @@ function appliedRuleNames(line: SalesLine): string[] {
     .filter(Boolean))];
 }
 
-function surchargeRuleNames(line: SalesLine): string[] {
+export function surchargeRuleNames(line: SalesLine): string[] {
   const snapshots = Array.isArray(line._commercial?.pricing_rule_snapshots)
     ? line._commercial!.pricing_rule_snapshots!
     : [];
@@ -399,7 +370,7 @@ function surchargeRuleNames(line: SalesLine): string[] {
     .filter(Boolean))];
 }
 
-interface ProductDescriptionGroup {
+export interface ProductDescriptionGroup {
   key: string;
   label: string;
   items: string[];
@@ -416,7 +387,7 @@ interface ProductDescriptionGroup {
  *
  * KHÔNG có thông tin nào bị bỏ: mọi mảnh của bản cũ đều còn, chỉ đổi chỗ.
  */
-function doorProductGroups(line: SalesLine, customerGroup: string): ProductDescriptionGroup[] {
+export function doorProductGroups(line: SalesLine, customerGroup: string): ProductDescriptionGroup[] {
   if (!isAreaDoor(line)) return [];
   const widthField = salesWidthInputField(line, customerGroup);
   const width = numberValue(widthField ? line[widthField] : undefined)
@@ -466,7 +437,7 @@ function doorProductDescription(line: SalesLine, customerGroup: string): string 
  * Trước đây chiết khấu và quà tặng nằm lẫn trong chuỗi mô tả dài, còn tên chính sách lại nằm ở
  * một cụm badge khác bên phải — hai nửa của cùng một câu chuyện ở hai đầu màn hình.
  */
-function promoChips(line: SalesLine): string[] {
+export function promoChips(line: SalesLine): string[] {
   const chips: string[] = [];
   const discountPercentage = numberValue(line.discount_percentage ?? line._commercial?.discount_percentage)
     ?? linePolicyDiscountPercentage(line);
@@ -902,34 +873,17 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
   const discountField = fieldFromMeta(props.childMeta, "discount_percentage", "Chiết khấu %", "Percent");
 
   const activeLines = useMemo(() => props.lines.filter((line) => text(line.item_code)), [props.lines]);
-  const visibleDynamicField = useCallback((line: SalesLine, fieldname: DynamicFieldName): boolean => {
-    /*
-     * "Có bắn bướm" KHÔNG lên cột — đây là quyết định TRÌNH BÀY, không phải luật nghiệp vụ:
-     * chính bảng này đã vẽ nó thành ô tick trong khối mô tả (chốt chủ xưởng 21/08/2026 —
-     * "bắn bướm là tick như … tick có ray ko ray của cửa đức"). Một khái niệm chỉ được có ĐÚNG MỘT
-     * ô điều khiển. Server hiện cũng đang ẩn nó ở mọi mặt hàng, nên đây là lớp chặn thứ hai chứ
-     * không phải chỗ hai bên cãi nhau.
-     */
-    if (fieldname === "has_butterfly_bracket") return false;
-    // "Tổng số lá" tắt ở màn tạo đơn — số vẫn được tính và vẫn nằm trong payload lưu,
-    // và vẫn đọc được ở khối "Vì sao ra con số này".
-    if (fieldname === "leaf_count" && !props.showLeafCountColumn) return false;
-    if (isAreaDoor(line)) {
-      if (fieldname === "width_pb_ray_m" || fieldname === "width_pb_nhua_m") {
-        // Nhóm giá ở header đổi trước khi preview dòng mới trả về. Trong khoảng chờ đó,
-        // `_overrides` vẫn là ảnh chụp của nhóm cũ và có thể đang `hidden: 1` đúng ô vừa được
-        // chọn — làm cột rộng biến mất vài giây. Luật chọn PB ray/nhựa là thuần xác định và
-        // giống hệt server, nên dùng kết quả hiện tại làm trọng tài; preview kế tiếp chỉ bổ sung
-        // nhãn/required, không được làm mất ô nhập.
-        return salesWidthInputField(line, props.customerGroup) === fieldname;
-      }
-      if (fieldname === "width_m" && salesWidthInputField(line, props.customerGroup)) return false;
-    }
-    return fieldVisible(line, fieldname);
-  }, [props.customerGroup, props.showLeafCountColumn]);
+  const dynamicOptions = useMemo(
+    () => ({ customerGroup: props.customerGroup, showLeafCountColumn: props.showLeafCountColumn }),
+    [props.customerGroup, props.showLeafCountColumn],
+  );
+  const visibleDynamicField = useCallback(
+    (line: SalesLine, fieldname: DynamicFieldName) => dynamicFieldVisible(line, fieldname, dynamicOptions),
+    [dynamicOptions],
+  );
   const dynamicColumns = useMemo(
-    () => DYNAMIC_FIELD_ORDER.filter((fieldname) => activeLines.some((line) => visibleDynamicField(line, fieldname))),
-    [activeLines, visibleDynamicField],
+    () => resolveDynamicColumns(activeLines, dynamicOptions),
+    [activeLines, dynamicOptions],
   );
   /**
    * Hai cột kho chỉ hiện khi có dòng thật sự cần tới.
@@ -1338,14 +1292,18 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
             const frozenClass = `${parentRowTone} bg-clip-padding`;
             const commercialLeadSpan = Math.max(1, columnCount - 4);
 
+            const inKhuyenMai = moTaKhuyenMai(line);
+
             return <Fragment key={line._key}>
               <TableRow className={`${parentRowTone} [&>td]:border-b-0`} data-sales-row={line._key}>
                 <TableCell style={{ width: widths.select, ...stickyStyle("select") }} className={`${frozenClass} px-1 py-1.5 text-center`}><Checkbox checked={props.selectedKeys.has(line._key)} onCheckedChange={(value) => props.onToggleSelection(line._key, value === true)} aria-label={`Chọn dòng ${rowIndex + 1}`} /></TableCell>
                 <TableCell style={{ width: widths.index, ...stickyStyle("index") }} className={`${frozenClass} px-1 py-1.5 text-center tabular-nums`}>
                   <div className="flex items-center justify-center gap-1">
-                    {hasAuxiliaryRow ? <button type="button" className="grid size-5 place-items-center rounded hover:bg-muted" onClick={() => setExpanded((current) => { const next = new Set(current); if (next.has(line._key)) next.delete(line._key); else next.add(line._key); return next; })} aria-label={`${expanded.has(line._key) ? "Thu gọn" : "Mở"} chi tiết dòng ${rowIndex + 1}`}>{expanded.has(line._key) ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}</button> : null}
+                    {/* Mũi tên bung dòng và biểu tượng trạng thái là thao tác/tín hiệu nội bộ —
+                        bản in chỉ cần con số thứ tự. */}
+                    {hasAuxiliaryRow ? <button type="button" className="grid size-5 place-items-center rounded hover:bg-muted print:hidden" onClick={() => setExpanded((current) => { const next = new Set(current); if (next.has(line._key)) next.delete(line._key); else next.add(line._key); return next; })} aria-label={`${expanded.has(line._key) ? "Thu gọn" : "Mở"} chi tiết dòng ${rowIndex + 1}`}>{expanded.has(line._key) ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}</button> : null}
                     <span>{rowIndex + 1}</span>
-                    {line._loading ? <Loader2 className="size-3 animate-spin text-muted-foreground" /> : rowError ? <AlertTriangle className="size-3 text-destructive" /> : needsApproval ? <AlertTriangle className="size-3" /> : text(line.item_code) ? <CheckCircle2 className="size-3 text-muted-foreground" /> : null}
+                    <span className="inline-flex print:hidden">{line._loading ? <Loader2 className="size-3 animate-spin text-muted-foreground" /> : rowError ? <AlertTriangle className="size-3 text-destructive" /> : needsApproval ? <AlertTriangle className="size-3" /> : text(line.item_code) ? <CheckCircle2 className="size-3 text-muted-foreground" /> : null}</span>
                   </div>
                 </TableCell>
                 <TableCell style={{ width: widths.item_code, ...stickyStyle("item_code") }} className={`${frozenClass} px-1.5 py-1.5 text-center align-middle`}>
@@ -1361,7 +1319,23 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
                   {/* "Còn N Mét · Giá Mét: 55.000 VND" — server đã dựng sẵn chuỗi này từ đợt đầu
                       nhưng bản Complete đánh rơi nó. Đây là câu duy nhất trả lời tại chỗ hai câu
                       hỏi trước khi hứa với khách: còn hàng không, và có giá chưa. */}
-                  {availabilityStatus ? <div className="mt-0.5 line-clamp-2 text-[9px] leading-3 text-muted-foreground" title={availabilityStatus}>{availabilityStatus}</div> : null}
+                  {/* `print:hidden` — dòng này là tồn kho + đơn giá nội bộ. Hữu ích cho người bán,
+                      nhưng bản in có ô ký của khách, không đưa số tồn và giá mét ra ngoài. */}
+                  {availabilityStatus ? <div className="mt-0.5 line-clamp-2 text-[9px] leading-3 text-muted-foreground print:hidden" title={availabilityStatus}>{availabilityStatus}</div> : null}
+
+                  {/* MÔ TẢ SẢN PHẨM — khi IN thì nằm NGAY TRONG ô Tên hàng (mẫu chủ xưởng duyệt),
+                      không chiếm một dòng riêng như trên màn. Cùng nguồn `descriptionGroups` mà
+                      màn đang dùng, nên không thể lệch. */}
+                  <div data-print-desc className="hidden font-normal leading-[1.25] print:block">
+                    {[
+                      ...(descriptionGroups.length
+                        ? descriptionGroups.map((group) => `${group.label}: ${group.items.join(" · ")}`)
+                        : [auxiliaryDescription]),
+                      // Khuyến mại/ray thô đi CÙNG mô tả mặt hàng, không đẩy xuống dòng chiết
+                      // khấu: dòng nào không có chiết khấu thì dòng đó biến mất hẳn.
+                      ...inKhuyenMai,
+                    ].filter(Boolean).join(" · ")}
+                  </div>
                 </TableCell>
                 <TableCell style={{ width: widths.color }} className={`${parentRowTone} px-1.5 py-1.5 text-center align-middle`}>{allowedColors.length && !fieldHidden(line, "color") ? <GridField rowKey={line._key} columnId="color" disabled={props.readOnly}><AlumdoorSalesOrderField id={`sales-v2-complete-color-${line._key}`} field={colorField} value={line.color} onChange={(value) => props.onCommit(line._key, "color", text(value) || undefined)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} readOnly={props.readOnly} compact hideLabel className="[&_.mf-control]:!min-h-8 [&_input]:!text-center [&_button]:!h-8 [&_button]:!justify-center" /></GridField> : <div className="flex h-8 items-center justify-center truncate text-center text-muted-foreground">{text(line.color)}</div>}</TableCell>
                 {showPriceVariant ? renderPriceVariantCell(line, parentRowTone) : null}
@@ -1386,7 +1360,7 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
               <BomBlock line={line} lineNumber={rowIndex + 1} expanded={expanded.has(line._key)} readOnly={props.readOnly} colSpan={columnCount} dynamicColumns={dynamicColumns} showPriceVariant={showPriceVariant} showStockConversion={showStockConversion} widths={widths} stickyStyle={stickyStyle} onToggle={() => setExpanded((current) => { const next = new Set(current); if (next.has(line._key)) next.delete(line._key); else next.add(line._key); return next; })} onBomActualChange={props.onBomActualChange} />
 
               {text(line.item_code) && hasAuxiliaryRow && expanded.has(line._key) ? (
-                <TableRow className={`${commercialRowTone} border-b-2 border-border`} data-section="sales-v2-commercial-row">
+                <TableRow className={`${commercialRowTone} border-b-2 border-border print:hidden`} data-section="sales-v2-commercial-row">
                   <TableCell colSpan={commercialLeadSpan} className="overflow-hidden px-2 py-1.5 text-left align-top">
                     {/* Mô tả sản phẩm — nhãn/giá trị theo nhóm, không còn một chuỗi dài bị cắt cụt.
                         Khối khuyến mại tách riêng, có nền + viền, vì đó là chỗ khách hỏi nhiều nhất. */}
@@ -1567,6 +1541,36 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
                     <div className="mt-1 whitespace-nowrap text-sm font-bold tabular-nums text-primary">{money(payable)} ₫</div>
                   </TableCell>
                   <TableCell style={{ width: widths.actions }} className="bg-background/70 px-1 py-1" />
+                </TableRow>
+              ) : null}
+
+              {/*
+                DÒNG PHỤ CỦA BẢN IN — vẽ lại theo mẫu chủ xưởng duyệt 24/08/2026.
+                Dòng phụ của MÀN là một ô `colSpan` chứa cả cụm ô tick, thẻ badge và ô nhập; in
+                nguyên ra thành mớ hộp rỗng kèm "0%", "−0 đ", "Không có phụ thu". Ở đây in một
+                dòng mảnh: nhãn dồn phải, số rơi đúng cột Đơn giá và Thành tiền — và CHỈ mọc khi
+                thật sự có số. Vẫn đọc chính biến của màn nên không thể lệch.
+                Ba ô cuối là `rate` · `gross_amount` · `actions`, nên nhãn trải `columnCount - 3`.
+              */}
+              {hasAuxiliaryRow && discountTotal ? (
+                <TableRow className="hidden print:table-row" data-section="sales-v2-print-discount-row">
+                  <TableCell colSpan={Math.max(1, columnCount - 3)} className="px-2 py-0.5 text-center align-middle italic">
+                    Chiết khấu{adjustmentSplit.reductionRules.length ? ` — ${adjustmentSplit.reductionRules.join(" · ")}` : ""}
+                  </TableCell>
+                  <TableCell className="px-1 py-0.5 text-center align-middle tabular-nums">{enteredDiscount ? `${quantity(enteredDiscount)}%` : ""}</TableCell>
+                  <TableCell className="px-1 py-0.5 text-right align-middle tabular-nums">{discountTotal ? `−${money(discountTotal)}` : ""}</TableCell>
+                  <TableCell className="px-1 py-0.5" />
+                </TableRow>
+              ) : null}
+
+              {hasAuxiliaryRow && adjustmentSplit.surcharge ? (
+                <TableRow className="hidden print:table-row" data-section="sales-v2-print-surcharge-row">
+                  <TableCell colSpan={Math.max(1, columnCount - 3)} className="px-2 py-0.5 text-center align-middle italic">
+                    Phụ thu{surchargeNames.length ? ` — ${surchargeNames.join(" · ")}` : ""}
+                  </TableCell>
+                  <TableCell className="px-1 py-0.5" />
+                  <TableCell className="px-1 py-0.5 text-right align-middle tabular-nums">+{money(adjustmentSplit.surcharge)}</TableCell>
+                  <TableCell className="px-1 py-0.5" />
                 </TableRow>
               ) : null}
 

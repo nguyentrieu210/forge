@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, Eye, Factory, Loader2, Lock, Printer, RefreshCw, Save, Send, Truck, Undo2, UserPlus } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Factory, Loader2, Lock, Printer, RefreshCw, Save, Send, Truck, Undo2, UserPlus } from "lucide-react";
 import {
   applyContextPolicy,
   mapError,
@@ -22,7 +22,7 @@ import {
   toast,
 } from "@metaforge/ui";
 import { useMetaForge } from "@metaforge/views/provider";
-import { salesItemSearchTerms } from "../sales-item-search.js";
+import { salesItemSearchTerms, timMatHang } from "../sales-item-search.js";
 import type { BomActualComponentRow } from "../AlumdoorBomActualEditor.js";
 import {
   AlumdoorSalesOrderField,
@@ -31,6 +31,7 @@ import {
   supplierNameFromOption,
 } from "./AlumdoorSalesOrderField.js";
 import { AlumdoorSalesOrderLineTableComplete } from "./AlumdoorSalesOrderLineTableComplete.js";
+import { AlumdoorSalesOrderPrintSheet } from "./AlumdoorSalesOrderPrintSheet.js";
 import {
   applySalesOrderDocumentPreview,
   beginSalesOrderDocumentPreview,
@@ -470,6 +471,12 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
     patchLine(key, active ? { ...patch, _loading: true, _commercial: undefined } : patch, true);
   }, [markDocumentChanged, patchLine]);
 
+  /**
+   * Danh mục mặt hàng bán, nạp một lần cho cả phiên (~240 mã). `null` = chưa nạp; giữ nguyên
+   * lời hứa để nhiều lần gõ liên tiếp dùng chung MỘT lượt đọc thay vì mỗi lần một lượt.
+   */
+  const danhMucMatHangRef = useRef<Promise<Array<{ value: string; label: string; group: string; image: string }>> | null>(null);
+
   const salesServices = useMemo<FieldServices>(() => ({
     ...services,
     searchLink: async (doctype, query, options) => {
@@ -481,29 +488,53 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
       }
       if (doctype !== "Item" || !services.searchLink) return services.searchLink?.(doctype, query, options) ?? [];
       const raw = text(query);
-      const terms = salesItemSearchTerms(raw);
-      const batches = await Promise.allSettled(terms.map((term) => services.searchLink!(doctype, term, { ...options, pageLength: 100 })));
-      const merged = new Map<string, { value: string; label?: string; description?: string }>();
-      let firstFailure: unknown;
-      let fulfilledCount = 0;
-      for (const batch of batches) {
-        if (batch.status === "fulfilled") {
-          fulfilledCount += 1;
-          for (const option of batch.value) if (!merged.has(option.value)) merged.set(option.value, option);
-        } else if (firstFailure === undefined) firstFailure = batch.reason;
-      }
-      if (!fulfilledCount) throw firstFailure ?? new Error("Không tải được danh sách mặt hàng.");
-      const candidates = [...merged.values()]
-        .sort((left, right) => itemSearchScore(right, raw) - itemSearchScore(left, raw) || left.value.localeCompare(right.value, "vi"))
-        .slice(0, 200);
-      /**
-       * Ba lượt đọc CHẠY SONG SONG cho cùng một tập ứng viên — không lượt nào nằm trên đường
-       * tới hạn của lượt kia, nên dropdown không chậm thêm so với trước.
+      /*
+       * TÌM TẠI CHỖ, KHÔNG BẮN 18 TRUY VẤN.
        *
-       * Vì sao chỉ `ITEM_HINT_LIMIT` mã: nền tảng chặn `in` ở 50 giá trị
-       * (`document-kernel/src/document-list.ts` MAX_IN_VALUES). Xin nhiều hơn là bị từ chối cả
-       * lượt, và người bán mất luôn gợi ý — tệ hơn là gợi ý ít hơn một chút.
+       * Danh mục bán chỉ ~240 mã nên nạp MỘT LẦN cho cả phiên rồi tự xếp hạng. Đổi lại:
+       *  · một vòng mạng thay vì mười tám cho mỗi lần gõ;
+       *  · so khớp do mình cầm — gõ liền không dấu ("cdl1ly") vẫn ra đúng CDL_DLM_1LY, và gõ
+       *    không trúng gì thì ra RỖNG chứ không đổ cả danh mục ra như trước.
+       * Nạp hỏng thì lui về đường server cũ, không để người bán mất ô tìm kiếm.
        */
+      let candidates: Array<{ value: string; label?: string; description?: string }> = [];
+      let danhMuc = danhMucMatHangRef.current;
+      if (!danhMuc) {
+        danhMuc = adapter.getList("Item", {
+          fields: ["name", "item_name", "item_group", "item_image"],
+          filters: [["is_sales_item", "=", 1], ["disabled", "=", 0]] as Filters,
+          pageLength: 1000,
+        }).then((rows) => rows.map((row) => ({
+          value: text(row.name),
+          label: text(row.item_name),
+          group: text(row.item_group),
+          // Ô chọn vẽ ảnh khi có; danh mục nào chưa gắn ảnh thì dòng gợi ý giữ nguyên như cũ.
+          image: text(row.item_image),
+        })).filter((row) => row.value));
+        danhMucMatHangRef.current = danhMuc;
+      }
+      try {
+        candidates = timMatHang(await danhMuc, raw, 200);
+      } catch (loi) {
+        // Nói ra vì sao phải đi đường lui — nuốt im lặng chính là thứ khiến lỗi ảnh trốn
+        // được suốt mấy lượt sửa: dropdown vẫn ra kết quả nên không ai biết nhánh nào chạy.
+        console.warn("[alumdoor] không nạp được danh mục mặt hàng, lui về tìm trên server:", loi);
+        danhMucMatHangRef.current = null;
+        const batches = await Promise.allSettled(
+          salesItemSearchTerms(raw).map((term) => services.searchLink!(doctype, term, { ...options, pageLength: 100 })),
+        );
+        const gop = new Map<string, { value: string; label?: string; description?: string }>();
+        let firstFailure: unknown;
+        let fulfilledCount = 0;
+        for (const batch of batches) {
+          if (batch.status === "fulfilled") {
+            fulfilledCount += 1;
+            for (const option of batch.value) if (!gop.has(option.value)) gop.set(option.value, option);
+          } else if (firstFailure === undefined) firstFailure = batch.reason;
+        }
+        if (!fulfilledCount) throw firstFailure ?? new Error("Không tải được danh sách mặt hàng.");
+        candidates = [...gop.values()].slice(0, 200);
+      }
       const hintCodes = candidates.slice(0, ITEM_HINT_LIMIT).map((option) => option.value);
       const hintPriceList = text(headerRef.current.selling_price_list);
       const [labelResult, itemResult, priceResult] = await Promise.allSettled([
@@ -515,7 +546,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
           : Promise.resolve([]),
         hintCodes.length
           ? adapter.getList("Item", {
-            fields: ["name", "item_group", "default_sales_uom", "stock_uom"],
+            fields: ["name", "item_group", "default_sales_uom", "stock_uom", "item_image"],
             filters: [["name", "in", hintCodes]] as Filters,
             pageLength: ITEM_HINT_LIMIT,
           })
@@ -538,11 +569,11 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
           if (name && label && label !== name) labels.set(name, label);
         }
       }
-      const itemFacts = new Map<string, { group: string; salesUom: string }>();
+      const itemFacts = new Map<string, { group: string; salesUom: string; image: string }>();
       if (itemResult.status === "fulfilled") {
         for (const row of itemResult.value) {
           const name = text(row.name);
-          if (name) itemFacts.set(name, { group: text(row.item_group), salesUom: text(row.default_sales_uom) || text(row.stock_uom) });
+          if (name) itemFacts.set(name, { group: text(row.item_group), salesUom: text(row.default_sales_uom) || text(row.stock_uom), image: text(row.item_image) });
         }
       }
       /**
@@ -574,10 +605,20 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
             facts?.salesUom ? `ĐVT ${facts.salesUom}` : "",
             pricedCodes && !pricedCodes.has(option.value) ? "chưa có giá" : "",
           ].filter(Boolean).join(" · ");
-          return { value: option.value, label: option.value, ...(hints ? { description: hints } : {}) };
+          // `image` phải đi tiếp: ô chọn vẽ ảnh từ chính khoá này, đánh rơi là dropdown trống ảnh.
+          /*
+           * Ảnh lấy từ LƯỢT ĐỌC BỔ SUNG (`itemFacts`) trước — lượt đó luôn chạy, bất kể ô tìm
+           * đi đường danh mục tại chỗ hay đường lui về server. Danh mục chỉ là nguồn phụ.
+           * Trước đây chỉ đọc từ danh mục nên hễ rơi vào đường lui là mất ảnh mà không ai biết.
+           */
+          const anh = text(facts?.image) || text((option as { image?: string }).image);
+          return { value: option.value, label: option.value, ...(hints ? { description: hints } : {}), ...(anh ? { image: anh } : {}) };
         })
-        .sort((left, right) => itemSearchScore(right, raw) - itemSearchScore(left, raw) || left.value.localeCompare(right.value, "vi"))
+        // KHÔNG sắp xếp lại: `timMatHang` đã xếp hạng theo truy vấn. Chấm điểm lần hai ở đây
+        // lại chấm trên chuỗi ĐÃ dựng lại (label = mã, description = gợi ý) nên nó phá đúng
+        // thứ hạng vừa tính. Đường lui về server giữ nguyên thứ tự server trả.
         .slice(0, 100);
+
       return displayOptions;
     },
     resolveDisplay: async (doctype, name) => doctype === "Item"
@@ -1435,7 +1476,8 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
       if (!saved) return;
       const savedName = text(saved.name) || documentName;
       toast.success(isExisting ? `Đã lưu nháp ${savedName}` : `Đã tạo nháp ${savedName}`);
-      if (previewAfterSave) props.onPreviewCreated(savedName);
+      // "Lưu & in" cũng đi đúng MỘT đường in như nút "In đơn": in chính màn đang nhìn.
+      if (previewAfterSave) window.print();
       else if (isExisting) props.onSaved?.(savedName);
       else props.onCreated(savedName);
     } catch (error) {
@@ -1719,39 +1761,29 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
   );
 
   return <>
+    {/*
+      TỜ IN — khối riêng, chỉ tồn tại khi in (`.ad-p-sheet` mặc định `display:none`).
+      Không phải màn nhập đem đi in: màn nhập tha theo ô tick, thẻ badge, nút bung dòng và bề
+      rộng cột nhớ trong trình duyệt. Bộ cột thì vẫn lấy từ `print-columns.ts` — đúng cái lưới
+      nhập dùng — nên tờ in không bao giờ hiện sai cột phủ bì.
+    */}
+    <AlumdoorSalesOrderPrintSheet
+      header={header}
+      lines={lines}
+      customerGroup={text(header.customer_group)}
+      totals={{
+        totalAmount: header.total_amount,
+        discountTotal,
+        surchargeTotal,
+        vatAmount: header.vat_amount,
+        grandTotal: header.grand_total,
+        depositAmount,
+        outstandingAmount,
+      }}
+    />
     <div className="flex h-full min-h-0 flex-col bg-background" data-surface="alumdoor-sales-order-v2-complete">
       <div className="min-h-0 flex-1 overflow-auto">
-        <div className="w-full space-y-3 px-3 py-3" data-print-root>
-          {/*
-            * Phần đầu bản in — CHỈ hiện khi in (CSS `sales-v2-print-head`).
-            *
-            * Chép đúng đầu mẫu A4 cũ: logo, tiêu đề, khối thông tin khách hai cột. Phần bảng
-            * bên dưới thì KHÔNG dựng lại — nó chính là lưới của màn nhập, nên bản in luôn khớp
-            * với thứ người bán vừa nhìn, không phải bảng thứ hai chép tay rồi trôi dạt.
-            */}
-          <div data-section="sales-v2-print-head">
-            <div className="flex items-start justify-between gap-6">
-              <img src="/alumdoor-order-logo.png" alt="ALUMDOOR" style={{ width: "78mm", height: "auto" }} />
-              <img src="/alumdoor-company-header.png" alt="Thông tin công ty ALUMDOOR" style={{ width: "104mm", height: "auto" }} />
-            </div>
-            <div className="mt-3 text-center text-[18px] font-bold uppercase tracking-wide text-[#f15a24]">Đơn bán hàng</div>
-            <div className="mt-3 grid grid-cols-2 gap-x-8 gap-y-1 text-[11px]">
-              <div className="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1">
-                <span className="font-bold">Khách hàng:</span><span>{text(header.customer)}</span>
-                {text(header.contact_person) ? <><span className="font-bold">Người liên hệ:</span><span>{text(header.contact_person)}</span></> : null}
-                {text(header.phone) ? <><span className="font-bold">SĐT:</span><span>{text(header.phone)}</span></> : null}
-                <span className="font-bold">Địa chỉ:</span><span>{text(header.install_address)}</span>
-                {text(header.shipping_note) ? <><span className="font-bold">Ghi chú vận chuyển:</span><span>{text(header.shipping_note)}</span></> : null}
-              </div>
-              <div className="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1">
-                <span className="font-bold">Số đơn:</span><span>{text(header.name) || "(chưa lưu)"}</span>
-                <span className="font-bold">Ngày đặt hàng:</span><span>{text(header.transaction_date)}</span>
-                <span className="font-bold">Ngày giao hàng:</span><span>{text(header.delivery_date)}</span>
-                {text(header.payment_method) ? <><span className="font-bold">Thanh toán:</span><span>{text(header.payment_method)}</span></> : null}
-                <span className="font-bold">% VAT:</span><span>{quantity(header.vat_rate ?? 0)} %</span>
-              </div>
-            </div>
-          </div>
+        <div className="w-full space-y-3 px-3 py-3">
           {formReadOnly ? <div className="rounded-md border bg-muted/40 px-3 py-2 text-xs print:hidden">Đơn đã ghi sổ/khóa hoặc tài khoản không có quyền sửa. Giá, BOM và số tiền chỉ hiển thị theo dữ liệu server.</div> : null}
           {headerError ? <div className="flex items-start justify-between gap-3 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive"><span className="flex items-start gap-2"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" />{headerError}</span><Button type="button" variant="outline" size="sm" className="h-7" disabled={busy} onClick={() => void refreshDocumentPreview("manual_retry")}>Thử lại</Button></div> : null}
 
@@ -1835,7 +1867,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
 
             <section className="rounded-lg border bg-card" data-section="sales-v2-summary-complete" aria-label="Tóm tắt đơn">
               <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-4 xl:grid-cols-9">
-                <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Dòng hàng</div><div className="mt-0.5 font-semibold tabular-nums">{activeLines.length}</div></div>
+                <div className="bg-card px-3 py-2 print:hidden"><div className="text-[10px] text-muted-foreground">Dòng hàng</div><div className="mt-0.5 font-semibold tabular-nums">{activeLines.length}</div></div>
                 <div className="bg-card px-3 py-2 print:hidden"><div className="text-[10px] text-muted-foreground">Diện tích cửa</div><div className="mt-0.5 font-semibold tabular-nums">{quantity(totalArea)} m²</div></div>
                 <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Tiền hàng</div><div className="mt-0.5 font-semibold tabular-nums">{money(header.total_amount)} ₫</div></div>
                 <div className="bg-card px-3 py-2" title={discountBreakdown}><div className="text-[10px] text-muted-foreground">Chiết khấu</div><div className="mt-0.5 font-semibold tabular-nums text-destructive">−{money(discountTotal)} ₫</div></div>
@@ -1863,12 +1895,12 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
                     compact
                     className={`mt-0.5 [&_.mf-control]:!min-h-7 [&_input]:!h-7 [&_input]:!text-right [&_input]:tabular-nums [&_input]:!font-semibold ${depositExceedsTotal ? "[&_input]:!border-destructive" : ""}`}
                   />
-                  {depositExceedsTotal ? <div className="mt-0.5 text-[10px] leading-tight text-destructive">Cọc lớn hơn Tiền phải thu</div> : null}
+                  {depositExceedsTotal ? <div className="mt-0.5 text-[10px] leading-tight text-destructive print:hidden">Cọc lớn hơn Tiền phải thu</div> : null}
                   {/* Doctype Sales Order chưa khai `deposit_amount`, nên số này mới chỉ tính được
                       "Còn phải thu" trên màn hình chứ CHƯA lưu vào đơn. Nói thẳng thay vì để người
                       bán tưởng đã lưu. Dòng cảnh báo tự biến mất khi brief có field và đã forge. */}
                   {!metaField("deposit_amount") && depositAmount > 0
-                    ? <div className="mt-0.5 text-[10px] leading-tight text-destructive">Chưa lưu được vào đơn — Sales Order thiếu field deposit_amount</div>
+                    ? <div className="mt-0.5 text-[10px] leading-tight text-destructive print:hidden">Chưa lưu được vào đơn — Sales Order thiếu field deposit_amount</div>
                     : null}
                 </div>
                 <div className="bg-card px-3 py-2"><div className="text-[10px] font-semibold text-muted-foreground">Còn phải thu</div><div className="mt-0.5 text-lg font-bold tabular-nums text-primary">{money(outstandingAmount)} ₫</div></div>
@@ -1886,6 +1918,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
               {rules.length ? <details className="border-t px-3 py-2 text-[11px] print:hidden"><summary className="cursor-pointer select-none font-medium">Chính sách giá đang áp · {rules.length} quy tắc</summary><div className="mt-2 flex flex-wrap gap-1.5">{rules.map((rule, index) => <Badge key={`${text(rule.rule_name)}-${index}`} variant="outline">{text(rule.rule_name)}</Badge>)}</div></details> : null}
             </section>
           </fieldset>
+
         </div>
       </div>
 
@@ -1897,7 +1930,9 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
             {docstatus === 1 && documentName ? <Button type="button" variant="outline" size="sm" onClick={openDelivery}><Truck className="size-3.5" /> Xuất kho</Button> : null}
             {coTheHuyDuyet ? <Button type="button" variant="outline" size="sm" disabled={unsubmitting} onClick={() => setConfirmUnsubmit(true)}>{unsubmitting ? <Loader2 className="size-3.5 animate-spin" /> : <Undo2 className="size-3.5" />} Huỷ duyệt để sửa</Button> : null}
             {docstatus === 1 && daXuatKho ? <span className="flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-700" title={`Phiếu xuất kho: ${deliveryNotes.map((row) => text(row.name)).join(", ")}`}><Lock className="size-3" /> Đã xuất kho — khoá sửa</span> : null}
-            {isExisting ? <Button type="button" variant="outline" size="sm" onClick={() => props.onPreviewCreated(documentName)}><Eye className="size-3.5" /> In / xem</Button> : null}
+            {/* 24/08/2026 — bỏ nút "In / xem" (nhảy sang route /print/… dựng bảng riêng).
+                Hai nút in cạnh nhau thì bấm nhầm là chắc, và bản dựng riêng luôn trôi dạt
+                khỏi màn nhập. Chỉ còn MỘT đường in: nút "In đơn" ngay bên phải. */}
             <Button type="button" variant="ghost" size="sm" onClick={requestClose}>{isExisting ? "Đóng" : "Hủy"}</Button>
             <Button type="button" variant="outline" size="sm" disabled={busy || formReadOnly} onClick={() => { const active = linesRef.current.filter((line) => text(line.item_code)); void Promise.all(active.map((line) => previewLine(line, "manual_refresh", {}, false))).finally(() => void refreshDocumentPreview("manual_refresh")); }}><RefreshCw className="size-3.5" /> Tính lại</Button>
             {/* In thẳng MÀN NÀY: phần đầu bản in (logo + thông tin khách) chỉ hiện khi in, phần
@@ -1907,7 +1942,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
             </Button>
             {docstatus === 0 ? <Button type="button" variant="outline" size="sm" disabled={persistenceBlocked || !canSave} onClick={() => void saveDraft(false)}>{saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />} Lưu nháp</Button> : null}
             {docstatus === 0 && canSubmit ? <Button type="button" size="sm" disabled={persistenceBlocked || approvalNeeded} title={approvalNeeded ? "Còn dòng giá/chiết khấu khác chính sách — cần duyệt trước khi ghi sổ. Lưu nháp vẫn được." : undefined} onClick={() => void submitOrder()}>{submitting ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />} Ghi sổ đơn</Button> : null}
-            {docstatus === 0 && isExisting ? <Button type="button" variant="outline" size="sm" disabled={persistenceBlocked || !canSave} onClick={() => void saveDraft(true)}><Eye className="size-3.5" /> Lưu & xem</Button> : null}
+            {docstatus === 0 && isExisting ? <Button type="button" variant="outline" size="sm" disabled={persistenceBlocked || !canSave} onClick={() => void saveDraft(true)}><Printer className="size-3.5" /> Lưu & in</Button> : null}
           </div>
         </div>
       </div>

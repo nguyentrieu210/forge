@@ -29,7 +29,7 @@ import {
   LockKeyholeOpen, MailCheck, MailQuestion, Map, MapPinCheck, MapPinned, Megaphone,
   MessagesSquare, MoveRight, Network, NotebookTabs, Package, PackageCheck, PackageOpen,
   PackagePlus, PackageSearch, Paintbrush, Palette, Plane, Printer, Receipt, ReceiptText,
-  PanelsTopLeft, Ruler, ScanBarcode, ScanFace, ScanLine, ScanSearch, Scale, Scissors, ScrollText,
+  PanelsTopLeft, QrCode, Ruler, ScanBarcode, ScanFace, ScanLine, ScanSearch, Scale, Scissors, ScrollText,
   Settings, ShieldAlert, ShieldCheck, ShieldPlus, ShoppingBag, Smartphone, Sparkles,
   SquareFunction, Table2, TableProperties, Tag, Tags, Target, Timer, TimerReset, TrendingUp,
   TriangleAlert, Truck, Undo2, Upload, UserPlus, UserRoundX, UserSearch, Users,
@@ -135,6 +135,7 @@ export const ICON_REGISTRY: Record<string, ComponentType> = {
   ruler: Ruler,
   // Lucide 0.460 chưa có `RulerDimensionLine`; giữ tên manifest ổn định và dùng icon Ruler gần nhất.
   "ruler-dimension-line": Ruler,
+  "qr-code": QrCode,
   "scan-barcode": ScanBarcode,
   "scan-face": ScanFace,
   "scan-line": ScanLine,

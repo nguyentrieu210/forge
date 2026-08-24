@@ -3633,10 +3633,9 @@
             "geometry_field": "LUOI_CAO",
             "role": "INPUT",
             "required": false,
-            "visible": false,
+            "visible": true,
             "editable": true,
-            "sequence": 30,
-            "label_override": "Cao (mua vào)"
+            "sequence": 30
           },
           {
             "row_id": "FIELD-4",
@@ -3715,10 +3714,9 @@
             "geometry_field": "LUOI_CAO",
             "role": "INPUT",
             "required": false,
-            "visible": false,
+            "visible": true,
             "editable": true,
-            "sequence": 30,
-            "label_override": "Cao (mua vào)"
+            "sequence": 30
           },
           {
             "row_id": "FIELD-4",
@@ -6790,6 +6788,13 @@
           "link_filters": "{\"is_group\":0,\"disabled\":0}"
         },
         {
+          "//": "Ảnh mặt hàng. `Attach Image` đã có control sẵn ở nền tảng (controls/register.ts) nên chỉ cần khai trường là ô tải ảnh hiện ra. Lưới bán hàng cũng đã biết đọc: `ITEM_IMAGE_KEYS` trong sales-order-v2/model.ts nhận đúng tên `item_image`.",
+          "fieldname": "item_image",
+          "fieldtype": "Attach Image",
+          "label": "Ảnh mặt hàng",
+          "in_list_view": true
+        },
+        {
           "fieldname": "item_nature",
           "label": "Bản chất mặt hàng",
           "fieldtype": "Select",
@@ -6989,7 +6994,8 @@
         "Thủ kho": "rwc",
         "Kế toán": "r",
         "Sản xuất": "r"
-      }
+      },
+      "image_field": "item_image"
     },
     {
       "//": "MỘT DÒNG QUY ĐỔI: một đơn vị GIAO DỊCH chứa bao nhiêu đơn vị TỒN.",

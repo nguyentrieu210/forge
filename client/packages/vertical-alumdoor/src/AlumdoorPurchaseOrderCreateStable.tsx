@@ -6,7 +6,8 @@ import { applyContextPolicy, formatMoney, mapError, serializeCreateDocument, typ
 import type { FieldServices } from "@metaforge/controls";
 import { Button, ConfirmDialog, toast } from "@metaforge/ui";
 import { useMetaForge } from "@metaforge/views/provider";
-import { salesItemSearchTerms } from "./sales-item-search.js";
+import type { Filters } from "@metaforge/core";
+import { taoTimMatHangCucBo } from "./item-picker.js";
 import {
   AlumdoorPurchaseOrderItemsGrid,
   isAluminumPurchaseLine,
@@ -307,32 +308,26 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
     setRows(normalizedRows);
   }, [childMeta]);
 
+  const timMua = useMemo(() => taoTimMatHangCucBo(adapter, [["is_purchase_item", "=", 1], ["disabled", "=", 0]] as Filters), [adapter]);
   const purchaseServices = useMemo<FieldServices>(() => ({
     ...services,
     searchLink: async (doctype, query, options) => {
       if (!services.searchLink) return [];
       if (doctype !== "Item") return services.searchLink(doctype, query, options);
-      const raw = text(query);
-      const terms = salesItemSearchTerms(raw);
-      const batches = await Promise.allSettled(terms.map((term) => services.searchLink!(doctype, term, {
-        ...options,
-        filters: mergePurchaseItemFilters(options?.filters),
-        pageLength: Math.max(options?.pageLength ?? 10, 100),
-      })));
-      const merged = new Map<string, { value: string; label?: string; description?: string }>();
-      let firstFailure: unknown;
-      let fulfilled = 0;
-      for (const batch of batches) {
-        if (batch.status === "fulfilled") {
-          fulfilled += 1;
-          for (const option of batch.value) if (option.value && !merged.has(option.value)) merged.set(option.value, option);
-        } else if (firstFailure === undefined) firstFailure = batch.reason;
+      /*
+       * Tìm TẠI CHỖ trên danh mục mua đã nạp sẵn: một vòng mạng cho cả phiên, khớp thông minh
+       * hơn (gõ liền không dấu vẫn ra), gõ trật thì ra RỖNG, và kèm ảnh cho ô chọn vẽ.
+       * Nạp hỏng thì lui về đường server cũ để người mua không mất ô tìm kiếm.
+       */
+      try {
+        return await timMua.tim(query, Math.max(options?.pageLength ?? 10, 100));
+      } catch {
+        return services.searchLink(doctype, text(query), {
+          ...options,
+          filters: mergePurchaseItemFilters(options?.filters),
+          pageLength: Math.max(options?.pageLength ?? 10, 100),
+        });
       }
-      if (!fulfilled) throw firstFailure ?? new Error("Không tải được danh sách mặt hàng mua.");
-      return [...merged.values()]
-        .sort((left, right) => itemSearchScore(right, raw) - itemSearchScore(left, raw)
-          || left.value.localeCompare(right.value, "vi"))
-        .slice(0, 100);
     },
   }), [services]);
 
@@ -1047,10 +1042,8 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
                   {headerControl("transaction_date", "Ngày đặt hàng", "Date")}
                   {hasField("schedule_date") ? headerControl("schedule_date", "Ngày giao dự kiến", "Date") : <div />}
                 </div>
-                <div className="grid gap-x-2 gap-y-2 md:grid-cols-2 xl:grid-cols-[minmax(150px,0.65fr)_minmax(230px,1fr)_minmax(230px,1fr)_minmax(230px,1fr)_minmax(360px,1.6fr)]">
+                <div className="grid gap-x-2 gap-y-2 md:grid-cols-2 xl:grid-cols-[minmax(150px,0.65fr)_minmax(230px,1fr)_minmax(360px,1.6fr)]">
                   {hasField("priority") ? headerControl("priority", "Mức độ", "Select") : <div />}
-                  {hasField("supplier_quotation") ? headerControl("supplier_quotation", "Theo báo giá NCC", "Link", "Supplier Quotation") : <div />}
-                  {hasField("material_request") ? headerControl("material_request", "Theo yêu cầu vật tư", "Link", "Material Request") : <div />}
                   {hasField("payment_terms") ? headerControl("payment_terms", "Thanh toán", metaField("payment_terms")!.fieldtype, metaField("payment_terms")!.options) : <div />}
                   {hasField("note") ? headerControl("note", "Ghi chú", metaField("note")!.fieldtype) : <div />}
                 </div>

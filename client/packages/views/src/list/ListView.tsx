@@ -1327,7 +1327,7 @@ function groupLabel(
  * Vì sao: khai ảnh cho 40 mặt hàng theo đường cũ là mở form → tìm ô Ảnh → chọn tệp → lưu → quay
  * lại danh sách, nhân 40 lần. Bấm thẳng vào avatar rút còn hai thao tác.
  */
-function AvatarUpload({ name, src, alt, onUpload, size = "size-7" }: {
+function AvatarUpload({ name, src, alt, onUpload, size = "size-14" }: {
   name: string;
   src?: string;
   alt: string;

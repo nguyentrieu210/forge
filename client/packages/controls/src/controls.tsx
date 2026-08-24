@@ -6,7 +6,7 @@
  */
 import { type ChangeEvent, type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { Check, ChevronsUpDown, Loader2, MapPin, Plus, TriangleAlert } from "lucide-react";
-import { buildLinkFilters, formatDuration, getNumberFormatInfo, linkDisplay } from "@metaforge/core";
+import { buildLinkFilters, formatDuration, getNumberFormatInfo, linkDisplay, sanitizeImageUrl, withAppBase } from "@metaforge/core";
 import {
   cn, Input, Textarea, Checkbox,
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
@@ -981,6 +981,26 @@ export function LinkControl(p: FieldControlProps) {
  * chế một ô tìm kiếm riêng. Tự chế thì mất hết: "+ Tạo mới", danh sách gần đây, lọc theo quyền
  * và User Permission phía server, chống race khi gõ nhanh, và cả các bản vá giao diện về sau.
  */
+/**
+ * ẢNH TRONG Ô CHỌN.
+ *
+ * `searchLink` được phép trả thêm `image` (đường dẫn tệp). Không có ảnh thì KHÔNG chừa chỗ —
+ * mọi doctype khác vẫn hiện y như cũ, không bị đội một ô trống bên trái.
+ */
+const APP_BASE_OPTION: string = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? "/";
+
+function OptionImage({ src, alt }: { src?: string; alt: string }) {
+  if (!src) return null;
+  /*
+   * `file_url` server trả tính từ GỐC SITE ("/files/x.jpg") còn app chạy dưới một base khác,
+   * nên dùng thẳng là trình duyệt gọi ra ngoài phạm vi app và nhận 404 — ảnh không bao giờ
+   * hiện. Cùng cách xử lý với `RowAvatar` ở danh sách và ô Attach Image.
+   */
+  const an = sanitizeImageUrl(withAppBase(src, APP_BASE_OPTION));
+  if (!an) return null;
+  return <img src={an} alt={alt} className="mr-2 size-14 shrink-0 rounded-md border border-border/70 bg-muted/40 object-contain" loading="lazy" />;
+}
+
 export function LinkCombobox({
   id, value, target, search, resolveDisplay, quickCreate, getMeta, filters, referenceDoctype, readOnly, error, describedBy, required, label, compact, onChange,
 }: {
@@ -1191,6 +1211,7 @@ export function LinkCombobox({
                     {visibleRecent.map((o) => (
                       <CommandItem key={`recent-${o.value}`} value={`recent-${o.value}`} onSelect={() => { onChange(o.value); setPickedDesc(pickedOptionDisplay(o, compact)); recordRecentLink(target, o); setOpen(false); }}>
                         <Check className={cn("mr-2 size-4 shrink-0", o.value === value ? "opacity-100" : "opacity-0")} />
+                        <OptionImage src={(o as { image?: string }).image} alt={optionDisplay(o, compact).primary} />
                         <span className="flex min-w-0 flex-col">
                           <span className="truncate">{optionDisplay(o, compact).primary}</span>
                           {optionDisplay(o, compact).secondary ? <span className="truncate text-xs text-muted-foreground">{optionDisplay(o, compact).secondary}</span> : null}
@@ -1203,6 +1224,7 @@ export function LinkCombobox({
                 {visibleOptions.map((o) => (
                   <CommandItem key={o.value} value={o.value} onSelect={() => { onChange(o.value); setPickedDesc(pickedOptionDisplay(o, compact)); recordRecentLink(target, o); setOpen(false); }}>
                     <Check className={cn("mr-2 size-4 shrink-0", o.value === value ? "opacity-100" : "opacity-0")} />
+                    <OptionImage src={(o as { image?: string }).image} alt={optionDisplay(o, compact).primary} />
                     <span className="flex min-w-0 flex-col">
                       <span className="truncate">{optionDisplay(o, compact).primary}</span>
                       {optionDisplay(o, compact).secondary ? <span className="truncate text-xs text-muted-foreground">{optionDisplay(o, compact).secondary}</span> : null}

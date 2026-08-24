@@ -91,8 +91,10 @@ export function deriveColumns(meta: DocTypeMeta, ctx: DeriveColumnsCtx = {}): Li
     isTitle: true,
     isImage: false,
     imageFieldname: imgField,
-    defaultWidth: 240,
-    minWidth: 180,
+    // Ảnh trong ô tiêu đề nay gấp đôi (56px), nên cột phải rộng thêm bằng đúng phần ảnh chiếm
+    // chỗ — không thì tên hàng bị bóp lại và phải bật tooltip mới đọc được.
+    defaultWidth: 300,
+    minWidth: 220,
   });
 
   /**
