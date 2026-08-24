@@ -22,6 +22,8 @@ const attendanceIndex = fileURLToPath(new URL("../attendance-mobile/index.html",
 const attendanceEntry = fileURLToPath(new URL("../attendance-mobile/src/main.tsx", import.meta.url));
 const attendancePublic = fileURLToPath(new URL("../attendance-mobile/public/", import.meta.url));
 const forgeBackend = process.env.VITE_FORGE_BACKEND ?? "http://127.0.0.1:8799";
+const frappeSite = process.env.VITE_FRAPPE_SITE;
+const frappeProxyHeaders = frappeSite ? { "X-Frappe-Site-Name": frappeSite } : undefined;
 
 /**
  * The deployed Gateway mounts the standalone attendance PWA at
@@ -150,6 +152,7 @@ export default defineConfig({
       "/api": {
         target: forgeBackend,
         changeOrigin: true,
+        headers: frappeProxyHeaders,
       },
       /**
        * `/files` PHẢI proxy y như `/api`.
@@ -162,6 +165,7 @@ export default defineConfig({
       "/files": {
         target: forgeBackend,
         changeOrigin: true,
+        headers: frappeProxyHeaders,
       },
     },
   },
@@ -170,10 +174,12 @@ export default defineConfig({
       "/files": {
         target: forgeBackend,
         changeOrigin: true,
+        headers: frappeProxyHeaders,
       },
       "/api": {
         target: forgeBackend,
         changeOrigin: true,
+        headers: frappeProxyHeaders,
       },
     },
   },
