@@ -11500,7 +11500,26 @@
         "transaction_date:Date!=(Today) Ngày đặt hàng",
         "schedule_date:Date Ngày giao dự kiến",
         "items:Table(Purchase Order Item)! Dòng hàng",
-        "grand_total:Currency~ Tổng tiền",
+        {
+          "//": "VAT CẢ ĐƠN (chốt chủ xưởng 24/08/2026), cùng hình dạng với Sales Order: total_amount là tiền hàng trước thuế, grand_total là số phải trả. Máy tính ở `purchasePreview`, ô này chỉ nhận % người mua gõ.",
+          "fieldname": "total_amount",
+          "fieldtype": "Currency",
+          "label": "Tổng cộng tiền hàng",
+          "read_only": true
+        },
+        {
+          "fieldname": "vat_rate",
+          "fieldtype": "Percent",
+          "label": "% VAT",
+          "default": 0
+        },
+        {
+          "fieldname": "vat_amount",
+          "fieldtype": "Currency",
+          "label": "Số tiền VAT",
+          "read_only": true
+        },
+        "grand_total:Currency~ Tổng phải trả",
         "company:Link(Company)-!=(ALUMDOOR) Công ty",
         "currency:Link(Currency)-!=(VND) Tiền tệ",
         "supplier_quotation:Link(Supplier Quotation)- Theo báo giá NCC",

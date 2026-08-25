@@ -378,13 +378,26 @@ async function purchasePreview(call: DocumentPreviewCall, doc: Json): Promise<Js
   const rows = Array.isArray(doc.items)
     ? doc.items.filter((row): row is Json => Boolean(row) && typeof row === "object" && !Array.isArray(row))
     : [];
-  if (!rows.length) return { items: [], net_total: 0, grand_total: 0, rounded_total: 0, total_amount: 0 };
+  if (!rows.length) return { items: [], net_total: 0, vat_amount: 0, grand_total: 0, rounded_total: 0, total_amount: 0 };
   const currency = text(doc.currency) || "VND";
   const scale = await currencyScale(call, currency);
   const priceList = text(doc.buying_price_list);
+  /*
+   * LỌC NGAY Ở SERVER, ĐỪNG KÉO CẢ BẢNG GIÁ VỀ RỒI LỌC TRONG BỘ NHỚ.
+   *
+   * Trước đây lượt này đọc 2000 dòng Item Price mỗi lần tính lại — tức mỗi lần người mua gõ
+   * một kích thước. `fieldMatchedPrice` bên dưới chỉ nhận dòng khớp `price_list` VÀ `item_code`,
+   * nên dòng bị loại ở đây vốn không bao giờ trúng: lọc trước là đổi tốc độ, không đổi kết quả.
+   *
+   * Nền tảng chặn `in` ở 50 giá trị (`document-list.ts` MAX_IN_VALUES). Đơn dài hơn 50 mã thì
+   * bỏ vế `item_code` và chỉ lọc theo bảng giá — vẫn đúng, chỉ đọc rộng hơn.
+   */
+  const maTrenDon = [...new Set(rows.map((row) => text(row.item_code)).filter(Boolean))];
+  const locGia: unknown[] = [["Item Price", "price_list", "=", priceList]];
+  if (maTrenDon.length && maTrenDon.length <= 50) locGia.push(["Item Price", "item_code", "in", maTrenDon]);
   const [listedPrices, rules] = priceList
     ? await Promise.all([
-      listDocs(call, "Item Price", ["name", "price_list", "item_code", "uom", "price_variant", "currency", "rate", "disabled"], [], 2000),
+      listDocs(call, "Item Price", ["name", "price_list", "item_code", "uom", "price_variant", "currency", "rate", "disabled"], locGia, 2000),
       listDocs(call, "Pricing Rule", [
         "name", "disabled", "priority", "price_list", "item_code", "party_type", "party",
         "customer_group", "supplier_group", "valid_from", "valid_upto", "min_qty", "max_qty",
@@ -399,11 +412,25 @@ async function purchasePreview(call: DocumentPreviewCall, doc: Json): Promise<Js
     return sum + toMinor(number(row.qty) * number(row.rate), scale, `${text(row.item_code)}.amount`);
   }, 0);
   const total = fromMinor(totalMinor, scale);
+  /*
+   * VAT CỦA CẢ ĐƠN, không phải theo dòng (chốt chủ xưởng 24/08/2026) — cùng hình dạng với đơn
+   * bán: `total_amount` là tiền hàng trước thuế, `grand_total` là số phải trả.
+   *
+   * Cộng bằng ĐƠN VỊ NHỎ NHẤT rồi mới đổi ngược, y như phép cộng tiền hàng ngay trên: nhân
+   * phần trăm trên số thực rồi làm tròn sau sẽ lệch vài đồng so với tổng các dòng, và lệch đó
+   * đi thẳng vào công nợ nhà cung cấp.
+   */
+  const vatRate = Math.min(100, Math.max(0, number(doc.vat_rate)));
+  const vatMinor = Math.round(totalMinor * vatRate / 100);
+  const vatAmount = fromMinor(vatMinor, scale);
+  const grandTotal = fromMinor(totalMinor + vatMinor, scale);
   return {
     items,
     net_total: total,
-    grand_total: total,
-    rounded_total: total,
+    vat_rate: vatRate,
+    vat_amount: vatAmount,
+    grand_total: grandTotal,
+    rounded_total: grandTotal,
     total_amount: total,
     purchase_pricing_preview: priceList ? "canonical-buying-price" : "manual-rate",
   };

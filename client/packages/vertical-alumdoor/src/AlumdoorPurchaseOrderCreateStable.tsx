@@ -34,7 +34,9 @@ type DocumentPreviewResult = {
 
 const PURCHASE_SUPPLIER_GROUPS = ["Nhôm", "Mô tơ", "Sơn", "Phụ kiện", "Vận chuyển", "Khác"];
 const PURCHASE_CONTEXT_FIELDS = new Set(["supplier_group", "buying_price_list"]);
-const PRICING_HEADER_FIELDS = new Set(["supplier", "supplier_group", "buying_price_list", "transaction_date", "currency"]);
+// `vat_rate` nằm đây vì VAT tính CẢ ĐƠN ở server: đổi % mà không gọi lại preview thì ô
+// Tổng phải trả đứng im trong khi số thật đã khác.
+const PRICING_HEADER_FIELDS = new Set(["supplier", "supplier_group", "buying_price_list", "transaction_date", "currency", "vat_rate"]);
 const ALUMINUM_MODE = "Nhôm cây/lá";
 
 export interface AlumdoorPurchaseOrderCreateProps {
@@ -497,6 +499,12 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
   const metaField = useCallback((fieldname: string) => meta?.fields.find((field) => field.fieldname === fieldname), [meta]);
   const activeRows = useMemo(() => rows.filter((row) => text(row.item_code)), [rows]);
   const aluminumRows = useMemo(() => activeRows.filter(isAluminumPurchaseLine), [activeRows]);
+  /* Tiền hàng TRƯỚC thuế. Server trả `total_amount`; phép cộng dưới chỉ là đường lui cho
+     nhịp đầu khi preview chưa về, y như `grandTotal` vẫn làm. */
+  const tienHang = useMemo(() => numberValue(header.total_amount)
+    ?? activeRows.reduce((sum, row) => sum + (numberValue(row.amount) ?? ((numberValue(row.qty) ?? 0) * (numberValue(row.rate) ?? 0))), 0), [activeRows, header.total_amount]);
+  // Số tiền VAT do server tính (`purchasePreview`), client không tự nhân lại.
+  const vatAmount = useMemo(() => numberValue(header.vat_amount) ?? 0, [header.vat_amount]);
   const grandTotal = useMemo(() => numberValue(header.grand_total)
     ?? activeRows.reduce((sum, row) => sum + (numberValue(row.amount) ?? ((numberValue(row.qty) ?? 0) * (numberValue(row.rate) ?? 0))), 0), [activeRows, header.grand_total]);
   const totalAluminumKg = useMemo(() => aluminumRows.reduce((sum, row) => sum + (numberValue(row.theoretical_kg ?? row.qty) ?? 0), 0), [aluminumRows]);
@@ -1042,8 +1050,9 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
                   {headerControl("transaction_date", "Ngày đặt hàng", "Date")}
                   {hasField("schedule_date") ? headerControl("schedule_date", "Ngày giao dự kiến", "Date") : <div />}
                 </div>
-                <div className="grid gap-x-2 gap-y-2 md:grid-cols-2 xl:grid-cols-[minmax(150px,0.65fr)_minmax(230px,1fr)_minmax(360px,1.6fr)]">
+                <div className="grid gap-x-2 gap-y-2 md:grid-cols-2 xl:grid-cols-[minmax(150px,0.65fr)_minmax(110px,0.5fr)_minmax(230px,1fr)_minmax(360px,1.6fr)]">
                   {hasField("priority") ? headerControl("priority", "Mức độ", "Select") : <div />}
+                  {hasField("vat_rate") ? headerControl("vat_rate", "% VAT", "Percent") : <div />}
                   {hasField("payment_terms") ? headerControl("payment_terms", "Thanh toán", metaField("payment_terms")!.fieldtype, metaField("payment_terms")!.options) : <div />}
                   {hasField("note") ? headerControl("note", "Ghi chú", metaField("note")!.fieldtype) : <div />}
                 </div>
@@ -1078,12 +1087,14 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
             />
 
             <section className="rounded-lg border bg-card" data-section="purchase-order-summary" aria-label="Tóm tắt đơn mua">
-              <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-3 xl:grid-cols-5">
+              <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-3 xl:grid-cols-7">
                 <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Dòng hàng</div><div className="mt-0.5 font-semibold tabular-nums">{activeRows.length}</div></div>
                 <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Dòng nhôm</div><div className="mt-0.5 font-semibold tabular-nums">{aluminumRows.length}</div></div>
                 <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Số cây/lá đặt</div><div className="mt-0.5 font-semibold tabular-nums">{quantity(totalAluminumBars, 0)}</div></div>
                 <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Kg nhôm</div><div className="mt-0.5 font-semibold tabular-nums">{quantity(totalAluminumKg)} kg</div></div>
-                <div className="bg-card px-3 py-2"><div className="text-[10px] font-semibold text-muted-foreground">Tạm tính</div><div className="mt-0.5 text-lg font-bold tabular-nums text-primary">{money(grandTotal)} ₫</div></div>
+                <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Tiền hàng</div><div className="mt-0.5 font-semibold tabular-nums">{money(tienHang)} ₫</div></div>
+                <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">VAT ({quantity(header.vat_rate ?? 0)}%)</div><div className="mt-0.5 font-semibold tabular-nums">{money(vatAmount)} ₫</div></div>
+                <div className="bg-card px-3 py-2"><div className="text-[10px] font-semibold text-muted-foreground">Tổng phải trả</div><div className="mt-0.5 text-lg font-bold tabular-nums text-primary">{money(grandTotal)} ₫</div></div>
               </div>
               <div className="flex flex-wrap items-center gap-2 border-t px-3 py-2 text-[11px]">
                 {previewPending > 0 || refreshing ? <span className="inline-flex items-center gap-1.5"><Loader2 className="size-3.5 animate-spin" /> Đang tính lại ({previewPending})</span>
@@ -1101,7 +1112,7 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
         <div className="flex w-full flex-wrap items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground">{docstatus === 1 ? "Đã ghi sổ" : isExisting ? (dirty ? "Nháp có thay đổi chưa lưu" : "Nháp đã đồng bộ") : activeRows.length ? "Đơn mua chưa lưu" : "Nhập mặt hàng để bắt đầu"}</span>
-            <strong className="tabular-nums">Tạm tính: {money(grandTotal)} ₫</strong>
+            <strong className="tabular-nums">Tổng phải trả: {money(grandTotal)} ₫</strong>
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
             {docstatus === 1 && workingName ? <Button type="button" variant="outline" size="sm" disabled={taoPhieuNhap} onClick={() => void moPhieuNhap()}>
