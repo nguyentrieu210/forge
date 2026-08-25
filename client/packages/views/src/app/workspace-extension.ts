@@ -23,6 +23,8 @@ export interface DoctypeWorkspaceExtensionResolution {
   create?: ReactNode;
   hasDetail?: boolean;
   contextTitle?: string;
+  /** User-facing noun used by the shared create-dialog chrome. */
+  createTitle?: string;
   onCloseDetail?: () => void;
   suppressBulk?: boolean;
   createSurface?: "quick" | "full";

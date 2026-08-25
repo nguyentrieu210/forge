@@ -1,0 +1,33 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["policy_code", "policy_name", "scope_section", "item", "item_group", "door_system", "warranty_months", "start_event", "supplier_return_allowed", "effective_from", "effective_to", "enabled", "terms"],
+ "fields": [
+  {"fieldname": "policy_code", "fieldtype": "Data", "in_list_view": 1, "label": "Mã chính sách", "read_only": 1, "search_index": 1, "unique": 1},
+  {"fieldname": "policy_name", "fieldtype": "Data", "in_list_view": 1, "label": "Tên chính sách bảo hành", "reqd": 1, "search_index": 1},
+  {"fieldname": "scope_section", "fieldtype": "Section Break", "label": "Phạm vi — chọn đúng một"},
+  {"fieldname": "item", "fieldtype": "Link", "label": "Vật tư", "options": "Alumdoor Item"},
+  {"fieldname": "item_group", "fieldtype": "Link", "label": "Nhóm vật tư", "options": "Alumdoor Item Group"},
+  {"fieldname": "door_system", "fieldtype": "Link", "label": "Hệ cửa", "options": "Door System"},
+  {"fieldname": "warranty_months", "fieldtype": "Int", "in_list_view": 1, "label": "Số tháng bảo hành", "reqd": 1},
+  {"default": "Delivery", "fieldname": "start_event", "fieldtype": "Select", "label": "Mốc bắt đầu", "options": "Delivery\nSales Order\nManufacturing", "reqd": 1},
+  {"default": "0", "fieldname": "supplier_return_allowed", "fieldtype": "Check", "label": "Cho phép trả nhà cung cấp"},
+  {"fieldname": "effective_from", "fieldtype": "Date", "label": "Hiệu lực từ"},
+  {"fieldname": "effective_to", "fieldtype": "Date", "label": "Hiệu lực đến"},
+  {"default": "1", "fieldname": "enabled", "fieldtype": "Check", "in_list_view": 1, "label": "Đang sử dụng"},
+  {"fieldname": "terms", "fieldtype": "Small Text", "label": "Điều kiện bảo hành"}
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "module": "Sales Configuration",
+ "name": "Alumdoor Warranty Policy",
+ "permissions": [{"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1}],
+ "search_fields": "policy_code,policy_name,item,item_group,door_system",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "show_title_field_in_link": 1,
+ "title_field": "policy_name"
+}

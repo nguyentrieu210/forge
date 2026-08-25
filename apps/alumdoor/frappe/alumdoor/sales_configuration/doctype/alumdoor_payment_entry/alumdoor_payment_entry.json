@@ -1,0 +1,18 @@
+{
+ "actions":[],"autoname":"PT-.YYYY.-.#####","doctype":"DocType","engine":"InnoDB","track_changes":1,
+ "field_order":["payment_code","flow_type","sales_order","partner","amount","money_account","posting_date","reason","status","idempotency_key"],
+ "fields":[
+  {"fieldname":"payment_code","fieldtype":"Data","in_list_view":1,"label":"Số phiếu","read_only":1,"unique":1},
+  {"default":"RECEIPT","fieldname":"flow_type","fieldtype":"Select","in_list_view":1,"label":"Thu / Chi","options":"RECEIPT\nPAYMENT","reqd":1},
+  {"fieldname":"sales_order","fieldtype":"Link","in_list_view":1,"label":"Đơn hàng","options":"Alumdoor Sales Order"},
+  {"fieldname":"partner","fieldtype":"Link","label":"Đối tác","options":"Alumdoor Partner"},
+  {"fieldname":"amount","fieldtype":"Currency","in_list_view":1,"label":"Số tiền","reqd":1},
+  {"fieldname":"money_account","fieldtype":"Link","label":"Quỹ / tài khoản","options":"Alumdoor Money Account","reqd":1},
+  {"default":"Today","fieldname":"posting_date","fieldtype":"Date","label":"Ngày thu/chi","reqd":1},
+  {"fieldname":"reason","fieldtype":"Small Text","label":"Diễn giải"},
+  {"default":"Draft","fieldname":"status","fieldtype":"Select","in_list_view":1,"label":"Trạng thái","options":"Draft\nSubmitted\nCancelled","reqd":1},
+  {"fieldname":"idempotency_key","fieldtype":"Data","hidden":1,"label":"Khóa chống trùng","unique":1}
+ ],
+ "index_web_pages_for_search":0,"links":[],"module":"Sales Configuration","name":"Alumdoor Payment Entry",
+ "permissions":[{"create":1,"read":1,"report":1,"role":"Alumdoor Owner","write":1},{"create":1,"read":1,"report":1,"role":"Alumdoor Accountant","write":1},{"create":1,"read":1,"report":1,"role":"System Manager","write":1}],"sort_field":"creation","sort_order":"DESC"
+}

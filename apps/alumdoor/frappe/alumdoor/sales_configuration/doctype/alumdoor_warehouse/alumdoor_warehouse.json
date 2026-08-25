@@ -1,0 +1,33 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:warehouse_code",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["warehouse_code", "warehouse_name", "warehouse_type", "parent_warehouse", "is_group", "enabled", "lft", "rgt", "old_parent"],
+ "fields": [
+  {"fieldname": "warehouse_code", "fieldtype": "Data", "in_list_view": 1, "label": "Warehouse Code", "reqd": 1, "search_index": 1, "unique": 1},
+  {"fieldname": "warehouse_name", "fieldtype": "Data", "in_list_view": 1, "label": "Warehouse Name", "reqd": 1, "search_index": 1},
+  {"fieldname": "warehouse_type", "fieldtype": "Select", "in_list_view": 1, "label": "Warehouse Type", "options": "\nRaw Material\nAccessory\nFinished Goods\nWIP\nProject\nRejected / Scrap"},
+  {"fieldname": "parent_warehouse", "fieldtype": "Link", "ignore_user_permissions": 1, "label": "Parent Warehouse", "options": "Alumdoor Warehouse", "search_index": 1},
+  {"default": "0", "fieldname": "is_group", "fieldtype": "Check", "label": "Is Group"},
+  {"default": "1", "fieldname": "enabled", "fieldtype": "Check", "in_list_view": 1, "label": "Enabled"},
+  {"fieldname": "lft", "fieldtype": "Int", "hidden": 1, "label": "Left"},
+  {"fieldname": "rgt", "fieldtype": "Int", "hidden": 1, "label": "Right"},
+  {"fieldname": "old_parent", "fieldtype": "Data", "hidden": 1, "label": "Old Parent"}
+ ],
+ "index_web_pages_for_search": 0,
+ "is_tree": 1,
+ "links": [],
+ "module": "Sales Configuration",
+ "name": "Alumdoor Warehouse",
+ "nsm_parent_field": "parent_warehouse",
+ "permissions": [
+  {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1}
+ ],
+ "search_fields": "warehouse_code,warehouse_name,warehouse_type",
+ "sort_field": "warehouse_name",
+ "sort_order": "ASC",
+ "show_title_field_in_link": 1,
+ "title_field": "warehouse_name"
+}

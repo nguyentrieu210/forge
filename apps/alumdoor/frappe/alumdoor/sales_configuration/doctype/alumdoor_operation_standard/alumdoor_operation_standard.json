@@ -1,0 +1,32 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["operation_code", "operation_name", "department", "door_system", "sales_package", "unit_basis", "setup_minutes", "standard_minutes", "sequence", "effective_from", "effective_to", "enabled"],
+ "fields": [
+  {"fieldname": "operation_code", "fieldtype": "Data", "in_list_view": 1, "label": "Mã công đoạn", "read_only": 1, "search_index": 1, "unique": 1},
+  {"fieldname": "operation_name", "fieldtype": "Data", "in_list_view": 1, "label": "Tên công đoạn", "reqd": 1, "search_index": 1},
+  {"fieldname": "department", "fieldtype": "Link", "in_list_view": 1, "label": "Bộ phận", "options": "Alumdoor Department", "reqd": 1, "search_index": 1},
+  {"fieldname": "door_system", "fieldtype": "Link", "label": "Hệ cửa", "options": "Door System"},
+  {"fieldname": "sales_package", "fieldtype": "Link", "label": "Gói bán hàng", "options": "Sales Package"},
+  {"fieldname": "unit_basis", "fieldtype": "Select", "label": "Cơ sở định mức", "options": "Per Set\nPer Area\nPer Piece\nPer Meter", "reqd": 1},
+  {"default": "0", "fieldname": "setup_minutes", "fieldtype": "Float", "label": "Phút chuẩn bị"},
+  {"fieldname": "standard_minutes", "fieldtype": "Float", "in_list_view": 1, "label": "Phút tiêu chuẩn", "reqd": 1},
+  {"default": "10", "fieldname": "sequence", "fieldtype": "Int", "label": "Thứ tự công đoạn"},
+  {"fieldname": "effective_from", "fieldtype": "Date", "label": "Hiệu lực từ"},
+  {"fieldname": "effective_to", "fieldtype": "Date", "label": "Hiệu lực đến"},
+  {"default": "1", "fieldname": "enabled", "fieldtype": "Check", "in_list_view": 1, "label": "Đang sử dụng"}
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "module": "Sales Configuration",
+ "name": "Alumdoor Operation Standard",
+ "permissions": [{"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1}],
+ "search_fields": "operation_code,operation_name,department,door_system,sales_package",
+ "sort_field": "sequence",
+ "sort_order": "ASC",
+ "show_title_field_in_link": 1,
+ "title_field": "operation_name"
+}

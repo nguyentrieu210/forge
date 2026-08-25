@@ -1,0 +1,32 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["rate_code", "supplier", "coating_part", "door_system", "item_group", "surface_finish", "calculation_basis", "rate", "minimum_charge", "currency", "effective_from", "effective_to", "enabled", "source_reference"],
+ "fields": [
+  {"fieldname": "rate_code", "fieldtype": "Data", "in_list_view": 1, "label": "Mã giá sơn", "read_only": 1, "search_index": 1, "unique": 1},
+  {"fieldname": "supplier", "fieldtype": "Link", "in_list_view": 1, "label": "Nhà gia công", "options": "Alumdoor Partner", "reqd": 1, "search_index": 1},
+  {"fieldname": "coating_part", "fieldtype": "Data", "in_list_view": 1, "label": "Hạng mục sơn", "reqd": 1, "search_index": 1},
+  {"fieldname": "door_system", "fieldtype": "Link", "in_list_view": 1, "label": "Hệ cửa", "options": "Door System"},
+  {"fieldname": "item_group", "fieldtype": "Link", "label": "Nhóm vật tư", "options": "Alumdoor Item Group"},
+  {"fieldname": "surface_finish", "fieldtype": "Link", "label": "Loại bề mặt", "options": "Surface Finish", "reqd": 1},
+  {"fieldname": "calculation_basis", "fieldtype": "Select", "label": "Cách tính", "options": "Slat Meter\nArea One Side\nArea Two Sides\nPer Meter\nFixed", "reqd": 1},
+  {"fieldname": "rate", "fieldtype": "Currency", "in_list_view": 1, "label": "Đơn giá", "reqd": 1, "options": "currency"},
+  {"default": "0", "fieldname": "minimum_charge", "fieldtype": "Currency", "label": "Mức tối thiểu", "options": "currency"},
+  {"default": "VND", "fieldname": "currency", "fieldtype": "Link", "label": "Tiền tệ", "options": "Currency", "reqd": 1},
+  {"fieldname": "effective_from", "fieldtype": "Date", "label": "Hiệu lực từ"},
+  {"fieldname": "effective_to", "fieldtype": "Date", "label": "Hiệu lực đến"},
+  {"default": "1", "fieldname": "enabled", "fieldtype": "Check", "in_list_view": 1, "label": "Đang sử dụng"},
+  {"fieldname": "source_reference", "fieldtype": "Data", "label": "Nguồn dữ liệu", "read_only": 1}
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "module": "Sales Configuration",
+ "name": "Alumdoor Coating Rate",
+ "permissions": [{"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1}],
+ "search_fields": "rate_code,supplier,coating_part,door_system,item_group,surface_finish",
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}

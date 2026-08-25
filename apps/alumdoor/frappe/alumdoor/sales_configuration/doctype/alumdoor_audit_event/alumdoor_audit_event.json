@@ -1,0 +1,29 @@
+{
+ "actions": [],
+ "autoname": "AUD-.YYYY.-.#####",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["actor", "action", "reference_doctype", "reference_name", "before_json", "after_json", "reason", "request_id", "ip"],
+ "fields": [
+  {"fieldname": "actor", "fieldtype": "Link", "in_list_view": 1, "label": "Người thực hiện", "options": "User", "read_only": 1, "reqd": 1},
+  {"fieldname": "action", "fieldtype": "Data", "in_list_view": 1, "label": "Hành động", "read_only": 1, "reqd": 1, "search_index": 1},
+  {"fieldname": "reference_doctype", "fieldtype": "Data", "label": "Loại chứng từ", "read_only": 1, "reqd": 1, "search_index": 1},
+  {"fieldname": "reference_name", "fieldtype": "Data", "in_list_view": 1, "label": "Chứng từ", "read_only": 1, "reqd": 1, "search_index": 1},
+  {"fieldname": "before_json", "fieldtype": "Long Text", "label": "Trước", "read_only": 1},
+  {"fieldname": "after_json", "fieldtype": "Long Text", "label": "Sau", "read_only": 1},
+  {"fieldname": "reason", "fieldtype": "Small Text", "label": "Lý do", "read_only": 1},
+  {"fieldname": "request_id", "fieldtype": "Data", "label": "Mã yêu cầu", "read_only": 1, "reqd": 1, "search_index": 1},
+  {"fieldname": "ip", "fieldtype": "Data", "label": "IP", "read_only": 1}
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "module": "Sales Configuration",
+ "name": "Alumdoor Audit Event",
+ "permissions": [
+  {"read": 1, "report": 1, "role": "Alumdoor Owner"},
+  {"read": 1, "report": 1, "role": "System Manager"}
+ ],
+ "search_fields": "action,reference_doctype,reference_name,request_id,actor",
+ "sort_field": "creation",
+ "sort_order": "DESC"
+}

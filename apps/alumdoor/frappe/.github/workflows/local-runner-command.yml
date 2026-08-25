@@ -1,0 +1,57 @@
+name: Local runner command
+
+on:
+  push:
+    branches: [version-16]
+    paths:
+      - '.github/runner-command.sh'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: alumdoor-local-runner-command
+  cancel-in-progress: true
+
+jobs:
+  run-command:
+    runs-on: [self-hosted]
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: version-16
+
+      - name: Execute command
+        shell: bash
+        run: |
+          set +e
+          chmod +x .github/runner-command.sh
+          {
+            echo "RUN_SHA=$GITHUB_SHA"
+            echo "RUNNER=$(hostname)"
+            echo "STARTED_AT=$(date -Iseconds)"
+            echo '--- OUTPUT ---'
+            .github/runner-command.sh
+            code=$?
+            echo '--- RESULT ---'
+            echo "EXIT_CODE=$code"
+            echo "FINISHED_AT=$(date -Iseconds)"
+            exit $code
+          } 2>&1 | tee .github/runner-command-output.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Publish command output
+        if: always()
+        shell: bash
+        run: |
+          git config user.name 'alumdoor-docker-runner'
+          git config user.email 'runner@alumdoor.local'
+          git add .github/runner-command-output.log
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m 'chore: publish local runner command output'
+          git push origin HEAD:version-16

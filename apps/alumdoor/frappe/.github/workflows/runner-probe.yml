@@ -1,0 +1,43 @@
+name: Probe local Frappe runner
+
+on:
+  push:
+    branches: [version-16]
+    paths:
+      - '.github/workflows/runner-probe.yml'
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: [self-hosted, alumdoor, docker]
+    timeout-minutes: 5
+    steps:
+      - name: Runner and Docker probe
+        shell: bash
+        run: |
+          set -u
+          echo '=== RUNNER ==='
+          echo "user=$(id -un)"
+          echo "host=$(hostname)"
+          echo "pwd=$(pwd)"
+          echo '=== DOCKER CLI ==='
+          command -v docker || true
+          docker version 2>&1 || true
+          echo '=== CONTAINERS ==='
+          docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}' 2>&1 || true
+          echo '=== FRAPPE BENCH CANDIDATES ==='
+          if command -v docker >/dev/null 2>&1; then
+            for c in $(docker ps --format '{{.Names}}' 2>/dev/null); do
+              if docker exec "$c" sh -lc 'test -d /home/frappe/frappe-bench' >/dev/null 2>&1; then
+                echo "--- $c ---"
+                docker exec "$c" sh -lc 'cd /home/frappe/frappe-bench && echo USER=$(id -un) && (bench version || true) && echo SITES: && find sites -maxdepth 2 -name site_config.json -print && echo APPS: && ls -1 apps 2>/dev/null | head -80' 2>&1 || true
+              fi
+            done
+          fi
+          echo '=== MOUNTS ==='
+          if command -v docker >/dev/null 2>&1; then
+            for c in $(docker ps --format '{{.Names}}' 2>/dev/null); do
+              echo "--- $c ---"
+              docker inspect "$c" --format '{{range .Mounts}}{{println .Destination "<-" .Source}}{{end}}' 2>/dev/null || true
+            done
+          fi

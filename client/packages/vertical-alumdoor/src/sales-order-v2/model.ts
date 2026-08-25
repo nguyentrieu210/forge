@@ -829,11 +829,32 @@ export function lineBillableArea(line: SalesLine): number | undefined {
 }
 
 export function linePricedQuantity(line: SalesLine): number | undefined {
-  // Hàng thường tính theo SL của ĐVT bán: phản hồi ngay khi gõ, không chờ preview cũ
-  // bị thay thế. Cửa theo diện tích vẫn ưu tiên priced_qty đã chuẩn hóa từ server.
-  return isAreaDoor(line)
-    ? numberValue(line._commercial?.priced_qty) ?? numberValue(line.qty)
-    : numberValue(line.qty) ?? numberValue(line._commercial?.priced_qty);
+  if (!text(line.item_code)) return undefined;
+  const serverPricedQty = numberValue(line._commercial?.priced_qty);
+  if (serverPricedQty !== undefined && serverPricedQty > 0) return serverPricedQty;
+
+  const physicalQty = numberValue(line[primaryQuantityField(line)]);
+  if (physicalQty === undefined || physicalQty <= 0) return undefined;
+
+  if (isAreaDoor(line)) {
+    // Chính override server chọn nguồn rộng. Không bao giờ đổi PB nhựa ↔ PB ray chỉ vì
+    // cột kia tình cờ có số; thiếu đúng cột của loại cửa thì Khối lượng phải là "—".
+    const widthField = (["cut_width_m", "width_pb_nhua_m", "width_pb_ray_m"] as const)
+      .find((fieldname) => fieldRequired(line, fieldname) && !fieldHidden(line, fieldname));
+    const width = widthField ? numberValue(line[widthField]) : undefined;
+    const height = numberValue(line.height_m);
+    return width !== undefined && width > 0 && height !== undefined && height > 0
+      ? width * height * physicalQty
+      : undefined;
+  }
+
+  if (fieldRequired(line, "length_m") && !fieldHidden(line, "length_m")) {
+    const length = numberValue(line.length_m);
+    return length !== undefined && length > 0 ? length * physicalQty : undefined;
+  }
+
+  // Bộ/cái/thanh/con bán trực tiếp: Khối lượng tính tiền chính là số lượng vật lý.
+  return physicalQty;
 }
 
 export function lineSellingRate(line: SalesLine): number | undefined {

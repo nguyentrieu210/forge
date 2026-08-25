@@ -1,0 +1,14 @@
+{
+ "actions":[],"autoname":"YCSX-.YYYY.-.#####","doctype":"DocType","engine":"InnoDB","track_changes":1,
+ "field_order":["request_code","sales_order","order_revision_no","required_date","status","snapshot_json"],
+ "fields":[
+  {"fieldname":"request_code","fieldtype":"Data","in_list_view":1,"label":"Mã yêu cầu","read_only":1,"unique":1},
+  {"fieldname":"sales_order","fieldtype":"Link","in_list_view":1,"label":"Đơn hàng","options":"Alumdoor Sales Order","reqd":1,"unique":1},
+  {"fieldname":"order_revision_no","fieldtype":"Int","label":"Phiên bản đơn","read_only":1},
+  {"fieldname":"required_date","fieldtype":"Date","in_list_view":1,"label":"Hạn sản xuất"},
+  {"default":"Open","fieldname":"status","fieldtype":"Select","in_list_view":1,"label":"Trạng thái","options":"Open\nConverted\nCancelled","reqd":1},
+  {"fieldname":"snapshot_json","fieldtype":"JSON","label":"Snapshot sản xuất","read_only":1}
+ ],
+ "index_web_pages_for_search":0,"links":[],"module":"Sales Configuration","name":"Alumdoor Production Request",
+ "permissions":[{"create":1,"read":1,"report":1,"role":"Alumdoor Owner","write":1},{"create":1,"read":1,"report":1,"role":"Alumdoor Accountant","write":1},{"read":1,"report":1,"role":"Alumdoor Sales"},{"create":1,"read":1,"report":1,"role":"System Manager","write":1}],"sort_field":"creation","sort_order":"DESC"
+}

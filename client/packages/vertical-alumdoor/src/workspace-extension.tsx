@@ -13,6 +13,7 @@ const AlumdoorWorkOrderDetail = lazy(() => import("./AlumdoorWorkOrderDetail.js"
 const AlumdoorManufacturingStockEntryCreate = lazy(() => import("./AlumdoorManufacturingStockEntryCreate.js").then((module) => ({ default: module.AlumdoorManufacturingStockEntryCreate })));
 const AlumdoorStockEntryCreate = lazy(() => import("./AlumdoorStockEntryCreate.js").then((module) => ({ default: module.AlumdoorStockEntryCreate })));
 const AlumdoorBomRuleEditor = lazy(() => import("./AlumdoorBomRuleEditor.js").then((module) => ({ default: module.AlumdoorBomRuleEditor })));
+const AlumdoorQuotationWorkbench = lazy(() => import("./quotation/AlumdoorQuotationWorkbench.js").then((module) => ({ default: module.AlumdoorQuotationWorkbench })));
 
 type ManufacturingStockPurpose = "Material Transfer" | "Manufacture";
 
@@ -68,6 +69,33 @@ export const alumdoorWorkspaceExtension: DoctypeWorkspaceExtension = {
   suppressAdvancedFilter: true,
   resolve(context) {
     const { doctype, isNew, decoded, bridge, base, printBase, listPath, closeRequest, onNavigate } = context;
+
+    if (isNew && doctype === "Alumdoor Sales Order") {
+      return {
+        createSurface: "full",
+        createTitle: "Đơn hàng",
+        createDataSurface: "alumdoor-sales-order-create",
+        suppressBulk: true,
+        create: (
+          <Suspense fallback={<div className="grid h-full place-items-center text-sm text-muted-foreground">Đang mở đơn hàng…</div>}>
+            <AlumdoorQuotationWorkbench closeRequest={closeRequest} onSaved={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)} onCancel={() => onNavigate(listPath)} />
+          </Suspense>
+        ),
+      };
+    }
+
+    if (decoded && doctype === "Alumdoor Sales Order") {
+      return {
+        hasDetail: true,
+        contextTitle: "Đơn hàng",
+        suppressBulk: true,
+        detail: (
+          <Suspense fallback={<div className="grid h-full place-items-center text-sm text-muted-foreground">Đang mở đơn hàng…</div>}>
+            <AlumdoorQuotationWorkbench key={`${doctype}/${decoded}`} name={decoded} onSaved={(savedName) => { if (savedName !== decoded) onNavigate(`${listPath}/${encodeURIComponent(savedName)}`); }} onCancel={() => onNavigate(listPath)} />
+          </Suspense>
+        ),
+      };
+    }
 
     if (isNew && doctype === "BOM Rule") {
       return {

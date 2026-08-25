@@ -1,0 +1,20 @@
+{
+ "actions": [],
+ "autoname": "Prompt",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["user", "action", "idempotency_key", "payload_hash", "reference_name", "response_json"],
+ "fields": [
+  {"fieldname": "user", "fieldtype": "Link", "label": "Người dùng", "options": "User", "read_only": 1, "reqd": 1, "search_index": 1},
+  {"fieldname": "action", "fieldtype": "Data", "label": "Hành động", "read_only": 1, "reqd": 1, "search_index": 1},
+  {"fieldname": "idempotency_key", "fieldtype": "Data", "label": "Khóa chống trùng", "read_only": 1, "reqd": 1},
+  {"fieldname": "payload_hash", "fieldtype": "Data", "label": "Băm payload", "read_only": 1, "reqd": 1},
+  {"fieldname": "reference_name", "fieldtype": "Data", "label": "Bản ghi kết quả", "read_only": 1},
+  {"fieldname": "response_json", "fieldtype": "Long Text", "label": "Kết quả", "read_only": 1}
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "module": "Sales Configuration",
+ "name": "Alumdoor Request Key",
+ "permissions": []
+}

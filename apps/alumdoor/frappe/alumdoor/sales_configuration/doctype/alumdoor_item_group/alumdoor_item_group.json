@@ -1,0 +1,33 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:item_group_code",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["item_group_code", "item_group_name", "parent_item_group", "is_group", "default_discount_percentage", "enabled", "lft", "rgt", "old_parent"],
+ "fields": [
+  {"fieldname": "item_group_code", "fieldtype": "Data", "in_list_view": 1, "label": "Item Group Code", "reqd": 1, "search_index": 1, "unique": 1},
+  {"fieldname": "item_group_name", "fieldtype": "Data", "in_list_view": 1, "label": "Item Group Name", "reqd": 1, "search_index": 1},
+  {"fieldname": "parent_item_group", "fieldtype": "Link", "ignore_user_permissions": 1, "label": "Parent Item Group", "options": "Alumdoor Item Group", "search_index": 1},
+  {"default": "0", "fieldname": "is_group", "fieldtype": "Check", "label": "Is Group"},
+  {"default": "0", "fieldname": "default_discount_percentage", "fieldtype": "Percent", "label": "Chiết khấu mặc định (%)"},
+  {"default": "1", "fieldname": "enabled", "fieldtype": "Check", "in_list_view": 1, "label": "Enabled"},
+  {"fieldname": "lft", "fieldtype": "Int", "hidden": 1, "label": "Left"},
+  {"fieldname": "rgt", "fieldtype": "Int", "hidden": 1, "label": "Right"},
+  {"fieldname": "old_parent", "fieldtype": "Data", "hidden": 1, "label": "Old Parent"}
+ ],
+ "index_web_pages_for_search": 0,
+ "is_tree": 1,
+ "links": [],
+ "module": "Sales Configuration",
+ "name": "Alumdoor Item Group",
+ "nsm_parent_field": "parent_item_group",
+ "permissions": [
+  {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1}
+ ],
+ "search_fields": "item_group_code,item_group_name",
+ "sort_field": "item_group_name",
+ "sort_order": "ASC",
+ "show_title_field_in_link": 1,
+ "title_field": "item_group_name"
+}

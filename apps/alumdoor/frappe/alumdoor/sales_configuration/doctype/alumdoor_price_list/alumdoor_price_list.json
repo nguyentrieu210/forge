@@ -1,0 +1,31 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["price_list_code", "price_list_name", "price_usage", "partner_group", "currency", "tax_included", "valid_from", "valid_to", "priority", "enabled", "notes"],
+ "fields": [
+  {"fieldname": "price_list_code", "fieldtype": "Data", "in_list_view": 1, "label": "Mã bảng giá", "read_only": 1, "search_index": 1, "unique": 1},
+  {"fieldname": "price_list_name", "fieldtype": "Data", "in_list_view": 1, "label": "Tên bảng giá", "reqd": 1, "search_index": 1},
+  {"fieldname": "price_usage", "fieldtype": "Select", "in_list_view": 1, "label": "Mục đích", "options": "Selling\nBuying\nCost", "reqd": 1},
+  {"fieldname": "partner_group", "fieldtype": "Link", "label": "Nhóm đối tác", "options": "Alumdoor Partner Group"},
+  {"default": "VND", "fieldname": "currency", "fieldtype": "Link", "in_list_view": 1, "label": "Tiền tệ", "options": "Currency", "reqd": 1},
+  {"default": "0", "fieldname": "tax_included", "fieldtype": "Check", "label": "Đã gồm thuế"},
+  {"fieldname": "valid_from", "fieldtype": "Date", "label": "Hiệu lực từ"},
+  {"fieldname": "valid_to", "fieldtype": "Date", "label": "Hiệu lực đến"},
+  {"default": "100", "fieldname": "priority", "fieldtype": "Int", "label": "Độ ưu tiên"},
+  {"default": "1", "fieldname": "enabled", "fieldtype": "Check", "in_list_view": 1, "label": "Đang sử dụng"},
+  {"fieldname": "notes", "fieldtype": "Small Text", "label": "Ghi chú"}
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "module": "Sales Configuration",
+ "name": "Alumdoor Price List",
+ "permissions": [{"read": 1, "report": 1, "role": "Alumdoor Accountant"}, {"read": 1, "report": 1, "role": "Alumdoor Sales"}, {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "Alumdoor Owner", "share": 1, "write": 1}, {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1}],
+ "search_fields": "price_list_code,price_list_name,price_usage",
+ "sort_field": "priority",
+ "sort_order": "ASC",
+ "show_title_field_in_link": 1,
+ "title_field": "price_list_name"
+}

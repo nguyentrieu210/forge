@@ -1,0 +1,25 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:code",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["code", "door_type_name", "description", "enabled", "sort_order"],
+ "fields": [
+  {"fieldname": "code", "fieldtype": "Data", "in_list_view": 1, "label": "Code", "reqd": 1, "search_index": 1, "unique": 1},
+  {"fieldname": "door_type_name", "fieldtype": "Data", "in_list_view": 1, "label": "Door Type Name", "reqd": 1, "search_index": 1},
+  {"fieldname": "description", "fieldtype": "Small Text", "label": "Description"},
+  {"default": "1", "fieldname": "enabled", "fieldtype": "Check", "in_list_view": 1, "label": "Enabled"},
+  {"default": "0", "fieldname": "sort_order", "fieldtype": "Int", "label": "Sort Order"}
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "module": "Sales Configuration",
+ "name": "Door Type",
+ "permissions": [{"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1}],
+ "search_fields": "code,door_type_name",
+ "sort_field": "sort_order",
+ "sort_order": "ASC",
+ "show_title_field_in_link": 1,
+ "title_field": "door_type_name"
+}

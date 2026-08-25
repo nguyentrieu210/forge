@@ -1,0 +1,29 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["reason_code", "reason_name", "responsible_party", "requires_order_reference", "warranty_eligible", "default_action", "requires_accounting_confirmation", "enabled", "description"],
+ "fields": [
+  {"fieldname": "reason_code", "fieldtype": "Data", "in_list_view": 1, "label": "Mã nguyên nhân", "read_only": 1, "search_index": 1, "unique": 1},
+  {"fieldname": "reason_name", "fieldtype": "Data", "in_list_view": 1, "label": "Tên nguyên nhân lỗi", "reqd": 1, "search_index": 1},
+  {"fieldname": "responsible_party", "fieldtype": "Select", "in_list_view": 1, "label": "Bên chịu trách nhiệm", "options": "Factory\nSupplier\nCustomer\nTransport\nOther", "reqd": 1},
+  {"default": "1", "fieldname": "requires_order_reference", "fieldtype": "Check", "label": "Bắt buộc chứng từ gốc"},
+  {"default": "0", "fieldname": "warranty_eligible", "fieldtype": "Check", "label": "Được xét bảo hành"},
+  {"fieldname": "default_action", "fieldtype": "Select", "label": "Hướng xử lý mặc định", "options": "Inspect\nRepair\nReplace\nReturn Supplier\nCharge Customer\nScrap", "reqd": 1},
+  {"default": "0", "fieldname": "requires_accounting_confirmation", "fieldtype": "Check", "label": "Cần kế toán xác nhận"},
+  {"default": "1", "fieldname": "enabled", "fieldtype": "Check", "in_list_view": 1, "label": "Đang sử dụng"},
+  {"fieldname": "description", "fieldtype": "Small Text", "label": "Mô tả"}
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "module": "Sales Configuration",
+ "name": "Alumdoor Fault Reason",
+ "permissions": [{"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1}],
+ "search_fields": "reason_code,reason_name,responsible_party",
+ "sort_field": "reason_name",
+ "sort_order": "ASC",
+ "show_title_field_in_link": 1,
+ "title_field": "reason_name"
+}

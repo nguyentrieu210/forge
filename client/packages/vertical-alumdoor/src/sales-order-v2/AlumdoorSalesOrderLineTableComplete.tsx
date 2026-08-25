@@ -669,6 +669,14 @@ export interface AlumdoorSalesOrderLineTableCompleteProps {
   lines: SalesLine[];
   customerGroup: string;
   childMeta: DocTypeMeta | null;
+  /**
+   * Màn cũ dùng Item / Sales Order Item. Frappe thuần Alumdoor dùng danh mục và
+   * dòng báo giá riêng, nhưng vẫn phải dùng nguyên bảng nhập cũ. Hai tham số này
+   * chỉ đổi nguồn Link và ngữ cảnh quyền; toàn bộ cơ chế trình bày giữ nguyên.
+   */
+  itemDoctype?: string;
+  rayColorDoctype?: string;
+  parentDoctype?: string;
   registry: ControlRegistry;
   services: FieldServices;
   roles: string[];
@@ -687,6 +695,8 @@ export interface AlumdoorSalesOrderLineTableCompleteProps {
    */
   showStockConversionColumn?: boolean;
   showLeafCountColumn?: boolean;
+  /** Pure Frappe Alumdoor chốt mô-tơ ngay trong mã hàng; không gọi panel gợi ý ERPNext cũ. */
+  showMotorSuggestions?: boolean;
   selectedKeys: Set<string>;
   leafVariants: string[];
   onToggleSelection: (key: string, checked: boolean) => void;
@@ -865,11 +875,14 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
   }, [widths]);
 
   const childFieldByName = useMemo(() => new Map((props.childMeta?.fields ?? []).map((field) => [field.fieldname, field])), [props.childMeta]);
+  const itemDoctype = props.itemDoctype ?? "Item";
+  const rayColorDoctype = props.rayColorDoctype ?? "Item Color";
+  const parentDoctype = props.parentDoctype ?? "Sales Order Item";
   const itemField = useMemo<DocField>(() => ({
-    ...(childFieldByName.get("item_code") ?? fallbackField("item_code", "Mã hàng", "Link", "Item")),
-    fieldname: "item_code", label: "Mã hàng", fieldtype: "Link", options: "Item", allow_create: false,
+    ...(childFieldByName.get("item_code") ?? fallbackField("item_code", "Mã hàng", "Link", itemDoctype)),
+    fieldname: "item_code", label: "Mã hàng", fieldtype: "Link", options: itemDoctype, allow_create: false,
     link_filters: JSON.stringify({ is_sales_item: 1, disabled: 0 }),
-  } as DocField), [childFieldByName]);
+  } as DocField), [childFieldByName, itemDoctype]);
   const discountField = fieldFromMeta(props.childMeta, "discount_percentage", "Chiết khấu %", "Percent");
 
   const activeLines = useMemo(() => props.lines.filter((line) => text(line.item_code)), [props.lines]);
@@ -1008,7 +1021,7 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
     let field = fieldFromMeta(props.childMeta, fieldname, fallbackLabel, DYNAMIC_FALLBACK_TYPES[fieldname]);
     if (fieldname === "leaf_variant") field = selectField(metaField, fieldname, label, props.leafVariants);
     else field = { ...field, label } as DocField;
-    if (fieldname === "motor_model" && !field.options) field = { ...field, fieldtype: "Link", options: "Item" } as DocField;
+    if (fieldname === "motor_model" && !field.options) field = { ...field, fieldtype: "Link", options: itemDoctype } as DocField;
     return field;
   };
 
@@ -1047,7 +1060,7 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
               onCommit={() => flushDynamicCommit(line._key, fieldname)}
               registry={props.registry}
               services={props.services}
-              parentDoctype="Sales Order Item"
+              parentDoctype={parentDoctype}
               docValues={line}
               roles={props.roles}
               required={required}
@@ -1123,7 +1136,7 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
                 onChange={(value) => props.onCommit(line._key, "price_variant", text(value) || undefined)}
                 registry={props.registry}
                 services={props.services}
-                parentDoctype="Sales Order Item"
+                parentDoctype={parentDoctype}
                 docValues={line}
                 roles={props.roles}
                 required
@@ -1270,8 +1283,8 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
              * mặt hàng độc lập), nên để Link mở toàn danh mục Màu thay vì Select rỗng.
              */
             const rayColorField: DocField = {
-              ...(childFieldByName.get("ray_color") ?? fallbackField("ray_color", "Màu ray", "Link", "Item Color")),
-              fieldname: "ray_color", label: "Màu ray", fieldtype: "Link", options: "Item Color",
+              ...(childFieldByName.get("ray_color") ?? fallbackField("ray_color", "Màu ray", "Link", rayColorDoctype)),
+              fieldname: "ray_color", label: "Màu ray", fieldtype: "Link", options: rayColorDoctype,
             } as DocField;
             /* Quà "tặng ray" chỉ được kể MỘT LẦN. Server trả nó về trong `benefit_items`, còn ô
                tick ngay cạnh đã mang đúng chữ "Tặng ray" — in cả hai ra đúng cái lỗi chủ xưởng
@@ -1307,7 +1320,7 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
                   </div>
                 </TableCell>
                 <TableCell style={{ width: widths.item_code, ...stickyStyle("item_code") }} className={`${frozenClass} px-1.5 py-1.5 text-center align-middle`}>
-                  <GridField rowKey={line._key} columnId="item_code" disabled={props.readOnly}><AlumdoorSalesOrderField id={`sales-v2-complete-item-${line._key}`} field={itemField} value={line.item_code} onChange={(value) => props.onCommit(line._key, "item_code", text(value) || undefined)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} required readOnly={props.readOnly} compact hideLabel className="[&_.mf-control]:!min-h-8 [&_input]:!text-center [&_button]:!h-8 [&_button]:!justify-center" /></GridField>
+                  <GridField rowKey={line._key} columnId="item_code" disabled={props.readOnly}><AlumdoorSalesOrderField id={`sales-v2-complete-item-${line._key}`} field={itemField} value={line.item_code} onChange={(value) => props.onCommit(line._key, "item_code", text(value) || undefined)} registry={props.registry} services={props.services} parentDoctype={parentDoctype} docValues={line} roles={props.roles} required readOnly={props.readOnly} compact hideLabel className="[&_.mf-control]:!min-h-8 [&_input]:!text-center [&_button]:!h-8 [&_button]:!justify-center" /></GridField>
                 </TableCell>
                 <TableCell style={{ width: widths.item_name, ...stickyStyle("item_name") }} className={`${frozenClass} px-1.5 py-1.5 text-center align-middle`}>
                   {/* Ảnh chỉ chen vào khi đơn thật sự có ảnh — xem `showItemImages`. Nó nằm
@@ -1337,7 +1350,7 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
                     ].filter(Boolean).join(" · ")}
                   </div>
                 </TableCell>
-                <TableCell style={{ width: widths.color }} className={`${parentRowTone} px-1.5 py-1.5 text-center align-middle`}>{allowedColors.length && !fieldHidden(line, "color") ? <GridField rowKey={line._key} columnId="color" disabled={props.readOnly}><AlumdoorSalesOrderField id={`sales-v2-complete-color-${line._key}`} field={colorField} value={line.color} onChange={(value) => props.onCommit(line._key, "color", text(value) || undefined)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} readOnly={props.readOnly} compact hideLabel className="[&_.mf-control]:!min-h-8 [&_input]:!text-center [&_button]:!h-8 [&_button]:!justify-center" /></GridField> : <div className="flex h-8 items-center justify-center truncate text-center text-muted-foreground">{text(line.color)}</div>}</TableCell>
+                <TableCell style={{ width: widths.color }} className={`${parentRowTone} px-1.5 py-1.5 text-center align-middle`}>{allowedColors.length && !fieldHidden(line, "color") ? <GridField rowKey={line._key} columnId="color" disabled={props.readOnly}><AlumdoorSalesOrderField id={`sales-v2-complete-color-${line._key}`} field={colorField} value={line.color} onChange={(value) => props.onCommit(line._key, "color", text(value) || undefined)} registry={props.registry} services={props.services} parentDoctype={parentDoctype} docValues={line} roles={props.roles} readOnly={props.readOnly} compact hideLabel className="[&_.mf-control]:!min-h-8 [&_input]:!text-center [&_button]:!h-8 [&_button]:!justify-center" /></GridField> : <div className="flex h-8 items-center justify-center truncate text-center text-muted-foreground">{text(line.color)}</div>}</TableCell>
                 {showPriceVariant ? renderPriceVariantCell(line, parentRowTone) : null}
                 {dynamicColumns.map((fieldname) => renderDynamicCell(line, fieldname, parentRowTone))}
                 <TableCell style={{ width: widths.quantity }} className={`${parentRowTone} px-1.5 py-1.5 text-center align-middle`}><GridField rowKey={line._key} columnId="quantity" disabled={props.readOnly || fieldReadonly(line, quantityField)}><AlumdoorSalesOrderField id={`sales-v2-complete-qty-${line._key}`} field={quantityDocField} value={line[quantityField]} onChange={(value) => {
@@ -1348,8 +1361,8 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
                   // SL là đầu vào tính tiền/BOM nên phải chạy lifecycle ngay khi đổi,
                   // không chờ người dùng blur khỏi ô rồi mới nhân đơn giá.
                   props.onCommit(line._key, quantityField, nextQuantity);
-                }} onCommit={() => props.onCommit(line._key, quantityField, line[quantityField])} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} required={fieldRequired(line, quantityField) || isAreaDoor(line)} readOnly={props.readOnly || fieldReadonly(line, quantityField)} compact hideLabel className="mx-auto [&_.mf-control]:!min-h-8 [&_input]:!h-8 [&_input]:!text-center" /></GridField></TableCell>
-                <TableCell style={{ width: widths.uom }} className={`${parentRowTone} overflow-hidden px-1 py-1.5 text-center align-middle`}>{allowedUoms.length > 1 ? <GridField rowKey={line._key} columnId="uom" disabled={props.readOnly}><AlumdoorSalesOrderField id={`sales-v2-complete-uom-${line._key}`} field={uomField} value={line.uom} onChange={(value) => props.onCommit(line._key, "uom", text(value) || undefined)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} readOnly={props.readOnly} compact hideLabel className="[&_.mf-control]:!min-h-8 [&_.mf-control]:!w-full [&_input]:!text-center [&_button]:!h-8 [&_button]:!w-full [&_button]:!justify-center [&_button]:!px-1" /></GridField> : <span className="inline-flex h-8 items-center justify-center">{text(line.uom) || text(line._context?.selected_uom) || "—"}</span>}</TableCell>
+                }} onCommit={() => props.onCommit(line._key, quantityField, line[quantityField])} registry={props.registry} services={props.services} parentDoctype={parentDoctype} docValues={line} roles={props.roles} required={fieldRequired(line, quantityField) || isAreaDoor(line)} readOnly={props.readOnly || fieldReadonly(line, quantityField)} compact hideLabel className="mx-auto [&_.mf-control]:!min-h-8 [&_input]:!h-8 [&_input]:!text-center" /></GridField></TableCell>
+                <TableCell style={{ width: widths.uom }} className={`${parentRowTone} overflow-hidden px-1 py-1.5 text-center align-middle`}>{allowedUoms.length > 1 ? <GridField rowKey={line._key} columnId="uom" disabled={props.readOnly}><AlumdoorSalesOrderField id={`sales-v2-complete-uom-${line._key}`} field={uomField} value={line.uom} onChange={(value) => props.onCommit(line._key, "uom", text(value) || undefined)} registry={props.registry} services={props.services} parentDoctype={parentDoctype} docValues={line} roles={props.roles} readOnly={props.readOnly} compact hideLabel className="[&_.mf-control]:!min-h-8 [&_.mf-control]:!w-full [&_input]:!text-center [&_button]:!h-8 [&_button]:!w-full [&_button]:!justify-center [&_button]:!px-1" /></GridField> : <span className="inline-flex h-8 items-center justify-center">{text(line.uom) || text(line._context?.selected_uom) || "—"}</span>}</TableCell>
                 {showStockConversion ? renderStockConversionCell(line, parentRowTone) : null}
                 <TableCell style={{ width: widths.priced_qty }} className={`${parentRowTone} px-1.5 py-1.5 text-center align-middle tabular-nums`}><div className="font-semibold text-primary">{pricedQty === undefined ? "—" : quantity(pricedQty)}</div></TableCell>
                 <TableCell style={{ width: widths.rate }} className={`${parentRowTone} px-1.5 py-1.5 text-center align-middle`}><div className="flex h-8 items-center justify-center font-medium tabular-nums" title="Đơn giá tự động theo bảng giá">{numberValue(line.rate) === undefined ? "—" : money(line.rate)}</div></TableCell>
@@ -1452,7 +1465,7 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
                                 </label>
                                 {rayToggle.checked ? (
                                   <span className="inline-flex items-center gap-1">
-                                    <span className="w-44"><GridField rowKey={line._key} columnId="ray_color" disabled={props.readOnly}><AlumdoorSalesOrderField id={`sales-v2-complete-ray-color-${line._key}`} field={rayColorField} value={line.ray_color} onChange={(value) => setRayColor(line, text(value) || undefined)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} readOnly={props.readOnly} compact hideLabel className="[&_.mf-control]:!min-h-6 [&_.mf-control]:!w-full [&_input]:!h-6 [&_input]:!text-[10px] [&_button]:!h-6 [&_button]:!w-full [&_button]:!justify-start" /></GridField></span>
+                                    <span className="w-44"><GridField rowKey={line._key} columnId="ray_color" disabled={props.readOnly}><AlumdoorSalesOrderField id={`sales-v2-complete-ray-color-${line._key}`} field={rayColorField} value={line.ray_color} onChange={(value) => setRayColor(line, text(value) || undefined)} registry={props.registry} services={props.services} parentDoctype={parentDoctype} docValues={line} roles={props.roles} readOnly={props.readOnly} compact hideLabel className="[&_.mf-control]:!min-h-6 [&_.mf-control]:!w-full [&_input]:!h-6 [&_input]:!text-[10px] [&_button]:!h-6 [&_button]:!w-full [&_button]:!justify-start" /></GridField></span>
                                     {!rayToggle.color ? (
                                       <span className="text-[9px] text-muted-foreground">chưa chọn màu — chưa tính phụ thu</span>
                                     ) : raySurcharge === undefined ? (
@@ -1486,7 +1499,7 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
                           · Cửa Úc kéo tay (`leaf_variant === "kéo tay"`) — vận hành tay, không có
                             mô-tơ nên cũng không cần bình lưu điện cho mô-tơ.
                         */}
-                        {isAreaDoor(line) && !laCuaKeoTay(line) ? (
+                        {props.showMotorSuggestions !== false && isAreaDoor(line) && !laCuaKeoTay(line) ? (
                           <div className="mt-2 print:hidden">
                             <AlumdoorMotorSuggestPanel
                               areaSqm={lineGiftRailArea(line)}
@@ -1516,7 +1529,7 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
                       sổ: "chiết khấu bị trừ hai lần cho cùng một chính sách". Chỉ ghi đúng cái
                       người bán tự gõ.
                     */
-                    onCommit={() => props.onCommit(line._key, "discount_percentage", line.discount_percentage)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} readOnly={props.readOnly || fieldReadonly(line, "discount_percentage")} compact hideLabel className="w-full max-w-full [&_.mf-control]:!min-h-7 [&_.mf-control]:!w-full [&_input]:!h-7 [&_input]:!w-full [&_input]:!text-center [&_input]:text-[10px] [&_input]:tabular-nums" /></GridField></div>
+                    onCommit={() => props.onCommit(line._key, "discount_percentage", line.discount_percentage)} registry={props.registry} services={props.services} parentDoctype={parentDoctype} docValues={line} roles={props.roles} readOnly={props.readOnly || fieldReadonly(line, "discount_percentage")} compact hideLabel className="w-full max-w-full [&_.mf-control]:!min-h-7 [&_.mf-control]:!w-full [&_input]:!h-7 [&_input]:!w-full [&_input]:!text-center [&_input]:text-[10px] [&_input]:tabular-nums" /></GridField></div>
                     {/* Sau bản vá P0, chiết khấu đại lý 15% KHÔNG còn nằm ở `discount_amount` mà
                         nằm trong `adjustment_amount` mang dấu ÂM. Ô này phải gom cả hai đường,
                         nếu không khách nhìn thấy "Chiết khấu 0 ₫" trong khi tiền đã giảm đúng.

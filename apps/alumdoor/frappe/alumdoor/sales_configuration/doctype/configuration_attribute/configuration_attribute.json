@@ -1,0 +1,28 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:attribute_code",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["attribute_code", "attribute_name", "data_type", "link_doctype", "required", "allow_multiple", "enabled", "values"],
+ "fields": [
+  {"fieldname": "attribute_code", "fieldtype": "Data", "in_list_view": 1, "label": "Attribute Code", "reqd": 1, "search_index": 1, "unique": 1},
+  {"fieldname": "attribute_name", "fieldtype": "Data", "in_list_view": 1, "label": "Attribute Name", "reqd": 1, "search_index": 1},
+  {"fieldname": "data_type", "fieldtype": "Select", "in_list_view": 1, "label": "Data Type", "options": "Select\nLink\nNumber\nCheck\nText", "reqd": 1},
+  {"depends_on": "eval:doc.data_type=='Link'", "fieldname": "link_doctype", "fieldtype": "Link", "label": "Link DocType", "options": "DocType"},
+  {"default": "0", "fieldname": "required", "fieldtype": "Check", "label": "Required"},
+  {"default": "0", "fieldname": "allow_multiple", "fieldtype": "Check", "label": "Allow Multiple"},
+  {"default": "1", "fieldname": "enabled", "fieldtype": "Check", "in_list_view": 1, "label": "Enabled"},
+  {"fieldname": "values", "fieldtype": "Table", "label": "Allowed Values", "options": "Configuration Attribute Value"}
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "module": "Sales Configuration",
+ "name": "Configuration Attribute",
+ "permissions": [{"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1}],
+ "search_fields": "attribute_code,attribute_name,data_type",
+ "sort_field": "attribute_name",
+ "sort_order": "ASC",
+ "show_title_field_in_link": 1,
+ "title_field": "attribute_name"
+}

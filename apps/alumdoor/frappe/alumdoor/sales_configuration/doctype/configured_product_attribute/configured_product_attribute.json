@@ -1,0 +1,17 @@
+{
+ "actions": [],
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": ["attribute", "value"],
+ "fields": [
+  {"fieldname": "attribute", "fieldtype": "Link", "in_list_view": 1, "label": "Attribute", "options": "Configuration Attribute", "reqd": 1},
+  {"fieldname": "value", "fieldtype": "Data", "in_list_view": 1, "label": "Value", "reqd": 1}
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "module": "Sales Configuration",
+ "name": "Configured Product Attribute",
+ "permissions": []
+}

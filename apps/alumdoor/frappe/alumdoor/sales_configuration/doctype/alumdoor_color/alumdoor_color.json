@@ -1,0 +1,30 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:color_code",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["color_code", "color_name", "surface_finish", "primary_color", "secondary_color", "applicable_products", "applies_to_accessories", "enabled", "sort_order", "source_reference"],
+ "fields": [
+  {"fieldname": "color_code", "fieldtype": "Data", "in_list_view": 1, "label": "Color Code", "reqd": 1, "search_index": 1, "unique": 1},
+  {"fieldname": "color_name", "fieldtype": "Data", "in_list_view": 1, "label": "Color Name", "reqd": 1, "search_index": 1},
+  {"fieldname": "surface_finish", "fieldtype": "Link", "in_list_view": 1, "label": "Surface Finish", "options": "Surface Finish", "reqd": 1, "search_index": 1},
+  {"fieldname": "primary_color", "fieldtype": "Data", "label": "Primary Color", "reqd": 1},
+  {"fieldname": "secondary_color", "fieldtype": "Data", "label": "Secondary Color"},
+  {"fieldname": "applicable_products", "fieldtype": "Small Text", "label": "Applicable Products", "reqd": 1},
+  {"default": "0", "fieldname": "applies_to_accessories", "fieldtype": "Check", "label": "Applies To Accessories"},
+  {"default": "1", "fieldname": "enabled", "fieldtype": "Check", "in_list_view": 1, "label": "Enabled"},
+  {"default": "0", "fieldname": "sort_order", "fieldtype": "Int", "label": "Sort Order"},
+  {"fieldname": "source_reference", "fieldtype": "Data", "label": "Source Reference", "read_only": 1}
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "module": "Sales Configuration",
+ "name": "Alumdoor Color",
+ "permissions": [{"read": 1, "report": 1, "role": "Alumdoor Accountant"}, {"read": 1, "report": 1, "role": "Alumdoor Sales"}, {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "Alumdoor Owner", "share": 1, "write": 1}, {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1}],
+ "search_fields": "color_code,color_name,primary_color,secondary_color,surface_finish",
+ "sort_field": "sort_order",
+ "sort_order": "ASC",
+ "show_title_field_in_link": 1,
+ "title_field": "color_name"
+}

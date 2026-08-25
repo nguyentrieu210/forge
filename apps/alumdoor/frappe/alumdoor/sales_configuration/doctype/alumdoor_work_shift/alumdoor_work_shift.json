@@ -1,0 +1,28 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["shift_code", "shift_name", "start_time", "end_time", "break_minutes", "working_minutes", "is_overtime", "enabled"],
+ "fields": [
+  {"fieldname": "shift_code", "fieldtype": "Data", "in_list_view": 1, "label": "Mã ca", "read_only": 1, "search_index": 1, "unique": 1},
+  {"fieldname": "shift_name", "fieldtype": "Data", "in_list_view": 1, "label": "Tên ca", "reqd": 1, "search_index": 1},
+  {"fieldname": "start_time", "fieldtype": "Time", "in_list_view": 1, "label": "Giờ bắt đầu", "reqd": 1},
+  {"fieldname": "end_time", "fieldtype": "Time", "in_list_view": 1, "label": "Giờ kết thúc", "reqd": 1},
+  {"default": "0", "fieldname": "break_minutes", "fieldtype": "Int", "label": "Phút nghỉ"},
+  {"fieldname": "working_minutes", "fieldtype": "Int", "label": "Phút làm việc", "read_only": 1},
+  {"default": "0", "fieldname": "is_overtime", "fieldtype": "Check", "label": "Là ca tăng ca"},
+  {"default": "1", "fieldname": "enabled", "fieldtype": "Check", "in_list_view": 1, "label": "Đang sử dụng"}
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "module": "Sales Configuration",
+ "name": "Alumdoor Work Shift",
+ "permissions": [{"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1}],
+ "search_fields": "shift_code,shift_name",
+ "sort_field": "start_time",
+ "sort_order": "ASC",
+ "show_title_field_in_link": 1,
+ "title_field": "shift_name"
+}

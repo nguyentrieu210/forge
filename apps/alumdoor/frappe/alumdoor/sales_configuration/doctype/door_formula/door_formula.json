@@ -1,0 +1,29 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:formula_code",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["formula_code", "formula_name", "door_type", "door_system", "version", "enabled", "effective_from", "effective_to", "variables"],
+ "fields": [
+  {"fieldname": "formula_code", "fieldtype": "Data", "in_list_view": 1, "label": "Formula Code", "reqd": 1, "search_index": 1, "unique": 1},
+  {"fieldname": "formula_name", "fieldtype": "Data", "in_list_view": 1, "label": "Formula Name", "reqd": 1, "search_index": 1},
+  {"fieldname": "door_type", "fieldtype": "Link", "in_list_view": 1, "label": "Door Type", "options": "Door Type", "search_index": 1},
+  {"fieldname": "door_system", "fieldtype": "Link", "in_list_view": 1, "label": "Door System", "options": "Door System", "search_index": 1},
+  {"default": "1", "fieldname": "version", "fieldtype": "Int", "label": "Version", "reqd": 1},
+  {"default": "1", "fieldname": "enabled", "fieldtype": "Check", "in_list_view": 1, "label": "Enabled"},
+  {"fieldname": "effective_from", "fieldtype": "Date", "label": "Effective From"},
+  {"fieldname": "effective_to", "fieldtype": "Date", "label": "Effective To"},
+  {"fieldname": "variables", "fieldtype": "Table", "label": "Variables", "options": "Door Formula Variable", "reqd": 1}
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "module": "Sales Configuration",
+ "name": "Door Formula",
+ "permissions": [{"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1}],
+ "search_fields": "formula_code,formula_name,door_type,door_system",
+ "sort_field": "formula_name",
+ "sort_order": "ASC",
+ "show_title_field_in_link": 1,
+ "title_field": "formula_name"
+}

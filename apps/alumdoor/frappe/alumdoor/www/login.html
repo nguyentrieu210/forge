@@ -1,0 +1,693 @@
+{% from "templates/includes/login/macros.html" import alert_banner %}
+{% extends "templates/web.html" %}
+
+{% block navbar %}{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block head_include %}
+{{ include_style('login.bundle.css') }}
+{% endblock %}
+
+{% block style %}
+<style>
+	:root {
+		--ad-navy: #0b1630;
+		--ad-blue: #1d4ed8;
+		--ad-blue-dark: #173ea8;
+		--ad-sky: #dbeafe;
+		--ad-ink: #111827;
+		--ad-muted: #64748b;
+		--ad-line: #dce3ec;
+		--ad-soft: #f4f7fb;
+	}
+
+	html,
+	body {
+		min-height: 100%;
+		background: var(--ad-soft) !important;
+	}
+
+	body {
+		margin: 0;
+		color: var(--ad-ink);
+	}
+
+	.web-footer,
+	.navbar,
+	.page-breadcrumbs,
+	.page-header {
+		display: none !important;
+	}
+
+	.page-content-wrapper,
+	.page_content,
+	main.container,
+	main.container-fluid {
+		max-width: none !important;
+		width: 100% !important;
+		margin: 0 !important;
+		padding: 0 !important;
+	}
+
+	.ad-auth-shell {
+		min-height: 100vh;
+		display: grid;
+		grid-template-columns: minmax(360px, 0.95fr) minmax(520px, 1.05fr);
+		background: #fff;
+	}
+
+	.ad-brand-panel {
+		position: relative;
+		overflow: hidden;
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		padding: clamp(38px, 5vw, 76px);
+		background:
+			radial-gradient(circle at 84% 16%, rgba(96, 165, 250, 0.34), transparent 29%),
+			linear-gradient(145deg, #081326 0%, #0d2148 58%, #123a75 100%);
+		color: #fff;
+	}
+
+	.ad-brand-panel::before,
+	.ad-brand-panel::after {
+		content: "";
+		position: absolute;
+		border: 1px solid rgba(255, 255, 255, 0.09);
+		border-radius: 999px;
+		pointer-events: none;
+	}
+
+	.ad-brand-panel::before {
+		width: 520px;
+		height: 520px;
+		right: -255px;
+		top: 18%;
+	}
+
+	.ad-brand-panel::after {
+		width: 310px;
+		height: 310px;
+		right: -120px;
+		top: 33%;
+	}
+
+	.ad-brand-top,
+	.ad-brand-copy,
+	.ad-brand-foot {
+		position: relative;
+		z-index: 1;
+	}
+
+	.ad-logo {
+		display: inline-flex;
+		align-items: center;
+		gap: 13px;
+		font-size: 20px;
+		font-weight: 800;
+		letter-spacing: 0.12em;
+	}
+
+	.ad-logo-mark {
+		width: 42px;
+		height: 42px;
+		display: grid;
+		place-items: center;
+		border: 1px solid rgba(255, 255, 255, 0.28);
+		border-radius: 12px;
+		background: rgba(255, 255, 255, 0.1);
+		box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+	}
+
+	.ad-logo-mark svg {
+		width: 26px;
+		height: 26px;
+	}
+
+	.ad-brand-copy {
+		max-width: 570px;
+	}
+
+	.ad-kicker {
+		display: inline-flex;
+		align-items: center;
+		gap: 9px;
+		margin-bottom: 22px;
+		font-size: 12px;
+		font-weight: 700;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: #bfdbfe;
+	}
+
+	.ad-kicker::before {
+		content: "";
+		width: 28px;
+		height: 2px;
+		background: #60a5fa;
+	}
+
+	.ad-brand-copy h1 {
+		margin: 0;
+		max-width: 560px;
+		font-size: clamp(38px, 4.7vw, 66px);
+		line-height: 1.04;
+		letter-spacing: -0.045em;
+		color: #fff;
+	}
+
+	.ad-brand-copy p {
+		max-width: 500px;
+		margin: 24px 0 0;
+		font-size: 16px;
+		line-height: 1.75;
+		color: #cbd5e1;
+	}
+
+	.ad-brand-features {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px;
+		margin-top: 30px;
+	}
+
+	.ad-feature {
+		padding: 8px 11px;
+		border: 1px solid rgba(255, 255, 255, 0.12);
+		border-radius: 8px;
+		background: rgba(255, 255, 255, 0.06);
+		font-size: 12px;
+		font-weight: 600;
+		color: #dbeafe;
+	}
+
+	.ad-brand-foot {
+		font-size: 12px;
+		color: #8fa8c8;
+	}
+
+	.ad-form-panel {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 48px clamp(28px, 6vw, 96px);
+		background:
+			linear-gradient(rgba(15, 23, 42, 0.025) 1px, transparent 1px),
+			linear-gradient(90deg, rgba(15, 23, 42, 0.025) 1px, transparent 1px),
+			#fff;
+		background-size: 32px 32px;
+	}
+
+	.ad-form-wrap {
+		width: 100%;
+		max-width: 430px;
+	}
+
+	.ad-form-wrap .page-card {
+		width: 100% !important;
+		max-width: none !important;
+		margin: 0 !important;
+		padding: 0 !important;
+		border: 0 !important;
+		border-radius: 0 !important;
+		background: transparent !important;
+		box-shadow: none !important;
+	}
+
+	.ad-mobile-logo {
+		display: none;
+		align-items: center;
+		gap: 10px;
+		margin-bottom: 34px;
+		font-size: 17px;
+		font-weight: 800;
+		letter-spacing: 0.11em;
+		color: var(--ad-navy);
+	}
+
+	.ad-mobile-logo .ad-logo-mark {
+		width: 38px;
+		height: 38px;
+		border-color: #cbd5e1;
+		background: var(--ad-navy);
+		color: #fff;
+	}
+
+	.ad-page-head {
+		margin-bottom: 34px;
+	}
+
+	.ad-page-head .ad-eyebrow {
+		margin-bottom: 10px;
+		font-size: 12px;
+		font-weight: 700;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--ad-blue);
+	}
+
+	.ad-page-head h2 {
+		margin: 0;
+		font-size: 32px;
+		line-height: 1.2;
+		letter-spacing: -0.035em;
+		color: var(--ad-ink);
+	}
+
+	.ad-page-head p {
+		margin: 10px 0 0;
+		font-size: 14px;
+		line-height: 1.65;
+		color: var(--ad-muted);
+	}
+
+	.ad-form-wrap .page-card-body,
+	.ad-form-wrap .page-card-actions {
+		padding: 0 !important;
+	}
+
+	.ad-form-wrap .form-group {
+		margin-bottom: 20px !important;
+	}
+
+	.ad-form-wrap label {
+		display: block;
+		margin-bottom: 8px !important;
+		font-size: 13px !important;
+		font-weight: 650;
+		color: #334155 !important;
+	}
+
+	.ad-form-wrap .email-field,
+	.ad-form-wrap .password-field {
+		position: relative;
+		width: 100%;
+	}
+
+	.ad-form-wrap .form-control {
+		width: 100%;
+		height: 50px;
+		padding: 0 15px;
+		border: 1px solid var(--ad-line);
+		border-radius: 10px;
+		background: #fff;
+		box-shadow: 0 1px 2px rgba(15, 23, 42, 0.025);
+		font-size: 14px;
+		color: var(--ad-ink);
+		transition: border-color 0.18s ease, box-shadow 0.18s ease;
+	}
+
+	.ad-form-wrap .password-field .form-control {
+		padding-right: 48px;
+	}
+
+	.ad-form-wrap .form-control:focus {
+		border-color: #60a5fa;
+		box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1) !important;
+		outline: none;
+	}
+
+	.ad-form-wrap .toggle-password {
+		position: absolute;
+		right: 15px;
+		top: 50%;
+		transform: translateY(-50%);
+		color: #64748b;
+		cursor: pointer;
+	}
+
+	.ad-form-wrap .field-error {
+		margin-top: 6px;
+		font-size: 12px !important;
+	}
+
+	.ad-form-wrap .forgot-link-row {
+		display: flex;
+		justify-content: flex-end;
+		margin: -5px 0 22px;
+	}
+
+	.ad-form-wrap .forgot-link-row a,
+	.ad-form-wrap .ad-back-link,
+	.ad-form-wrap .sign-up-message a {
+		font-size: 13px;
+		font-weight: 650;
+		color: var(--ad-blue) !important;
+		text-decoration: none;
+	}
+
+	.ad-form-wrap .forgot-link-row a:hover,
+	.ad-form-wrap .ad-back-link:hover,
+	.ad-form-wrap .sign-up-message a:hover {
+		text-decoration: underline;
+	}
+
+	.ad-form-wrap .es-button,
+	.ad-primary-button {
+		width: 100%;
+		min-height: 50px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		border: 1px solid var(--ad-blue) !important;
+		border-radius: 10px !important;
+		background: var(--ad-blue) !important;
+		box-shadow: 0 8px 20px rgba(29, 78, 216, 0.17);
+		font-size: 14px !important;
+		font-weight: 700 !important;
+		color: #fff !important;
+		text-decoration: none !important;
+		transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+	}
+
+	.ad-form-wrap .es-button:hover,
+	.ad-primary-button:hover {
+		background: var(--ad-blue-dark) !important;
+		transform: translateY(-1px);
+		box-shadow: 0 11px 24px rgba(29, 78, 216, 0.22);
+	}
+
+	.ad-form-wrap .btn-login-option {
+		border-color: var(--ad-line) !important;
+		background: #fff !important;
+		box-shadow: none;
+		color: #334155 !important;
+	}
+
+	.ad-form-wrap .btn-login-option:hover {
+		background: #f8fafc !important;
+		color: #0f172a !important;
+	}
+
+	.ad-form-wrap .page-card-actions {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+	}
+
+	.ad-form-wrap .social-logins {
+		margin-top: 2px;
+	}
+
+	.ad-form-wrap .social-login-buttons,
+	.ad-form-wrap .login-button-wrapper {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+	}
+
+	.ad-form-wrap .sign-up-message {
+		margin: 25px 0 0 !important;
+		text-align: center;
+		font-size: 13px;
+		color: var(--ad-muted) !important;
+	}
+
+	.ad-form-wrap .alert {
+		margin-bottom: 18px;
+		border-radius: 10px;
+	}
+
+	.ad-security-note {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 7px;
+		margin-top: 26px;
+		font-size: 11px;
+		color: #94a3b8;
+	}
+
+	.ad-security-dot {
+		width: 6px;
+		height: 6px;
+		border-radius: 999px;
+		background: #22c55e;
+		box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.12);
+	}
+
+	@media (max-width: 960px) {
+		.ad-auth-shell {
+			grid-template-columns: 1fr;
+		}
+
+		.ad-brand-panel {
+			display: none;
+		}
+
+		.ad-form-panel {
+			min-height: 100vh;
+			padding: 42px 24px;
+		}
+
+		.ad-mobile-logo {
+			display: flex;
+		}
+	}
+
+	@media (max-width: 520px) {
+		.ad-form-panel {
+			align-items: flex-start;
+			padding: 30px 20px;
+		}
+
+		.ad-page-head {
+			margin-bottom: 28px;
+		}
+
+		.ad-page-head h2 {
+			font-size: 28px;
+		}
+	}
+</style>
+{% endblock %}
+
+{% macro alumdoor_mark() %}
+<span class="ad-logo-mark" aria-hidden="true">
+	<svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+		<path d="M6.5 26L14.4 6H18L25.5 26" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+		<path d="M10 20.5H22" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+		<path d="M18 6V26" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" opacity="0.65"/>
+	</svg>
+</span>
+{% endmacro %}
+
+{% macro page_head(title, subtitle) %}
+<div class="ad-page-head">
+	<div class="ad-eyebrow">Alumdoor ERP</div>
+	<h2>{{ title }}</h2>
+	<p>{{ subtitle }}</p>
+</div>
+{% endmacro %}
+
+{% macro password_login_form() %}
+<form class="form-signin form-login" role="form" novalidate>
+	<div class="page-card-body">
+		{{ alert_banner("error") }}
+
+		{% if not disable_user_pass_login or (ldap_settings and ldap_settings.enabled) %}
+		<div class="form-group">
+			<label for="login_email">{{ login_label or _("Email") }}</label>
+			<div class="email-field">
+				<input
+					type="text"
+					id="login_email"
+					class="form-control"
+					placeholder="Email, số điện thoại hoặc tên đăng nhập"
+					required
+					autofocus
+					autocomplete="username"
+				>
+			</div>
+			<p class="field-error text-ink-red-8 mb-0"></p>
+		</div>
+
+		<div class="form-group">
+			<label for="login_password">Mật khẩu</label>
+			<div class="password-field">
+				<input
+					type="password"
+					id="login_password"
+					class="form-control"
+					placeholder="••••••••"
+					autocomplete="current-password"
+					required
+				>
+				<svg toggle="#login_password" class="icon icon-sm toggle-password" xmlns="http://www.w3.org/2000/svg">
+					<use href="#icon-eye"></use>
+				</svg>
+			</div>
+			<p class="field-error text-ink-red-8 mb-0"></p>
+		</div>
+
+		{% if not disable_user_pass_login %}
+		<div class="forgot-link-row">
+			<a href="#forgot">Quên mật khẩu?</a>
+		</div>
+		{% endif %}
+		{% endif %}
+	</div>
+
+	<div class="page-card-actions">
+		{% if not disable_user_pass_login %}
+		<button class="es-button" data-variant="solid" type="submit">Đăng nhập</button>
+		{% endif %}
+
+		{% if ldap_settings and ldap_settings.enabled %}
+		<button class="es-button btn-ldap-login" data-variant="solid">Đăng nhập bằng LDAP</button>
+		{% endif %}
+
+		{% if login_with_email_link %}
+		<a href="#login-with-email-link" class="es-button btn-login-option btn-login-with-email-link">
+			Đăng nhập bằng liên kết email
+		</a>
+		{% endif %}
+
+		{% if social_login %}
+		<div class="social-logins">
+			<div class="social-login-buttons">
+				{% for provider in provider_logins %}
+				<div class="login-button-wrapper">
+					<a href="{{ provider.auth_url }}" class="es-button btn-login-option btn-{{ provider.name }}">
+						{% if provider.icon %}{{ provider.icon }}{% endif %}
+						Đăng nhập với {{ provider.provider_name }}
+					</a>
+				</div>
+				{% endfor %}
+			</div>
+		</div>
+		{% endif %}
+	</div>
+</form>
+{% endmacro %}
+
+{% block page_content %}
+<div class="ad-auth-shell">
+	<aside class="ad-brand-panel">
+		<div class="ad-brand-top">
+			<div class="ad-logo">
+				{{ alumdoor_mark() }}
+				<span>ALUMDOOR</span>
+			</div>
+		</div>
+
+		<div class="ad-brand-copy">
+			<div class="ad-kicker">Hệ thống vận hành</div>
+			<h1>Một luồng dữ liệu cho toàn bộ nhà máy.</h1>
+			<p>
+				Quản lý bán hàng, vật tư, sản xuất và kho trên cùng một nền tảng vận hành dành riêng cho Alumdoor.
+			</p>
+			<div class="ad-brand-features">
+				<span class="ad-feature">Bán hàng</span>
+				<span class="ad-feature">Sản xuất</span>
+				<span class="ad-feature">Kho & vật tư</span>
+				<span class="ad-feature">Mua hàng</span>
+			</div>
+		</div>
+
+		<div class="ad-brand-foot">ALUMDOOR · INTERNAL OPERATIONS</div>
+	</aside>
+
+	<main class="ad-form-panel">
+		<div class="ad-form-wrap">
+			<div class="ad-mobile-logo">
+				{{ alumdoor_mark() }}
+				<span>ALUMDOOR</span>
+			</div>
+
+			<noscript>
+				<div class="alert alert-danger">Bạn cần bật JavaScript để đăng nhập.</div>
+			</noscript>
+
+			<section class="for-login">
+				<div class="login-content page-card">
+					{{ page_head("Đăng nhập hệ thống", "Nhập tài khoản Alumdoor để tiếp tục vào khu vực làm việc.") }}
+					{{ password_login_form() }}
+					{% if not disable_signup and not disable_user_pass_login %}
+					<div class="sign-up-message">Chưa có tài khoản? <a href="#signup">Đăng ký</a></div>
+					{% endif %}
+				</div>
+			</section>
+
+			{% if social_login %}
+			<section class="for-email-login">
+				<div class="login-content page-card">
+					{{ page_head("Đăng nhập hệ thống", "Nhập tài khoản Alumdoor để tiếp tục vào khu vực làm việc.") }}
+					{{ password_login_form() }}
+				</div>
+			</section>
+			{% endif %}
+
+			<section class="for-forgot">
+				<div class="login-content page-card">
+					{{ page_head("Khôi phục mật khẩu", "Nhập email tài khoản. Hệ thống sẽ gửi liên kết đặt lại mật khẩu cho bạn.") }}
+					<form class="form-signin form-forgot hide" role="form" novalidate>
+						<div class="page-card-body">
+							{{ alert_banner("success") }}
+							{{ alert_banner("error") }}
+							<div class="form-group">
+								<label for="forgot_email">Email</label>
+								<div class="email-field">
+									<input type="email" id="forgot_email" class="form-control" placeholder="ten@congty.vn" required autofocus autocomplete="username">
+								</div>
+								<p class="field-error text-ink-red-8 mb-0"></p>
+							</div>
+						</div>
+						<div class="page-card-actions">
+							<button class="es-button btn-forgot" data-variant="solid" type="submit" disabled>Gửi liên kết đặt lại</button>
+						</div>
+					</form>
+					<div class="sign-up-message"><a href="#login" class="ad-back-link">← Quay lại đăng nhập</a></div>
+				</div>
+			</section>
+
+			<section class="for-login-with-email-link">
+				<div class="login-content page-card">
+					{{ page_head("Đăng nhập bằng email", "Nhập email và chúng tôi sẽ gửi một liên kết đăng nhập dùng một lần.") }}
+					<form class="form-signin form-login-with-email-link hide" role="form" novalidate>
+						<div class="page-card-body">
+							{{ alert_banner("success", _("Please check your email.")) }}
+							{{ alert_banner("error") }}
+							<div class="form-group">
+								<label for="login_with_email_link_email">Email</label>
+								<div class="email-field">
+									<input type="email" id="login_with_email_link_email" class="form-control" placeholder="ten@congty.vn" required autofocus autocomplete="username">
+								</div>
+								<p class="field-error text-ink-red-8 mb-0"></p>
+							</div>
+						</div>
+						<div class="page-card-actions">
+							<p class="resend-link hidden">Chưa nhận được? <a href="#" class="btn-resend-link">Gửi lại</a></p>
+							<button class="es-button btn-login-with-email-link" data-variant="solid" type="submit">Gửi liên kết đăng nhập</button>
+							<a href="#login" class="es-button btn-login-option">Đăng nhập bằng mật khẩu</a>
+						</div>
+					</form>
+				</div>
+			</section>
+
+			<section class="for-signup {{ 'signup-disabled' if disable_signup else '' }}">
+				<div class="login-content page-card">
+					{{ page_head("Tạo tài khoản", "Điền thông tin để tạo tài khoản mới trên hệ thống Alumdoor.") }}
+					{% if not disable_signup %}
+						{{ signup_form_template }}
+					{% else %}
+						<div class="alert alert-secondary">Hệ thống hiện không cho phép tự đăng ký tài khoản.</div>
+					{% endif %}
+					<div class="sign-up-message"><a href="#login" class="ad-back-link">← Quay lại đăng nhập</a></div>
+				</div>
+			</section>
+
+			<div class="ad-security-note">
+				<span class="ad-security-dot"></span>
+				<span>Phiên đăng nhập được bảo vệ bởi Frappe Framework</span>
+			</div>
+		</div>
+	</main>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>{% include "templates/includes/login/login.js" %}</script>
+{% endblock %}
+
+{% block sidebar %}{% endblock %}

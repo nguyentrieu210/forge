@@ -1,0 +1,30 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "autoname": "BGD-.#####",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["price_list", "item", "sales_package", "price_variant", "uom", "price_basis", "rate", "min_qty", "valid_from", "valid_to", "enabled", "source_reference"],
+ "fields": [
+  {"fieldname": "price_list", "fieldtype": "Link", "in_list_view": 1, "label": "Bảng giá", "options": "Alumdoor Price List", "reqd": 1, "search_index": 1},
+  {"fieldname": "item", "fieldtype": "Link", "in_list_view": 1, "label": "Vật tư", "options": "Alumdoor Item", "search_index": 1},
+  {"fieldname": "sales_package", "fieldtype": "Link", "in_list_view": 1, "label": "Gói bán hàng", "options": "Sales Package", "search_index": 1},
+  {"default": "STANDARD", "fieldname": "price_variant", "fieldtype": "Data", "in_list_view": 1, "label": "Mã cách bán", "reqd": 1, "search_index": 1},
+  {"fieldname": "uom", "fieldtype": "Link", "label": "Đơn vị tính", "options": "Alumdoor UOM", "reqd": 1},
+  {"fieldname": "price_basis", "fieldtype": "Select", "label": "Cơ sở tính giá", "options": "Per Qty\nPer Meter\nPer Area\nPer Set\nPer Kg", "reqd": 1},
+  {"fieldname": "rate", "fieldtype": "Currency", "in_list_view": 1, "label": "Đơn giá", "reqd": 1},
+  {"default": "0", "fieldname": "min_qty", "fieldtype": "Float", "label": "Số lượng tối thiểu"},
+  {"fieldname": "valid_from", "fieldtype": "Date", "label": "Hiệu lực từ"},
+  {"fieldname": "valid_to", "fieldtype": "Date", "label": "Hiệu lực đến"},
+  {"default": "1", "fieldname": "enabled", "fieldtype": "Check", "in_list_view": 1, "label": "Đang sử dụng"},
+  {"fieldname": "source_reference", "fieldtype": "Data", "label": "Nguồn dữ liệu", "read_only": 1}
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "module": "Sales Configuration",
+ "name": "Alumdoor Item Price",
+ "permissions": [{"read": 1, "report": 1, "role": "Alumdoor Accountant"}, {"read": 1, "report": 1, "role": "Alumdoor Sales"}, {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "Alumdoor Owner", "share": 1, "write": 1}, {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1}],
+ "search_fields": "price_list,item,sales_package,source_reference",
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}

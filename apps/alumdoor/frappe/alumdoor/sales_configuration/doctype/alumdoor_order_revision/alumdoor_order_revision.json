@@ -1,0 +1,16 @@
+{
+ "actions":[],"autoname":"hash","doctype":"DocType","engine":"InnoDB","track_changes":0,
+ "field_order":["sales_order","revision_no","reason","before_json","after_json","diff_json","changed_by","changed_at"],
+ "fields":[
+  {"fieldname":"sales_order","fieldtype":"Link","in_list_view":1,"label":"Đơn hàng","options":"Alumdoor Sales Order","reqd":1},
+  {"fieldname":"revision_no","fieldtype":"Int","in_list_view":1,"label":"Lần sửa","reqd":1},
+  {"fieldname":"reason","fieldtype":"Small Text","label":"Lý do sửa","reqd":1},
+  {"fieldname":"before_json","fieldtype":"JSON","label":"Trước khi sửa","read_only":1},
+  {"fieldname":"after_json","fieldtype":"JSON","label":"Sau khi sửa","read_only":1},
+  {"fieldname":"diff_json","fieldtype":"JSON","label":"Khác biệt","read_only":1},
+  {"fieldname":"changed_by","fieldtype":"Link","label":"Người sửa","options":"User","read_only":1},
+  {"fieldname":"changed_at","fieldtype":"Datetime","label":"Thời điểm","read_only":1}
+ ],
+ "index_web_pages_for_search":0,"links":[],"module":"Sales Configuration","name":"Alumdoor Order Revision",
+ "permissions":[{"read":1,"report":1,"role":"Alumdoor Owner"},{"read":1,"report":1,"role":"Alumdoor Accountant"},{"read":1,"report":1,"role":"Alumdoor Sales"},{"read":1,"report":1,"role":"System Manager"}],"sort_field":"creation","sort_order":"DESC"
+}

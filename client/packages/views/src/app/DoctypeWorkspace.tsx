@@ -164,7 +164,7 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
           onEscapeKeyDown={(event) => { event.preventDefault(); requestCreateClose(); }}
         >
           <DialogHeader className={cn("relative shrink-0 border-b border-border/70 px-5 py-4", chromeFill, chromeText)}>
-            <DialogTitle className="pr-14 text-xl font-semibold tracking-tight">{t("form.create_title_prefix")} {displayTitle.toLocaleLowerCase("vi")}</DialogTitle>
+            <DialogTitle className="pr-14 text-xl font-semibold tracking-tight">{t("form.create_title_prefix")} {(extension?.createTitle ?? displayTitle).toLocaleLowerCase("vi")}</DialogTitle>
             {useFullCreate ? (
               <button
                 type="button"

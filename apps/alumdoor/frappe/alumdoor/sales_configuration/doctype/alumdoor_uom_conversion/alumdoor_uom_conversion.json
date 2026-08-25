@@ -1,0 +1,17 @@
+{
+ "actions": [],
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": ["uom", "conversion_factor"],
+ "fields": [
+  {"fieldname": "uom", "fieldtype": "Link", "in_list_view": 1, "label": "UOM", "options": "Alumdoor UOM", "reqd": 1},
+  {"description": "Number of stock UOM units in one unit of this UOM", "fieldname": "conversion_factor", "fieldtype": "Float", "in_list_view": 1, "label": "Conversion Factor", "reqd": 1}
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "module": "Sales Configuration",
+ "name": "Alumdoor UOM Conversion",
+ "permissions": []
+}

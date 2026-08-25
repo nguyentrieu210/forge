@@ -1,0 +1,28 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["category_code", "category_name", "flow_type", "requires_partner", "requires_order_reference", "default_money_account", "enabled", "sort_order"],
+ "fields": [
+  {"fieldname": "category_code", "fieldtype": "Data", "in_list_view": 1, "label": "Mã loại thu chi", "read_only": 1, "search_index": 1, "unique": 1},
+  {"fieldname": "category_name", "fieldtype": "Data", "in_list_view": 1, "label": "Tên loại thu chi", "reqd": 1, "search_index": 1},
+  {"fieldname": "flow_type", "fieldtype": "Select", "in_list_view": 1, "label": "Chiều dòng tiền", "options": "Receipt\nPayment\nTransfer", "reqd": 1},
+  {"default": "0", "fieldname": "requires_partner", "fieldtype": "Check", "label": "Bắt buộc đối tác"},
+  {"default": "0", "fieldname": "requires_order_reference", "fieldtype": "Check", "label": "Bắt buộc chứng từ nguồn"},
+  {"fieldname": "default_money_account", "fieldtype": "Link", "label": "Quỹ/tài khoản mặc định", "options": "Alumdoor Money Account"},
+  {"default": "1", "fieldname": "enabled", "fieldtype": "Check", "in_list_view": 1, "label": "Đang sử dụng"},
+  {"default": "0", "fieldname": "sort_order", "fieldtype": "Int", "label": "Thứ tự"}
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "module": "Sales Configuration",
+ "name": "Alumdoor Cashflow Category",
+ "permissions": [{"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1}],
+ "search_fields": "category_code,category_name,flow_type",
+ "sort_field": "sort_order",
+ "sort_order": "ASC",
+ "show_title_field_in_link": 1,
+ "title_field": "category_name"
+}

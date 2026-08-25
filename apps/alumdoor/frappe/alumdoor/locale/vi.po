@@ -1,0 +1,701 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: alumdoor\n"
+"Language: vi\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "Accessory"
+msgstr "Phụ kiện"
+
+msgid "Allow Multiple"
+msgstr "Cho phép chọn nhiều"
+
+msgid "Allowed Values"
+msgstr "Các giá trị được phép"
+
+msgid "Alumdoor Item"
+msgstr "Vật tư Alumdoor"
+
+msgid "Alumdoor Item Group"
+msgstr "Nhóm vật tư Alumdoor"
+
+msgid "Alumdoor Pricing Rule"
+msgstr "Quy tắc giá Alumdoor"
+
+msgid "Alumdoor UOM"
+msgstr "Đơn vị tính Alumdoor"
+
+msgid "Alumdoor UOM Conversion"
+msgstr "Quy đổi đơn vị Alumdoor"
+
+msgid "Alumdoor Warehouse"
+msgstr "Kho Alumdoor"
+
+msgid "Amount"
+msgstr "Thành tiền"
+
+msgid "Area (m²)"
+msgstr "Diện tích (m²)"
+
+msgid "Attribute"
+msgstr "Thuộc tính"
+
+msgid "Attribute Code"
+msgstr "Mã thuộc tính"
+
+msgid "Attribute Name"
+msgstr "Tên thuộc tính"
+
+msgid "Attributes"
+msgstr "Thuộc tính"
+
+msgid "Calculated Total"
+msgstr "Tổng tiền tính được"
+
+msgid "Calculated Variables Snapshot"
+msgstr "Dữ liệu biến đã tính"
+
+msgid "Cancelled"
+msgstr "Đã hủy"
+
+msgid "Check"
+msgstr "Có/Không"
+
+msgid "Code"
+msgstr "Mã"
+
+msgid "Component"
+msgstr "Cấu phần"
+
+msgid "Component Role"
+msgstr "Vai trò cấu phần"
+
+msgid "Component Rule"
+msgstr "Quy tắc cấu phần"
+
+msgid "Component Rule Condition"
+msgstr "Điều kiện quy tắc cấu phần"
+
+msgid "Components"
+msgstr "Các cấu phần"
+
+msgid "Condition Field"
+msgstr "Trường điều kiện"
+
+msgid "Condition Value"
+msgstr "Giá trị điều kiện"
+
+msgid "Conditions"
+msgstr "Các điều kiện"
+
+msgid "Configuration Attribute"
+msgstr "Thuộc tính cấu hình"
+
+msgid "Configuration Attribute Value"
+msgstr "Giá trị thuộc tính cấu hình"
+
+msgid "Configuration Attributes"
+msgstr "Các thuộc tính cấu hình"
+
+msgid "Configuration Snapshot"
+msgstr "Dữ liệu cấu hình"
+
+msgid "Configured Product"
+msgstr "Sản phẩm đã cấu hình"
+
+msgid "Configured Product Attribute"
+msgstr "Thuộc tính sản phẩm cấu hình"
+
+msgid "Configured Product Component"
+msgstr "Cấu phần sản phẩm cấu hình"
+
+msgid "Configured Product ID"
+msgstr "Mã sản phẩm cấu hình"
+
+msgid "Conversion Factor"
+msgstr "Hệ số quy đổi"
+
+msgid "Currency"
+msgstr "Tiền tệ"
+
+msgid "Data Type"
+msgstr "Kiểu dữ liệu"
+
+msgid "Default Formula"
+msgstr "Công thức mặc định"
+
+msgid "Default Value"
+msgstr "Giá trị mặc định"
+
+msgid "Description"
+msgstr "Mô tả"
+
+msgid "Dimensions (mm)"
+msgstr "Kích thước (mm)"
+
+msgid "Disabled"
+msgstr "Ngừng sử dụng"
+
+msgid "Door Formula"
+msgstr "Công thức cửa"
+
+msgid "Door Formula Variable"
+msgstr "Biến công thức cửa"
+
+msgid "Door System"
+msgstr "Hệ cửa"
+
+msgid "Door Type"
+msgstr "Loại cửa"
+
+msgid "Door Type Name"
+msgstr "Tên loại cửa"
+
+msgid "Draft"
+msgstr "Nháp"
+
+msgid "Effective From"
+msgstr "Hiệu lực từ"
+
+msgid "Effective To"
+msgstr "Hiệu lực đến"
+
+msgid "Enabled"
+msgstr "Đang sử dụng"
+
+msgid "Expression"
+msgstr "Biểu thức"
+
+msgid "Finished Goods"
+msgstr "Thành phẩm"
+
+msgid "Finished Product"
+msgstr "Sản phẩm hoàn thiện"
+
+msgid "Fixed"
+msgstr "Cố định"
+
+msgid "Formula"
+msgstr "Công thức"
+
+msgid "Formula Code"
+msgstr "Mã công thức"
+
+msgid "Formula Name"
+msgstr "Tên công thức"
+
+msgid "Height (mm)"
+msgstr "Chiều cao (mm)"
+
+msgid "in"
+msgstr "thuộc"
+
+msgid "Is Group"
+msgstr "Là nhóm"
+
+msgid "Is Manufactured Item"
+msgstr "Là mặt hàng sản xuất"
+
+msgid "is not set"
+msgstr "chưa có giá trị"
+
+msgid "Is Purchase Item"
+msgstr "Được phép mua"
+
+msgid "Is Sales Item"
+msgstr "Được phép bán"
+
+msgid "is set"
+msgstr "đã có giá trị"
+
+msgid "Is Stock Item"
+msgstr "Theo dõi tồn kho"
+
+msgid "Item"
+msgstr "Vật tư"
+
+msgid "Item Code"
+msgstr "Mã vật tư"
+
+msgid "Item Group"
+msgstr "Nhóm vật tư"
+
+msgid "Item Group Code"
+msgstr "Mã nhóm vật tư"
+
+msgid "Item Group Name"
+msgstr "Tên nhóm vật tư"
+
+msgid "Item Name"
+msgstr "Tên vật tư"
+
+msgid "Item Price"
+msgstr "Giá vật tư"
+
+msgid "Item Type"
+msgstr "Loại vật tư"
+
+msgid "Label"
+msgstr "Nhãn"
+
+msgid "Left"
+msgstr "Vế trái"
+
+msgid "Link"
+msgstr "Liên kết"
+
+msgid "Link DocType"
+msgstr "DocType liên kết"
+
+msgid "Linked DocType"
+msgstr "DocType được liên kết"
+
+msgid "Linked Document"
+msgstr "Chứng từ liên kết"
+
+msgid "Maximum Value"
+msgstr "Giá trị lớn nhất"
+
+msgid "Minimum Value"
+msgstr "Giá trị nhỏ nhất"
+
+msgid "Must be Whole Number"
+msgstr "Phải là số nguyên"
+
+msgid "not in"
+msgstr "không thuộc"
+
+msgid "Notes"
+msgstr "Ghi chú"
+
+msgid "Number"
+msgstr "Số"
+
+msgid "Number of stock UOM units in one unit of this UOM"
+msgstr "Số đơn vị tồn kho tương ứng với một đơn vị này"
+
+msgid "Old Parent"
+msgstr "Nhóm cha cũ"
+
+msgid "Operator"
+msgstr "Toán tử"
+
+msgid "Optional"
+msgstr "Không bắt buộc"
+
+msgid "Ordered"
+msgstr "Đã đặt hàng"
+
+msgid "Output Unit"
+msgstr "Đơn vị kết quả"
+
+msgid "Package Code"
+msgstr "Mã gói"
+
+msgid "Package Name"
+msgstr "Tên gói"
+
+msgid "Parent Item Group"
+msgstr "Nhóm vật tư cha"
+
+msgid "Parent Warehouse"
+msgstr "Kho cha"
+
+msgid "Per Area"
+msgstr "Theo diện tích"
+
+msgid "Per Meter"
+msgstr "Theo mét"
+
+msgid "Per Qty"
+msgstr "Theo số lượng"
+
+msgid "Price Type"
+msgstr "Kiểu tính giá"
+
+msgid "Pricing"
+msgstr "Tính giá"
+
+msgid "Pricing Rule"
+msgstr "Quy tắc giá"
+
+msgid "Priority"
+msgstr "Độ ưu tiên"
+
+msgid "Project"
+msgstr "Dự án"
+
+msgid "Quantity"
+msgstr "Số lượng"
+
+msgid "Quantity Formula"
+msgstr "Công thức số lượng"
+
+msgid "Rule Scope"
+msgstr "Phạm vi quy tắc"
+
+msgid "Component"
+msgstr "Cấu phần"
+
+msgid "Adjustment"
+msgstr "Điều chỉnh giá"
+
+msgid "Adjustment Type"
+msgstr "Loại điều chỉnh"
+
+msgid "Adjustment Item"
+msgstr "Khoản điều chỉnh"
+
+msgid "Adjustment UOM"
+msgstr "Đơn vị điều chỉnh"
+
+msgid "Surcharge"
+msgstr "Phụ thu"
+
+msgid "Discount"
+msgstr "Chiết khấu"
+
+msgid "Condition Expression"
+msgstr "Điều kiện áp dụng"
+
+msgid "Quoted"
+msgstr "Đã báo giá"
+
+msgid "Rate"
+msgstr "Đơn giá"
+
+msgid "Raw Material"
+msgstr "Nguyên vật liệu"
+
+msgid "Reference Pricing"
+msgstr "Giá tham chiếu"
+
+msgid "Rate With Rail"
+msgstr "Giá có ray"
+
+msgid "Ultra Small Accessory Rate"
+msgstr "Phụ thu siêu nhỏ"
+
+msgid "Source Details"
+msgstr "Thông tin từ danh mục nguồn"
+
+msgid "Source Item Code"
+msgstr "Mã vật tư trong file nguồn"
+
+msgid "Specifications"
+msgstr "Thông số"
+
+msgid "Logic Group"
+msgstr "Nhóm logic"
+
+msgid "Includes Free Rail"
+msgstr "Có ray tặng"
+
+msgid "Rejected / Scrap"
+msgstr "Hàng loại / phế liệu"
+
+msgid "Required"
+msgstr "Bắt buộc"
+
+msgid "Resolved"
+msgstr "Đã tính cấu hình"
+
+msgid "Resolved Components"
+msgstr "Các cấu phần đã xác định"
+
+msgid "Result"
+msgstr "Kết quả"
+
+msgid "Result Item"
+msgstr "Vật tư kết quả"
+
+msgid "Result Metadata"
+msgstr "Thông tin kết quả"
+
+msgid "Result Quantity"
+msgstr "Số lượng kết quả"
+
+msgid "Result UOM"
+msgstr "Đơn vị kết quả"
+
+msgid "Right"
+msgstr "Vế phải"
+
+msgid "Rule Code"
+msgstr "Mã quy tắc"
+
+msgid "Rule Name"
+msgstr "Tên quy tắc"
+
+msgid "Sales Package"
+msgstr "Gói bán hàng"
+
+msgid "Sales Package Attribute"
+msgstr "Thuộc tính gói bán hàng"
+
+msgid "Sales Package Component"
+msgstr "Cấu phần gói bán hàng"
+
+msgid "Select"
+msgstr "Danh sách chọn"
+
+msgid "Selling UOM"
+msgstr "Đơn vị bán"
+
+msgid "Semi Finished"
+msgstr "Bán thành phẩm"
+
+msgid "Sequence"
+msgstr "Thứ tự"
+
+msgid "Service"
+msgstr "Dịch vụ"
+
+msgid "Sort Order"
+msgstr "Thứ tự sắp xếp"
+
+msgid "Source Component Rule"
+msgstr "Quy tắc cấu phần nguồn"
+
+msgid "Standard Selling Rate"
+msgstr "Đơn giá bán chuẩn"
+
+msgid "Status"
+msgstr "Trạng thái"
+
+msgid "Stock UOM"
+msgstr "Đơn vị tồn kho"
+
+msgid "Symbol"
+msgstr "Ký hiệu"
+
+msgid "System Code"
+msgstr "Mã hệ cửa"
+
+msgid "System Name"
+msgstr "Tên hệ cửa"
+
+msgid "Text"
+msgstr "Văn bản"
+
+msgid "UOM"
+msgstr "Đơn vị tính"
+
+msgid "UOM Conversions"
+msgstr "Quy đổi đơn vị"
+
+msgid "UOM Name"
+msgstr "Tên đơn vị"
+
+msgid "Usage"
+msgstr "Mục đích sử dụng"
+
+msgid "Value"
+msgstr "Giá trị"
+
+msgid "Variable Name"
+msgstr "Tên biến"
+
+msgid "Variables"
+msgstr "Các biến"
+
+msgid "Version"
+msgstr "Phiên bản"
+
+msgid "Warehouse Code"
+msgstr "Mã kho"
+
+msgid "Warehouse Name"
+msgstr "Tên kho"
+
+msgid "Warehouse Type"
+msgstr "Loại kho"
+
+msgid "Width (mm)"
+msgstr "Chiều rộng (mm)"
+
+msgid "Surface Finish"
+msgstr "Loại bề mặt"
+
+msgid "Finish Code"
+msgstr "Mã loại bề mặt"
+
+msgid "Finish Name"
+msgstr "Tên loại bề mặt"
+
+msgid "Finish Category"
+msgstr "Nhóm bề mặt"
+
+msgid "Abbreviation"
+msgstr "Viết tắt"
+
+msgid "Alumdoor Color"
+msgstr "Màu sắc & bề mặt"
+
+msgid "Color Code"
+msgstr "Mã màu"
+
+msgid "Color Name"
+msgstr "Tên màu"
+
+msgid "Primary Color"
+msgstr "Màu thứ nhất"
+
+msgid "Secondary Color"
+msgstr "Màu thứ hai"
+
+msgid "Applicable Products"
+msgstr "Nhóm sản phẩm áp dụng"
+
+msgid "Applies To Accessories"
+msgstr "Áp dụng cho phụ kiện"
+
+msgid "Source Reference"
+msgstr "Tham chiếu nguồn"
+
+msgid "Primary Color and Secondary Color must be different"
+msgstr "Màu thứ nhất và màu thứ hai phải khác nhau"
+
+msgid "Value {0} does not exist in {1}"
+msgstr "Giá trị {0} không tồn tại trong danh mục {1}"
+
+msgid "WIP"
+msgstr "Đang sản xuất"
+
+msgid "Alumdoor Partner Group"
+msgstr "Nhóm đối tác"
+
+msgid "Alumdoor Partner"
+msgstr "Đối tác"
+
+msgid "Alumdoor Department"
+msgstr "Bộ phận"
+
+msgid "Alumdoor Employee"
+msgstr "Nhân viên"
+
+msgid "Alumdoor Price List"
+msgstr "Bảng giá"
+
+msgid "Alumdoor Item Price"
+msgstr "Dòng bảng giá"
+
+msgid "Alumdoor Material Specification"
+msgstr "Quy cách vật tư"
+
+msgid "Alumdoor Operation Standard"
+msgstr "Công đoạn & định mức"
+
+msgid "Alumdoor Work Shift"
+msgstr "Ca làm việc"
+
+msgid "Alumdoor Fault Reason"
+msgstr "Nguyên nhân lỗi"
+
+msgid "Alumdoor Warranty Policy"
+msgstr "Chính sách bảo hành"
+
+msgid "Alumdoor Coating Rate"
+msgstr "Bảng giá gia công sơn"
+
+msgid "Alumdoor Money Account"
+msgstr "Quỹ & tài khoản"
+
+msgid "Alumdoor Cashflow Category"
+msgstr "Loại thu chi"
+
+msgid "Customer"
+msgstr "Khách hàng"
+
+msgid "Supplier"
+msgstr "Nhà cung cấp"
+
+msgid "Both"
+msgstr "Cả hai"
+
+msgid "Selling"
+msgstr "Giá bán"
+
+msgid "Buying"
+msgstr "Giá mua"
+
+msgid "Cost"
+msgstr "Giá vốn"
+
+msgid "Sales"
+msgstr "Bán hàng"
+
+msgid "Accounting"
+msgstr "Kế toán"
+
+msgid "Production"
+msgstr "Sản xuất"
+
+msgid "Coating"
+msgstr "Sơn"
+
+msgid "Delivery"
+msgstr "Giao hàng"
+
+msgid "Per Set"
+msgstr "Theo bộ"
+
+msgid "Per Piece"
+msgstr "Theo cái"
+
+msgid "Per Kg"
+msgstr "Theo kg"
+
+msgid "Factory"
+msgstr "Xưởng"
+
+msgid "Transport"
+msgstr "Vận chuyển"
+
+msgid "Inspect"
+msgstr "Kiểm tra"
+
+msgid "Repair"
+msgstr "Sửa chữa"
+
+msgid "Replace"
+msgstr "Đổi mới"
+
+msgid "Return Supplier"
+msgstr "Trả nhà cung cấp"
+
+msgid "Charge Customer"
+msgstr "Tính phí khách hàng"
+
+msgid "Scrap"
+msgstr "Phế liệu"
+
+msgid "Cash"
+msgstr "Tiền mặt"
+
+msgid "Bank"
+msgstr "Ngân hàng"
+
+msgid "Receipt"
+msgstr "Thu"
+
+msgid "Payment"
+msgstr "Chi"
+
+msgid "Transfer"
+msgstr "Chuyển quỹ"
+
+msgid "Slat Meter"
+msgstr "Mét lá"
+
+msgid "Area One Side"
+msgstr "Diện tích một mặt"
+
+msgid "Area Two Sides"
+msgstr "Diện tích hai mặt"
+
+msgid "Fixed"
+msgstr "Cố định"

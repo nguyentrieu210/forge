@@ -1,0 +1,26 @@
+{
+ "actions": [],
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": ["component_role", "item", "item_group", "qty", "uom", "qty_formula", "measure_formula", "measure_uom", "optional", "sequence", "notes"],
+ "fields": [
+  {"fieldname": "component_role", "fieldtype": "Data", "in_list_view": 1, "label": "Vai trò cấu kiện", "reqd": 1},
+  {"fieldname": "item", "fieldtype": "Link", "in_list_view": 1, "label": "Vật tư/cấu kiện", "options": "Alumdoor Item"},
+  {"fieldname": "item_group", "fieldtype": "Link", "label": "Nhóm vật tư", "options": "Alumdoor Item Group"},
+  {"default": "1", "description": "Số cấu kiện cần sản xuất cho một cửa, ví dụ 1 lá trung gian hoặc 2 cây ray.", "fieldname": "qty", "fieldtype": "Float", "in_list_view": 1, "label": "Số cấu kiện/1 cửa"},
+  {"fieldname": "uom", "fieldtype": "Link", "in_list_view": 1, "label": "ĐVT sản xuất", "options": "Alumdoor UOM"},
+  {"description": "Công thức nhân theo số bộ cửa, ví dụ quantity hoặc 2 * quantity.", "fieldname": "qty_formula", "fieldtype": "Code", "label": "Công thức số lượng sản xuất", "options": "Python"},
+  {"description": "Quy đổi riêng để cắt vật tư/tính giá, ví dụ area hoặc rail_length_m.", "fieldname": "measure_formula", "fieldtype": "Code", "label": "Công thức khối lượng tính giá", "options": "Python"},
+  {"fieldname": "measure_uom", "fieldtype": "Link", "in_list_view": 1, "label": "ĐVT tính giá", "options": "Alumdoor UOM"},
+  {"default": "0", "fieldname": "optional", "fieldtype": "Check", "in_list_view": 1, "label": "Không bắt buộc"},
+  {"default": "0", "fieldname": "sequence", "fieldtype": "Int", "in_list_view": 1, "label": "Thứ tự"},
+  {"fieldname": "notes", "fieldtype": "Small Text", "label": "Ghi chú"}
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "module": "Sales Configuration",
+ "name": "Sales Package Component",
+ "permissions": []
+}

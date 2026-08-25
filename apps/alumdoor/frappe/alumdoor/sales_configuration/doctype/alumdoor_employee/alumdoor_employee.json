@@ -1,0 +1,28 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 0,
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["employee_code", "employee_name", "user", "department", "job_title", "phone", "email", "enabled"],
+ "fields": [
+  {"fieldname": "employee_code", "fieldtype": "Data", "in_list_view": 1, "label": "Mã nhân viên", "read_only": 1, "search_index": 1, "unique": 1},
+  {"fieldname": "employee_name", "fieldtype": "Data", "in_list_view": 1, "label": "Tên nhân viên", "reqd": 1, "search_index": 1},
+  {"fieldname": "user", "fieldtype": "Link", "label": "Tài khoản Frappe", "options": "User", "unique": 1},
+  {"fieldname": "department", "fieldtype": "Link", "in_list_view": 1, "label": "Bộ phận", "options": "Alumdoor Department", "reqd": 1, "search_index": 1},
+  {"fieldname": "job_title", "fieldtype": "Data", "label": "Chức danh"},
+  {"fieldname": "phone", "fieldtype": "Data", "label": "Điện thoại", "options": "Phone"},
+  {"fieldname": "email", "fieldtype": "Data", "label": "Email", "options": "Email"},
+  {"default": "1", "fieldname": "enabled", "fieldtype": "Check", "in_list_view": 1, "label": "Đang làm việc"}
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "module": "Sales Configuration",
+ "name": "Alumdoor Employee",
+ "permissions": [{"read": 1, "report": 1, "role": "Alumdoor Accountant"}, {"read": 1, "report": 1, "role": "Alumdoor Sales"}, {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "Alumdoor Owner", "share": 1, "write": 1}, {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1}],
+ "search_fields": "employee_code,employee_name,phone,email",
+ "sort_field": "employee_name",
+ "sort_order": "ASC",
+ "show_title_field_in_link": 1,
+ "title_field": "employee_name"
+}
