@@ -1,0 +1,417 @@
+{
+  "schema_version": "1.0.0",
+  "program": "R7-A",
+  "upstream": {
+    "app": "frappe",
+    "tag": "v16.19.0",
+    "full_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c"
+  },
+  "forge_seed": "b702376ff8b2d4dfe0a53dc2759b71e9df3c99ab",
+  "denominator": {
+    "path": "server/docs/spec/source-exact/frappe-framework-domain-ledger.json",
+    "expected_domain_count": 28
+  },
+  "allowed_classifications": [
+    "EXACT_PARITY",
+    "SEMANTIC_PARITY",
+    "FORGE_SUPERSET",
+    "INTENTIONAL_DIFFERENCE",
+    "GAP",
+    "UNRESOLVED",
+    "OUT_OF_SCOPE"
+  ],
+  "domains": [
+    {
+      "domain_id": "FRAPPE-01-METADATA-AND-DOCTYPE-RUNTIME",
+      "name": "Metadata and DocType runtime",
+      "lane": "R7-01",
+      "classification": "UNRESOLVED",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [],
+      "evidence": [],
+      "oracle_cases": [],
+      "gaps": [
+        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      ],
+      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+    },
+    {
+      "domain_id": "FRAPPE-02-DOCUMENT-LIFECYCLE",
+      "name": "Document lifecycle",
+      "lane": "R7-02",
+      "classification": "UNRESOLVED",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [],
+      "evidence": [],
+      "oracle_cases": [],
+      "gaps": [
+        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      ],
+      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+    },
+    {
+      "domain_id": "FRAPPE-03-NAMING",
+      "name": "Naming",
+      "lane": "R7-02",
+      "classification": "UNRESOLVED",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [],
+      "evidence": [],
+      "oracle_cases": [],
+      "gaps": [
+        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      ],
+      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+    },
+    {
+      "domain_id": "FRAPPE-04-PERMISSIONS",
+      "name": "Permissions",
+      "lane": "R7-03",
+      "classification": "UNRESOLVED",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [],
+      "evidence": [],
+      "oracle_cases": [],
+      "gaps": [
+        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      ],
+      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+    },
+    {
+      "domain_id": "FRAPPE-05-AUTHENTICATION-AND-SESSIONS",
+      "name": "Authentication and sessions",
+      "lane": "R7-03",
+      "classification": "UNRESOLVED",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [],
+      "evidence": [],
+      "oracle_cases": [],
+      "gaps": [
+        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      ],
+      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+    },
+    {
+      "domain_id": "FRAPPE-06-REST-AND-RPC",
+      "name": "REST and RPC",
+      "lane": "R7-09",
+      "classification": "UNRESOLVED",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [],
+      "evidence": [],
+      "oracle_cases": [],
+      "gaps": [
+        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      ],
+      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+    },
+    {
+      "domain_id": "FRAPPE-07-DATABASE-ABSTRACTION",
+      "name": "Database abstraction",
+      "lane": "R7-10",
+      "classification": "UNRESOLVED",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [],
+      "evidence": [],
+      "oracle_cases": [],
+      "gaps": [
+        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      ],
+      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+    },
+    {
+      "domain_id": "FRAPPE-08-QUERY-AND-LIST-ENGINE",
+      "name": "Query and list engine",
+      "lane": "R7-06",
+      "classification": "UNRESOLVED",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [],
+      "evidence": [],
+      "oracle_cases": [],
+      "gaps": [
+        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      ],
+      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+    },
+    {
+      "domain_id": "FRAPPE-09-BACKGROUND-JOBS",
+      "name": "Background jobs",
+      "lane": "R7-08",
+      "classification": "UNRESOLVED",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [],
+      "evidence": [],
+      "oracle_cases": [],
+      "gaps": [
+        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      ],
+      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+    },
+    {
+      "domain_id": "FRAPPE-10-SCHEDULER",
+      "name": "Scheduler",
+      "lane": "R7-08",
+      "classification": "UNRESOLVED",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [],
+      "evidence": [],
+      "oracle_cases": [],
+      "gaps": [
+        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      ],
+      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+    },
+    {
+      "domain_id": "FRAPPE-11-REALTIME",
+      "name": "Realtime",
+      "lane": "R7-08",
+      "classification": "UNRESOLVED",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [],
+      "evidence": [],
+      "oracle_cases": [],
+      "gaps": [
+        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      ],
+      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+    },
+    {
+      "domain_id": "FRAPPE-12-CACHING-AND-LOCKS",
+      "name": "Caching and locks",
+      "lane": "R7-08",
+      "classification": "UNRESOLVED",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [],
+      "evidence": [],
+      "oracle_cases": [],
+      "gaps": [
+        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      ],
+      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+    },
+    {
+      "domain_id": "FRAPPE-13-FILES-AND-ATTACHMENTS",
+      "name": "Files and attachments",
+      "lane": "R7-05",
+      "classification": "UNRESOLVED",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [],
+      "evidence": [],
+      "oracle_cases": [],
+      "gaps": [
+        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      ],
+      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+    },
+    {
+      "domain_id": "FRAPPE-14-PRINT-AND-PDF",
+      "name": "Print and PDF",
+      "lane": "R7-06",
+      "classification": "UNRESOLVED",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [],
+      "evidence": [],
+      "oracle_cases": [],
+      "gaps": [
+        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      ],
+      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+    },
+    {
+      "domain_id": "FRAPPE-15-DATA-IMPORT-EXPORT",
+      "name": "Data import/export",
+      "lane": "R7-07",
+      "classification": "UNRESOLVED",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [],
+      "evidence": [],
+      "oracle_cases": [],
+      "gaps": [
+        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      ],
+      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+    },
+    {
+      "domain_id": "FRAPPE-16-WORKFLOW",
+      "name": "Workflow",
+      "lane": "R7-04",
+      "classification": "UNRESOLVED",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [],
+      "evidence": [],
+      "oracle_cases": [],
+      "gaps": [
+        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      ],
+      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+    },
+    {
+      "domain_id": "FRAPPE-17-NOTIFICATIONS-AND-COMMUNICATIONS",
+      "name": "Notifications and communications",
+      "lane": "R7-08",
+      "classification": "UNRESOLVED",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [],
+      "evidence": [],
+      "oracle_cases": [],
+      "gaps": [
+        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      ],
+      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+    },
+    {
+      "domain_id": "FRAPPE-18-HOOKS-AND-APP-COMPOSITION",
+      "name": "Hooks and app composition",
+      "lane": "R7-09",
+      "classification": "UNRESOLVED",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [],
+      "evidence": [],
+      "oracle_cases": [],
+      "gaps": [
+        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      ],
+      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+    },
+    {
+      "domain_id": "FRAPPE-19-MIGRATIONS-AND-PATCHES",
+      "name": "Migrations and patches",
+      "lane": "R7-07",
+      "classification": "UNRESOLVED",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [],
+      "evidence": [],
+      "oracle_cases": [],
+      "gaps": [
+        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      ],
+      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+    },
+    {
+      "domain_id": "FRAPPE-20-DESK-BOOT-AND-NAVIGATION",
+      "name": "Desk boot and navigation",
+      "lane": "R7-06",
+      "classification": "UNRESOLVED",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [],
+      "evidence": [],
+      "oracle_cases": [],
+      "gaps": [
+        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      ],
+      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+    },
+    {
+      "domain_id": "FRAPPE-21-FORM-RUNTIME",
+      "name": "Form runtime",
+      "lane": "R7-06",
+      "classification": "UNRESOLVED",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [],
+      "evidence": [],
+      "oracle_cases": [],
+      "gaps": [
+        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      ],
+      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+    },
+    {
+      "domain_id": "FRAPPE-22-LIST-REPORT-DASHBOARD-RUNTIME",
+      "name": "List/report/dashboard runtime",
+      "lane": "R7-06",
+      "classification": "UNRESOLVED",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [],
+      "evidence": [],
+      "oracle_cases": [],
+      "gaps": [
+        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      ],
+      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+    },
+    {
+      "domain_id": "FRAPPE-23-WEBSITE-AND-PORTAL",
+      "name": "Website and portal",
+      "lane": "R7-06",
+      "classification": "UNRESOLVED",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [],
+      "evidence": [],
+      "oracle_cases": [],
+      "gaps": [
+        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      ],
+      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+    },
+    {
+      "domain_id": "FRAPPE-24-LOCALIZATION",
+      "name": "Localization",
+      "lane": "R7-06",
+      "classification": "UNRESOLVED",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [],
+      "evidence": [],
+      "oracle_cases": [],
+      "gaps": [
+        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      ],
+      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+    },
+    {
+      "domain_id": "FRAPPE-25-AUDIT-AND-COLLABORATION",
+      "name": "Audit and collaboration",
+      "lane": "R7-05",
+      "classification": "UNRESOLVED",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [],
+      "evidence": [],
+      "oracle_cases": [],
+      "gaps": [
+        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      ],
+      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+    },
+    {
+      "domain_id": "FRAPPE-26-INTEGRATIONS",
+      "name": "Integrations",
+      "lane": "R7-08",
+      "classification": "UNRESOLVED",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [],
+      "evidence": [],
+      "oracle_cases": [],
+      "gaps": [
+        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      ],
+      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+    },
+    {
+      "domain_id": "FRAPPE-27-SECURITY-BOUNDARIES",
+      "name": "Security boundaries",
+      "lane": "R7-03",
+      "classification": "UNRESOLVED",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [],
+      "evidence": [],
+      "oracle_cases": [],
+      "gaps": [
+        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      ],
+      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+    },
+    {
+      "domain_id": "FRAPPE-28-TESTING-FRAMEWORK",
+      "name": "Testing framework",
+      "lane": "R7-10",
+      "classification": "UNRESOLVED",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [],
+      "evidence": [],
+      "oracle_cases": [],
+      "gaps": [
+        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      ],
+      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+    }
+  ]
+}
