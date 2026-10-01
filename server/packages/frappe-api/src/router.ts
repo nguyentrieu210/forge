@@ -22,7 +22,7 @@ import {
   type JsonValue, type ListFilter, type MetadataPermissionService, type MetadataStore, type MutationAction,
   type MutationCommand, type MutationReceipt, type PropertySetterRecord, type QueryFilter,
 } from "./router-platform.js";
-import { readFrappeArgs, type FrappeArgs } from "./args.js";
+import { FrappeArgs, readFrappeArgs } from "./args.js";
 import { VERTICAL_METHODS } from "./vertical-methods.js";
 import {
   assertDocumentAction, getReadableStoredDocument, isPlatformAdmin, loadReadable, loadWritable, workflowTransitionAccess,
