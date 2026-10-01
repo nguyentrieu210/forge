@@ -116,6 +116,20 @@ async function seed(): Promise<void> {
      ON CONFLICT DO NOTHING`,
   ).bind().run();
 
+  await env.DB.prepare(
+    `INSERT INTO roles(tenant_id,role,modified_at) VALUES('demo','Field Visit Reader',?1)
+     ON CONFLICT(tenant_id,role) DO NOTHING`,
+  ).bind(NOW).run();
+  await env.DB.prepare(
+    `INSERT INTO users(tenant_id,user_id,full_name,email,password_hash,language,time_zone,created_at,modified_at)
+     VALUES('demo','reader@example.com','Scoped Reader','reader@example.com',?1,'vi','Asia/Ho_Chi_Minh',?2,?2)
+     ON CONFLICT(tenant_id,user_id) DO UPDATE SET password_hash=excluded.password_hash,enabled=1`,
+  ).bind(await hashPassword(PASSWORD, 1_000), NOW).run();
+  await env.DB.prepare(
+    `INSERT INTO user_roles(tenant_id,user_id,role) VALUES('demo','reader@example.com','Field Visit Reader')
+     ON CONFLICT DO NOTHING`,
+  ).bind().run();
+
   // A metadata-driven DocType, so the generic runtime is what answers.
   const meta = {
     name: "Field Visit",
@@ -137,7 +151,10 @@ async function seed(): Promise<void> {
       { fieldname: "fee", label: "Fee", fieldtype: "Currency", non_negative: true },
       { fieldname: "visit_date", label: "Visit Date", fieldtype: "Date", default: "Today" },
     ],
-    permissions: [{ role: "System Manager", read: true, write: true, create: true, delete: true, submit: true, cancel: true, amend: true, print: true, email: true, report: true, import: true, export: true, share: true }],
+    permissions: [
+      { role: "System Manager", read: true, write: true, create: true, delete: true, submit: true, cancel: true, amend: true, print: true, email: true, report: true, import: true, export: true, share: true },
+      { role: "Field Visit Reader", read: true, write: false, create: false, delete: false, print: true, report: true, export: true },
+    ],
     revision: 1,
   };
   await env.DB.prepare(
@@ -608,10 +625,36 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     expect(missingJson.exc_type).toBeUndefined();
   });
 
+  it("keeps v2 group_by inside User Permission scope", async () => {
+    await env.DB.prepare(
+      `INSERT INTO user_permissions(
+         tenant_id,user,allow_doctype,allow_name,applicable_for_doctype,is_default,hide_descendants,created_by,created_at
+       ) VALUES('demo','reader@example.com','Customer','CUST-1','Field Visit',0,0,'Administrator',?1)
+       ON CONFLICT(tenant_id,user,allow_doctype,allow_name,applicable_for_doctype)
+       DO UPDATE SET hide_descendants=0`,
+    ).bind(NOW).run();
+
+    expect((await switchSession("reader@example.com")).status).toBe(200);
+    const fields = encodeURIComponent(JSON.stringify(["customer", "count(name) as count"]));
+    const grouped = await call(`/api/v2/document/Field%20Visit?group_by=customer&fields=${fields}&limit=20`);
+    expect(grouped.status).toBe(200);
+    const payload: any = await grouped.json();
+    expect(payload.data.length).toBeGreaterThan(0);
+    expect(payload.data.every((row: any) => row.customer === "CUST-1")).toBe(true);
+    expect(payload.data.every((row: any) => Number(row.count) >= 1)).toBe(true);
+
+    await env.DB.prepare(
+      `DELETE FROM user_permissions
+       WHERE tenant_id='demo' AND user='reader@example.com'
+         AND allow_doctype='Customer' AND applicable_for_doctype='Field Visit'`,
+    ).run();
+    expect((await switchSession("sales@example.com")).status).toBe(200);
+  });
+
   it("fails closed on v2 collection shapes Forge has not implemented instead of silently changing meaning", async () => {
-    const grouped = await call("/api/v2/document/Field%20Visit?group_by=customer");
-    expect(grouped.status).toBe(417);
-    expect(String((await grouped.json() as any).errors[0].message)).toMatch(/group_by/i);
+    const invalidGrouped = await call("/api/v2/document/Field%20Visit?group_by=customer&fields=%5B%22subject%22%5D");
+    expect(invalidGrouped.status).toBe(417);
+    expect(String((await invalidGrouped.json() as any).errors[0].message)).toMatch(/grouped field/i);
 
     const tuples = await call("/api/v2/document/Field%20Visit?fields=%5B%22name%22%2C%22subject%22%5D&as_dict=0&limit=1");
     expect(tuples.status).toBe(200);
