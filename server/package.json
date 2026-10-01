@@ -75,7 +75,8 @@
     "dev:seed": "node scripts/seed-local.mjs",
     "smoke:http": "node scripts/http-smoke.mjs",
     "r7:frappe:audit": "node scripts/verify-r7-frappe-closure.mjs",
-    "r7:frappe:certify": "node scripts/verify-r7-frappe-closure.mjs --certify"
+    "r7:frappe:certify": "node scripts/verify-r7-frappe-closure.mjs --certify",
+    "test:r7-frappe": "node --test tests/r7-frappe-closure.test.mjs"
   },
   "dependencies": {
     "@cloudforge/alumdoor-hr-payroll-contract": "workspace:*",
