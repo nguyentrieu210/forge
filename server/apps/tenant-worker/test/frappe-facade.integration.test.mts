@@ -514,7 +514,8 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     expect(snapshot.count).toBeGreaterThanOrEqual(1);
     expect(snapshot.capabilities.create).toBe(true);
     expect(snapshot.capabilities.delete).toBe(true);
-    expect(snapshot.display_values).toContainEqual({ doctype: "Customer", name: "CUST-1", label: "CUST-1" });
+    // Customer has a title field; display values must resolve the human title, not fall back to the ID.
+    expect(snapshot.display_values).toContainEqual({ doctype: "Customer", name: "CUST-1", label: "Acme Corporation" });
   });
 
   it("resolves link searches and display values through the permission layer", async () => {
