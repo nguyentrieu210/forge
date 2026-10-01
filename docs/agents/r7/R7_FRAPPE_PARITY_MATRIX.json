@@ -109,15 +109,20 @@
       "domain_id": "FRAPPE-07-DATABASE-ABSTRACTION",
       "name": "Database abstraction",
       "lane": "R7-10",
-      "classification": "UNRESOLVED",
+      "classification": "INTENTIONAL_DIFFERENCE",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
-      "forge_authority": [],
-      "evidence": [],
-      "oracle_cases": [],
-      "gaps": [
-        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      "forge_authority": [
+        "server/packages/document-kernel",
+        "D1 transaction/batch paths",
+        "Durable Object coordination"
       ],
-      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+      "evidence": [
+        "server/docs/spec/source-exact/05-cloudforge-mapping-contract.md",
+        "docs/ARCHITECTURE.md"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "Forge intentionally targets Cloudflare D1/Durable Objects rather than reproducing Frappe's MariaDB/PostgreSQL abstraction. R7 requires equivalent atomicity/race/replay safety, not engine compatibility."
     },
     {
       "domain_id": "FRAPPE-08-QUERY-AND-LIST-ENGINE",
@@ -207,15 +212,20 @@
       "domain_id": "FRAPPE-14-PRINT-AND-PDF",
       "name": "Print and PDF",
       "lane": "R7-06",
-      "classification": "UNRESOLVED",
+      "classification": "INTENTIONAL_DIFFERENCE",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
-      "forge_authority": [],
-      "evidence": [],
-      "oracle_cases": [],
-      "gaps": [
-        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      "forge_authority": [
+        "frappe.www.printview.get_html_and_style compatibility path",
+        "client print rendering"
       ],
-      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+      "evidence": [
+        "docs/API_SURFACE.md",
+        "docs/VERIFICATION.md",
+        "client/packages/adapter-frappe/src/frappe-adapter.ts"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "Forge deliberately does not expose Frappe's binary download_pdf on Workers; it exposes rendered HTML+CSS and fails unsupported PDF generation explicitly instead of returning a fake success."
     },
     {
       "domain_id": "FRAPPE-15-DATA-IMPORT-EXPORT",
@@ -249,15 +259,20 @@
       "domain_id": "FRAPPE-17-NOTIFICATIONS-AND-COMMUNICATIONS",
       "name": "Notifications and communications",
       "lane": "R7-08",
-      "classification": "UNRESOLVED",
+      "classification": "GAP",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
-      "forge_authority": [],
-      "evidence": [],
+      "forge_authority": [
+        "server/packages/frappe-model/src/notification-rules.ts"
+      ],
+      "evidence": [
+        "server/packages/frappe-model/src/notification-rules.ts",
+        "server/tests/notifications-auto-repeat.test.mjs"
+      ],
       "oracle_cases": [],
       "gaps": [
-        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+        "Frappe Email notification delivery/queue semantics are not implemented because no mail transport is configured; Email intents are recorded with skipped_reason."
       ],
-      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+      "rationale": "This is a real capability gap for Frappe 16 communications semantics, not a parity success."
     },
     {
       "domain_id": "FRAPPE-18-HOOKS-AND-APP-COMPOSITION",
@@ -333,15 +348,21 @@
       "domain_id": "FRAPPE-23-WEBSITE-AND-PORTAL",
       "name": "Website and portal",
       "lane": "R7-06",
-      "classification": "UNRESOLVED",
+      "classification": "GAP",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
-      "forge_authority": [],
-      "evidence": [],
+      "forge_authority": [
+        "server/packages/frappe-api/src/website-router.ts",
+        "Portal User metadata foundation"
+      ],
+      "evidence": [
+        "server/BUILD_REPORT.md",
+        "server/scripts/generate-verification.py"
+      ],
       "oracle_cases": [],
       "gaps": [
-        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+        "Complete website runtime parity and customer/supplier portal/self-service flows remain open."
       ],
-      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+      "rationale": "Current exact generated verification still describes CRM/portal as metadata foundations rather than complete website/portal behavior."
     },
     {
       "domain_id": "FRAPPE-24-LOCALIZATION",
@@ -403,15 +424,20 @@
       "domain_id": "FRAPPE-28-TESTING-FRAMEWORK",
       "name": "Testing framework",
       "lane": "R7-10",
-      "classification": "UNRESOLVED",
+      "classification": "OUT_OF_SCOPE",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
-      "forge_authority": [],
-      "evidence": [],
-      "oracle_cases": [],
-      "gaps": [
-        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      "forge_authority": [
+        "server/tests",
+        "validation",
+        "Cloudflare/Vitest/Node test infrastructure"
       ],
-      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+      "evidence": [
+        "docs/VALIDATION_GATES.md",
+        "skills/forge-enterprise-completion/SKILL.md"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "Frappe's internal Python unit/integration test framework is a developer implementation facility, not an observable production platform contract required for Forge clients. R7 still requires Forge-native tests/oracles for every in-scope domain."
     }
   ]
 }
