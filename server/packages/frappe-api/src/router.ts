@@ -18,7 +18,7 @@ import {
   type Actor, type AppInstaller, type AppMethodEnv, type AppReportService, type AppReportSpec,
   type CanonicalDocument, type CustomFieldRecord, type CustomizationStore, type D1CollaborationService,
   type D1MutationStore, type D1ReportService, type D1SearchStore, type D1UserStore, type DocTypeMeta,
-  type DocumentAccessStore, type DocumentListService, type ExtendedPermissionAction, type JsonObject,
+  type DocumentAccessStore, type DocumentGroupProjection, type DocumentListService, type ExtendedPermissionAction, type JsonObject,
   type JsonValue, type ListFilter, type MetadataPermissionService, type MetadataStore, type MutationAction,
   type MutationCommand, type MutationReceipt, type PropertySetterRecord, type QueryFilter,
 } from "./router-platform.js";
@@ -309,10 +309,31 @@ async function routeFrappeV2(
 
     if (!name) {
       if (method === "GET") {
-        if (args.text("group_by")) throw errors.validation("Frappe v2 group_by is not supported by this compatibility layer");
         const asDict = !args.has("as_dict") || args.bool("as_dict", true);
-        const requestedFields = args.array<string>("fields") ?? ["name"];
+        const groupByText = args.text("group_by")?.trim();
         const limit = clampPageLength(args.int("limit", 20));
+        if (groupByText) {
+          const groupBy = groupByText.split(",")
+            .map((field) => toKernelField(stripFieldQualifier(field.trim().replace(/`/g, ""))))
+            .filter(Boolean);
+          const requestedFields = args.array<string>("fields") ?? groupBy;
+          const projections = parseV2GroupProjections(requestedFields, groupBy);
+          const body: JsonObject = {
+            doctype,
+            filters: toKernelFilters(args.json("filters"), doctype) as unknown as JsonValue,
+            limit,
+            offset: args.int("start", 0),
+          };
+          const search = toKernelSearch(args.json("or_filters"));
+          if (search) body.search = search;
+          const grouped = await context.listService.group(context.actor, context.tenantId, body, groupBy, projections);
+          const data = asDict
+            ? grouped.rows
+            : grouped.rows.map((row) => projections.map((projection) => row[projection.alias] ?? null));
+          return v2DataResponse(data, 200, { has_next_page: grouped.has_more });
+        }
+
+        const requestedFields = args.array<string>("fields") ?? ["name"];
         const adaptedUrl = new URL(url);
         adaptedUrl.searchParams.set("limit", String(limit + 1));
         adaptedUrl.searchParams.set("limit_start", String(args.int("start", 0)));
@@ -369,6 +390,26 @@ async function routeFrappeV2(
   }
 
   return null;
+}
+
+function parseV2GroupProjections(fields: string[], groupBy: string[]): DocumentGroupProjection[] {
+  const aggregatePattern = /^(count|sum|avg|min|max)\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)\s+as\s+([A-Za-z_][A-Za-z0-9_]*)$/i;
+  return fields.map((raw) => {
+    const value = raw.trim().replace(/`/g, "");
+    const aggregate = aggregatePattern.exec(value);
+    if (aggregate) {
+      return {
+        aggregate: aggregate[1]!.toLowerCase() as DocumentGroupProjection["aggregate"],
+        field: toKernelField(aggregate[2]!),
+        alias: aggregate[3]!,
+      };
+    }
+    const field = toKernelField(stripFieldQualifier(value));
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(field) || !groupBy.includes(field)) {
+      throw errors.validation(`Grouped field must be in group_by or use an aggregate with AS: ${raw}`);
+    }
+    return { field, alias: field };
+  });
 }
 
 function v2TransitionArgs(doctype: string, name: string, args: FrappeArgs): FrappeArgs {
