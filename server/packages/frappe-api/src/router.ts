@@ -43,7 +43,7 @@ import type { VerticalRouterHooks } from "./vertical-methods.js";
 import { LINK_DISPLAY_RULES } from "./vertical-display.js";
 import { assertModifiedMatches, buildCommand, stripServerOwnedFields } from "./command.js";
 import { fromFrappeDoc, toFrappeDoc, toFrappeListRow } from "./doc-shape.js";
-import { faultResponse, methodResponse, resourceResponse, responseFieldsResponse } from "./envelope.js";
+import { faultResponse, methodResponse, resourceResponse, responseFieldsResponse, v2DataResponse, v2FaultResponse } from "./envelope.js";
 import { consumeSubmissionAllowance, loadPublishedForm, publicFormShape, submissionActor, submissionDocument } from "./web-form-routes.js";
 import { handleUploadFile, matchFilePath, readFileContent, serveFile, UPLOAD_FILE_PATH, type FileStore } from "./files.js";
 import {
@@ -193,14 +193,25 @@ function rbacAudit(context: FrappeRouterContext, source: string, reason?: string
 
 const RESOURCE_PATH = /^\/api\/resource\/([^/]+)(?:\/([^/]+))?$/;
 const METHOD_PATH = /^\/api\/method\/([A-Za-z0-9_.]+)$/;
+const V2_DOCUMENT_PATH = /^\/api\/v2\/document\/([^/]+)(?:\/([^/]+))?(?:\/(copy|method)(?:\/([^/]+))?)?\/?$/;
+const V2_DOCTYPE_PATH = /^\/api\/v2\/doctype\/([^/]+)\/(meta|count)\/?$/;
+const V2_METHOD_PATH = /^\/api\/v2\/method\/(.+)$/;
 
 export function isFrappePath(pathname: string): boolean {
-  return pathname.startsWith("/api/resource/") || pathname.startsWith("/api/method/");
+  return pathname.startsWith("/api/resource/")
+    || pathname.startsWith("/api/method/")
+    || pathname.startsWith("/api/v2/");
 }
 
 export async function routeFrappeApi(request: Request, url: URL, context: FrappeRouterContext): Promise<Response | null> {
   if (!isFrappePath(url.pathname)) return null;
   try {
+    if (url.pathname.startsWith("/api/v2/")) {
+      const v2 = await routeFrappeV2(request, url, context);
+      if (v2) return v2;
+      return v2FaultResponse(errors.notFound("Unknown API v2 path"), context.traceId);
+    }
+
     // BEFORE `readFrappeArgs`, which turns the body into text: an upload is multipart,
     // and reading it as text either fails outright or produces a mangled string.
     if (url.pathname === UPLOAD_FILE_PATH) {
@@ -230,8 +241,139 @@ export async function routeFrappeApi(request: Request, url: URL, context: Frappe
 
     return faultResponse(errors.notFound("Unknown API path"), context.traceId);
   } catch (error) {
-    return faultResponse(error, context.traceId);
+    return url.pathname.startsWith("/api/v2/")
+      ? v2FaultResponse(error, context.traceId)
+      : faultResponse(error, context.traceId);
   }
+}
+
+async function routeFrappeV2(
+  request: Request,
+  url: URL,
+  context: FrappeRouterContext,
+): Promise<Response | null> {
+  const method = request.method.toUpperCase();
+
+  // Upload is multipart and must be handled before generic argument parsing.
+  if (url.pathname === "/api/v2/method/upload_file") {
+    if (method !== "POST") throw errors.validation("upload_file accepts POST");
+    return v2DataResponse(await handleUploadFile(
+      request,
+      context.actor,
+      fileStore(context),
+      (doctype, name) => assertDocumentAction(context, doctype, name, "save"),
+    ));
+  }
+
+  const args = await readFrappeArgs(request, url);
+
+  const docMatch = V2_DOCUMENT_PATH.exec(url.pathname);
+  if (docMatch) {
+    const doctype = decodeURIComponent(docMatch[1]!);
+    const name = docMatch[2] ? decodeURIComponent(docMatch[2]) : null;
+    const operation = docMatch[3];
+    const operationName = docMatch[4] ? decodeURIComponent(docMatch[4]) : null;
+
+    if (operation === "copy") {
+      if (method !== "GET" || !name) throw errors.validation("Document copy accepts GET on a named document");
+      const source = await loadReadable(doctype, name, context);
+      const meta = await requireMeta(doctype, context);
+      const copy = dropNoCopyFields(structuredClone(source.data) as JsonObject, meta);
+      // Frappe copy returns a clean insertable document, not the source identity/lifecycle.
+      return v2DataResponse({ doctype, ...copy });
+    }
+
+    if (operation === "method") {
+      if (!name || !operationName) throw errors.validation("Document method requires document and method names");
+      // The compatibility layer exposes only methods backed by canonical Forge authorities.
+      // It deliberately cannot execute arbitrary Python controller/server-script methods.
+      if (operationName === "submit") {
+        if (method !== "POST") throw errors.validation("submit requires POST");
+        return v2DataResponse(await transition("submit", v2TransitionArgs(doctype, name, args), context));
+      }
+      if (operationName === "cancel") {
+        if (method !== "POST") throw errors.validation("cancel requires POST");
+        return v2DataResponse(await transition("cancel", v2TransitionArgs(doctype, name, args), context));
+      }
+      if (operationName === "add_comment") {
+        if (method !== "POST") throw errors.validation("add_comment requires POST");
+        const text = args.text("text") ?? args.text("content");
+        if (!text) throw errors.validation("text is required");
+        await assertDocumentAction(context, doctype, name, "read");
+        return v2DataResponse(await context.collaboration.addComment(
+          context.tenantId, context.actor, doctype, name, text, context.now(),
+        ));
+      }
+      throw errors.notFound(`Unsupported v2 document method: ${operationName}`);
+    }
+
+    if (!name) {
+      if (method === "GET") {
+        if (args.text("group_by")) throw errors.validation("Frappe v2 group_by is not supported by this compatibility layer");
+        if (args.has("as_dict") && !args.bool("as_dict", true)) {
+          throw errors.validation("Frappe v2 as_dict=false is not supported by this compatibility layer");
+        }
+        const limit = clampPageLength(args.int("limit", 20));
+        const adaptedUrl = new URL(url);
+        adaptedUrl.searchParams.set("limit", String(limit + 1));
+        adaptedUrl.searchParams.set("limit_start", String(args.int("start", 0)));
+        const adapted = await readFrappeArgs(new Request(adaptedUrl, { method: "GET", headers: request.headers }), adaptedUrl);
+        const rows = await listDocuments(doctype, adapted, context);
+        return v2DataResponse(rows.slice(0, limit), 200, { has_next_page: rows.length > limit });
+      }
+      if (method === "POST") return v2DataResponse(await createDocument(doctype, args, context));
+      throw errors.validation(`${method} is not supported on a v2 doctype collection`);
+    }
+
+    if (method === "GET") return v2DataResponse(toFrappeDoc(await loadReadable(doctype, name, context)));
+    if (method === "PATCH" || method === "PUT") {
+      // Deliberately stronger than upstream v2: Forge requires the last-read modified token.
+      // Never weaken OCC merely for route parity.
+      return v2DataResponse(await saveDocument(doctype, name, args, context));
+    }
+    if (method === "DELETE") {
+      await deleteDocument(doctype, name, context);
+      return v2DataResponse("ok", 202);
+    }
+    throw errors.validation(`${method} is not supported on a v2 document`);
+  }
+
+  const doctypeMatch = V2_DOCTYPE_PATH.exec(url.pathname);
+  if (doctypeMatch) {
+    const doctype = decodeURIComponent(doctypeMatch[1]!);
+    const operation = doctypeMatch[2];
+    if (method !== "GET") throw errors.validation(`${operation} accepts GET`);
+    if (operation === "meta") {
+      const meta = await requireMeta(doctype, context);
+      return v2DataResponse(toFrappeDocType(meta, await context.metadata.getWorkflow(context.tenantId, doctype)));
+    }
+    const countArgsUrl = new URL(url);
+    countArgsUrl.searchParams.set("doctype", doctype);
+    const countArgs = await readFrappeArgs(new Request(countArgsUrl, { method: "GET", headers: request.headers }), countArgsUrl);
+    return v2DataResponse(await countDocuments(countArgs, context));
+  }
+
+  const methodMatch = V2_METHOD_PATH.exec(url.pathname);
+  if (methodMatch) {
+    const methodName = decodeURIComponent(methodMatch[1]!);
+    if (methodName === "ping") return v2DataResponse("pong");
+    // Reuse the canonical method dispatcher, then translate only its public envelope.
+    // Arbitrary Python/server-script discovery is intentionally not emulated.
+    const v1 = await dispatchMethod(methodName, request, args, context);
+    const body = await v1.clone().json() as JsonObject;
+    if (!v1.ok) throw errors.validation(String(body.message ?? "Frappe method failed"));
+    return v2DataResponse(body.message ?? body);
+  }
+
+  return null;
+}
+
+function v2TransitionArgs(doctype: string, name: string, args: FrappeArgs): FrappeArgs {
+  return new FrappeArgs(new Map<string, string | JsonValue>([
+    ["doctype", doctype],
+    ["name", name],
+    ...(args.text("modified") ? [["modified", args.text("modified")!] as [string, JsonValue]] : []),
+  ]));
 }
 
 // ---- REST resource ----------------------------------------------------------
