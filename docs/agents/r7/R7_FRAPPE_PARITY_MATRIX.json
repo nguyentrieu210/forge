@@ -82,22 +82,24 @@
       "domain_id": "FRAPPE-04-PERMISSIONS",
       "name": "Permissions",
       "lane": "R7-03",
-      "classification": "GAP",
+      "classification": "INTENTIONAL_DIFFERENCE",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
       "forge_authority": [
-        "server/packages/frappe-model/src/permission.ts"
+        "server/packages/frappe-model/src/permission.ts",
+        "server/packages/policy",
+        "published Role Policy row/field rules"
       ],
       "evidence": [
         "server/packages/frappe-model/src/permission.ts",
-        "docs/agents/rc/RC-05-iam-tenant.md",
-        "server/docs/spec/source-exact/02-static-extraction-contract.md"
+        "server/tests/permission-v2.test.mjs",
+        "server/apps/tenant-worker/test/frappe-facade.integration.test.mts",
+        "Frappe v16.19.0 frappe/core/doctype/user_permission/user_permission.py",
+        "Frappe v16.19.0 frappe/permissions.py",
+        "GitHub Actions R7 Frappe 16 Closure run 36908752934"
       ],
       "oracle_cases": [],
-      "gaps": [
-        "Frappe permission_query_conditions / has_permission hook semantics are not implemented as compatible dynamic hook authorities.",
-        "Hierarchy/descendant semantics still require exact Frappe differential coverage."
-      ],
-      "rationale": "Role/owner/share/User Permission/permlevel server enforcement is strong, but the declared Frappe 16 permission contract includes hook-driven query/permission behavior that is not closed."
+      "gaps": [],
+      "rationale": "Forge implements DocPerm, owner/share, permlevel, User Permission Link scopes and Frappe 16 tree-descendant expansion, but intentionally does not execute arbitrary Python permission_query_conditions/has_permission hooks. Dynamic restrictions are expressed through bounded/versioned Role Policy and organization-scope authorities instead. The user-visible descendant behavior is now pinned by Workerd regression and passed R7 CI."
     },
     {
       "domain_id": "FRAPPE-05-AUTHENTICATION-AND-SESSIONS",
