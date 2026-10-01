@@ -25,85 +25,120 @@
       "domain_id": "FRAPPE-01-METADATA-AND-DOCTYPE-RUNTIME",
       "name": "Metadata and DocType runtime",
       "lane": "R7-01",
-      "classification": "UNRESOLVED",
+      "classification": "SEMANTIC_PARITY",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
-      "forge_authority": [],
-      "evidence": [],
-      "oracle_cases": [],
-      "gaps": [
-        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      "forge_authority": [
+        "server/packages/frappe-model",
+        "server/packages/frappe-api/src/router.ts",
+        "server/packages/app-registry"
       ],
-      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+      "evidence": [
+        "server/packages/frappe-api/src/router.ts",
+        "server/packages/frappe-model/src/customization.ts",
+        "server/apps/tenant-worker/test/frappe-facade.integration.test.mts"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "DocType/DocField metadata, Custom Field, Property Setter overlays, effective revision/cache invalidation and controller registry semantics are implemented with a different storage/runtime architecture but equivalent declared outcomes."
     },
     {
       "domain_id": "FRAPPE-02-DOCUMENT-LIFECYCLE",
       "name": "Document lifecycle",
       "lane": "R7-02",
-      "classification": "UNRESOLVED",
+      "classification": "SEMANTIC_PARITY",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
-      "forge_authority": [],
-      "evidence": [],
-      "oracle_cases": [],
-      "gaps": [
-        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      "forge_authority": [
+        "server/packages/document-kernel",
+        "server/packages/frappe-api/src/command.ts"
       ],
-      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+      "evidence": [
+        "server/docs/spec/technical/controller-compatibility.md",
+        "server/packages/frappe-api/src/command.ts",
+        "docs/VERIFICATION.md"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "Create/save/submit/cancel/amend/delete and optimistic conflict semantics are mapped to the Document Kernel lifecycle; side effects are planned through the authoritative unit-of-work/outbox boundary."
     },
     {
       "domain_id": "FRAPPE-03-NAMING",
       "name": "Naming",
       "lane": "R7-02",
-      "classification": "UNRESOLVED",
+      "classification": "SEMANTIC_PARITY",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
-      "forge_authority": [],
-      "evidence": [],
-      "oracle_cases": [],
-      "gaps": [
-        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      "forge_authority": [
+        "server/packages/frappe-model/src/autoname.ts",
+        "server/packages/frappe-model/src/store.ts"
       ],
-      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+      "evidence": [
+        "server/packages/frappe-model/src/autoname.ts",
+        "server/tests/autoname-and-conditions.test.mjs"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "Exact current code supports hash, classic/date series, field:, naming_series:, format:, prompt and autoincrement with tenant-scoped atomic allocation and fail-closed unsupported patterns."
     },
     {
       "domain_id": "FRAPPE-04-PERMISSIONS",
       "name": "Permissions",
       "lane": "R7-03",
-      "classification": "UNRESOLVED",
+      "classification": "GAP",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
-      "forge_authority": [],
-      "evidence": [],
+      "forge_authority": [
+        "server/packages/frappe-model/src/permission.ts"
+      ],
+      "evidence": [
+        "server/packages/frappe-model/src/permission.ts",
+        "docs/agents/rc/RC-05-iam-tenant.md",
+        "server/docs/spec/source-exact/02-static-extraction-contract.md"
+      ],
       "oracle_cases": [],
       "gaps": [
-        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+        "Frappe permission_query_conditions / has_permission hook semantics are not implemented as compatible dynamic hook authorities.",
+        "Hierarchy/descendant semantics still require exact Frappe differential coverage."
       ],
-      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+      "rationale": "Role/owner/share/User Permission/permlevel server enforcement is strong, but the declared Frappe 16 permission contract includes hook-driven query/permission behavior that is not closed."
     },
     {
       "domain_id": "FRAPPE-05-AUTHENTICATION-AND-SESSIONS",
       "name": "Authentication and sessions",
       "lane": "R7-03",
-      "classification": "UNRESOLVED",
+      "classification": "GAP",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
-      "forge_authority": [],
-      "evidence": [],
+      "forge_authority": [
+        "server/packages/frappe-api/src/session.ts",
+        "server/packages/frappe-api/src/auth-routes.ts"
+      ],
+      "evidence": [
+        "server/packages/frappe-api/src/session.ts",
+        "docs/agents/rc/RC-04-kernel-auth.md",
+        "docs/agents/rc/RC3_A2_PLATFORM_IAM_APPFACTORY_EVIDENCE.md"
+      ],
       "oracle_cases": [],
       "gaps": [
-        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+        "Audited support impersonation is explicitly missing.",
+        "Generic Frappe OAuth/API-key/token lifecycle parity is not closed; provider-specific and connector seams do not equal the full Frappe auth contract."
       ],
-      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+      "rationale": "Cookie session, CSRF, revocation, MFA and rate-limit behavior are strong, but required Frappe 16 auth/session behaviors are not all implemented."
     },
     {
       "domain_id": "FRAPPE-06-REST-AND-RPC",
       "name": "REST and RPC",
       "lane": "R7-09",
-      "classification": "UNRESOLVED",
+      "classification": "GAP",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
-      "forge_authority": [],
-      "evidence": [],
+      "forge_authority": [
+        "server/packages/frappe-api/src/router.ts"
+      ],
+      "evidence": [
+        "docs/API_SURFACE.md",
+        "server/packages/frappe-api/src/router.ts"
+      ],
       "oracle_cases": [],
       "gaps": [
-        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+        "Frappe v2 document API parity is not exposed; current canonical facade is /api/resource and /api/method plus Forge/MetaForge extensions."
       ],
-      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+      "rationale": "The primary REST/RPC surface is compatible and tested, but the declared denominator includes Frappe v2 document API behavior."
     },
     {
       "domain_id": "FRAPPE-07-DATABASE-ABSTRACTION",
@@ -128,85 +163,119 @@
       "domain_id": "FRAPPE-08-QUERY-AND-LIST-ENGINE",
       "name": "Query and list engine",
       "lane": "R7-06",
-      "classification": "UNRESOLVED",
+      "classification": "SEMANTIC_PARITY",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
-      "forge_authority": [],
-      "evidence": [],
-      "oracle_cases": [],
-      "gaps": [
-        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      "forge_authority": [
+        "server/packages/document-kernel/src/document-list.ts",
+        "server/packages/frappe-api/src/filters.ts",
+        "server/packages/query"
       ],
-      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+      "evidence": [
+        "server/packages/document-kernel/src/document-list.ts",
+        "server/packages/frappe-api/src/filters.ts",
+        "server/apps/tenant-worker/test/frappe-facade.integration.test.mts"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "List/query behavior is implemented through a permission-aware AST/compiler with filtering, projection, ordering, pagination and search/link adapters; implementation differs from Frappe Query Builder."
     },
     {
       "domain_id": "FRAPPE-09-BACKGROUND-JOBS",
       "name": "Background jobs",
       "lane": "R7-08",
-      "classification": "UNRESOLVED",
+      "classification": "GAP",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
-      "forge_authority": [],
-      "evidence": [],
+      "forge_authority": [
+        "server/apps/jobs-worker",
+        "server/packages/outbox"
+      ],
+      "evidence": [
+        "docs/agents/workstreams/WS10-integration-hub.md",
+        "server/apps/jobs-worker/src/index.ts"
+      ],
       "oracle_cases": [],
       "gaps": [
-        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+        "Generic failed-job/dead-letter/quarantine/recovery semantics remain incomplete; current evidence describes dead-letter handling as Foundation."
       ],
-      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+      "rationale": "Queue delivery, retry and idempotency exist, but the full Frappe background-job failure registry/recovery contract is not closed."
     },
     {
       "domain_id": "FRAPPE-10-SCHEDULER",
       "name": "Scheduler",
       "lane": "R7-08",
-      "classification": "UNRESOLVED",
+      "classification": "GAP",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
-      "forge_authority": [],
-      "evidence": [],
+      "forge_authority": [
+        "server/apps/tenant-worker/src/index-core-base.ts"
+      ],
+      "evidence": [
+        "server/apps/tenant-worker/src/index-core-base.ts",
+        "docs/VERIFICATION.md"
+      ],
       "oracle_cases": [],
       "gaps": [
-        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+        "Generic merged Frappe cron/all/daily/hourly app scheduler event semantics are not implemented; current scheduled handler primarily runs Forge maintenance."
       ],
-      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+      "rationale": "A scheduler exists operationally, but it is not equivalent to Frappe's installed-app scheduler-event composition."
     },
     {
       "domain_id": "FRAPPE-11-REALTIME",
       "name": "Realtime",
       "lane": "R7-08",
-      "classification": "UNRESOLVED",
+      "classification": "GAP",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
-      "forge_authority": [],
-      "evidence": [],
+      "forge_authority": [
+        "event/outbox seams",
+        "bounded realtime domain implementations"
+      ],
+      "evidence": [
+        "server/docs/spec/source-exact/05-cloudforge-mapping-contract.md",
+        "docs/TECHNICAL_DESIGN_SOCIAL_COMMERCE_SAAS.md"
+      ],
       "oracle_cases": [],
       "gaps": [
-        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+        "Generic frappe.publish_realtime-compatible room authorization/order/reconnect behavior is not proven as a platform-wide authority."
       ],
-      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+      "rationale": "Realtime exists in bounded designs/verticals, but the generic Frappe framework contract is not closed."
     },
     {
       "domain_id": "FRAPPE-12-CACHING-AND-LOCKS",
       "name": "Caching and locks",
       "lane": "R7-08",
-      "classification": "UNRESOLVED",
+      "classification": "INTENTIONAL_DIFFERENCE",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
-      "forge_authority": [],
-      "evidence": [],
-      "oracle_cases": [],
-      "gaps": [
-        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      "forge_authority": [
+        "revisioned metadata/cache keys",
+        "Durable Object serialization/coordination",
+        "Cloudflare cache primitives"
       ],
-      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+      "evidence": [
+        "server/docs/spec/source-exact/05-cloudforge-mapping-contract.md",
+        "server/packages/frappe-model/src/customization.ts",
+        "server/packages/document-kernel"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "Forge intentionally does not reproduce Frappe Redis internals. Cache invalidation is revision-driven and authoritative write locking/serialization uses D1/DO semantics; R7 compares observable invalidation and mutual-exclusion outcomes."
     },
     {
       "domain_id": "FRAPPE-13-FILES-AND-ATTACHMENTS",
       "name": "Files and attachments",
       "lane": "R7-05",
-      "classification": "UNRESOLVED",
+      "classification": "SEMANTIC_PARITY",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
-      "forge_authority": [],
-      "evidence": [],
-      "oracle_cases": [],
-      "gaps": [
-        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      "forge_authority": [
+        "server/packages/frappe-api/src/files.ts",
+        "R2 + D1 file metadata"
       ],
-      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+      "evidence": [
+        "server/packages/frappe-api/src/files.ts",
+        "server/apps/tenant-worker/test/files.integration.test.mts",
+        "server/RUNBOOK_FRAPPE_CORE_BETA.md"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "Upload, private/public access path, permission enforcement, delete and bounded file handling are implemented on R2/D1 rather than Frappe filesystem/storage adapters."
     },
     {
       "domain_id": "FRAPPE-14-PRINT-AND-PDF",
@@ -231,29 +300,45 @@
       "domain_id": "FRAPPE-15-DATA-IMPORT-EXPORT",
       "name": "Data import/export",
       "lane": "R7-07",
-      "classification": "UNRESOLVED",
+      "classification": "GAP",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
-      "forge_authority": [],
-      "evidence": [],
+      "forge_authority": [
+        "frappe-shaped synchronous import/export",
+        "server/packages/migration"
+      ],
+      "evidence": [
+        "docs/API_SURFACE.md",
+        "docs/agents/workstreams/WS13-migration-implementation.md"
+      ],
       "oracle_cases": [],
       "gaps": [
-        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+        "Frappe background/queued Data Import status lifecycle is not exposed on the facade.",
+        "Large import/error-workbook/update-mode parity remains incomplete."
       ],
-      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+      "rationale": "CSV preview/apply/export is usable, but Frappe 16 import/export includes asynchronous lifecycle behavior that Forge has not closed."
     },
     {
       "domain_id": "FRAPPE-16-WORKFLOW",
       "name": "Workflow",
       "lane": "R7-04",
-      "classification": "UNRESOLVED",
+      "classification": "GAP",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
-      "forge_authority": [],
-      "evidence": [],
+      "forge_authority": [
+        "server/packages/frappe-model workflow metadata",
+        "Document Kernel lifecycle",
+        "organization-security delegation"
+      ],
+      "evidence": [
+        "server/packages/frappe-api/src/desk-surfaces.ts",
+        "server/apps/tenant-worker/src/index-core-base.ts",
+        "server/packages/frappe-model/src/notification-rules.ts"
+      ],
       "oracle_cases": [],
       "gaps": [
-        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+        "Workflow email/action delivery is not complete because mail transport is absent.",
+        "Exact Frappe condition/evaluation and all workflow side-effect semantics require closure."
       ],
-      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+      "rationale": "State/transition/role actions are implemented, but the declared workflow contract includes email/actions and dynamic semantics not fully closed."
     },
     {
       "domain_id": "FRAPPE-17-NOTIFICATIONS-AND-COMMUNICATIONS",
@@ -278,71 +363,101 @@
       "domain_id": "FRAPPE-18-HOOKS-AND-APP-COMPOSITION",
       "name": "Hooks and app composition",
       "lane": "R7-09",
-      "classification": "UNRESOLVED",
+      "classification": "INTENTIONAL_DIFFERENCE",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
-      "forge_authority": [],
-      "evidence": [],
-      "oracle_cases": [],
-      "gaps": [
-        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      "forge_authority": [
+        "server/packages/app-registry",
+        "server/packages/document-kernel controller registry",
+        "outbox subscribers"
       ],
-      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+      "evidence": [
+        "server/docs/spec/technical/controller-compatibility.md",
+        "server/FEATURE_MATRIX_v1.0.0.md"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "Forge intentionally does not execute arbitrary Python hooks/monkey patches. Controller overrides, ordered document events and app composition are represented by versioned registries and deterministic pre-commit/outbox phases."
     },
     {
       "domain_id": "FRAPPE-19-MIGRATIONS-AND-PATCHES",
       "name": "Migrations and patches",
       "lane": "R7-07",
-      "classification": "UNRESOLVED",
+      "classification": "GAP",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
-      "forge_authority": [],
-      "evidence": [],
+      "forge_authority": [
+        "server/migrations",
+        "server/packages/app-registry",
+        "server/packages/migration"
+      ],
+      "evidence": [
+        "docs/agents/rc/RC-05-iam-tenant.md",
+        "server/packages/app-registry/src/app-rollback.ts"
+      ],
       "oracle_cases": [],
       "gaps": [
-        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+        "Generic reversible schema/data migration and repair semantics are not complete.",
+        "Materialized app rollback remains intentionally blocked without explicit reverse migration/reconciliation."
       ],
-      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+      "rationale": "Forward migrations and app upgrades are strong, but the full patch/repair/rollback contract is not closed."
     },
     {
       "domain_id": "FRAPPE-20-DESK-BOOT-AND-NAVIGATION",
       "name": "Desk boot and navigation",
       "lane": "R7-06",
-      "classification": "UNRESOLVED",
+      "classification": "SEMANTIC_PARITY",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
-      "forge_authority": [],
-      "evidence": [],
-      "oracle_cases": [],
-      "gaps": [
-        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      "forge_authority": [
+        "server/packages/frappe-api Desk facade",
+        "MetaForge runtime"
       ],
-      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+      "evidence": [
+        "docs/API_SURFACE.md",
+        "docs/VERIFICATION.md",
+        "server/apps/tenant-worker/test/frappe-facade.integration.test.mts"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "Boot, workspace/desktop navigation and permission-filtered client contract are exposed through the Frappe-shaped facade and have browser/integration evidence."
     },
     {
       "domain_id": "FRAPPE-21-FORM-RUNTIME",
       "name": "Form runtime",
       "lane": "R7-06",
-      "classification": "UNRESOLVED",
+      "classification": "SEMANTIC_PARITY",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
-      "forge_authority": [],
-      "evidence": [],
-      "oracle_cases": [],
-      "gaps": [
-        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      "forge_authority": [
+        "MetaForge form runtime",
+        "Frappe adapter",
+        "server metadata/document contract"
       ],
-      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+      "evidence": [
+        "client/docs/brd-screens/11-form-view.md",
+        "client/docs/brd-flows/00-core-flows.md",
+        "server/tests/client-contract.test.mjs"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "Field rendering, depends_on/fetch behavior, trusted Client Script compatibility execution, child grids and optimistic save/conflict behavior are represented in the current form contract."
     },
     {
       "domain_id": "FRAPPE-22-LIST-REPORT-DASHBOARD-RUNTIME",
       "name": "List/report/dashboard runtime",
       "lane": "R7-06",
-      "classification": "UNRESOLVED",
+      "classification": "SEMANTIC_PARITY",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
-      "forge_authority": [],
-      "evidence": [],
-      "oracle_cases": [],
-      "gaps": [
-        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      "forge_authority": [
+        "server/packages/frappe-api/src/desk-surfaces.ts",
+        "server/packages/query",
+        "MetaForge list/report/dashboard surfaces"
       ],
-      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+      "evidence": [
+        "client/docs/technical/api-map.md",
+        "server/apps/tenant-worker/test/frappe-facade.integration.test.mts",
+        "server/packages/frappe-api/src/desk-surfaces.ts"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "List/report execution, prepared-report fallback/async semantics, dashboard charts and number cards are exposed through the current Frappe-shaped client contract."
     },
     {
       "domain_id": "FRAPPE-23-WEBSITE-AND-PORTAL",
@@ -368,57 +483,85 @@
       "domain_id": "FRAPPE-24-LOCALIZATION",
       "name": "Localization",
       "lane": "R7-06",
-      "classification": "UNRESOLVED",
+      "classification": "GAP",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
-      "forge_authority": [],
-      "evidence": [],
+      "forge_authority": [
+        "translation store",
+        "MetaForge locale formatting"
+      ],
+      "evidence": [
+        "client/I18N_MODEL.md",
+        "server/packages/frappe-api/src/router.ts",
+        "docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md"
+      ],
       "oracle_cases": [],
       "gaps": [
-        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+        "Exact Frappe 16 timezone/language/translation runtime behavior is not closed end-to-end.",
+        "Some server/domain code still owns bounded timezone assumptions rather than deriving every behavior from the same site/user locale contract."
       ],
-      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+      "rationale": "Client locale formatting and translation seams exist, but the full framework localization contract is broader than the currently proven path."
     },
     {
       "domain_id": "FRAPPE-25-AUDIT-AND-COLLABORATION",
       "name": "Audit and collaboration",
       "lane": "R7-05",
-      "classification": "UNRESOLVED",
+      "classification": "SEMANTIC_PARITY",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
-      "forge_authority": [],
-      "evidence": [],
-      "oracle_cases": [],
-      "gaps": [
-        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      "forge_authority": [
+        "server/packages/frappe-model/src/services.ts",
+        "Document Kernel version history",
+        "frappe-api collaboration methods"
       ],
-      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+      "evidence": [
+        "server/packages/frappe-model/src/services.ts",
+        "docs/API_SURFACE.md",
+        "docs/VERIFICATION.md"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "Version history, comments, assignments/ToDo-like state, tags, shares and timeline composition are implemented with immutable/permission-aware Forge storage semantics."
     },
     {
       "domain_id": "FRAPPE-26-INTEGRATIONS",
       "name": "Integrations",
       "lane": "R7-08",
-      "classification": "UNRESOLVED",
+      "classification": "GAP",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
-      "forge_authority": [],
-      "evidence": [],
+      "forge_authority": [
+        "integration hub",
+        "social ingress",
+        "outbox"
+      ],
+      "evidence": [
+        "docs/agents/workstreams/WS10-integration-hub.md",
+        "server/apps/social-ingress-worker"
+      ],
       "oracle_cases": [],
       "gaps": [
-        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+        "Generic API-key/service-account/OAuth connected-app lifecycle is not fully wired.",
+        "Generic webhook/event subscription and provider-neutral production queue lifecycle remain Foundation in current evidence."
       ],
-      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+      "rationale": "Provider-specific and generic integration seams exist, but they do not yet close the full Frappe integrations contract."
     },
     {
       "domain_id": "FRAPPE-27-SECURITY-BOUNDARIES",
       "name": "Security boundaries",
       "lane": "R7-03",
-      "classification": "UNRESOLVED",
+      "classification": "INTENTIONAL_DIFFERENCE",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
-      "forge_authority": [],
-      "evidence": [],
-      "oracle_cases": [],
-      "gaps": [
-        "R7 audit not yet resolved against the pinned Frappe 16 runtime/source contract."
+      "forge_authority": [
+        "policy/expression DSL",
+        "tenant/auth/permission kernel",
+        "Cloudflare isolation boundaries"
       ],
-      "rationale": "Conservative R7-00 baseline: existing implementation evidence is not automatically promoted into a parity claim."
+      "evidence": [
+        "server/docs/spec/technical/controller-compatibility.md",
+        "docs/agents/rc/RC-04-kernel-auth.md",
+        "skills/forge-enterprise-completion/SKILL.md"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "Forge intentionally refuses arbitrary Python safe_exec/raw SQL/implicit global state in Workers and replaces them with allowlisted DSLs, typed errors, trusted tenant identity, server-side authorization and bounded execution."
     },
     {
       "domain_id": "FRAPPE-28-TESTING-FRAMEWORK",
