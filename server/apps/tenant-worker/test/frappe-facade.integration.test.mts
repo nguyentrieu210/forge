@@ -612,9 +612,12 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     expect(grouped.status).toBe(417);
     expect(String((await grouped.json() as any).errors[0].message)).toMatch(/group_by/i);
 
-    const tuples = await call("/api/v2/document/Field%20Visit?as_dict=0");
-    expect(tuples.status).toBe(417);
-    expect(String((await tuples.json() as any).errors[0].message)).toMatch(/as_dict=false/i);
+    const tuples = await call("/api/v2/document/Field%20Visit?fields=%5B%22name%22%2C%22subject%22%5D&as_dict=0&limit=1");
+    expect(tuples.status).toBe(200);
+    const tupleBody: any = await tuples.json();
+    expect(Array.isArray(tupleBody.data)).toBe(true);
+    expect(Array.isArray(tupleBody.data[0])).toBe(true);
+    expect(tupleBody.data[0]).toHaveLength(2);
   });
 
   it("submits the document and then reports capabilities that match the new state", async () => {
