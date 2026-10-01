@@ -17,6 +17,8 @@ import {
   toKernelSort,
   faultResponse,
   methodResponse,
+  v2DataResponse,
+  v2FaultResponse,
 } from "../dist/packages/frappe-api/src/index.js";
 import { errors } from "../dist/packages/core/src/index.js";
 import { parseDocumentListRequest, DocumentListCompiler } from "../dist/packages/document-kernel/src/index.js";
@@ -547,4 +549,18 @@ test("a doctype WITHOUT a status field still gets the derived one", () => {
   assert.equal(toFrappeDoc({ ...base, docstatus: 0, status: "Draft" }).status, "Draft");
   assert.equal(toFrappeDoc({ ...base, docstatus: 1, status: "Submitted" }).status, "Submitted");
   assert.equal(toFrappeDoc({ ...base, docstatus: 2, status: "Cancelled" }).status, "Cancelled");
+});
+
+
+test("v2 success/error envelopes use data/errors rather than v1 message/exc_type", async () => {
+  const ok = v2DataResponse({ name: "X" }, 200, { has_next_page: false });
+  assert.deepEqual(await ok.json(), { data: { name: "X" }, has_next_page: false });
+
+  const failure = v2FaultResponse(errors.notFound("Missing"), "trace-v2");
+  assert.equal(failure.status, 404);
+  const body = await failure.json();
+  assert.equal(body.errors[0].type, "DoesNotExistError");
+  assert.equal(body.errors[0].message, "Missing");
+  assert.equal(body.exc_type, undefined);
+  assert.equal(body._trace_id, "trace-v2");
 });
