@@ -5,6 +5,7 @@ on:
     paths:
       - "docs/agents/r7/**"
       - "server/packages/frappe-api/**"
+      - "server/packages/frappe-model/src/permission.ts"
       - "server/tests/r7-frappe-closure.test.mjs"
       - "server/apps/tenant-worker/test/frappe-facade.integration.test.mts"
       - "server/scripts/verify-r7-frappe-closure.mjs"
