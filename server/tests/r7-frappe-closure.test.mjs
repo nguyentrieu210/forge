@@ -48,7 +48,12 @@ test("R7 closed dispositions carry evidence and out-of-scope rows carry rational
   }
 });
 
-test("R7 certification remains blocked while GAP or UNRESOLVED exists", () => {
-  const blockers = matrix.domains.filter((row) => row.classification === "GAP" || row.classification === "UNRESOLVED");
-  assert.ok(blockers.length > 0, "do not silently turn the initial R7 baseline into a closure claim");
+test("R7 audit has no unresolved Frappe 16 domains", () => {
+  const unresolved = matrix.domains.filter((row) => row.classification === "UNRESOLVED");
+  assert.deepEqual(unresolved, [], "every denominator domain must have an evidence-backed audit disposition");
+});
+
+test("R7 platform certification remains blocked while GAP exists", () => {
+  const gaps = matrix.domains.filter((row) => row.classification === "GAP");
+  assert.ok(gaps.length > 0, "audit completion must not be confused with platform closure");
 });
