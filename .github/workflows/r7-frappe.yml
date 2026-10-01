@@ -1,0 +1,57 @@
+name: R7 Frappe 16 Closure
+
+on:
+  pull_request:
+    paths:
+      - "docs/agents/r7/**"
+      - "server/packages/frappe-api/**"
+      - "server/tests/r7-frappe-closure.test.mjs"
+      - "server/apps/tenant-worker/test/frappe-facade.integration.test.mts"
+      - "server/scripts/verify-r7-frappe-closure.mjs"
+      - "server/source-lock.json"
+      - "server/package.json"
+      - ".github/workflows/r7-frappe.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  r7-frappe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pinned pnpm
+        run: corepack enable && corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install frozen workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify R7 control contract
+        run: |
+          pnpm --filter cloudforge run test:r7-frappe
+          pnpm --filter cloudforge run r7:frappe:audit-complete
+
+      - name: Changed-authority TypeScript guard
+        shell: bash
+        run: |
+          set +e
+          pnpm --filter cloudforge exec tsc -p tsconfig.json --noEmit 2>&1 | tee /tmp/r7-tsc.log
+          code=${PIPESTATUS[0]}
+          set -e
+          if grep -E 'packages/frappe-api/src/(router|envelope)\.ts|apps/tenant-worker/test/frappe-facade\.integration\.test\.mts' /tmp/r7-tsc.log; then
+            echo "Changed R7 authority has TypeScript errors"
+            exit 1
+          fi
+          if [ "$code" -ne 0 ]; then
+            echo "Global server TypeScript baseline remains non-zero outside this R7 delta; changed-authority guard is clean."
+          fi
+
+      - name: Workerd Frappe facade regression
+        working-directory: server
+        run: pnpm exec vitest run --config apps/tenant-worker/vitest.config.mts apps/tenant-worker/test/frappe-facade.integration.test.mts
