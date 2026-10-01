@@ -527,6 +527,95 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     expect(labels[0].label).toBe("Renamed subject");
   });
 
+  it("serves the pinned Frappe 16 v2 document envelope and pagination marker", async () => {
+    const response = await call("/api/v2/document/Field%20Visit?fields=%5B%22name%22%2C%22subject%22%5D&limit=1");
+    expect(response.status).toBe(200);
+    const body: any = await response.json();
+    expect(Array.isArray(body.data)).toBe(true);
+    expect(body.data.length).toBe(1);
+    expect(typeof body.has_next_page).toBe("boolean");
+    expect(body.message).toBeUndefined();
+  });
+
+  it("supports Frappe 16 v2 meta, count and ping on the canonical authorities", async () => {
+    const metaResponse = await call("/api/v2/doctype/Field%20Visit/meta");
+    expect(metaResponse.status).toBe(200);
+    const meta: any = await metaResponse.json();
+    expect(meta.data.name).toBe("Field Visit");
+    expect(Array.isArray(meta.data.fields)).toBe(true);
+
+    const countResponse = await call("/api/v2/doctype/Field%20Visit/count");
+    expect(countResponse.status).toBe(200);
+    expect(Number((await countResponse.json() as any).data)).toBeGreaterThanOrEqual(1);
+
+    const ping = await call("/api/v2/method/ping");
+    expect(ping.status).toBe(200);
+    expect((await ping.json() as any).data).toBe("pong");
+  });
+
+  it("runs Frappe 16 v2 create/read/PATCH/copy/delete without creating another write authority", async () => {
+    const created = await call("/api/v2/document/Field%20Visit", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ subject: "V2 visit", customer: "CUST-2", external_ref: "V2-EXT" }),
+    });
+    expect(created.status).toBe(200);
+    const createdDoc: any = (await created.json() as any).data;
+    expect(createdDoc.subject).toBe("V2 visit");
+    expect(createdDoc.name).toMatch(/^FV-2026-/);
+
+    const read = await call(`/api/v2/document/Field%20Visit/${encodeURIComponent(createdDoc.name)}/`);
+    expect(read.status).toBe(200);
+    expect((await read.json() as any).data.name).toBe(createdDoc.name);
+
+    // Forge deliberately keeps stronger OCC than upstream Frappe v2.
+    const missingToken = await call(`/api/v2/document/Field%20Visit/${encodeURIComponent(createdDoc.name)}/`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ subject: "Unsafe overwrite" }),
+    });
+    expect(missingToken.status).toBe(417);
+    const missingBody: any = await missingToken.json();
+    expect(missingBody.errors[0].type).toBe("TimestampMismatchError");
+
+    const patched = await call(`/api/v2/document/Field%20Visit/${encodeURIComponent(createdDoc.name)}/`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ subject: "V2 updated", modified: createdDoc.modified }),
+    });
+    expect(patched.status).toBe(200);
+    const patchedDoc: any = (await patched.json() as any).data;
+    expect(patchedDoc.subject).toBe("V2 updated");
+
+    const copied = await call(`/api/v2/document/Field%20Visit/${encodeURIComponent(createdDoc.name)}/copy`);
+    expect(copied.status).toBe(200);
+    const copy: any = (await copied.json() as any).data;
+    expect(copy.doctype).toBe("Field Visit");
+    expect(copy.subject).toBe("V2 updated");
+    expect(copy.external_ref).toBeUndefined();
+    expect(copy.name).toBeUndefined();
+
+    const deleted = await call(`/api/v2/document/Field%20Visit/${encodeURIComponent(createdDoc.name)}/`, { method: "DELETE" });
+    expect(deleted.status).toBe(202);
+    expect((await deleted.json() as any).data).toBe("ok");
+
+    const missing = await call(`/api/v2/document/Field%20Visit/${encodeURIComponent(createdDoc.name)}/`);
+    expect(missing.status).toBe(404);
+    const missingJson: any = await missing.json();
+    expect(missingJson.errors[0].type).toBe("DoesNotExistError");
+    expect(missingJson.exc_type).toBeUndefined();
+  });
+
+  it("fails closed on v2 collection shapes Forge has not implemented instead of silently changing meaning", async () => {
+    const grouped = await call("/api/v2/document/Field%20Visit?group_by=customer");
+    expect(grouped.status).toBe(417);
+    expect(String((await grouped.json() as any).errors[0].message)).toMatch(/group_by/i);
+
+    const tuples = await call("/api/v2/document/Field%20Visit?as_dict=0");
+    expect(tuples.status).toBe(417);
+    expect(String((await tuples.json() as any).errors[0].message)).toMatch(/as_dict=false/i);
+  });
+
   it("submits the document and then reports capabilities that match the new state", async () => {
     const submitted = await unwrap(await method("frappe.client.submit", {
       doc: { doctype: "Field Visit", name: createdName, modified: createdModified },
