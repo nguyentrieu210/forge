@@ -73,7 +73,9 @@
     "verify:alumdoor-meta": "node scripts/verify-alumdoor-meta-completeness.mjs",
     "brief:check": "node scripts/forge-app.mjs briefs/assets.json --dry-run && node scripts/forge-app.mjs briefs/center.json --dry-run && node scripts/forge-app.mjs briefs/alumdoor.json --dry-run && node scripts/forge-app.mjs briefs/alumdoor-v2.json --dry-run && node scripts/verify-alumdoor-meta-completeness.mjs && node scripts/forge-app.mjs briefs/phanbon.json --dry-run",
     "dev:seed": "node scripts/seed-local.mjs",
-    "smoke:http": "node scripts/http-smoke.mjs"
+    "smoke:http": "node scripts/http-smoke.mjs",
+    "r7:frappe:audit": "node scripts/verify-r7-frappe-closure.mjs",
+    "r7:frappe:certify": "node scripts/verify-r7-frappe-closure.mjs --certify"
   },
   "dependencies": {
     "@cloudforge/alumdoor-hr-payroll-contract": "workspace:*",
