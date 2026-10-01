@@ -310,16 +310,19 @@ async function routeFrappeV2(
     if (!name) {
       if (method === "GET") {
         if (args.text("group_by")) throw errors.validation("Frappe v2 group_by is not supported by this compatibility layer");
-        if (args.has("as_dict") && !args.bool("as_dict", true)) {
-          throw errors.validation("Frappe v2 as_dict=false is not supported by this compatibility layer");
-        }
+        const asDict = !args.has("as_dict") || args.bool("as_dict", true);
+        const requestedFields = args.array<string>("fields") ?? ["name"];
         const limit = clampPageLength(args.int("limit", 20));
         const adaptedUrl = new URL(url);
         adaptedUrl.searchParams.set("limit", String(limit + 1));
         adaptedUrl.searchParams.set("limit_start", String(args.int("start", 0)));
         const adapted = await readFrappeArgs(new Request(adaptedUrl, { method: "GET", headers: request.headers }), adaptedUrl);
         const rows = await listDocuments(doctype, adapted, context);
-        return v2DataResponse(rows.slice(0, limit), 200, { has_next_page: rows.length > limit });
+        const page = rows.slice(0, limit);
+        const data = asDict
+          ? page
+          : page.map((row) => requestedFields.map((field) => row[field] ?? null));
+        return v2DataResponse(data, 200, { has_next_page: rows.length > limit });
       }
       if (method === "POST") return v2DataResponse(await createDocument(doctype, args, context));
       throw errors.validation(`${method} is not supported on a v2 doctype collection`);
