@@ -47,3 +47,17 @@ Mọi product/domain work mới phải bắt đầu từ exact current `main`, x
 ## 5. Production boundary
 
 Release/deploy/migration/provider/customer-data work chỉ thực hiện khi user authorize rõ. Source cleanup hoặc Sentrux improvement không tự mở quyền production mutation.
+
+
+## R7-A — Frappe 16 Platform Closure
+
+Active control PR: #994 (`codex/r7-frappe-platform-closure`).
+
+Order of work:
+
+1. keep Frappe source locked at `v16.19.0` / `ba18090b141740e75d52aa97bfc525ff2f831f6c`;
+2. close the 28-domain R7 matrix using exact source/runtime/oracle evidence;
+3. prioritize metadata/document, permission, workflow, query/API and async ambiguities before ERPNext business parity;
+4. keep `GAP` and `UNRESOLVED` fail-closed; do not promote from source presence alone;
+5. do not start broad .NET porting until the corresponding platform/domain contract is verified;
+6. no production deploy/migration/provider/customer-data mutation from R7 audit work.
