@@ -369,10 +369,10 @@ async function routeFrappeV2(
 }
 
 function v2TransitionArgs(doctype: string, name: string, args: FrappeArgs): FrappeArgs {
+  const modified = args.text("modified");
+  const doc: JsonObject = { doctype, name, ...(modified ? { modified } : {}) };
   return new FrappeArgs(new Map<string, string | JsonValue>([
-    ["doctype", doctype],
-    ["name", name],
-    ...(args.text("modified") ? [["modified", args.text("modified")!] as [string, JsonValue]] : []),
+    ["doc", doc],
   ]));
 }
 
