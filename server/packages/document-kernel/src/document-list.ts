@@ -845,6 +845,14 @@ const SO_THANH_TOAN_THEO_DOCTYPE: Record<string, {
 export interface DocumentListStore {
   list(tenantId: string, request: DocumentListRequest, definition: DocumentListDefinition, scope?: DocumentReadScope): Promise<DocumentListPage>;
   count(tenantId: string, request: DocumentListRequest, definition: DocumentListDefinition, scope?: DocumentReadScope): Promise<number>;
+  group(
+    tenantId: string,
+    request: DocumentListRequest,
+    definition: DocumentListDefinition,
+    groupBy: string[],
+    projections: DocumentGroupProjection[],
+    scope?: DocumentReadScope,
+  ): Promise<DocumentGroupPage>;
 }
 
 export class D1DocumentListStore implements DocumentListStore {
