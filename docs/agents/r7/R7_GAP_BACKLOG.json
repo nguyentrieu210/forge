@@ -6,7 +6,7 @@
     "full_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c"
   },
   "generated_from": "docs/agents/r7/R7_FRAPPE_PARITY_MATRIX.json",
-  "gap_count": 13,
+  "gap_count": 12,
   "gaps": [
     {
       "domain_id": "FRAPPE-04-PERMISSIONS",
@@ -254,30 +254,6 @@
       "evidence": [
         "server/BUILD_REPORT.md",
         "server/scripts/generate-verification.py"
-      ],
-      "closure_gate": [
-        "pinned_frappe16_fixture",
-        "forge_regression",
-        "differential_review",
-        "matrix_update"
-      ]
-    },
-    {
-      "domain_id": "FRAPPE-24-LOCALIZATION",
-      "name": "Localization",
-      "lane": "R7-06",
-      "gaps": [
-        "Exact Frappe 16 timezone/language/translation runtime behavior is not closed end-to-end.",
-        "Some server/domain code still owns bounded timezone assumptions rather than deriving every behavior from the same site/user locale contract."
-      ],
-      "forge_authority": [
-        "translation store",
-        "MetaForge locale formatting"
-      ],
-      "evidence": [
-        "client/I18N_MODEL.md",
-        "server/packages/frappe-api/src/router.ts",
-        "docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md"
       ],
       "closure_gate": [
         "pinned_frappe16_fixture",
