@@ -105,8 +105,92 @@ export class D1DocumentAccessStore implements DocumentAccessStore {
           `SELECT user,allow_doctype,allow_name,applicable_for_doctype,is_default,hide_descendants,created_by,created_at
            FROM user_permissions WHERE tenant_id=?1 AND user=?2 ORDER BY applicable_for_doctype,allow_doctype,allow_name`,
         ).bind(tenantId, user).all<UserPermissionRecord>();
-      return (result.results ?? []).map((row) => ({ ...row, is_default: Boolean(row.is_default), hide_descendants: Boolean(row.hide_descendants) }));
+      const normalized = (result.results ?? []).map((row) => ({
+        ...row,
+        is_default: Boolean(row.is_default),
+        hide_descendants: Boolean(row.hide_descendants),
+      }));
+      return this.expandUserPermissionDescendants(tenantId, normalized);
     });
+  }
+
+  /**
+   * Mirrors Frappe 16 User Permission semantics for tree DocTypes:
+   * hide_descendants=0 grants every descendant of the selected tree node.
+   *
+   * Forge does not depend on Frappe's lft/rgt implementation. Its canonical tree
+   * contract is the self-referencing parent_<doctype> field, so descendant
+   * expansion walks that authority directly. UNION (not UNION ALL) makes a corrupt
+   * cycle terminate rather than broadening indefinitely.
+   */
+  private async expandUserPermissionDescendants(
+    tenantId: string,
+    rows: UserPermissionRecord[],
+  ): Promise<UserPermissionRecord[]> {
+    const output = [...rows];
+    const seen = new Set(rows.map((row) => [
+      row.user, row.allow_doctype, row.allow_name, row.applicable_for_doctype,
+    ].join("\u0000")));
+    const parentFieldCache = new Map<string, string | null>();
+
+    for (const row of rows) {
+      if (row.hide_descendants) continue;
+      let parentField = parentFieldCache.get(row.allow_doctype);
+      if (parentField === undefined) {
+        const definition = await this.db.prepare(
+          `SELECT metadata_json FROM doctype_definitions WHERE tenant_id=?1 AND doctype=?2 AND disabled=0`,
+        ).bind(tenantId, row.allow_doctype).first<{ metadata_json: string }>();
+        parentField = null;
+        if (definition?.metadata_json) {
+          try {
+            const meta = JSON.parse(definition.metadata_json) as { fields?: Array<{ fieldname?: string; fieldtype?: string; options?: string }> };
+            const conventional = `parent_${row.allow_doctype.toLowerCase().replace(/ /g, "_")}`;
+            const field = (meta.fields ?? []).find((candidate) =>
+              candidate.fieldname === conventional
+              && (candidate.fieldtype === "Link" || candidate.fieldtype === "Data")
+              && (!candidate.options || candidate.options === row.allow_doctype));
+            if (field) parentField = conventional;
+          } catch {
+            // Corrupt metadata must not widen access. Treat it as a non-tree.
+            parentField = null;
+          }
+        }
+        parentFieldCache.set(row.allow_doctype, parentField);
+      }
+      if (!parentField) continue;
+
+      const jsonPath = `$.${parentField}`;
+      const descendants = await this.db.prepare(
+        `WITH RECURSIVE descendants(name) AS (
+           SELECT name
+           FROM documents
+           WHERE tenant_id=?1 AND doctype=?2 AND docstatus<>2
+             AND json_extract(payload_json,?3)=?4
+           UNION
+           SELECT child.name
+           FROM documents child
+           JOIN descendants parent
+             ON json_extract(child.payload_json,?3)=parent.name
+           WHERE child.tenant_id=?1 AND child.doctype=?2 AND child.docstatus<>2
+         )
+         SELECT name FROM descendants ORDER BY name`,
+      ).bind(tenantId, row.allow_doctype, jsonPath, row.allow_name).all<{ name: string }>();
+
+      for (const descendant of descendants.results ?? []) {
+        if (!descendant.name) continue;
+        const key = [row.user, row.allow_doctype, descendant.name, row.applicable_for_doctype].join("\u0000");
+        if (seen.has(key)) continue;
+        seen.add(key);
+        output.push({
+          ...row,
+          allow_name: descendant.name,
+          is_default: false,
+          hide_descendants: false,
+        });
+      }
+    }
+
+    return output;
   }
 
   async putUserPermission(tenantId: string, record: UserPermissionRecord): Promise<UserPermissionRecord> {
