@@ -489,23 +489,23 @@
       "domain_id": "FRAPPE-24-LOCALIZATION",
       "name": "Localization",
       "lane": "R7-06",
-      "classification": "GAP",
+      "classification": "SEMANTIC_PARITY",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
       "forge_authority": [
-        "translation store",
-        "MetaForge locale formatting"
+        "server/packages/frappe-api/src/translations.ts",
+        "Frappe boot language/time_zone/sysdefaults",
+        "client/packages/core/src/i18n/format.ts"
       ],
       "evidence": [
-        "client/I18N_MODEL.md",
-        "server/packages/frappe-api/src/router.ts",
-        "docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md"
+        "server/packages/frappe-api/src/translations.ts",
+        "server/apps/tenant-worker/test/frappe-facade.integration.test.mts",
+        "client/packages/core/src/i18n/format.ts",
+        "client/apps/demo/src/selfcheck.ts",
+        "client/I18N_MODEL.md"
       ],
       "oracle_cases": [],
-      "gaps": [
-        "Exact Frappe 16 timezone/language/translation runtime behavior is not closed end-to-end.",
-        "Some server/domain code still owns bounded timezone assumptions rather than deriving every behavior from the same site/user locale contract."
-      ],
-      "rationale": "Client locale formatting and translation seams exist, but the full framework localization contract is broader than the currently proven path."
+      "gaps": [],
+      "rationale": "The declared framework behaviors are covered semantically: tenant/user language and timezone travel in boot/session state; tenant translations override platform fallback; number/date/currency formatting is driven by boot sysdefaults with tested Frappe-style formats. Implementation is TypeScript/D1 rather than Frappe Python/Babel."
     },
     {
       "domain_id": "FRAPPE-25-AUDIT-AND-COLLABORATION",
