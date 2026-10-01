@@ -8,6 +8,7 @@ const serverRoot = path.resolve(here, "..");
 const repoRoot = path.resolve(serverRoot, "..");
 const args = new Set(process.argv.slice(2));
 const certify = args.has("--certify");
+const requireAuditComplete = args.has("--audit-complete") || certify;
 
 const readJson = async (p) => JSON.parse(await readFile(p, "utf8"));
 const sourceLockPath = path.join(serverRoot, "source-lock.json");
@@ -59,11 +60,13 @@ for (const row of matrix.domains ?? []) {
 }
 
 const unresolved = (counts.GAP ?? 0) + (counts.UNRESOLVED ?? 0);
+const unresolvedOnly = counts.UNRESOLVED ?? 0;
+if (requireAuditComplete && unresolvedOnly !== 0) failures.push(`R7-A audit incomplete: UNRESOLVED=${unresolvedOnly}`);
 if (certify && unresolved !== 0) failures.push(`R7-A closure blocked: GAP+UNRESOLVED=${unresolved}`);
 
 const result = {
   ok: failures.length === 0,
-  mode: certify ? "CERTIFY" : "AUDIT",
+  mode: certify ? "CERTIFY" : (requireAuditComplete ? "AUDIT_COMPLETE" : "AUDIT"),
   program: matrix.program,
   frappe: { tag: matrix.upstream.tag, sha: matrix.upstream.full_sha },
   denominator: ledger.domain_count,
