@@ -10,6 +10,7 @@
 import { env, exports } from "cloudflare:workers";
 import { beforeAll, describe, expect, it } from "vitest";
 import { hashPassword, mintSession, toFrappeModified } from "../../../packages/frappe-api/src/index.js";
+import { D1DocumentAccessStore } from "../../../packages/frappe-model/src/index.js";
 
 const NOW = "2026-07-26T10:00:00.000Z";
 const PASSWORD = "supersecret-password";
@@ -859,6 +860,42 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     expect(roots.map((node: any) => node.value)).toEqual(["North"]);
     const children = await unwrap(await method("frappe.desk.treeview.get_children", { doctype: "Visit Region", parent: "North" }, "GET"));
     expect(children.map((node: any) => node.value)).toEqual(["Hanoi"]);
+  });
+
+  it("expands User Permission descendants exactly like Frappe 16 unless hide_descendants is set", async () => {
+    // The previous tree scenario created North -> Hanoi. Add one more level so
+    // the permission expansion proves recursion, not just one-hop inclusion.
+    await unwrap(await method("metaforge.api.add_tree_node", {
+      doctype: "Visit Region", parent: "Hanoi", name: "Ba Dinh", region_name: "Ba Dinh",
+    }));
+
+    await env.DB.prepare(
+      `INSERT INTO user_permissions(
+         tenant_id,user,allow_doctype,allow_name,applicable_for_doctype,is_default,hide_descendants,created_by,created_at
+       ) VALUES('demo','sales@example.com','Visit Region','North','Field Visit',0,0,'Administrator',?1)
+       ON CONFLICT(tenant_id,user,allow_doctype,allow_name,applicable_for_doctype)
+       DO UPDATE SET hide_descendants=0`,
+    ).bind(NOW).run();
+
+    const expanded = await new D1DocumentAccessStore(env.DB)
+      .listUserPermissions("demo", "sales@example.com", "Field Visit");
+    expect(expanded.filter((row) => row.allow_doctype === "Visit Region").map((row) => row.allow_name).sort())
+      .toEqual(["Ba Dinh", "Hanoi", "North"]);
+
+    await env.DB.prepare(
+      `UPDATE user_permissions SET hide_descendants=1
+       WHERE tenant_id='demo' AND user='sales@example.com' AND allow_doctype='Visit Region'
+         AND allow_name='North' AND applicable_for_doctype='Field Visit'`,
+    ).run();
+    const hidden = await new D1DocumentAccessStore(env.DB)
+      .listUserPermissions("demo", "sales@example.com", "Field Visit");
+    expect(hidden.filter((row) => row.allow_doctype === "Visit Region").map((row) => row.allow_name))
+      .toEqual(["North"]);
+
+    await env.DB.prepare(
+      `DELETE FROM user_permissions
+       WHERE tenant_id='demo' AND user='sales@example.com' AND allow_doctype='Visit Region'`,
+    ).run();
   });
 
   it("refuses to walk a doctype that was never modelled as a tree", async () => {
