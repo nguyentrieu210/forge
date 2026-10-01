@@ -399,7 +399,7 @@ function parseV2GroupProjections(fields: string[], groupBy: string[]): DocumentG
     const aggregate = aggregatePattern.exec(value);
     if (aggregate) {
       return {
-        aggregate: aggregate[1]!.toLowerCase() as DocumentGroupProjection["aggregate"],
+        aggregate: aggregate[1]!.toLowerCase() as NonNullable<DocumentGroupProjection["aggregate"]>,
         field: toKernelField(aggregate[2]!),
         alias: aggregate[3]!,
       };
