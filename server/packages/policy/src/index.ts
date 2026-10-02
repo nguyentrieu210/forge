@@ -26,6 +26,7 @@ export const STATIC_DOCTYPE_PERMISSIONS: Record<string, DoctypePermission> = {
   "Payment Entry": matrix(["Accounts Manager", "Accounts User"], ["Accounts Manager"]),
   "Payment Allocation": matrix(["Accounts Manager", "Accounts User"], ["Accounts Manager"]),
   "Journal Entry": matrix(["Accounts Manager", "Accounts User"], ["Accounts Manager"]),
+  "Period Closing Voucher": matrix(["Accounts Manager", "Accounts User"], ["Accounts Manager"]),
   "Purchase Order": matrix(["Purchase Manager", "Purchase User"], ["Purchase Manager"]),
   "Purchase Receipt": matrix(["Purchase Manager", "Purchase User", "Stock Manager", "Stock User"], ["Purchase Manager", "Stock Manager"]),
   "Purchase Invoice": matrix(["Purchase Manager", "Purchase User", "Accounts Manager", "Accounts User"], ["Accounts Manager"]),
@@ -87,6 +88,15 @@ const REPORT_PERMISSIONS: Record<string, readonly string[]> = {
     "Kế toán trưởng",
   ],
   "Finance Reconciliation Diagnostics": [
+    "System Manager",
+    "Accounts Manager",
+    "Accounts User",
+    "General Accountant",
+    "Chief Accountant",
+    "Kế toán tổng hợp",
+    "Kế toán trưởng",
+  ],
+  "Finance Budget vs Actual": [
     "System Manager",
     "Accounts Manager",
     "Accounts User",
