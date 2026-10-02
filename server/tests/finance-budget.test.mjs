@@ -200,6 +200,9 @@ test("Finance Budget generates exact equal fiscal distribution without minor-uni
   }));
   const rows = plan.document.data.budget_distribution;
   assert.equal(rows.length, 12);
+  assert.equal(plan.document.children.length, 12);
+  assert.equal(plan.document.children[0].fieldname, "budget_distribution");
+  assert.equal(plan.document.children[0].child_doctype, "Finance Budget Distribution");
   assert.equal(plan.document.data.distribution_weight_total, 12);
   assert.equal(rows.reduce((sum, row) => sum + row.allocation_weight, 0), 12);
   assert.equal(rows.reduce((sum, row) => sum + row.percent_bps, 0), 10_000);
