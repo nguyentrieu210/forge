@@ -19,6 +19,7 @@ on:
       - "server/tests/period-close-timestamp.test.mjs"
       - "server/tests/finance-closure-query.test.mjs"
       - "server/tests/finance-budget-actual-sql.test.mjs"
+      - "server/tests/finance-budget.test.mjs"
       - "server/tests/finance-budget-transaction-control.test.mjs"
       - "server/tests/exchange-rate-revaluation.test.mjs"
       - "server/tests/procurement-p2p-closure.test.mjs"
@@ -89,6 +90,8 @@ jobs:
         run: node --test server/tests/finance-closure-query.test.mjs
       - name: Finance Budget vs Actual executable SQL regression
         run: node --test server/tests/finance-budget-actual-sql.test.mjs
+      - name: Finance Budget controller regression
+        run: node --test server/tests/finance-budget.test.mjs
       - name: Finance Budget transaction-control parity regression
         run: node --test server/tests/finance-budget-transaction-control.test.mjs
       - name: Finance Budget atomic GL guard regression
