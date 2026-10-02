@@ -10,6 +10,8 @@ export interface Actor {
   roles: string[];
   locale?: string;
   timezone?: string;
+  /** Original human operator when this actor is an audited support-impersonation session. */
+  impersonator_user_id?: string;
 }
 
 export interface TrustedIdentity {
