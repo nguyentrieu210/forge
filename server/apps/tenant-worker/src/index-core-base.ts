@@ -7,7 +7,7 @@ import {
 } from "../../../packages/auth/src/index.js";
 import {
   assertSessionCsrf, D1DeskViewStore, D1TranslationStore, establishFrappeApiCredential, establishSession, faultResponse, isFrappePath, isPublicFrappePath,
-  buildCommand, isPublicFilePath, isStorefrontPath, isWebFormPath, routeFileDownload, routeFrappeApi, routeFrappeAuth, runAutoRepeat, runNotificationRules, slideSession,
+  buildCommand, isPublicFilePath, isStorefrontPath, isWebFormPath, routeFileDownload, routeFrappeApi, routeFrappeAuth, runAutoRepeat, runNotificationRules, slideSession, syncWorkflowActions,
   type AuthRouteContext, type AutoRepeatRunResult, type EstablishedSession,
 } from "../../../packages/frappe-api/src/index.js";
 import {
@@ -241,6 +241,20 @@ async function routeInternalDomainEventRequest(
       return { matched: 0, delivered: 0, skipped: 0 };
     });
 
+    // Workflow Action is a durable after-commit projection of the SAME workflow
+    // authority the mutation already passed. It never decides whether a transition is
+    // legal; it records which role has work to do and closes that record when the
+    // document leaves the state. Idempotence is keyed by the source domain event.
+    const workflowActions = await syncWorkflowActions(
+      env.DB, tenant, event, new Date().toISOString(),
+    ).catch((error) => {
+      console.error(JSON.stringify({
+        level: "error", trace_id: traceId, code: "WORKFLOW_ACTION_SYNC_FAILED",
+        detail: error instanceof Error ? error.message : String(error),
+      }));
+      return { completed: 0, created: 0, open: 0 };
+    });
+
     let hookOutcomes: HookDeliveryOutcome[] = [];
     try {
       hookOutcomes = await fanOutAppHooks(env, tenant, event);
@@ -254,7 +268,7 @@ async function routeInternalDomainEventRequest(
       }));
     }
     return jsonResponse(
-      { committed: true, event_id: idempotencyKey, inserted, hooks: hookOutcomes, notifications, realtime },
+      { committed: true, event_id: idempotencyKey, inserted, hooks: hookOutcomes, notifications, workflow_actions: workflowActions, realtime },
       200,
       { "x-cloudforge-event-committed": idempotencyKey },
     );
