@@ -164,7 +164,7 @@ test("subcontracting closes material-send -> consume -> finished-good receipt wi
   assert.equal(first.data.finished_good_value_minor, 2500);
 
   const snapshotAfterFirst = store.snapshot();
-  const firstGl = snapshotAfterFirst.gl_entries.filter((line) => line.source_voucher_type === "Subcontracting Receipt" && line.source_voucher_no === "SCR-1");
+  const firstGl = snapshotAfterFirst.gl_entries.filter((line) => ["SERVICE-STOCK", "SERVICE-SRBNB"].includes(line.line_key));
   assert.equal(firstGl.reduce((sum, line) => sum + line.debit_minor, 0), 500);
   assert.equal(firstGl.reduce((sum, line) => sum + line.credit_minor, 0), 500);
 
