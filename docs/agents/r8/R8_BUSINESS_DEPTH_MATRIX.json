@@ -127,7 +127,9 @@
       "forge_evidence_roots": [
         "docs/agents/r8/R8_P2P_REMAP.md",
         "docs/agents/transaction-closure/05-PROCUREMENT-P2P.md",
-        "server/packages/clouderp-core/src/procurement-p2p-controllers.ts"
+        "server/packages/clouderp-core/src/procurement-p2p-controllers.ts",
+        "docs/agents/r8/R8B_SUBCONTRACTING_CLOSURE.md",
+        "server/packages/clouderp-erpnext/src/subcontracting.ts"
       ],
       "upstream_evidence": [
         "ERPNext v16.20.0 buying/stock subcontracting and landed-cost controllers at pinned SHA"
@@ -135,9 +137,9 @@
       "oracle_cases": [],
       "gaps": [
         "Authoritative landed-cost application/reversal is incomplete.",
-        "Subcontracting is a confirmed GAP.",
         "Ambiguous same-item multi-PO row allocation is incomplete.",
-        "Supplier-management breadth and runtime oracle remain open."
+        "Supplier-management breadth and runtime oracle remain open.",
+        "Subcontracting is now first-class but remains partial around reservation, returns, secondary/process-loss and repost depth."
       ],
       "rationale": "Normal P2P is strong, but landed cost, subcontracting and remaining Buying breadth prevent closure."
     },
@@ -205,7 +207,9 @@
         "docs/agents/r8/R8_MANUFACTURING_REMAP.md",
         "docs/agents/transaction-closure/02-MANUFACTURING.md",
         "server/packages/clouderp-erpnext/src/manufacturing-lifecycle.ts",
-        "server/packages/clouderp-erpnext/src/manufacturing-mrp.ts"
+        "server/packages/clouderp-erpnext/src/manufacturing-mrp.ts",
+        "docs/agents/r8/R8B_SUBCONTRACTING_CLOSURE.md",
+        "server/packages/clouderp-erpnext/src/subcontracting.ts"
       ],
       "upstream_evidence": [
         "ERPNext v16.20.0 BOM/Production Plan/Work Order/Job Card controllers at pinned SHA"
@@ -215,7 +219,7 @@
         "Phantom/substitute/full alternate BOM semantics are incomplete.",
         "MRP is not full ATP/projected netting.",
         "Posted operation cost/variance and rework are incomplete.",
-        "Subcontracting is a GAP."
+        "Subcontracting execution now exists, but manufacturing integration remains partial around reservation, Job Card/quality, secondary/process-loss and repost semantics."
       ],
       "rationale": "Forge manufacturing execution is strong, but ERPNext planning/cost/rework/subcontracting depth is broader."
     },
@@ -799,11 +803,13 @@
       "name": "Subcontracting procurement and supplied-material accounting",
       "path": "Subcontracting Order -> material supply -> subcontracted receipt -> consumption/valuation -> payable",
       "priority": "P0",
-      "classification": "GAP",
+      "classification": "PARTIAL",
       "evidence": [
+        "docs/agents/r8/R8B_SUBCONTRACTING_CLOSURE.md",
+        "server/packages/clouderp-erpnext/src/subcontracting.ts",
+        "server/tests/subcontracting-closure.test.mjs",
+        "server/migrations/tenant/0141_subcontracting_authority.sql",
         "docs/agents/r8/R8_P2P_REMAP.md",
-        "docs/agents/transaction-closure/02-MANUFACTURING.md",
-        "docs/agents/transaction-closure/05-PROCUREMENT-P2P.md",
         "ERPNext v16.20.0 erpnext/subcontracting/doctype/subcontracting_order/subcontracting_order.py",
         "ERPNext v16.20.0 erpnext/subcontracting/doctype/subcontracting_receipt/subcontracting_receipt.py"
       ],
@@ -815,16 +821,20 @@
         "returns",
         "supplier warehouse semantics"
       ],
-      "rationale": "ERPNext v16 has a first-class subcontracting transaction engine with stock, GL, reservation, BOM-consumption and correction semantics. Forge currently has denominator/declaration intent but no comparable production transaction authority.",
+      "rationale": "Forge now has an authoritative end-to-end subcontracting transaction path with stock, valuation, service-cost GL, PO progress, correction and AP dependency guards. ERPNext still has broader reservation, secondary/process-loss, return and repost behavior, so PARTIAL is the highest evidence-supported disposition.",
       "confirmed_findings": [
-        "Pinned ERPNext Subcontracting Order validates the subcontract PO, tracks supplied/raw materials, reserves raw material and updates subcontracted PO quantity/status on submit/cancel.",
-        "Pinned ERPNext Subcontracting Receipt validates BOM consumption, updates supplied/consumed material state, posts Stock Ledger and GL, manages serial/batch bundles, reposts future SLE/GLE, and reverses these effects on cancel.",
-        "Current Forge searches resolve Subcontracting Order/Receipt only in declarations/docs/denominators; the transaction-closure manufacturing record explicitly leaves subcontracting dependent on future procurement/material-send/return/valuation contracts."
+        "Forge now has first-class Subcontracting Order and Subcontracting Receipt transaction controllers rather than declaration-only artifacts.",
+        "A submitted subcontracting Purchase Order service line is frozen into an Order with exact BOM-row raw-material requirements, supplier warehouse and finished-goods warehouse.",
+        "Canonical Stock Entry supplies raw material to the supplier warehouse with cumulative per-BOM-row over-transfer guards.",
+        "Subcontracting Receipt consumes supplier-held raw material through canonical valuation, capitalizes raw-material value plus subcontract service cost into finished goods, posts balanced service-cost GL, and advances canonical Purchase Order receipt progress for AP matching.",
+        "Cancellation exactly reverses submitted Stock/GL/procurement progress and blocks reversal below active receipt/AP dependencies.",
+        "Executable R8-B run 36964364802 passed TypeScript build, focused subcontracting lifecycle regressions and the R8 benchmark invariant."
       ],
       "gaps": [
-        "No current Forge production Subcontracting Order transaction authority equivalent to ERPNext's reservation/material-supply lifecycle was found.",
-        "No current Forge production Subcontracting Receipt authority equivalent to ERPNext stock/GL/repost/consumption/cancel lifecycle was found.",
-        "No end-to-end supplier-warehouse raw-material transfer -> consumption -> subcontracted finished-good valuation chain is proven."
+        "ERPNext-style raw-material reservation/unreservation and richer material-transfer status lifecycle are not yet implemented.",
+        "Secondary items, rejected quantity/process loss, quality-inspection and Job Card subcontract seams remain broader in ERPNext.",
+        "Subcontracting-specific landed-cost application and future SLE/GLE repost remain open.",
+        "Subcontracting return lifecycle and the full ERPNext runtime differential remain uncaptured."
       ]
     },
     {
