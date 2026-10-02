@@ -61,7 +61,10 @@
         "server/packages/clouderp-core/src/period-closing-controller.ts",
         "server/migrations/tenant/0151_period_closing_voucher.sql",
         "server/tests/period-closing-authority.test.mjs",
-        "server/scripts/test-period-closing-authority-migration.py"
+        "server/scripts/test-period-closing-authority-migration.py",
+        "server/migrations/tenant/0153_finance_budget_transaction_control.sql",
+        "server/tests/finance-budget-transaction-control.test.mjs",
+        "server/scripts/test-finance-budget-transaction-control.py"
       ],
       "upstream_evidence": [
         "ERPNext v16.20.0 accounts doctypes/controllers at ff46d20b259a2d65a7ded959df9f9a42991a3562"
@@ -69,10 +72,10 @@
       "oracle_cases": [],
       "gaps": [
         "Full Exchange Rate Revaluation is incomplete.",
-        "Budget-vs-Actual and consolidation remain incomplete.",
+        "Automatic budget commitment consumption/fiscal distribution and consolidation remain incomplete.",
         "Bank reconciliation exact runtime parity remains unproven."
       ],
-      "rationale": "Forge now has a reusable company/branch/account/date GL aggregate authority and first-class Period Closing Voucher with retained-earnings posting, exact reversal and commit-time source fingerprint protection. Full period-end FX revaluation, Budget-vs-Actual, consolidation and exact bank-reconciliation runtime parity remain open."
+      "rationale": "Forge now has a reusable company/branch/account/date GL aggregate authority, first-class Period Closing Voucher, executable Budget-vs-Actual, and commit-time actual+commitment Stop/Warn/Ignore control. Full period-end FX revaluation, automatic commitment consumption/fiscal distribution, consolidation and exact bank-reconciliation runtime parity remain open."
     },
     {
       "depth_id": "R8-M02-SELLING",
@@ -557,7 +560,10 @@
         "server/packages/clouderp-core/src/period-closing-controller.ts",
         "server/migrations/tenant/0151_period_closing_voucher.sql",
         "server/tests/period-closing-authority.test.mjs",
-        "server/scripts/test-period-closing-authority-migration.py"
+        "server/scripts/test-period-closing-authority-migration.py",
+        "server/migrations/tenant/0153_finance_budget_transaction_control.sql",
+        "server/tests/finance-budget-transaction-control.test.mjs",
+        "server/scripts/test-finance-budget-transaction-control.py"
       ],
       "known_depth_questions": [
         "account types/root semantics",
@@ -568,18 +574,18 @@
         "exchange-rate revaluation",
         "budget enforcement"
       ],
-      "rationale": "General ledger/period authority is materially stronger: automated P&L-to-retained-earnings close is now first-class and race-protected. Full period-end FX revaluation, exact Budget-vs-Actual consumption and multi-company consolidation/elimination remain open, so the flow stays PARTIAL.",
+      "rationale": "General ledger/period authority is materially stronger: automated P&L-to-retained-earnings close is first-class and race-protected, Budget-vs-Actual is executable, and Stop budget enforcement now runs atomically against actual GL plus commitments. Full period-end FX revaluation, automatic commitment consumption/fiscal distribution and multi-company consolidation/elimination remain open, so the flow stays PARTIAL.",
       "confirmed_findings": [
         "Forge has canonical append-only GL, exact reversal, hard/soft accounting-period guards, company/branch scoped General Ledger and Trial Balance, and Finance Daily Detailed Ledger derived from the same GL authority.",
-        "Forge Finance Budget has fixed-point approval/revision/commitment controls, but exact budget-vs-actual remains blocked on a canonical company/branch/account/date GL aggregate.",
         "Pinned ERPNext Period Closing Voucher validates fiscal continuity and closing account, generates/reverses closing GL and supports background processing for large ledgers.",
         "Pinned ERPNext Exchange Rate Revaluation calculates period-end account gain/loss and ties booked gain/loss to Journal Entry/GL behavior.",
         "R8-B adds a reusable canonical GL aggregate read port scoped by tenant/company/date/branch/account, implemented over immutable GL rows in D1 and mirrored in the in-memory adapter.",
-        "R8-B adds a first-class Period Closing Voucher: fiscal-year P&L balances are closed into a leaf Equity/Liability account, the accounting period must be locked through the close date, exact submitted GL is reversed on cancel, and a D1 commit-time row-count/debit/credit fingerprint rejects concurrent source drift."
+        "R8-B adds a first-class Period Closing Voucher: fiscal-year P&L balances are closed into a leaf Equity/Liability account, the accounting period must be locked through the close date, exact submitted GL is reversed on cancel, and a D1 commit-time row-count/debit/credit fingerprint rejects concurrent source drift.",
+        "R8-B enforces Finance Budget Stop atomically at GL commit over scoped actuals plus submitted commitments and dated revisions; Warn/Ignore remain non-blocking, mixed currency/scale fails closed, and the in-memory adapter mirrors D1."
       ],
       "gaps": [
         "Full period-end Exchange Rate Revaluation is not closed.",
-        "Exact Budget-vs-Actual over the authoritative ledger aggregate is not closed.",
+        "Automatic commitment consumption and fiscal distribution remain open after actual-aware transaction enforcement.",
         "Multi-company consolidation/elimination remains unproven."
       ]
     },
