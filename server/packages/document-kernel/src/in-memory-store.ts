@@ -629,6 +629,7 @@ export class InMemoryMutationStore implements MutationStore {
     this.assertSuiteBreadthInvariants(plan);
     this.assertBankReconciliationInvariants(plan);
     this.assertFinanceBudgetInvariants(plan);
+    this.assertExchangeRateRevaluationInvariants(plan);
     this.assertAmendChain(command);
   }
 
@@ -1111,6 +1112,119 @@ export class InMemoryMutationStore implements MutationStore {
         && candidate.data.pos_profile === profile).some((opening) => ![...this.documents.values()].some((closing) => closing.tenant_id === document.tenant_id
           && closing.doctype === "POS Closing Entry" && closing.docstatus === 1 && closing.data.opening_entry === opening.name));
       if (anotherOpen) throw errors.reference(`POS Profile ${profile} already has an open session`);
+    }
+  }
+
+  private assertExchangeRateRevaluationInvariants<T extends JsonObject>(plan: MutationPlan<T>): void {
+    if (plan.command.aggregate.doctype !== "Exchange Rate Revaluation" || plan.command.action !== "submit") return;
+    const data = plan.document.data;
+    const tenantId = plan.command.tenant_id;
+    const company = typeof data.company === "string" ? data.company : "";
+    const postingAt = typeof data.posting_at === "string" ? data.posting_at : "";
+    const companyCurrency = typeof data.company_currency === "string" ? data.company_currency : "";
+    const gainLossAccount = typeof data.gain_loss_account === "string" ? data.gain_loss_account : "";
+    const companyScale = Number(data.company_currency_scale ?? 2);
+    const entries = Array.isArray(data.revaluation_entries) ? data.revaluation_entries : [];
+    if (!company || !postingAt || !companyCurrency || !gainLossAccount || entries.length === 0) {
+      throw errors.lifecycle("FINANCE_FX_SOURCE_SNAPSHOT_REQUIRED");
+    }
+    const postingDate = postingAt.slice(0, 10);
+    const reversalAt = typeof data.reversal_at === "string" ? data.reversal_at : "";
+    const expectedReversal = new Date(postingAt);
+    expectedReversal.setUTCDate(expectedReversal.getUTCDate() + 1);
+    if (!reversalAt || reversalAt.slice(0, 10) !== expectedReversal.toISOString().slice(0, 10)) {
+      throw errors.lifecycle("FINANCE_FX_INVALID_REVERSAL_DATE");
+    }
+
+    const companyMaster = this.documents.get(this.docKey(tenantId, "Company", company))?.data
+      ?? this.masterRecords.get(`${tenantId}:Company:${company}`);
+    const currencyMaster = this.documents.get(this.docKey(tenantId, "Currency", companyCurrency))?.data
+      ?? this.masterRecords.get(`${tenantId}:Currency:${companyCurrency}`);
+    if (!companyMaster
+      || companyMaster.default_currency !== companyCurrency
+      || companyMaster.exchange_gain_loss_account !== gainLossAccount
+      || !currencyMaster
+      || Number(currencyMaster.currency_scale ?? 2) !== companyScale) {
+      throw errors.lifecycle("FINANCE_FX_COMPANY_SNAPSHOT_DRIFT");
+    }
+
+    const duplicate = [...this.documents.values()].find((document) =>
+      document.tenant_id === tenantId
+      && document.doctype === "Exchange Rate Revaluation"
+      && document.docstatus === 1
+      && document.name !== plan.document.name
+      && document.data.company === company
+      && typeof document.data.posting_at === "string"
+      && document.data.posting_at.slice(0, 10) === postingDate
+    );
+    if (duplicate) throw errors.lifecycle("FINANCE_FX_DUPLICATE_DATE");
+
+    const grouped = new Map<string, {
+      account_type: string; party_type: string; party: string; account: string;
+      against_voucher_type: string; against_voucher_no: string; currency: string;
+      currency_scale: number; outstanding_minor: number; base_outstanding_minor: number; source_row_count: number;
+    }>();
+    for (const stored of this.voucherPaymentEntries) {
+      if (stored.tenant_id !== tenantId) continue;
+      const line = stored.line;
+      if (line.against_voucher_type !== "Sales Invoice" && line.against_voucher_type !== "Purchase Invoice") continue;
+      if (!line.against_voucher_no || line.posting_at.slice(0, 10) > postingDate) continue;
+      if (line.currency === companyCurrency) continue;
+      const source = this.documents.get(this.docKey(tenantId, line.against_voucher_type, line.against_voucher_no));
+      if (!source || source.data.company !== company) continue;
+      const key = [line.account_type,line.party_type,line.party,line.account,line.against_voucher_type,line.against_voucher_no,line.currency,line.currency_scale].join("\u0000");
+      const row = grouped.get(key) ?? {
+        account_type: line.account_type,
+        party_type: line.party_type,
+        party: line.party,
+        account: line.account,
+        against_voucher_type: line.against_voucher_type,
+        against_voucher_no: line.against_voucher_no,
+        currency: line.currency,
+        currency_scale: line.currency_scale,
+        outstanding_minor: 0,
+        base_outstanding_minor: 0,
+        source_row_count: 0,
+      };
+      row.outstanding_minor += line.amount_minor;
+      row.base_outstanding_minor += line.base_amount_minor;
+      row.source_row_count += 1;
+      grouped.set(key, row);
+    }
+    const sourceRows = [...grouped.values()].filter((row) => row.outstanding_minor !== 0 || row.base_outstanding_minor !== 0);
+    if (sourceRows.length !== entries.length) throw errors.lifecycle("FINANCE_FX_SOURCE_COUNT_DRIFT");
+
+    for (const raw of entries) {
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw errors.lifecycle("FINANCE_FX_SOURCE_BALANCE_DRIFT");
+      const entry = raw as JsonObject;
+      const match = sourceRows.find((row) =>
+        row.account_type === entry.account_type
+        && row.party_type === entry.party_type
+        && row.party === entry.party
+        && row.account === entry.account
+        && row.against_voucher_type === entry.against_voucher_type
+        && row.against_voucher_no === entry.against_voucher_no
+        && row.currency === entry.currency
+        && row.currency_scale === Number(entry.currency_scale)
+      );
+      if (!match
+        || match.outstanding_minor !== Number(entry.outstanding_minor)
+        || match.base_outstanding_minor !== Number(entry.base_outstanding_minor)
+        || match.source_row_count !== Number(entry.source_row_count)) {
+        throw errors.lifecycle("FINANCE_FX_SOURCE_BALANCE_DRIFT");
+      }
+      const foreign = String(entry.currency ?? "");
+      const exactName = `${foreign}:${companyCurrency}:${postingDate}`;
+      const fallbackName = `${foreign}:${companyCurrency}`;
+      const rateMaster = this.documents.get(this.docKey(tenantId, "Exchange Rate", exactName))?.data
+        ?? this.masterRecords.get(`${tenantId}:Exchange Rate:${exactName}`)
+        ?? this.documents.get(this.docKey(tenantId, "Exchange Rate", fallbackName))?.data
+        ?? this.masterRecords.get(`${tenantId}:Exchange Rate:${fallbackName}`);
+      const rawRate = rateMaster?.rate;
+      const rateMicros = typeof rawRate === "string" || typeof rawRate === "number"
+        ? toScaledInt(rawRate, 6, "exchange rate")
+        : -1;
+      if (rateMicros !== Number(entry.closing_rate_micros)) throw errors.lifecycle("FINANCE_FX_RATE_DRIFT");
     }
   }
 
