@@ -400,11 +400,26 @@ export function validateWorkflow(value: unknown, expectedDoctype?: string): Work
   const states = array(input.states, "states").map((entry, index) => {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) throw errors.validation(`states[${index}] must be an object`);
     const state = entry as Record<string, unknown>;
+    const updateField = state.update_field === undefined || state.update_field === ""
+      ? undefined
+      : identifier(state.update_field, `states[${index}].update_field`);
+    const evaluateAsExpression = bool(state.evaluate_as_expression, false);
+    const updateValue = state.update_value === undefined
+      ? ""
+      : workflowUpdateScalar(state.update_value, `states[${index}].update_value`);
+    if (evaluateAsExpression) {
+      if (!updateField) throw errors.validation(`states[${index}].evaluate_as_expression requires update_field`);
+      if (typeof updateValue !== "string" || !/^doc\.[A-Za-z_][A-Za-z0-9_]*$/.test(updateValue.trim())) {
+        throw errors.validation(`states[${index}].update_value expression must be a direct doc.<field> reference`);
+      }
+    }
     return {
       state: text(state.state, `states[${index}].state`, 120),
       docstatus: safeInt(state.docstatus, `states[${index}].docstatus`, 0, 2) as 0 | 1 | 2,
       ...(state.allow_edit === undefined ? {} : { allow_edit: text(state.allow_edit, `states[${index}].allow_edit`, 120) }),
       ...(state.style === undefined ? {} : { style: text(state.style, `states[${index}].style`, 80) }),
+      ...(updateField ? { update_field: updateField, update_value: updateValue, evaluate_as_expression: evaluateAsExpression } : {}),
+      send_email: bool(state.send_email, false),
     };
   });
   const transitions = array(input.transitions, "transitions").map((entry, index) => {
@@ -445,6 +460,12 @@ function array(value: unknown, field: string): unknown[] {
   if (!Array.isArray(value)) throw errors.validation(`${field} must be an array`);
   return value;
 }
+function workflowUpdateScalar(value: unknown, field: string): JsonValue {
+  if (value === null || typeof value === "string" || typeof value === "boolean") return value;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  throw errors.validation(`${field} must be a scalar JSON value`);
+}
+
 function text(value: unknown, field: string, max: number): string {
   if (typeof value !== "string" || !value.trim() || value.length > max) throw errors.validation(`${field} must be a non-empty string up to ${max} characters`);
   return value.trim();
