@@ -1998,6 +1998,54 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     expect(approved.workflow_state).toBe("Approved");
   });
 
+
+  it("applies workflow state update fields through server authority", async () => {
+    const meta = {
+      name: "Workflow Update Probe", module: "R7", title_field: "subject",
+      fields: [
+        { fieldname: "subject", label: "Subject", fieldtype: "Data", required: true },
+        { fieldname: "resolution_code", label: "Resolution", fieldtype: "Data", read_only: true },
+        { fieldname: "workflow_state", label: "State", fieldtype: "Data", read_only: true },
+      ],
+      permissions: [{ role: "System Manager", read: true, write: true, create: true, report: true }],
+      revision: 1,
+    };
+    const workflow = {
+      name: "Workflow Update Probe Flow", document_type: "Workflow Update Probe", state_field: "workflow_state", is_active: true,
+      states: [
+        { state: "Draft", docstatus: 0, allow_edit: "System Manager" },
+        {
+          state: "Approved", docstatus: 0, allow_edit: "System Manager",
+          update_field: "resolution_code", update_value: "doc.subject", evaluate_as_expression: true,
+        },
+      ],
+      transitions: [{
+        state: "Draft", action: "Approve", next_state: "Approved",
+        allowed_role: "System Manager", allow_self_approval: true,
+      }],
+      revision: 1,
+    };
+    await env.DB.prepare(
+      `INSERT INTO doctype_definitions(tenant_id,doctype,module,revision,metadata_json,modified_by,modified_at)
+       VALUES('demo','Workflow Update Probe','R7',1,?1,'Administrator',?2)`,
+    ).bind(JSON.stringify(meta), NOW).run();
+    await env.DB.prepare(
+      `INSERT INTO workflows(tenant_id,name,document_type,is_active,revision,workflow_json,modified_by,modified_at)
+       VALUES('demo','Workflow Update Probe Flow','Workflow Update Probe',1,1,?1,'Administrator',?2)`,
+    ).bind(JSON.stringify(workflow), NOW).run();
+    await env.DB.prepare(
+      `INSERT INTO documents(
+         tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json,modified_by
+       ) VALUES('demo','Workflow Update Probe:WUP-1','Workflow Update Probe','WUP-1','owner@example.com',0,'Draft',1,?1,?1,?2,'owner@example.com')`,
+    ).bind(NOW, JSON.stringify({ subject: "COPIED-BY-WORKFLOW", workflow_state: "Draft" })).run();
+
+    const approved = await unwrap(await method("frappe.model.workflow.apply_workflow", {
+      doctype: "Workflow Update Probe", name: "WUP-1", action: "Approve",
+    }));
+    expect(approved.workflow_state).toBe("Approved");
+    expect(approved.resolution_code).toBe("COPIED-BY-WORKFLOW");
+  });
+
   it("logs out and the session stops working", async () => {
     const response = await call("/api/method/logout", { method: "POST" });
     expect(response.status).toBe(200);
