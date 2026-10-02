@@ -145,7 +145,9 @@ test("Finance Budget vs Actual derives effective budget, commitments and scoped 
   assert.match(compiled.sql, /g\.cost_center/);
   assert.match(compiled.sql, /g\.dimensions_json,'\$\.project'/);
   assert.match(compiled.sql, /budget_amount_minor\+revision_minor AS effective_budget_minor/);
-  assert.match(compiled.sql, /effective_budget_minor-actual_minor-committed_minor AS available_minor/);
+  assert.match(compiled.sql, /accumulated_budget_minor-actual_minor-committed_minor AS available_minor/);
+  assert.match(compiled.sql, /accumulated_distribution_weight/);
+  assert.ok(compiled.columns.some((column) => column.field === "accumulated_budget_minor"));
   assert.deepEqual(compiled.params.slice(0, 3), ["tenant-a", "2026-09-30", "Demo Company"]);
   assert.ok(!compiled.sql.includes("budget_actual_snapshot"));
   assert.ok(!compiled.sql.includes("budget_actual_balances"));
