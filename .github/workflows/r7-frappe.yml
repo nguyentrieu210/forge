@@ -16,7 +16,7 @@ on:
       - "server/apps/tenant-worker/src/env.ts"
       - "server/apps/tenant-worker/wrangler.jsonc"
       - "server/migrations/tenant/**"
-      - "server/packages/frappe-model/src/permission.ts"
+      - "server/packages/frappe-model/src/**"
       - "server/packages/document-kernel/src/document-list.ts"
       - "server/tests/r7-frappe-closure.test.mjs"
       - "server/apps/tenant-worker/test/frappe-facade.integration.test.mts"
@@ -57,7 +57,7 @@ jobs:
           pnpm --filter cloudforge exec tsc -p tsconfig.json --noEmit 2>&1 | tee /tmp/r7-tsc.log
           code=${PIPESTATUS[0]}
           set -e
-          if grep -E 'packages/frappe-api/src/(router|envelope|auth-routes|session)\.ts|packages/auth/src/(api-credentials|user-store|session-registry)\.ts|packages/contracts/src/index\.ts|packages/app-registry/src/(manifest|cron|scheduler|index)\.ts|apps/tenant-worker/src/(index-core-base|realtime-hub|env)\.ts|apps/tenant-worker/test/frappe-facade\.integration\.test\.mts' /tmp/r7-tsc.log; then
+          if grep -E 'packages/frappe-api/src/(router|router-platform|desk-surfaces|envelope|auth-routes|session)\.ts|packages/frappe-model/src/(workflow-condition|generic-controller|validate|index)\.ts|packages/auth/src/(api-credentials|user-store|session-registry)\.ts|packages/contracts/src/index\.ts|packages/app-registry/src/(manifest|cron|scheduler|index)\.ts|apps/tenant-worker/src/(index-core-base|realtime-hub|env)\.ts|apps/tenant-worker/test/frappe-facade\.integration\.test\.mts' /tmp/r7-tsc.log; then
             echo "Changed R7 authority has TypeScript errors"
             exit 1
           fi
