@@ -14,13 +14,13 @@ db.row_factory=sqlite3.Row
 db.executescript('''
 CREATE TABLE documents(tenant_id TEXT,doctype TEXT,name TEXT,docstatus INTEGER,payload_json TEXT);
 CREATE TABLE master_records(tenant_id TEXT,record_type TEXT,name TEXT,data_json TEXT,disabled INTEGER);
-CREATE TABLE gl_entries(tenant_id TEXT,voucher_type TEXT,voucher_no TEXT,voucher_revision INTEGER,account TEXT,posting_at TEXT,debit_minor INTEGER,credit_minor INTEGER,currency TEXT,currency_scale INTEGER,cost_center TEXT,dimensions_json TEXT);
+CREATE TABLE gl_entries(tenant_id TEXT,voucher_type TEXT,voucher_no TEXT,voucher_revision INTEGER,line_key TEXT,account TEXT,posting_at TEXT,debit_minor INTEGER,credit_minor INTEGER,currency TEXT,currency_scale INTEGER,cost_center TEXT,dimensions_json TEXT);
 ''')
 for row in v['documents']: db.execute('INSERT INTO documents VALUES(?,?,?,?,?)',row[:4]+[json.dumps(row[4])])
 for row in v['accounts']:
     db.execute('INSERT INTO master_records VALUES(?,?,?,?,?)',[row[0],'Account',row[1],json.dumps({'company':row[2],'root_type':row[3],'is_group':row[4]}),row[5] if len(row)>5 else 0])
 db.executescript(v['account_view'])
-for row in v['gl']: db.execute('INSERT INTO gl_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',row[:11]+[json.dumps(row[11])])
+for row in v['gl']: db.execute('INSERT INTO gl_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)',row[:12]+[json.dumps(row[12])])
 print(json.dumps([dict(r) for r in db.execute(v['sql'],v['params'])]))
 `;
 
@@ -31,9 +31,9 @@ function fixture({ scope='Company', root='Expense', budget=1000, scale=0, curren
   return { documents:[['t','Finance Budget','BUD',1,input]], accounts:[['t','EXP','Demo',root,0]],gl:[] };
 }
 function document(f, type, name, data, status=1, tenant='t') { f.documents.push([tenant,type,name,status,data]); }
-function ledger(f, { name='INV'+f.gl.length, debit=0, credit=0, date='2026-06-01', branch='A', project='P', costCenter='CC', currency='VND',scale=0,company='Demo',tenant='t',type='Purchase Invoice',status=1 }={}) {
-  if (!f.documents.some(r=>r[0]===tenant&&r[1]===type&&r[2]===name)) document(f,type,name,{company,branch,project},status,tenant);
-  f.gl.push([tenant,type,name,1,'EXP',date+'T12:00:00.000Z',debit,credit,currency,scale,costCenter,{branch,project}]);
+function ledger(f, { name='INV'+f.gl.length, debit=0, credit=0, date='2026-06-01', branch='A', project='P', costCenter='CC', currency='VND',scale=0,company='Demo',tenant='t',type='Purchase Invoice',status=1,lineKey='L1',documentData={} }={}) {
+  if (!f.documents.some(r=>r[0]===tenant&&r[1]===type&&r[2]===name)) document(f,type,name,{company,branch,project,...documentData},status,tenant);
+  f.gl.push([tenant,type,name,1,lineKey,'EXP',date+'T12:00:00.000Z',debit,credit,currency,scale,costCenter,{branch,project}]);
 }
 function report(f, date='2026-09-30', filters=[]) {
   const compiled=new FinanceClosureQueryCompiler().compile({report:'Finance Budget vs Actual',tenant_id:'t',filters:[
@@ -114,4 +114,67 @@ test('actual SQL clips end date and parameterizes output filters',()=>{
   const f=fixture();ledger(f,{debit:100,date:'2026-12-31'});ledger(f,{debit:500,date:'2027-01-01'});
   const [row]=report(f,'2027-06-01');assert.equal(row.through_date,'2026-12-31');assert.equal(row.actual_minor,100);
   assert.deepEqual(report(f,'2027-06-01',[{field:'budget',operator:'=',value:"BUD' OR 1=1 --"}]),[]);
+});
+
+
+test('actual SQL consumes linked PO commitment as PI expense actual and restores it on reversal',()=>{
+  const f=fixture({budget:1000});
+  document(f,'Purchase Order','PO-AUTO',{
+    company:'Demo',currency:'VND',items:[{row_id:'PO-ROW',item_code:'ITEM-1',material_request:'MR-AUTO'}]
+  });
+  document(f,'Finance Budget Commitment','COM-AUTO',{
+    budget:'BUD',posting_date:'2026-04-01',commitment_type:'Reserve',amount_minor:1000,
+    source_doctype:'Purchase Order',source_name:'PO-AUTO'
+  });
+  ledger(f,{
+    name:'PI-AUTO',debit:600,lineKey:'EXPENSE-PI-ROW',
+    documentData:{
+      against_purchase_order:'PO-AUTO',
+      items:[{row_id:'PI-ROW',item_code:'ITEM-1',purchase_order:'PO-AUTO',
+        purchase_order_item_row_id:'PO-ROW',material_request:'MR-AUTO'}]
+    }
+  });
+  let [row]=report(f);
+  assert.equal(row.actual_minor,600);
+  assert.equal(row.committed_minor,400);
+  assert.equal(row.available_minor,0);
+
+  ledger(f,{
+    name:'PI-AUTO',credit:600,lineKey:'REV-EXPENSE-PI-ROW',status:2,
+    documentData:{
+      against_purchase_order:'PO-AUTO',
+      items:[{row_id:'PI-ROW',item_code:'ITEM-1',purchase_order:'PO-AUTO',
+        purchase_order_item_row_id:'PO-ROW',material_request:'MR-AUTO'}]
+    }
+  });
+  [row]=report(f);
+  assert.equal(row.actual_minor,0);
+  assert.equal(row.committed_minor,1000);
+  assert.equal(row.available_minor,0);
+});
+
+test('actual SQL consumes Material Request commitment only from the exact PI row lineage',()=>{
+  const f=fixture({budget:1000});
+  document(f,'Finance Budget Commitment','COM-MR',{
+    budget:'BUD',posting_date:'2026-04-01',commitment_type:'Reserve',amount_minor:700,
+    source_doctype:'Material Request',source_name:'MR-1'
+  });
+  ledger(f,{
+    name:'PI-MULTI',debit:300,lineKey:'EXPENSE-MR-ROW',
+    documentData:{items:[
+      {row_id:'MR-ROW',material_request:'MR-1'},
+      {row_id:'OTHER-ROW',material_request:'MR-2'}
+    ]}
+  });
+  ledger(f,{
+    name:'PI-MULTI',debit:200,lineKey:'EXPENSE-OTHER-ROW',
+    documentData:{items:[
+      {row_id:'MR-ROW',material_request:'MR-1'},
+      {row_id:'OTHER-ROW',material_request:'MR-2'}
+    ]}
+  });
+  const [row]=report(f);
+  assert.equal(row.actual_minor,500);
+  assert.equal(row.committed_minor,400);
+  assert.equal(row.available_minor,100);
 });
