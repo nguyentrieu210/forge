@@ -65,3 +65,19 @@ test("R8 O2C remap detects stale oracle-side Forge conclusions", async () => {
     assert.equal(matrix.flow_depth.find((x) => x.flow_id === id)?.classification, "PARTIAL");
   }
 });
+
+
+test("R8 P2P distinguishes transaction depth from landed-cost/subcontracting gaps", async () => {
+  const matrix = await readJson(path.join(repoRoot, "docs/agents/r8/R8_BUSINESS_DEPTH_MATRIX.json"));
+  const p2p = await readFile(path.join(serverRoot, "packages/clouderp-core/src/procurement-p2p-controllers.ts"), "utf8");
+  const landed = await readFile(path.join(serverRoot, "packages/clouderp-core/src/procurement-landed-cost.ts"), "utf8");
+
+  assert.match(p2p, /PURCHASE_MATCH_POLICY_VERSION/);
+  assert.match(p2p, /receipt_match_required/);
+  assert.match(landed, /never emits a Stock Ledger or GL entry/);
+
+  assert.equal(matrix.flow_depth.find((x) => x.flow_id === "R8-F02-P2P")?.classification, "PARTIAL");
+  const subcontracting = matrix.flow_depth.find((x) => x.flow_id === "R8-F12-SUBCONTRACTING");
+  assert.equal(subcontracting?.classification, "GAP");
+  assert.ok(Array.isArray(subcontracting?.gaps) && subcontracting.gaps.length >= 3);
+});

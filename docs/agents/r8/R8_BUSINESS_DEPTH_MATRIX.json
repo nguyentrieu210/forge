@@ -318,12 +318,19 @@
       "name": "Procure to pay and supplier settlement",
       "path": "Material Request -> RFQ -> Supplier Quotation -> Purchase Order -> Purchase Receipt -> Purchase Invoice -> Payment -> Reconciliation",
       "priority": "P0",
-      "classification": "UNRESOLVED",
+      "classification": "PARTIAL",
       "evidence": [
+        "docs/agents/r8/R8_P2P_REMAP.md",
         "docs/agents/transaction-closure/05-PROCUREMENT-P2P.md",
-        "server/packages/clouderp-buying",
-        "server/packages/clouderp-finance",
-        "server/packages/clouderp-stock"
+        "docs/agents/transaction-closure/07-CONVERGENCE.md",
+        "server/packages/clouderp-core/src/procurement-p2p-controllers.ts",
+        "server/packages/clouderp-core/src/procurement-p2p-rollout-controllers.ts",
+        "server/packages/clouderp-core/src/procurement-landed-cost.ts",
+        "server/tests/procurement-p2p-closure.test.mjs",
+        "server/tests/procurement-p2p-correction-boundary.test.mjs",
+        "server/tests/procurement-landed-cost.test.mjs",
+        "ERPNext v16.20.0 erpnext/buying/doctype/purchase_order/purchase_order.py",
+        "ERPNext v16.20.0 erpnext/stock/doctype/landed_cost_voucher/landed_cost_voucher.py"
       ],
       "known_depth_questions": [
         "Partial receipt/billing/payment and over-receipt/over-billing",
@@ -333,7 +340,19 @@
         "RFQ/Supplier Quotation depth",
         "cancel/amend/backdate/race semantics"
       ],
-      "rationale": "Forge has a P2P transaction-closure lineage, but R8 has not yet compared the whole flow behaviorally against the pinned ERPNext runtime."
+      "rationale": "Core source-to-pay behavior is substantial and transaction-closure evidence is strong, but ERPNext authoritative landed-cost semantics and exact runtime differential coverage remain open.",
+      "confirmed_findings": [
+        "Forge has a real P2P authority chain: RFQ/Supplier Quotation selection, Purchase Order, partial Purchase Receipt, Purchase Invoice three-way match, multi-PO invoice support, Supplier Payment/Advance via Finance, Stock Return and Debit Note correction boundaries.",
+        "Purchase Invoice match policy is frozen on PO and a failed receipt/quantity/price match holds before GL, Payment Ledger or procurement-progress commit.",
+        "Forge landed-cost code is allocation/preview evidence only and deliberately emits no Stock Ledger or GL; ERPNext v16.20 Landed Cost Voucher updates receipt valuation, cancels/rebuilds Stock Ledger and GL, and reposts future SLE/GLE.",
+        "Ambiguous same-item split-price PO invoice allocation still lacks authoritative purchase_order_item row identity.",
+        "A dedicated pinned ERPNext P2P runtime oracle has not yet been captured, so the normal P2P path cannot be promoted beyond PARTIAL."
+      ],
+      "gaps": [
+        "Authoritative landed-cost stock-value application, reversal and downstream reconciliation are not implemented end to end.",
+        "Ambiguous same-item split-price multi-PO invoice allocation lacks exact row-level authority.",
+        "Pinned ERPNext P2P runtime differential remains to be captured."
+      ]
     },
     {
       "flow_id": "R8-F03-AR-AP-SETTLEMENT",
@@ -560,11 +579,13 @@
       "name": "Subcontracting procurement and supplied-material accounting",
       "path": "Subcontracting Order -> material supply -> subcontracted receipt -> consumption/valuation -> payable",
       "priority": "P0",
-      "classification": "UNRESOLVED",
+      "classification": "GAP",
       "evidence": [
-        "server/FEATURE_MATRIX_v0.9.0.md",
-        "server/packages/clouderp-buying",
-        "server/packages/clouderp-stock"
+        "docs/agents/r8/R8_P2P_REMAP.md",
+        "docs/agents/transaction-closure/02-MANUFACTURING.md",
+        "docs/agents/transaction-closure/05-PROCUREMENT-P2P.md",
+        "ERPNext v16.20.0 erpnext/subcontracting/doctype/subcontracting_order/subcontracting_order.py",
+        "ERPNext v16.20.0 erpnext/subcontracting/doctype/subcontracting_receipt/subcontracting_receipt.py"
       ],
       "known_depth_questions": [
         "supplied material transfer",
@@ -574,7 +595,17 @@
         "returns",
         "supplier warehouse semantics"
       ],
-      "rationale": "Subcontracting artifacts exist in the ERPNext denominator; current Forge depth must be proven rather than assumed."
+      "rationale": "ERPNext v16 has a first-class subcontracting transaction engine with stock, GL, reservation, BOM-consumption and correction semantics. Forge currently has denominator/declaration intent but no comparable production transaction authority.",
+      "confirmed_findings": [
+        "Pinned ERPNext Subcontracting Order validates the subcontract PO, tracks supplied/raw materials, reserves raw material and updates subcontracted PO quantity/status on submit/cancel.",
+        "Pinned ERPNext Subcontracting Receipt validates BOM consumption, updates supplied/consumed material state, posts Stock Ledger and GL, manages serial/batch bundles, reposts future SLE/GLE, and reverses these effects on cancel.",
+        "Current Forge searches resolve Subcontracting Order/Receipt only in declarations/docs/denominators; the transaction-closure manufacturing record explicitly leaves subcontracting dependent on future procurement/material-send/return/valuation contracts."
+      ],
+      "gaps": [
+        "No current Forge production Subcontracting Order transaction authority equivalent to ERPNext's reservation/material-supply lifecycle was found.",
+        "No current Forge production Subcontracting Receipt authority equivalent to ERPNext stock/GL/repost/consumption/cancel lifecycle was found.",
+        "No end-to-end supplier-warehouse raw-material transfer -> consumption -> subcontracted finished-good valuation chain is proven."
+      ]
     },
     {
       "flow_id": "R8-F13-ASSETS",
