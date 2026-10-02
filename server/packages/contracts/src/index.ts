@@ -111,6 +111,16 @@ export interface StockLedgerEntry {
   source_voucher_type?: string;
   source_voucher_no?: string;
   source_voucher_revision?: number;
+  /** Stable child-row identity inside the source voucher. */
+  source_row_id?: string;
+  /**
+   * A zero-quantity valuation adjustment may target one immutable source row.
+   * Landed Cost uses this instead of smearing value across unrelated FIFO layers.
+   */
+  valuation_target_voucher_type?: string;
+  valuation_target_voucher_no?: string;
+  valuation_target_voucher_revision?: number;
+  valuation_target_row_id?: string;
   item_code: string;
   warehouse: string;
   actual_qty_micros: number;
