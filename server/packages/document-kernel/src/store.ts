@@ -24,6 +24,35 @@ export interface TrackedStockPosition extends TrackedStockState {
   batch_no: string;
 }
 
+export interface GlAccountBalanceQuery {
+  tenantId: string;
+  company: string;
+  fromDate: string;
+  throughDate: string;
+  branch?: string;
+  account?: string;
+}
+
+export interface GlAccountBalance {
+  account: string;
+  currency: string;
+  currency_scale: number;
+  debit_minor: number;
+  credit_minor: number;
+  /** Natural signed ledger movement: debit minus credit. */
+  balance_minor: number;
+}
+
+export interface LedgerAggregateReader {
+  /**
+   * Canonical company/date/account aggregate over immutable GL rows.
+   *
+   * Consumers such as period close, budget actuals and FX revaluation must use this
+   * port instead of compiling their own document/GL joins or persisting shadow totals.
+   */
+  getGlAccountBalances(query: GlAccountBalanceQuery): Promise<GlAccountBalance[]>;
+}
+
 /**
  * Narrow read ports exposed by the kernel package.
  *
@@ -152,6 +181,7 @@ export interface PeriodLockReader {
 export interface DomainReader
   extends DocumentReader,
     SubmittedQuantityReader,
+    LedgerAggregateReader,
     PaymentLedgerReader,
     StockLedgerReader,
     ReturnProgressReader,
