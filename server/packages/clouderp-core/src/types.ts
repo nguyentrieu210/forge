@@ -68,6 +68,8 @@ export interface PurchaseItem extends UomLine {
    * giữa đơn mua và phiếu nhập: một đơn giao làm nhiều đợt, và một chuyến giao gộp nhiều đơn.
    */
   purchase_order?: string;
+  /** Exact Purchase Order child row. Required when one PO repeats the same item. */
+  purchase_order_item_row_id?: string;
   /** Yêu cầu vật tư của riêng dòng này. Bỏ trống thì lấy theo đầu phiếu. */
   material_request?: string;
   rate: DecimalInput;
