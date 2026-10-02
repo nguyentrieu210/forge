@@ -166,6 +166,8 @@ export interface FulfillmentEntry {
 export interface ProcurementEntry {
   line_key: string;
   purchase_order: string;
+  /** Exact approved PO child row. Nullable only for legacy aggregate progress. */
+  purchase_order_item_row_id?: string;
   kind: "Receipt" | "Billing";
   item_code: string;
   qty_micros: number;
