@@ -41,31 +41,267 @@ abstract class BaseController<T extends JsonObject> implements DocumentControlle
   }
 }
 
-export class CreditNoteController extends BaseController<CreditNoteData>{
-  readonly doctype="Credit Note";
-  async normalize(context:ControllerContext<CreditNoteData>):Promise<CreditNoteData>{
-    const input=context.command.document;if(!input.customer||!input.company||!input.currency||!input.posting_at||!input.return_against||!input.debit_to||!input.default_income_account)throw errors.validation("Customer, company, currency, posting_at, return invoice and accounts are required");
-    const currency=await resolveCurrency(context,input.company,input.currency,input.posting_at,context.command.action==="submit");
-    const totals=calculateSalesTotals(input.items as never,input.taxes??[],currency.transactionScale);
-    if(context.command.action==="submit"){
-      const source=await requireSubmitted<JsonObject>(context,"Sales Invoice",input.return_against);if(source.data.customer!==input.customer||source.data.company!==input.company||source.data.currency!==input.currency)throw errors.reference("Credit Note context does not match Sales Invoice");
-      const outstanding=await context.reader.getOutstandingMinor(context.command.tenant_id,"Sales Invoice",input.return_against);if(totals.grand_total_minor>outstanding)throw errors.reference("Credit Note exceeds Sales Invoice outstanding",{outstanding_minor:outstanding,credit_minor:totals.grand_total_minor});
-      await assertReturnRemaining(context,source,"Sales Credit",totals.items as unknown as ReturnItem[]);
-      await assertMasters(context,[["Customer",input.customer],["Company",input.company],["Currency",input.currency],["Account",input.debit_to],["Account",input.default_income_account],...totals.items.map((i):[string,string]=>["Item",i.item_code]),...totals.taxes.map((t):[string,string]=>["Account",t.account])]);
+export class CreditNoteController extends BaseController<CreditNoteData> {
+  readonly doctype = "Credit Note";
+
+  async normalize(context: ControllerContext<CreditNoteData>): Promise<CreditNoteData> {
+    const input = context.command.document;
+    if (!input.customer || !input.company || !input.currency || !input.posting_at
+      || !input.return_against || !input.debit_to || !input.default_income_account) {
+      throw errors.validation("Customer, company, currency, posting_at, return invoice and accounts are required");
     }
-    return{...input,currency_scale:currency.transactionScale,company_currency:currency.companyCurrency,company_currency_scale:currency.companyScale,conversion_rate:fromScaledInt(currency.rateMicros,6),conversion_rate_micros:currency.rateMicros,...totals,...baseTotals(totals,currency)} as CreditNoteData;
+    const currency = await resolveCurrency(
+      context,
+      input.company,
+      input.currency,
+      input.posting_at,
+      context.command.action === "submit",
+    );
+    const totals = calculateSalesTotals(input.items as never, input.taxes ?? [], currency.transactionScale);
+    let applied = 0;
+    let baseApplied = 0;
+    let customerCredit = 0;
+    let baseCustomerCredit = 0;
+    let exchangeGainLossAccount = "";
+    let exchangeDifference = 0;
+
+    if (context.command.action === "submit") {
+      const source = await requireSubmitted<JsonObject>(context, "Sales Invoice", input.return_against);
+      if (source.data.customer !== input.customer || source.data.company !== input.company || source.data.currency !== input.currency) {
+        throw errors.reference("Credit Note context does not match Sales Invoice");
+      }
+
+      // Return quantity is authoritative for physical/commercial lineage, while this
+      // aggregate cap prevents a caller from returning the same quantity at an inflated rate.
+      const priorCredits = await context.reader.listDocumentsByDoctype<CreditNoteData>(
+        context.command.tenant_id,
+        "Credit Note",
+      );
+      const priorCreditMinor = priorCredits
+        .filter((doc) => doc.docstatus === 1 && doc.name !== context.existing?.name
+          && doc.data.return_against === input.return_against)
+        .reduce((sum, doc) => addMinor([sum, doc.data.grand_total_minor ?? 0], "prior credit-note amount"), 0);
+      const sourceGrand = typeof source.data.grand_total_minor === "number"
+        ? source.data.grand_total_minor
+        : toScaledInt(String(source.data.grand_total ?? 0), currency.transactionScale, "source invoice grand_total");
+      if (addMinor([priorCreditMinor, totals.grand_total_minor], "cumulative credit-note amount") > sourceGrand) {
+        throw errors.reference("Credit Notes exceed the original Sales Invoice value", {
+          invoice_total_minor: sourceGrand,
+          prior_credit_minor: priorCreditMinor,
+          requested_credit_minor: totals.grand_total_minor,
+        });
+      }
+
+      const outstanding = await context.reader.getOutstandingMinor(
+        context.command.tenant_id,
+        "Sales Invoice",
+        input.return_against,
+      );
+      const baseOutstanding = await context.reader.getBaseOutstandingMinor(
+        context.command.tenant_id,
+        "Sales Invoice",
+        input.return_against,
+      );
+      if (outstanding < 0 || baseOutstanding < 0) {
+        throw errors.ledger("Sales Invoice outstanding is invalid before Credit Note");
+      }
+
+      applied = Math.min(totals.grand_total_minor, outstanding);
+      customerCredit = totals.grand_total_minor - applied;
+      if (applied > 0) {
+        baseApplied = applied === outstanding
+          ? baseOutstanding
+          : divideRounded(baseOutstanding * applied, outstanding);
+      }
+      baseCustomerCredit = customerCredit > 0
+        ? convertMinor(customerCredit, currency.transactionScale, currency.rateMicros, currency.companyScale)
+        : 0;
+
+      const company = await context.reader.getMasterRecordData(context.command.tenant_id, "Company", input.company);
+      exchangeGainLossAccount = typeof company?.exchange_gain_loss_account === "string"
+        ? company.exchange_gain_loss_account
+        : "";
+      const baseGrand = convertMinor(
+        totals.grand_total_minor,
+        currency.transactionScale,
+        currency.rateMicros,
+        currency.companyScale,
+      );
+      const partyBase = addMinor([baseApplied, baseCustomerCredit], "credit-note party base");
+      exchangeDifference = partyBase - baseGrand;
+      if (exchangeDifference !== 0 && !exchangeGainLossAccount) {
+        throw errors.reference(`Company ${input.company} must define exchange_gain_loss_account for Credit Note FX difference`);
+      }
+
+      await assertReturnRemaining(context, source, "Sales Credit", totals.items as unknown as ReturnItem[]);
+      const masters: Array<[string, string]> = [
+        ["Customer", input.customer], ["Company", input.company], ["Currency", input.currency],
+        ["Account", input.debit_to], ["Account", input.default_income_account],
+        ...totals.items.map((i): [string, string] => ["Item", i.item_code]),
+        ...totals.taxes.map((t): [string, string] => ["Account", t.account]),
+      ];
+      if (exchangeGainLossAccount) masters.push(["Account", exchangeGainLossAccount]);
+      await assertMasters(context, masters);
+    }
+
+    return {
+      ...input,
+      currency_scale: currency.transactionScale,
+      company_currency: currency.companyCurrency,
+      company_currency_scale: currency.companyScale,
+      conversion_rate: fromScaledInt(currency.rateMicros, 6),
+      conversion_rate_micros: currency.rateMicros,
+      ...totals,
+      ...baseTotals(totals, currency),
+      applied_to_invoice_minor: applied,
+      applied_to_invoice: fromScaledInt(applied, currency.transactionScale),
+      base_applied_to_invoice_minor: baseApplied,
+      base_applied_to_invoice: fromScaledInt(baseApplied, currency.companyScale),
+      customer_credit_minor: customerCredit,
+      customer_credit: fromScaledInt(customerCredit, currency.transactionScale),
+      base_customer_credit_minor: baseCustomerCredit,
+      base_customer_credit: fromScaledInt(baseCustomerCredit, currency.companyScale),
+      ...(exchangeGainLossAccount ? { exchange_gain_loss_account: exchangeGainLossAccount } : {}),
+      exchange_difference_minor: exchangeDifference,
+      exchange_difference: fromScaledInt(exchangeDifference, currency.companyScale),
+    } as CreditNoteData;
   }
-  async ledger(context:ControllerContext<CreditNoteData>,data:CreditNoteData):Promise<Ledgers>{
-    if(!["submit","cancel"].includes(context.command.action))return{};await assertUnlocked(context,data.company,data.posting_at);const tx=data.currency_scale??2;const baseScale=data.company_currency_scale??tx;const rate=data.conversion_rate_micros??1_000_000;const currency=data.company_currency??data.currency;const baseNet=data.base_net_total_minor??convertMinor(data.net_total_minor??0,tx,rate,baseScale);const baseGrand=data.base_grand_total_minor??convertMinor(data.grand_total_minor??0,tx,rate,baseScale);
-    const gl:GeneralLedgerEntry[]=[{line_key:"INCOME",account:data.default_income_account,debit_minor:baseNet,credit_minor:0,currency,currency_scale:baseScale,posting_at:data.posting_at}];let components=baseNet;
-    for(const [index,tax] of (data.taxes??[]).entries()){const amount=convertMinor(Math.abs(tax.tax_amount_minor??0),tx,rate,baseScale);if(!amount)continue;const positive=(tax.tax_amount_minor??0)>0;components+=positive?amount:-amount;gl.push({line_key:`TAX-${tax.row_id||index+1}`,account:tax.account,debit_minor:positive?amount:0,credit_minor:positive?0:amount,currency,currency_scale:baseScale,posting_at:data.posting_at});}
-    const difference=baseGrand-components;if(difference!==0){if(!data.round_off_account)throw errors.validation("round_off_account is required");gl.push({line_key:"ROUND-OFF",account:data.round_off_account,debit_minor:difference>0?difference:0,credit_minor:difference<0?-difference:0,currency,currency_scale:baseScale,posting_at:data.posting_at});}
-    gl.push({line_key:"RECEIVABLE",account:data.debit_to,party_type:"Customer",party:data.customer,debit_minor:0,credit_minor:baseGrand,currency,currency_scale:baseScale,posting_at:data.posting_at});
-    const payment:PaymentLedgerEntry[]=[{line_key:"CREDIT",account_type:"Receivable",party_type:"Customer",party:data.customer,account:data.debit_to,amount_minor:-(data.grand_total_minor??0),base_amount_minor:-baseGrand,currency:data.currency,currency_scale:tx,against_voucher_type:"Sales Invoice",against_voucher_no:data.return_against,posting_at:data.posting_at}];
-    const returns=data.items.map((item,index):ReturnEntry=>({line_key:`RETURN-${item.row_id||index+1}`,reference_doctype:"Sales Invoice",reference_name:data.return_against,kind:"Sales Credit",item_code:item.item_code,qty_micros:item.qty_micros??toScaledInt(item.qty,6),posting_at:data.posting_at}));
-    return context.command.action==="cancel"?{gl:reverseGl(gl),payment:reversePayment(payment),returns:reverseReturns(returns)}:{gl,payment,returns};
+
+  async ledger(context: ControllerContext<CreditNoteData>, data: CreditNoteData): Promise<Ledgers> {
+    if (!["submit", "cancel"].includes(context.command.action)) return {};
+    await assertUnlocked(context, data.company, data.posting_at);
+    const tx = data.currency_scale ?? 2;
+    const baseScale = data.company_currency_scale ?? tx;
+    const rate = data.conversion_rate_micros ?? 1_000_000;
+    const currency = data.company_currency ?? data.currency;
+    const baseNet = data.base_net_total_minor
+      ?? convertMinor(data.net_total_minor ?? 0, tx, rate, baseScale);
+    const baseGrand = data.base_grand_total_minor
+      ?? convertMinor(data.grand_total_minor ?? 0, tx, rate, baseScale);
+    const baseApplied = data.base_applied_to_invoice_minor ?? 0;
+    const baseCustomerCredit = data.base_customer_credit_minor ?? 0;
+    const partyBase = addMinor([baseApplied, baseCustomerCredit], "credit-note party base");
+
+    const gl: GeneralLedgerEntry[] = [{
+      line_key: "INCOME",
+      account: data.default_income_account,
+      debit_minor: baseNet,
+      credit_minor: 0,
+      currency,
+      currency_scale: baseScale,
+      posting_at: data.posting_at,
+    }];
+    let components = baseNet;
+    for (const [index, tax] of (data.taxes ?? []).entries()) {
+      const amount = convertMinor(Math.abs(tax.tax_amount_minor ?? 0), tx, rate, baseScale);
+      if (!amount) continue;
+      const positive = (tax.tax_amount_minor ?? 0) > 0;
+      components += positive ? amount : -amount;
+      gl.push({
+        line_key: `TAX-${tax.row_id || index + 1}`,
+        account: tax.account,
+        debit_minor: positive ? amount : 0,
+        credit_minor: positive ? 0 : amount,
+        currency,
+        currency_scale: baseScale,
+        posting_at: data.posting_at,
+      });
+    }
+    const roundDifference = baseGrand - components;
+    if (roundDifference !== 0) {
+      if (!data.round_off_account) throw errors.validation("round_off_account is required");
+      gl.push({
+        line_key: "ROUND-OFF",
+        account: data.round_off_account,
+        debit_minor: roundDifference > 0 ? roundDifference : 0,
+        credit_minor: roundDifference < 0 ? -roundDifference : 0,
+        currency,
+        currency_scale: baseScale,
+        posting_at: data.posting_at,
+      });
+    }
+    gl.push({
+      line_key: "RECEIVABLE",
+      account: data.debit_to,
+      party_type: "Customer",
+      party: data.customer,
+      debit_minor: 0,
+      credit_minor: partyBase,
+      currency,
+      currency_scale: baseScale,
+      posting_at: data.posting_at,
+    });
+    const exchangeDifference = data.exchange_difference_minor ?? (partyBase - baseGrand);
+    if (exchangeDifference !== 0) {
+      if (!data.exchange_gain_loss_account) {
+        throw errors.validation("exchange_gain_loss_account is required for Credit Note exchange difference");
+      }
+      gl.push({
+        line_key: "EXCHANGE-DIFFERENCE",
+        account: data.exchange_gain_loss_account,
+        debit_minor: exchangeDifference > 0 ? exchangeDifference : 0,
+        credit_minor: exchangeDifference < 0 ? -exchangeDifference : 0,
+        currency,
+        currency_scale: baseScale,
+        posting_at: data.posting_at,
+      });
+    }
+
+    const payment: PaymentLedgerEntry[] = [];
+    const applied = data.applied_to_invoice_minor ?? 0;
+    if (applied > 0) {
+      payment.push({
+        line_key: "CREDIT-INVOICE",
+        account_type: "Receivable",
+        party_type: "Customer",
+        party: data.customer,
+        account: data.debit_to,
+        amount_minor: -applied,
+        base_amount_minor: -baseApplied,
+        currency: data.currency,
+        currency_scale: tx,
+        against_voucher_type: "Sales Invoice",
+        against_voucher_no: data.return_against,
+        posting_at: data.posting_at,
+      });
+    }
+    const customerCredit = data.customer_credit_minor ?? 0;
+    if (customerCredit > 0) {
+      payment.push({
+        line_key: "CUSTOMER-CREDIT",
+        account_type: "Receivable",
+        party_type: "Customer",
+        party: data.customer,
+        account: data.debit_to,
+        amount_minor: -customerCredit,
+        base_amount_minor: -baseCustomerCredit,
+        currency: data.currency,
+        currency_scale: tx,
+        against_voucher_type: "Credit Note",
+        against_voucher_no: context.command.aggregate.name,
+        posting_at: data.posting_at,
+      });
+    }
+
+    const returns = data.items.map((item, index): ReturnEntry => ({
+      line_key: `RETURN-${item.row_id || index + 1}`,
+      reference_doctype: "Sales Invoice",
+      reference_name: data.return_against,
+      kind: "Sales Credit",
+      item_code: item.item_code,
+      qty_micros: item.qty_micros ?? toScaledInt(item.qty, 6),
+      posting_at: data.posting_at,
+    }));
+    return context.command.action === "cancel"
+      ? { gl: reverseGl(gl), payment: reversePayment(payment), returns: reverseReturns(returns) }
+      : { gl, payment, returns };
   }
-  status(context:ControllerContext<CreditNoteData>):string{return nextDocStatus(context.command.action)===1?"Credit Issued":super.status(context,{} as CreditNoteData);}
+
+  status(context: ControllerContext<CreditNoteData>): string {
+    return nextDocStatus(context.command.action) === 1
+      ? ((context.command.document.customer_credit_minor ?? 0) as number) > 0 ? "Customer Credit" : "Credit Issued"
+      : super.status(context, {} as CreditNoteData);
+  }
 }
 
 export class DebitNoteController extends BaseController<DebitNoteData>{
