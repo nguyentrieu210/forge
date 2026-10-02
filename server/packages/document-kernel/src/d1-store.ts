@@ -629,11 +629,16 @@ export class D1MutationStore implements MutationStore {
     purchaseOrder: string,
     kind?: "Receipt" | "Billing",
     itemCode?: string,
+    purchaseOrderItemRowId?: string,
   ): Promise<number> {
     const conditions = ["tenant_id=?1", "purchase_order=?2"];
     const values: unknown[] = [tenantId, purchaseOrder];
     if (kind) { conditions.push(`kind=?${values.length + 1}`); values.push(kind); }
     if (itemCode) { conditions.push(`item_code=?${values.length + 1}`); values.push(itemCode); }
+    if (purchaseOrderItemRowId) {
+      conditions.push(`purchase_order_item_row_id=?${values.length + 1}`);
+      values.push(purchaseOrderItemRowId);
+    }
     const row = await this.writer.prepare(
       `SELECT COALESCE(SUM(qty_micros),0) AS total FROM purchase_order_progress_entries WHERE ${conditions.join(" AND ")}`,
     ).bind(...values).first<{ total: number }>();
@@ -1199,11 +1204,12 @@ export class D1MutationStore implements MutationStore {
     for (const line of plan.procurement_entries ?? []) {
       statements.push(database.prepare(
         `INSERT INTO purchase_order_progress_entries
-         (tenant_id,voucher_type,voucher_no,voucher_revision,line_key,purchase_order,kind,item_code,qty_micros,posting_at)
-         VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10)`,
+         (tenant_id,voucher_type,voucher_no,voucher_revision,line_key,purchase_order,purchase_order_item_row_id,kind,item_code,qty_micros,posting_at)
+         VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11)`,
       ).bind(
         command.tenant_id, command.aggregate.doctype, command.aggregate.name, plan.document.version,
-        line.line_key, line.purchase_order, line.kind, line.item_code, line.qty_micros, line.posting_at,
+        line.line_key, line.purchase_order, line.purchase_order_item_row_id ?? null,
+        line.kind, line.item_code, line.qty_micros, line.posting_at,
       ));
     }
     for (const line of plan.stock_bundle_usages ?? []) {
