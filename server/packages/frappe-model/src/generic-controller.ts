@@ -452,6 +452,11 @@ export function blocksSelfApproval(
   return targetDocstatus > currentDocstatus;
 }
 
+function isAdministrator(context: ControllerContext<JsonObject>): boolean {
+  return context.command.actor.user_id === "Administrator"
+    || context.command.actor.roles.includes("Administrator")
+    || context.command.actor.roles.includes("System Manager");
+}
 
 function requireExisting(context: ControllerContext<JsonObject>): CanonicalDocument<JsonObject> { if (!context.existing) throw errors.notFound(); return context.existing; }
 function sameJsonValue(left: JsonValue | undefined, right: JsonValue | undefined): boolean { return JSON.stringify(left) === JSON.stringify(right); }
