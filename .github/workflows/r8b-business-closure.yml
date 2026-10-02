@@ -15,7 +15,10 @@ on:
       - "server/tests/landed-cost-authority.test.mjs"
       - "server/tests/customer-credit-authority.test.mjs"
       - "server/tests/period-closing-authority.test.mjs"
+      - "server/tests/period-close-timestamp.test.mjs"
       - "server/tests/finance-closure-query.test.mjs"
+      - "server/tests/finance-budget-actual-sql.test.mjs"
+      - "server/tests/procurement-p2p-closure.test.mjs"
       - "server/tests/finance-closure-policy.test.mjs"
       - "server/tests/r8-erpnext-depth.test.mjs"
       - "server/migrations/tenant/0141_subcontracting_authority.sql"
@@ -23,8 +26,10 @@ on:
       - "server/migrations/tenant/0143_purchase_invoice_row_authority.sql"
       - "server/migrations/tenant/0150_customer_credit_authority.sql"
       - "server/migrations/tenant/0151_period_closing_voucher.sql"
+      - "server/migrations/tenant/0152_period_close_scope_safety.sql"
       - "server/scripts/test-customer-credit-authority-migration.py"
       - "server/scripts/test-period-closing-authority-migration.py"
+      - "server/scripts/verify-r8-erpnext-depth.mjs"
       - "docs/agents/r8/**"
       - ".github/workflows/r8b-business-closure.yml"
   workflow_dispatch:
@@ -60,10 +65,14 @@ jobs:
         run: python3 server/scripts/test-customer-credit-authority-migration.py
       - name: Period Closing Voucher regression
         run: node --test server/tests/period-closing-authority.test.mjs
+      - name: Period Closing UTC timestamp regression
+        run: node --test server/tests/period-close-timestamp.test.mjs
       - name: Period close atomic migration regression
         run: python3 server/scripts/test-period-closing-authority-migration.py
       - name: Finance Budget vs Actual query regression
         run: node --test server/tests/finance-closure-query.test.mjs
+      - name: Finance Budget vs Actual executable SQL regression
+        run: node --test server/tests/finance-budget-actual-sql.test.mjs
       - name: Finance close/budget RBAC regression
         run: node --test server/tests/finance-closure-policy.test.mjs
       - name: R8 benchmark invariant

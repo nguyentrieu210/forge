@@ -74,6 +74,7 @@ def connection() -> sqlite3.Connection:
     db = sqlite3.connect(":memory:")
     db.executescript(SCHEMA)
     db.executescript(MIGRATION.read_text())
+    db.executescript((ROOT / 'migrations/tenant/0152_period_close_scope_safety.sql').read_text())
     return db
 
 
@@ -214,3 +215,77 @@ else:
 db.executescript(MIGRATION.read_text())
 
 print("period closing authority migration: PASS")
+
+def rejected(db, payload, expected):
+    document(db, 'Period Closing Voucher', 'PCV-BLOCK', 0, payload)
+    try:
+        db.execute("UPDATE documents SET docstatus=1 WHERE doc_key='Period Closing Voucher:PCV-BLOCK'")
+    except sqlite3.IntegrityError as exc:
+        assert expected in str(exc), exc
+    else:
+        raise AssertionError(expected + ' guard did not fire')
+    assert db.execute("SELECT docstatus FROM documents WHERE doc_key='Period Closing Voucher:PCV-BLOCK'").fetchone() == (0,)
+
+db = connection(); seed_source(db); lock(db)
+payload = pcv_payload(); payload['posting_at'] = '2026-12-31BAD'
+rejected(db, payload, 'PERIOD_CLOSE_INVALID_POSTING_AT')
+
+# Inactive historical balances must not silently disappear from retained earnings.
+for kind in ['master', 'document']:
+    db = connection(); seed_source(db); lock(db)
+    if kind == 'master':
+        db.execute("UPDATE master_records SET disabled=1 WHERE name='Rent'")
+    else:
+        document(db, 'Account', 'Rent', 0, {'company':'Demo', 'root_type':'Expense', 'is_group':0, 'disabled':1})
+    payload = pcv_payload(); payload.update(source_gl_row_count=1, source_debit_minor=0)
+    rejected(db, payload, 'PERIOD_CLOSE_INACTIVE_PNL_BALANCE')
+
+# Whole-company and branch scopes overlap in both directions, including unequal periods.
+for existing_branch, new_branch in [('A', ''), ('', 'A'), ('A', 'A')]:
+    db = connection(); seed_source(db); lock(db)
+    existing = pcv_payload(); existing['branch'] = existing_branch
+    document(db, 'Period Closing Voucher', 'PCV-ACTIVE', 1, existing)
+    payload = pcv_payload(); payload['branch'] = new_branch
+    payload['period_start_date'] = '2026-06-01'
+    rejected(db, payload, 'PERIOD_CLOSE_OVERLAPPING_SCOPE')
+
+# Separate branches are allowed; cancelled closes and another company are not blockers.
+db = connection(); seed_source(db); lock(db)
+db.execute("UPDATE documents SET payload_json=json_set(payload_json,'$.branch','B') WHERE doctype='Journal Entry'")
+existing = pcv_payload(); existing['branch'] = 'A'
+document(db, 'Period Closing Voucher', 'PCV-A', 1, existing)
+payload = pcv_payload(); payload['branch'] = 'B'
+document(db, 'Period Closing Voucher', 'PCV-B', 0, payload)
+db.execute("UPDATE documents SET docstatus=1 WHERE doc_key='Period Closing Voucher:PCV-B'")
+assert db.execute("SELECT docstatus FROM documents WHERE name='PCV-B'").fetchone() == (1,)
+db.execute("UPDATE documents SET docstatus=2 WHERE doctype='Period Closing Voucher'")
+payload = pcv_payload()
+document(db, 'Period Closing Voucher', 'PCV-REPLACEMENT', 0, payload)
+db.execute("UPDATE documents SET docstatus=1 WHERE name='PCV-REPLACEMENT'")
+db.executescript((ROOT / 'migrations/tenant/0152_period_close_scope_safety.sql').read_text())
+print('period close scope/timestamp/inactive account safety: PASS')
+
+# INSERT cannot bypass the new safety boundary used by submitted UPDATE.
+for scenario, expected in [('timestamp','PERIOD_CLOSE_INVALID_POSTING_AT'),
+                            ('scope','PERIOD_CLOSE_OVERLAPPING_SCOPE'),
+                            ('inactive','PERIOD_CLOSE_INACTIVE_PNL_BALANCE')]:
+    db = connection(); seed_source(db); lock(db); payload = pcv_payload()
+    if scenario == 'timestamp':
+        payload['posting_at'] = '2026-12-31BAD'
+    elif scenario == 'scope':
+        document(db, 'Period Closing Voucher', 'PCV-EXISTING', 1, pcv_payload())
+    else:
+        db.execute("UPDATE master_records SET disabled=1 WHERE name='Rent'")
+    try:
+        document(db, 'Period Closing Voucher', 'PCV-DIRECT', 1, payload)
+    except sqlite3.IntegrityError as exc:
+        assert expected in str(exc), exc
+    else:
+        raise AssertionError('direct INSERT bypassed '+expected)
+
+db = connection(); seed_source(db); lock(db)
+old = pcv_payload(); old.update(period_start_date='2025-01-01', period_end_date='2025-12-31', posting_at='2025-12-31T23:59:59Z')
+document(db, 'Period Closing Voucher', 'PCV-2025', 1, old)
+document(db, 'Period Closing Voucher', 'PCV-2026', 0, pcv_payload())
+db.execute("UPDATE documents SET docstatus=1 WHERE name='PCV-2026'")
+print('period close direct insert and non-overlapping periods: PASS')

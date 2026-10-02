@@ -137,7 +137,7 @@ test("Finance Budget vs Actual derives effective budget, commitments and scoped 
   assert.match(compiled.sql, /r\.doctype='Finance Budget Revision'/);
   assert.match(compiled.sql, /cm\.doctype='Finance Budget Commitment'/);
   assert.match(compiled.sql, /FROM gl_entries g/);
-  assert.match(compiled.sql, /LEFT JOIN finance_active_accounts a/);
+  assert.match(compiled.sql, /LEFT JOIN finance_historical_accounts a/);
   assert.match(compiled.sql, /g\.voucher_type<>'Period Closing Voucher'/);
   assert.match(compiled.sql, /b\.budget_against='Branch'/);
   assert.match(compiled.sql, /b\.budget_against='Cost Center'/);

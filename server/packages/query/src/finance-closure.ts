@@ -407,7 +407,7 @@ function compileFinanceBudgetVsActual(
         CAST(COALESCE(json_extract(b.payload_json,'$.budget_amount_minor'),0) AS INTEGER) AS budget_amount_minor,
         COALESCE(json_extract(b.payload_json,'$.control_action'),'Stop') AS control_action
       FROM documents b
-      LEFT JOIN finance_active_accounts a
+      LEFT JOIN finance_historical_accounts a
         ON a.tenant_id=b.tenant_id
        AND a.name=json_extract(b.payload_json,'$.account')
        AND (a.company=json_extract(b.payload_json,'$.company') OR a.company IS NULL OR a.company='')
@@ -416,6 +416,23 @@ function compileFinanceBudgetVsActual(
         AND b.docstatus=1
         AND json_extract(b.payload_json,'$.company')=?3
         AND date(json_extract(b.payload_json,'$.start_date'))<=date(?2)
+    ), budget_gl AS (
+      SELECT
+        b.budget,g.debit_minor,g.credit_minor,g.currency,g.currency_scale
+      FROM gl_entries g
+      INNER JOIN budget_base b ON g.account=b.account
+      INNER JOIN documents d
+        ON d.tenant_id=g.tenant_id AND d.doctype=g.voucher_type AND d.name=g.voucher_no
+      WHERE g.tenant_id=?1 AND json_extract(d.payload_json,'$.company')=b.company
+        AND date(g.posting_at)>=date(b.start_date)
+        AND date(g.posting_at)<=date(b.through_date)
+        AND g.voucher_type<>'Period Closing Voucher'
+        AND (
+          b.budget_against='Company'
+          OR (b.budget_against='Branch' AND ${branchExpr}=b.branch)
+          OR (b.budget_against='Cost Center' AND ${costCenterExpr}=b.cost_center)
+          OR (b.budget_against='Project' AND ${projectExpr}=b.project)
+        )
     ), metrics AS (
       SELECT
         b.*,
@@ -452,46 +469,41 @@ function compileFinanceBudgetVsActual(
               ELSE g.debit_minor-g.credit_minor
             END
           )
-          FROM gl_entries g
-          INNER JOIN documents d
-            ON d.tenant_id=g.tenant_id
-           AND d.doctype=g.voucher_type
-           AND d.name=g.voucher_no
-          WHERE g.tenant_id=?1
-            AND g.account=b.account
-            AND json_extract(d.payload_json,'$.company')=b.company
-            AND date(g.posting_at)>=date(b.start_date)
-            AND date(g.posting_at)<=date(b.through_date)
-            AND g.voucher_type<>'Period Closing Voucher'
-            AND (
-              b.budget_against='Company'
-              OR (b.budget_against='Branch' AND ${branchExpr}=b.branch)
-              OR (b.budget_against='Cost Center' AND ${costCenterExpr}=b.cost_center)
-              OR (b.budget_against='Project' AND ${projectExpr}=b.project)
-            )
-        ),0) AS actual_minor
+          FROM budget_gl g
+          WHERE g.budget=b.budget
+            AND g.currency=b.currency AND g.currency_scale=b.currency_scale
+        ),0) AS valid_actual_minor,
+        (SELECT COUNT(*) FROM budget_gl g WHERE g.budget=b.budget
+          AND (g.currency IS NOT b.currency OR g.currency_scale IS NOT b.currency_scale)
+        ) AS invalid_gl_entry_count
       FROM budget_base b
-    ), calculated AS (
+    ), effective AS (
       SELECT
         metrics.*,
         budget_amount_minor+revision_minor AS effective_budget_minor,
-        budget_amount_minor+revision_minor-actual_minor-committed_minor AS available_minor
+        CASE WHEN invalid_gl_entry_count=0 THEN valid_actual_minor ELSE NULL END AS actual_minor
       FROM metrics
+    ), calculated AS (
+      SELECT effective.*,effective_budget_minor-actual_minor-committed_minor AS available_minor
+      FROM effective
     ), report AS (
       SELECT
         budget,company,account,budget_against,scope_key,start_date,end_date,through_date,
         currency,currency_scale,control_action,
-        budget_amount_minor,revision_minor,effective_budget_minor,actual_minor,committed_minor,available_minor,
+        budget_amount_minor,revision_minor,effective_budget_minor,actual_minor,committed_minor,available_minor,invalid_gl_entry_count,
         CAST(budget_amount_minor AS REAL)/${moneyDivisor("currency_scale")} AS budget_amount,
         CAST(effective_budget_minor AS REAL)/${moneyDivisor("currency_scale")} AS effective_budget_amount,
         CAST(actual_minor AS REAL)/${moneyDivisor("currency_scale")} AS actual_amount,
         CAST(committed_minor AS REAL)/${moneyDivisor("currency_scale")} AS committed_amount,
         CAST(available_minor AS REAL)/${moneyDivisor("currency_scale")} AS available_amount,
         CASE
+          WHEN invalid_gl_entry_count>0 THEN NULL
+          WHEN effective_budget_minor=0 AND actual_minor+committed_minor<>0 THEN NULL
           WHEN effective_budget_minor=0 THEN 0.0
           ELSE CAST(actual_minor+committed_minor AS REAL)*100.0/CAST(effective_budget_minor AS REAL)
         END AS utilization_pct,
         CASE
+          WHEN invalid_gl_entry_count>0 THEN 'Invalid GL Currency / Scale'
           WHEN available_minor>=0 THEN 'Within Budget'
           WHEN control_action='Warn' THEN 'Exceeded / Warn'
           WHEN control_action='Ignore' THEN 'Exceeded / Ignore'
@@ -639,6 +651,7 @@ function budgetActualColumns(): ReportColumn[] {
     { field: "revision_minor", label: "Revision Minor", type: "Int" },
     { field: "effective_budget_minor", label: "Effective Budget Minor", type: "Int" },
     { field: "actual_minor", label: "Actual Minor", type: "Int" },
+    { field: "invalid_gl_entry_count", label: "Invalid GL Currency / Scale Entries", type: "Int" },
     { field: "committed_minor", label: "Committed Minor", type: "Int" },
     { field: "available_minor", label: "Available Minor", type: "Int" },
     { field: "budget_amount", label: "Budget", type: "Currency" },

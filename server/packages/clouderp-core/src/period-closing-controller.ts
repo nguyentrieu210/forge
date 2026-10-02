@@ -113,6 +113,13 @@ export class PeriodClosingVoucherController implements DocumentController<Period
     if (!companyName || !fiscalYearName || !postingAt || !closingAccountName) {
       throw errors.validation("Company, fiscal year, posting_at and closing account are required");
     }
+    // All GL readers use calendar dates from the persisted timestamp. A prefix
+    // match alone permits invalid GL that disappears from SQLite date scopes.
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(postingAt)
+      || !Number.isFinite(Date.parse(postingAt))
+      || new Date(postingAt).toISOString().slice(0, 10) !== postingAt.slice(0, 10)) {
+      throw errors.validation("Period Closing Voucher posting_at must be a valid UTC timestamp");
+    }
 
     // Draft payloads never get to supply authoritative close/fingerprint values.
     const draft: PeriodClosingVoucherData = {
