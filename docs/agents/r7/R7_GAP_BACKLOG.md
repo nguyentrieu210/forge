@@ -4,7 +4,6 @@ Audit state: **complete** for the declared 28-domain denominator. Platform closu
 
 | Domain | Gap summary | Closure evidence |
 |---|---|---|
-| FRAPPE-10 — Scheduler | Generic merged Frappe cron/all/daily/hourly app scheduler event semantics are not implemented; current scheduled handler primarily runs Forge maintenance. | Pinned Frappe 16 source/runtime fixture + Forge regression/differential + updated matrix |
 | FRAPPE-11 — Realtime | Generic frappe.publish_realtime-compatible room authorization/order/reconnect behavior is not proven as a platform-wide authority. | Pinned Frappe 16 source/runtime fixture + Forge regression/differential + updated matrix |
 | FRAPPE-15 — Data import/export | Frappe background/queued Data Import status lifecycle is not exposed on the facade.<br>Large import/error-workbook/update-mode parity remains incomplete. | Pinned Frappe 16 source/runtime fixture + Forge regression/differential + updated matrix |
 | FRAPPE-16 — Workflow | Workflow email/action delivery is not complete because mail transport is absent.<br>Exact Frappe condition/evaluation and all workflow side-effect semantics require closure. | Pinned Frappe 16 source/runtime fixture + Forge regression/differential + updated matrix |
@@ -15,11 +14,11 @@ Audit state: **complete** for the declared 28-domain denominator. Platform closu
 
 ## Closure order
 
-1. **Execution fabric** — FRAPPE-10 Scheduler, FRAPPE-11 Realtime.
+1. **Realtime execution fabric** — FRAPPE-11 Realtime.
 2. **Data/workflow communication** — FRAPPE-15 Data import/export, FRAPPE-16 Workflow, FRAPPE-17 Notifications/communications.
 3. **Migration/product/integration surface** — FRAPPE-19 Migrations/patches, FRAPPE-23 Website/portal, FRAPPE-26 Integrations.
 
-FRAPPE-05 Authentication & Sessions left this backlog after Frappe `token`/`Basic` API-key semantics and audited impersonation passed R7 GitHub Actions run `36960220755`.
+FRAPPE-10 Scheduler left this backlog after installed-app scheduler composition, timezone cadence, D1 slot claiming/dedupe and Workerd regression passed R7 GitHub Actions run `36961538818`.
 
 ## Rule
 
