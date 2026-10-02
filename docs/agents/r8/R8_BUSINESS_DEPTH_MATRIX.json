@@ -55,19 +55,24 @@
         "docs/agents/r8/R8_O2C_REMAP.md",
         "server/packages/ledger",
         "server/packages/query/src/finance-closure.ts",
-        "server/packages/clouderp-erpnext/src/finance-budget.ts"
+        "server/packages/clouderp-erpnext/src/finance-budget.ts",
+        "server/packages/document-kernel/src/store.ts",
+        "server/packages/document-kernel/src/d1-store.ts",
+        "server/packages/clouderp-core/src/period-closing-controller.ts",
+        "server/migrations/tenant/0151_period_closing_voucher.sql",
+        "server/tests/period-closing-authority.test.mjs",
+        "server/scripts/test-period-closing-authority-migration.py"
       ],
       "upstream_evidence": [
         "ERPNext v16.20.0 accounts doctypes/controllers at ff46d20b259a2d65a7ded959df9f9a42991a3562"
       ],
       "oracle_cases": [],
       "gaps": [
-        "Period Closing Voucher-equivalent automated close is incomplete.",
         "Full Exchange Rate Revaluation is incomplete.",
         "Budget-vs-Actual and consolidation remain incomplete.",
         "Bank reconciliation exact runtime parity remains unproven."
       ],
-      "rationale": "GL/payment/period/bank foundations are substantial, but several high-value ERPNext Accounting artifacts remain incomplete or unproven."
+      "rationale": "Forge now has a reusable company/branch/account/date GL aggregate authority and first-class Period Closing Voucher with retained-earnings posting, exact reversal and commit-time source fingerprint protection. Full period-end FX revaluation, Budget-vs-Actual, consolidation and exact bank-reconciliation runtime parity remain open."
     },
     {
       "depth_id": "R8-M02-SELLING",
@@ -546,7 +551,13 @@
         "server/migrations/tenant/0110_rc020_finance_posting_period_integrity.sql",
         "ERPNext v16.20.0 erpnext/accounts/doctype/period_closing_voucher/period_closing_voucher.py",
         "ERPNext v16.20.0 erpnext/accounts/doctype/exchange_rate_revaluation/exchange_rate_revaluation.py",
-        "ERPNext v16.20.0 erpnext/accounts/doctype/budget/budget.py"
+        "ERPNext v16.20.0 erpnext/accounts/doctype/budget/budget.py",
+        "server/packages/document-kernel/src/store.ts",
+        "server/packages/document-kernel/src/d1-store.ts",
+        "server/packages/clouderp-core/src/period-closing-controller.ts",
+        "server/migrations/tenant/0151_period_closing_voucher.sql",
+        "server/tests/period-closing-authority.test.mjs",
+        "server/scripts/test-period-closing-authority-migration.py"
       ],
       "known_depth_questions": [
         "account types/root semantics",
@@ -557,16 +568,16 @@
         "exchange-rate revaluation",
         "budget enforcement"
       ],
-      "rationale": "Forge's posting ledger and period integrity are strong, but ERPNext financial-close depth includes closing-entry orchestration, period-end revaluation and budget actuals that remain explicit Forge blockers.",
+      "rationale": "General ledger/period authority is materially stronger: automated P&L-to-retained-earnings close is now first-class and race-protected. Full period-end FX revaluation, exact Budget-vs-Actual consumption and multi-company consolidation/elimination remain open, so the flow stays PARTIAL.",
       "confirmed_findings": [
         "Forge has canonical append-only GL, exact reversal, hard/soft accounting-period guards, company/branch scoped General Ledger and Trial Balance, and Finance Daily Detailed Ledger derived from the same GL authority.",
         "Forge Finance Budget has fixed-point approval/revision/commitment controls, but exact budget-vs-actual remains blocked on a canonical company/branch/account/date GL aggregate.",
-        "Forge workstream evidence explicitly keeps automated year-end close/retained earnings and full period-end FX revaluation blocked.",
         "Pinned ERPNext Period Closing Voucher validates fiscal continuity and closing account, generates/reverses closing GL and supports background processing for large ledgers.",
-        "Pinned ERPNext Exchange Rate Revaluation calculates period-end account gain/loss and ties booked gain/loss to Journal Entry/GL behavior."
+        "Pinned ERPNext Exchange Rate Revaluation calculates period-end account gain/loss and ties booked gain/loss to Journal Entry/GL behavior.",
+        "R8-B adds a reusable canonical GL aggregate read port scoped by tenant/company/date/branch/account, implemented over immutable GL rows in D1 and mirrored in the in-memory adapter.",
+        "R8-B adds a first-class Period Closing Voucher: fiscal-year P&L balances are closed into a leaf Equity/Liability account, the accounting period must be locked through the close date, exact submitted GL is reversed on cancel, and a D1 commit-time row-count/debit/credit fingerprint rejects concurrent source drift."
       ],
       "gaps": [
-        "No fully authoritative automated year-end closing/retained-earnings flow equivalent to ERPNext Period Closing Voucher is proven.",
         "Full period-end Exchange Rate Revaluation is not closed.",
         "Exact Budget-vs-Actual over the authoritative ledger aggregate is not closed.",
         "Multi-company consolidation/elimination remains unproven."
