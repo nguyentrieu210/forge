@@ -89,6 +89,15 @@ fields = {field["fieldname"]: field for field in meta["fields"]}
 assert fields["source_payment_entry"]["required"] is False
 assert fields["source_credit_note"]["fieldtype"] == "Link"
 assert fields["source_credit_note"]["options"] == "Credit Note"
+assert fields["total_source_base_allocated_amount"]["read_only"] is True
+assert fields["exchange_gain_loss_account"]["options"] == "Account"
+assert fields["exchange_difference"]["read_only"] is True
+
+child_meta = json.loads(db.execute(
+    "SELECT metadata_json FROM doctype_definitions WHERE tenant_id='demo' AND doctype='Payment Allocation Reference'"
+).fetchone()[0])
+child_fields = {field["fieldname"]: field for field in child_meta["fields"]}
+assert child_fields["source_base_allocated_amount"]["read_only"] is True
 
 insert = """INSERT INTO payment_ledger_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"""
 
@@ -188,6 +197,48 @@ atomic_target = db.execute(
 ).fetchone()[0]
 assert credit_after == -1500, credit_after
 assert atomic_target == 1000, atomic_target
+
+# Cross-rate signed-source proof: D1 accepts independent source/target base amounts
+# while preserving both zero-crossing guards. The controller owns the balancing FX GL.
+db.execute(insert, (
+    "demo", "Sales Invoice", "SI-FX", 2, "RECEIVABLE",
+    "Receivable", "Customer", "CUST-1", "Debtors",
+    2500, 2750, "EUR", 2,
+    "Sales Invoice", "SI-FX", "2026-10-02T10:00:00.000Z",
+))
+db.execute(insert, (
+    "demo", "Credit Note", "CN-FX", 2, "CUSTOMER-CREDIT",
+    "Receivable", "Customer", "CUST-1", "Debtors",
+    -4000, -4800, "EUR", 2,
+    "Credit Note", "CN-FX", "2026-10-02T10:00:00.000Z",
+))
+db.commit()
+
+db.execute("BEGIN")
+db.execute(insert, (
+    "demo", "Payment Allocation", "PA-FX", 2, "SOURCE-FX",
+    "Receivable", "Customer", "CUST-1", "Debtors",
+    2500, 3000, "EUR", 2,
+    "Credit Note", "CN-FX", "2026-10-02T10:01:00.000Z",
+))
+db.execute(insert, (
+    "demo", "Payment Allocation", "PA-FX", 2, "TARGET-FX",
+    "Receivable", "Customer", "CUST-1", "Debtors",
+    -2500, -2750, "EUR", 2,
+    "Sales Invoice", "SI-FX", "2026-10-02T10:01:00.000Z",
+))
+db.commit()
+
+fx_credit = db.execute(
+    """SELECT SUM(amount_minor),SUM(base_amount_minor) FROM payment_ledger_entries
+       WHERE tenant_id='demo' AND against_voucher_type='Credit Note' AND against_voucher_no='CN-FX'"""
+).fetchone()
+fx_invoice = db.execute(
+    """SELECT SUM(amount_minor),SUM(base_amount_minor) FROM payment_ledger_entries
+       WHERE tenant_id='demo' AND against_voucher_type='Sales Invoice' AND against_voucher_no='SI-FX'"""
+).fetchone()
+assert fx_credit == (-1500, -1800), fx_credit
+assert fx_invoice == (0, 0), fx_invoice
 
 assert db.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
 print("CUSTOMER_CREDIT_ALLOCATION_MIGRATION_PASS")
