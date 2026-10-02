@@ -575,10 +575,18 @@
       "name": "BOM, routing, MRP and production planning",
       "path": "BOM/version -> routing/capacity -> demand -> Production Plan/MRP -> Work Order",
       "priority": "P0",
-      "classification": "UNRESOLVED",
+      "classification": "PARTIAL",
       "evidence": [
+        "docs/agents/r8/R8_MANUFACTURING_REMAP.md",
         "docs/agents/transaction-closure/02-MANUFACTURING.md",
-        "server/packages/clouderp-manufacturing"
+        "docs/agents/workstreams/WS05-manufacturing-qms.md",
+        "docs/agents/r5/R5_A4_MANUFACTURING_SERVICE.md",
+        "server/packages/clouderp-erpnext/src/manufacturing-lifecycle.ts",
+        "server/packages/clouderp-erpnext/src/manufacturing-mrp.ts",
+        "server/packages/clouderp-erpnext/src/manufacturing-mrp-netting.ts",
+        "server/packages/clouderp-erpnext/src/manufacturing-capacity.ts",
+        "ERPNext v16.20.0 erpnext/manufacturing/doctype/bom/bom.py",
+        "ERPNext v16.20.0 erpnext/manufacturing/doctype/production_plan/production_plan.py"
       ],
       "known_depth_questions": [
         "multi-level explosion",
@@ -588,18 +596,37 @@
         "material request generation",
         "revision/effective-date semantics"
       ],
-      "rationale": "Current manufacturing closure is not itself ERPNext source-exact proof."
+      "rationale": "Forge has a serious BOM/MRP/capacity foundation, but ERPNext manufacturing planning remains deeper in alternate/phantom/substitute behavior and projected/reserved supply-demand planning.",
+      "confirmed_findings": [
+        "Forge has versioned/effective BOMs, immutable Work Order BOM checksum/snapshot, multi-level gross MRP with cycle/depth guards, Material Request conversion, routing/workstation calendars, downtime and finite day-bucket capacity planning.",
+        "Forge MRP intentionally labels automatic Material Request output gross_only; its only netting preview is ON_HAND_ONLY_NOT_ATP and excludes reservations, open PO/WO supply, lead time and safety stock.",
+        "Current Forge manufacturing audit explicitly marks phantom BOM as missing and substitute material as missing; alternate BOM is only foundation-level because overlapping active alternatives are forbidden.",
+        "Pinned ERPNext BOM exposes phantom/alternative-item semantics, operations, costing and secondary/scrap items, while Production Plan integrates stock reservation and Sales Order/material-request demand."
+      ],
+      "gaps": [
+        "Phantom BOM semantics are missing.",
+        "Substitute-material selection/availability policy is missing.",
+        "Full alternate-BOM policy is not closed.",
+        "MRP netting is not full ATP/projected supply-demand netting; automatic MR conversion remains gross-only.",
+        "Pinned ERPNext BOM/Production Plan runtime differential is not yet captured."
+      ]
     },
     {
       "flow_id": "R8-F11-MFG-EXEC-COST",
       "name": "Shop-floor execution, WIP, scrap and manufacturing cost",
       "path": "Work Order -> material transfer/issue -> Job Card -> FG/scrap -> actual cost/variance -> reversal",
       "priority": "P0",
-      "classification": "UNRESOLVED",
+      "classification": "PARTIAL",
       "evidence": [
+        "docs/agents/r8/R8_MANUFACTURING_REMAP.md",
         "docs/agents/transaction-closure/02-MANUFACTURING.md",
-        "server/packages/clouderp-manufacturing",
-        "server/packages/clouderp-stock"
+        "docs/agents/transaction-closure/07-CONVERGENCE.md",
+        "docs/agents/rc4/A13-PROGRESS.md",
+        "server/packages/clouderp-erpnext/src/manufacturing-lifecycle.ts",
+        "server/packages/clouderp-erpnext/src/manufacturing-costing-read.ts",
+        "server/packages/clouderp-erpnext/src/manufacturing-genealogy.ts",
+        "ERPNext v16.20.0 erpnext/manufacturing/doctype/work_order/work_order.py",
+        "ERPNext v16.20.0 erpnext/manufacturing/doctype/job_card/job_card.py"
       ],
       "known_depth_questions": [
         "partial production",
@@ -610,7 +637,21 @@
         "rework",
         "backdated consumption/FG"
       ],
-      "rationale": "Forge records a read-only cost reconciliation model; R8 must compare ERPNext posting and costing depth explicitly."
+      "rationale": "Shop-floor and stock execution are strong, but ERPNext's operation-cost/WIP/corrective execution depth exceeds Forge's current read-only costing and unresolved rework/variance accounting.",
+      "confirmed_findings": [
+        "Forge has guarded partial manufacture, exact retry/cancel/correction, canonical Stock Entry/Stock Ledger posting, scrap/offcut recovery, Job Card completion guards, backdated valuation audit and Work Order genealogy.",
+        "Forge manufacturing cost evidence is explicitly READ_ONLY_CANONICAL_LEDGER with posting_status=NOT_POSTED; labor/machine/overhead and manufacturing variance are not posted through Finance.",
+        "Forge rework remains an explicit unresolved business-policy decision rather than a fabricated universal flow.",
+        "Pinned ERPNext Job Card tracks hour rate/time, corrective operation cost, semi-finished/WIP stock execution, quality inspection and adds operation cost to manufacture Stock Entry valuation.",
+        "Pinned ERPNext manufacturing also connects corrective/subcontracted Job Card paths to stock/procurement execution."
+      ],
+      "gaps": [
+        "Posted labor/machine/overhead operation cost is not closed.",
+        "Manufacturing variance GL posting/reversal and accounting-period semantics are not closed.",
+        "Rework operating model is not defined generically.",
+        "Historical finance correction after wider backdated manufacturing valuation changes remains incomplete.",
+        "Pinned ERPNext Work Order/Job Card runtime differential is not yet captured."
+      ]
     },
     {
       "flow_id": "R8-F12-SUBCONTRACTING",

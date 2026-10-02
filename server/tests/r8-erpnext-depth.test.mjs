@@ -99,3 +99,21 @@ test("R8 finance remap keeps strong ledger core separate from unclosed close sem
   assert.equal(matrix.flow_depth.find((x) => x.flow_id === "R8-F04-GL-PERIOD-CLOSE")?.classification, "PARTIAL");
   assert.equal(matrix.flow_depth.find((x) => x.flow_id === "R8-F05-CASH-BANK-RECON")?.classification, "PARTIAL");
 });
+
+
+test("R8 manufacturing remap exposes MRP and posted-cost depth boundaries", async () => {
+  const matrix = await readJson(path.join(repoRoot, "docs/agents/r8/R8_BUSINESS_DEPTH_MATRIX.json"));
+  const mrp = await readFile(path.join(serverRoot, "packages/clouderp-erpnext/src/manufacturing-mrp.ts"), "utf8");
+  const netting = await readFile(path.join(serverRoot, "packages/clouderp-erpnext/src/manufacturing-mrp-netting.ts"), "utf8");
+  const costing = await readFile(path.join(serverRoot, "packages/clouderp-erpnext/src/manufacturing-costing-read.ts"), "utf8");
+  const lifecycle = await readFile(path.join(serverRoot, "packages/clouderp-erpnext/src/manufacturing-lifecycle.ts"), "utf8");
+
+  assert.match(mrp, /netting_mode: "gross_only"/);
+  assert.match(netting, /ON_HAND_ONLY_NOT_ATP/);
+  assert.match(costing, /posting_status: "NOT_POSTED"/);
+  assert.match(lifecycle, /VersionedBillOfMaterialsController/);
+  assert.match(lifecycle, /SnapshotWorkOrderController/);
+
+  assert.equal(matrix.flow_depth.find((x) => x.flow_id === "R8-F10-MFG-BOM-MRP")?.classification, "PARTIAL");
+  assert.equal(matrix.flow_depth.find((x) => x.flow_id === "R8-F11-MFG-EXEC-COST")?.classification, "PARTIAL");
+});
