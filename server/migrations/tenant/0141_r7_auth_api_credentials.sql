@@ -17,7 +17,6 @@ CREATE TABLE IF NOT EXISTS user_api_credentials (
   revoked_by TEXT,
   revoke_reason TEXT,
   PRIMARY KEY (tenant_id, credential_id),
-  UNIQUE (tenant_id, api_key),
   FOREIGN KEY (tenant_id, user_id) REFERENCES users(tenant_id, user_id) ON DELETE CASCADE,
   CHECK (length(api_key) BETWEEN 15 AND 128),
   CHECK (length(secret_salt) BETWEEN 16 AND 128),
@@ -34,8 +33,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_user_api_credentials_one_active
   ON user_api_credentials(tenant_id,user_id)
   WHERE revoked_at IS NULL;
 
-CREATE INDEX IF NOT EXISTS idx_user_api_credentials_key_active
-  ON user_api_credentials(tenant_id,api_key,revoked_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_user_api_credentials_key_active
+  ON user_api_credentials(tenant_id,api_key)
+  WHERE revoked_at IS NULL;
 
 CREATE TRIGGER IF NOT EXISTS user_api_credentials_identity_immutable
 BEFORE UPDATE OF tenant_id,credential_id,user_id,api_key,secret_salt,secret_hash,created_at
