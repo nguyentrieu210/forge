@@ -1,16 +1,16 @@
-# R8-B Customer Credit Authority Closure
+# R8-B Customer Credit and Settlement Authority Closure
 
 ## Disposition
 
-**Customer credit-limit / hold, fully-paid return credit, cash refund, and same-base credit reuse: closed for the declared R8-B transaction boundary.**
+**Customer credit-limit / hold, fully-paid return credit, cash refund, reusable credit, signed-source advance allocation and realized-FX settlement: closed for the declared R8-B transaction boundary.**
 
-Forge does not maintain a mutable customer-credit wallet. Credit exposure, refundable credit
-and reusable credit are all represented by canonical Payment Ledger balances.
+Forge does not maintain a mutable customer-credit wallet. Credit exposure, refundable credit,
+reusable credit and advance settlement are represented by canonical Payment Ledger balances.
+When source and target historical company-currency bases differ, Payment Allocation posts the
+realized difference to canonical GL instead of mutating or homogenizing the Payment Ledger base.
 
 Selling/O2C remains **PARTIAL** against ERPNext v16.20.0 because exact-current oracle replay
-is still open and Payment Allocation deliberately fails closed when source credit and target
-invoice carry different historical company-currency bases. That case needs first-class
-realized-FX GL before it can be enabled safely.
+and other declared O2C differences remain open. This closure does not claim module-wide parity.
 
 ## Closed in this lane
 
@@ -29,42 +29,55 @@ realized-FX GL before it can be enabled safely.
   and unallocated customer refund are rejected.
 - Refund posts `Dr Debtors / Cr Bank`, clears the Credit Note source toward zero, and
   reverses exactly on cancellation.
-- `Payment Allocation` now accepts exactly one signed source:
+- `Payment Allocation` accepts exactly one signed source:
   - an existing Payment Entry advance; or
   - a submitted Customer Credit Note via `source_credit_note`.
-- Credit Note reuse allocates append-only Payment Ledger rows:
-  - positive source row against the Credit Note, consuming customer credit toward zero;
-  - negative target row against the later Sales Invoice, consuming invoice outstanding
-    toward zero.
 - Source and target company/party/account/currency context must match.
-- Source credit and target invoice are both bounded at commit time by existing D1 guards.
-  If either side would cross zero, the whole mutation rolls back.
-- While a submitted Payment Allocation consumes a Credit Note, cancelling that Credit Note
-  is blocked by the same signed-source invariant. Reverse the allocation first.
-- Cancelling Payment Allocation sign-reverses its exact source/target Payment Ledger rows and
-  restores both source credit and target invoice outstanding.
-- Migration `0156_customer_credit_allocation.sql` makes `source_payment_entry` optional
-  in Payment Allocation metadata and exposes `source_credit_note` without changing the
-  underlying authority model.
-- If source and target historical company-currency base amounts differ for the requested
-  allocation, submit fails closed with an explicit realized-FX requirement. Forge does not
-  silently drift base Receivable balances.
+- Source credit/advance and target invoice are bounded independently at commit time by the
+  existing D1 signed-source and invoice-outstanding guards. If either side would cross zero,
+  the whole mutation rolls back.
+- A reference freezes two different historical company-currency amounts:
+  - `source_base_allocated_amount_minor`: base consumed from the signed source;
+  - `base_allocated_amount_minor`: base consumed from the target invoice.
+- Same-base allocation produces Payment Ledger movement only; it does not invent bank or GL
+  activity.
+- Cross-rate allocation derives the Company's `exchange_gain_loss_account` server-side and
+  posts the exact realized difference:
+  - Customer/Receivable: source base above target base -> debit party / credit FX gain;
+  - Supplier/Payable: source base above target base -> credit party / debit FX loss;
+  - the opposite base direction reverses those signs.
+- Customer Credit Note EUR 1.20 -> later Sales Invoice EUR 1.10 is proven as
+  `Dr Debtors / Cr FX Gain-Loss` for the base difference while clearing each Payment Ledger
+  side by its own historical base.
+- Supplier Payment Entry advance EUR 1.20 -> Purchase Invoice EUR 1.10 is proven with the
+  opposite Payable sign: `Cr Creditors / Dr FX Gain-Loss`.
+- Company FX account, company currency, source identity, source base, target base and signed
+  difference are frozen on the submitted allocation; cancellation reverses exact stored GL
+  and Payment Ledger evidence without recalculation from current rates.
+- While a submitted Payment Allocation consumes a Credit Note or advance, source cancellation
+  cannot cross the signed-source balance; reverse the allocation first.
+- Migration `0156_customer_credit_allocation.sql` exposes Credit Note source selection and
+  read-only source-base / realized-FX evidence in metadata without creating a wallet or
+  shadow balance.
 
-## No shadow receivable authority
+## No shadow receivable/payable authority
 
-No customer-balance or credit-wallet table was added.
+No customer-balance, supplier-advance wallet or settlement snapshot table was added.
 
 The authority remains:
 
-`open Sales Order exposure + Payment Ledger Receivable -> atomic credit guard / settlement`
+`open order exposure + Payment Ledger AR/AP -> atomic settlement -> GL realized FX only for historical-base difference`
 
-A reusable Credit Note is simply a negative Payment Ledger source balance. Payment Allocation
-moves that source toward zero while moving a later invoice toward zero in the same transaction.
+A reusable Credit Note or Payment Entry advance is a negative signed Payment Ledger source.
+Payment Allocation moves that source toward zero while moving the target invoice toward zero;
+the GL receives only the company-currency difference needed to keep AR/AP accounting aligned.
 
 ## Evidence
 
 - `server/packages/clouderp-selling/src/credit-policy.ts`
 - `server/packages/clouderp-selling/src/finance-controllers.ts`
+- `server/packages/clouderp-selling/src/types.ts`
+- `server/packages/clouderp-selling/src/safe-finance-payment-entry.ts`
 - `server/packages/clouderp-erpnext/src/controllers.ts`
 - `server/packages/document-kernel/src/finance-aware-in-memory-store.ts`
 - `server/migrations/tenant/0031_finance_payment_allocations.sql`
@@ -74,10 +87,10 @@ moves that source toward zero while moving a later invoice toward zero in the sa
 - `server/tests/customer-credit-authority.test.mjs`
 - `server/scripts/test-customer-credit-authority-migration.py`
 - `server/scripts/test-customer-credit-allocation-migration.py`
-- R8-B workflow run **36991994526** on implementation commit
-  `1e64317593948247c722a04963c18cf97e03b878`: server build, both customer-credit
-  controller/migration regressions, all other R8-B regressions, benchmark invariant and
-  matrix regression passed.
+- R8-B workflow run **36993183653** on implementation commit
+  `cca876632a340d5deb6de1c5c20d38f8a5281255`: all 25 R8-B gates passed,
+  including server build, customer settlement controller regressions, SQLite source/target
+  atomicity, Budget/Close/FX-revaluation regressions, benchmark invariant and matrix verifier.
 
 ## Executable proofs
 
@@ -90,22 +103,24 @@ The focused evidence proves:
 5. a fully paid return creates negative canonical Receivable against the Credit Note;
 6. cash refund is bounded by that source credit and cancels exactly;
 7. a later Sales Invoice can be settled from Credit Note credit through Payment Allocation;
-8. over-target allocation is rejected;
-9. source credit decreases exactly while target outstanding decreases exactly;
-10. Payment Allocation itself creates no fake bank/GL movement for a same-base offset;
-11. Credit Note cancellation is blocked while its credit is actively allocated;
-12. Payment Allocation cancellation restores both source and target balances exactly;
-13. SQLite source and target guards rollback atomically when the second leg fails;
-14. cross-rate source/target base mismatch fails closed with no ledger mutation.
+8. source and target zero-crossing guards rollback atomically;
+9. same-base allocation creates no fake GL;
+10. cross-rate Customer credit clears source/target by distinct historical bases and posts
+    balanced realized-FX GL;
+11. cross-rate Supplier advance clears Payable with the opposite party-account GL sign;
+12. the Company's FX account is server-derived and frozen;
+13. active allocation blocks invalid source cancellation;
+14. Payment Allocation cancellation restores source/target Payment Ledger balances and
+    reverses its exact realized-FX GL.
 
 ## Remaining O2C boundary
 
-The former **customer-credit reuse** gap is closed for allocations whose historical base
-values net exactly.
+The former reusable-credit and cross-rate settlement gaps are closed for the declared
+Payment Allocation sources.
 
-Remaining customer-settlement depth includes first-class realized-FX GL for cross-rate
-credit/advance allocation. Exact-current replay of the pinned ERPNext O2C fixtures and other
-declared O2C semantic differences also remain open.
+Remaining O2C depth includes exact-current replay of the pinned ERPNext fixture set, wider
+tax/pricing combinations, current stock-policy differences and the broader lifecycle/race
+questions already tracked by the R8 matrix.
 
-Those remaining boundaries keep Selling and O2C at `PARTIAL`; this closure does not claim
-module-wide ERPNext parity.
+Those boundaries keep Selling, P2P and O2C at `PARTIAL`; this closure does not claim
+ERPNext module parity.
