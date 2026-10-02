@@ -445,3 +445,545 @@ BEGIN
       )
   ) THEN RAISE(ABORT,'FINANCE_BUDGET_TRANSACTION_EXCEEDED') END;
 END;
+
+
+-- Replace raw annual-only commitment submission guards. Source/amount/lifecycle validation
+-- stays here; projected Stop is enforced by the source-net actual+commitment triggers below.
+DROP TRIGGER IF EXISTS finance_budget_commitment_submit_guard;
+DROP TRIGGER IF EXISTS finance_budget_commitment_update_guard;
+DROP TRIGGER IF EXISTS finance_budget_commitment_update_submission_closure;
+DROP TRIGGER IF EXISTS finance_budget_commitment_projected_stop_insert_guard;
+DROP TRIGGER IF EXISTS finance_budget_commitment_projected_stop_update_guard;
+
+CREATE TRIGGER finance_budget_commitment_submit_guard
+BEFORE INSERT ON documents
+WHEN NEW.doctype='Finance Budget Commitment' AND NEW.docstatus=1
+BEGIN
+  SELECT CASE
+    WHEN NOT EXISTS(
+      SELECT 1 FROM documents b
+      WHERE b.tenant_id=NEW.tenant_id AND b.doctype='Finance Budget'
+        AND b.name=json_extract(NEW.payload_json,'$.budget') AND b.docstatus=1
+    ) THEN RAISE(ABORT,'FINANCE_BUDGET_COMMITMENT_BUDGET_REQUIRED')
+    WHEN COALESCE(json_extract(NEW.payload_json,'$.commitment_type'),'') NOT IN ('Reserve','Release')
+      OR COALESCE(CAST(json_extract(NEW.payload_json,'$.amount_minor') AS INTEGER),0)<=0
+      THEN RAISE(ABORT,'FINANCE_BUDGET_COMMITMENT_AMOUNT_INVALID')
+    WHEN NOT EXISTS(
+      SELECT 1 FROM documents s
+      WHERE s.tenant_id=NEW.tenant_id
+        AND s.doctype=json_extract(NEW.payload_json,'$.source_doctype')
+        AND s.name=json_extract(NEW.payload_json,'$.source_name')
+        AND s.docstatus=1
+    ) THEN RAISE(ABORT,'FINANCE_BUDGET_COMMITMENT_SOURCE_REQUIRED')
+    WHEN json_extract(NEW.payload_json,'$.commitment_type')='Release' AND (
+      SELECT COALESCE(SUM(
+        CASE json_extract(c.payload_json,'$.commitment_type')
+          WHEN 'Reserve' THEN CAST(json_extract(c.payload_json,'$.amount_minor') AS INTEGER)
+          ELSE -CAST(json_extract(c.payload_json,'$.amount_minor') AS INTEGER)
+        END
+      ),0)
+      FROM documents c
+      WHERE c.tenant_id=NEW.tenant_id
+        AND c.doctype='Finance Budget Commitment'
+        AND c.docstatus=1
+        AND json_extract(c.payload_json,'$.budget')=json_extract(NEW.payload_json,'$.budget')
+        AND json_extract(c.payload_json,'$.source_doctype')=json_extract(NEW.payload_json,'$.source_doctype')
+        AND json_extract(c.payload_json,'$.source_name')=json_extract(NEW.payload_json,'$.source_name')
+    ) < CAST(json_extract(NEW.payload_json,'$.amount_minor') AS INTEGER)
+      THEN RAISE(ABORT,'FINANCE_BUDGET_RELEASE_EXCEEDS_SOURCE')
+    WHEN (
+      SELECT COALESCE(SUM(
+        CASE json_extract(c.payload_json,'$.commitment_type')
+          WHEN 'Reserve' THEN CAST(json_extract(c.payload_json,'$.amount_minor') AS INTEGER)
+          ELSE -CAST(json_extract(c.payload_json,'$.amount_minor') AS INTEGER)
+        END
+      ),0)
+      FROM documents c
+      WHERE c.tenant_id=NEW.tenant_id
+        AND c.doctype='Finance Budget Commitment'
+        AND c.docstatus=1
+        AND json_extract(c.payload_json,'$.budget')=json_extract(NEW.payload_json,'$.budget')
+    ) + CASE json_extract(NEW.payload_json,'$.commitment_type')
+          WHEN 'Reserve' THEN CAST(json_extract(NEW.payload_json,'$.amount_minor') AS INTEGER)
+          ELSE -CAST(json_extract(NEW.payload_json,'$.amount_minor') AS INTEGER)
+        END < 0
+      THEN RAISE(ABORT,'FINANCE_BUDGET_COMMITMENT_NEGATIVE')
+  END;
+END;
+
+CREATE TRIGGER finance_budget_commitment_update_guard
+BEFORE UPDATE ON documents
+WHEN NEW.doctype='Finance Budget Commitment' AND OLD.docstatus<>1 AND NEW.docstatus=1
+BEGIN
+  SELECT CASE
+    WHEN NOT EXISTS(
+      SELECT 1 FROM documents b
+      WHERE b.tenant_id=NEW.tenant_id AND b.doctype='Finance Budget'
+        AND b.name=json_extract(NEW.payload_json,'$.budget') AND b.docstatus=1
+        AND date(json_extract(NEW.payload_json,'$.posting_date'))
+          BETWEEN date(json_extract(b.payload_json,'$.start_date')) AND date(json_extract(b.payload_json,'$.end_date'))
+    ) THEN RAISE(ABORT,'FINANCE_BUDGET_COMMITMENT_PERIOD_INVALID')
+    WHEN NOT EXISTS(
+      SELECT 1 FROM documents s
+      WHERE s.tenant_id=NEW.tenant_id
+        AND s.doctype=json_extract(NEW.payload_json,'$.source_doctype')
+        AND s.name=json_extract(NEW.payload_json,'$.source_name')
+        AND s.docstatus=1
+    ) THEN RAISE(ABORT,'FINANCE_BUDGET_COMMITMENT_SOURCE_REQUIRED')
+    WHEN EXISTS(
+      SELECT 1
+      FROM documents b
+      JOIN documents s ON s.tenant_id=b.tenant_id
+        AND s.doctype=json_extract(NEW.payload_json,'$.source_doctype')
+        AND s.name=json_extract(NEW.payload_json,'$.source_name') AND s.docstatus=1
+      WHERE b.tenant_id=NEW.tenant_id AND b.doctype='Finance Budget'
+        AND b.name=json_extract(NEW.payload_json,'$.budget') AND b.docstatus=1
+        AND COALESCE(json_extract(s.payload_json,'$.company'),'')<>''
+        AND json_extract(s.payload_json,'$.company')<>json_extract(b.payload_json,'$.company')
+    ) THEN RAISE(ABORT,'FINANCE_BUDGET_SOURCE_COMPANY_MISMATCH')
+    WHEN COALESCE(json_extract(NEW.payload_json,'$.commitment_type'),'') NOT IN ('Reserve','Release')
+      OR COALESCE(CAST(json_extract(NEW.payload_json,'$.amount_minor') AS INTEGER),0)<=0
+      THEN RAISE(ABORT,'FINANCE_BUDGET_COMMITMENT_AMOUNT_INVALID')
+    WHEN json_extract(NEW.payload_json,'$.commitment_type')='Release' AND (
+      SELECT COALESCE(SUM(
+        CASE json_extract(c.payload_json,'$.commitment_type')
+          WHEN 'Reserve' THEN CAST(json_extract(c.payload_json,'$.amount_minor') AS INTEGER)
+          ELSE -CAST(json_extract(c.payload_json,'$.amount_minor') AS INTEGER)
+        END
+      ),0)
+      FROM documents c
+      WHERE c.tenant_id=NEW.tenant_id
+        AND c.doctype='Finance Budget Commitment'
+        AND c.docstatus=1
+        AND c.doc_key<>OLD.doc_key
+        AND json_extract(c.payload_json,'$.budget')=json_extract(NEW.payload_json,'$.budget')
+        AND json_extract(c.payload_json,'$.source_doctype')=json_extract(NEW.payload_json,'$.source_doctype')
+        AND json_extract(c.payload_json,'$.source_name')=json_extract(NEW.payload_json,'$.source_name')
+    ) < CAST(json_extract(NEW.payload_json,'$.amount_minor') AS INTEGER)
+      THEN RAISE(ABORT,'FINANCE_BUDGET_RELEASE_EXCEEDS_SOURCE')
+  END;
+END;
+
+CREATE TRIGGER finance_budget_commitment_projected_stop_insert_guard
+BEFORE INSERT ON documents
+WHEN NEW.doctype='Finance Budget Commitment' AND NEW.docstatus=1
+BEGIN
+  SELECT CASE WHEN EXISTS (
+    SELECT 1
+    FROM documents b
+    LEFT JOIN finance_historical_accounts a
+      ON a.tenant_id=b.tenant_id
+     AND a.name=json_extract(b.payload_json,'$.account')
+     AND (a.company=json_extract(b.payload_json,'$.company') OR a.company IS NULL OR a.company='')
+    WHERE b.tenant_id=NEW.tenant_id
+      AND b.doctype='Finance Budget'
+      AND b.name=json_extract(NEW.payload_json,'$.budget')
+      AND b.docstatus=1
+      AND COALESCE(json_extract(b.payload_json,'$.control_action'),'Stop')='Stop'
+      AND (
+        COALESCE((
+          SELECT SUM(
+            CASE COALESCE(a.root_type,'')
+              WHEN 'Income' THEN g.credit_minor-g.debit_minor
+              ELSE g.debit_minor-g.credit_minor
+            END
+          )
+          FROM gl_entries g
+          INNER JOIN documents d
+            ON d.tenant_id=g.tenant_id AND d.doctype=g.voucher_type AND d.name=g.voucher_no
+          WHERE g.tenant_id=NEW.tenant_id
+            AND g.voucher_type<>'Period Closing Voucher'
+            AND g.account=json_extract(b.payload_json,'$.account')
+            AND g.currency=json_extract(b.payload_json,'$.currency')
+            AND g.currency_scale=CAST(COALESCE(json_extract(b.payload_json,'$.currency_scale'),2) AS INTEGER)
+            AND json_extract(d.payload_json,'$.company')=json_extract(b.payload_json,'$.company')
+            AND date(g.posting_at)>=date(json_extract(b.payload_json,'$.start_date'))
+            AND date(g.posting_at)<=date(json_extract(NEW.payload_json,'$.posting_date'))
+            AND (
+              json_extract(b.payload_json,'$.budget_against')='Company'
+              OR (
+                json_extract(b.payload_json,'$.budget_against')='Branch'
+                AND COALESCE(NULLIF(json_extract(d.payload_json,'$.branch'),''),
+                             NULLIF(json_extract(g.dimensions_json,'$.branch'),''),'')
+                    =COALESCE(json_extract(b.payload_json,'$.branch'),'')
+              )
+              OR (
+                json_extract(b.payload_json,'$.budget_against')='Cost Center'
+                AND COALESCE(NULLIF(g.cost_center,''),
+                             NULLIF(json_extract(g.dimensions_json,'$.cost_center'),''),'')
+                    =COALESCE(json_extract(b.payload_json,'$.cost_center'),'')
+              )
+              OR (
+                json_extract(b.payload_json,'$.budget_against')='Project'
+                AND COALESCE(NULLIF(json_extract(d.payload_json,'$.project'),''),
+                             NULLIF(json_extract(g.dimensions_json,'$.project'),''),'')
+                    =COALESCE(json_extract(b.payload_json,'$.project'),'')
+              )
+            )
+        ),0)
+        + COALESCE((
+          SELECT SUM(
+            MAX(
+              sc.raw_minor
+              - MIN(
+                MAX(sc.raw_minor,0),
+                MAX(COALESCE((
+                  SELECT SUM(
+                    CASE COALESCE(a.root_type,'')
+                      WHEN 'Income' THEN linked.credit_minor-linked.debit_minor
+                      ELSE linked.debit_minor-linked.credit_minor
+                    END
+                  )
+                  FROM gl_entries linked
+                  INNER JOIN documents linked_doc
+                    ON linked_doc.tenant_id=linked.tenant_id
+                   AND linked_doc.doctype=linked.voucher_type
+                   AND linked_doc.name=linked.voucher_no
+                  WHERE linked.tenant_id=NEW.tenant_id
+                    AND linked.account=json_extract(b.payload_json,'$.account')
+                    AND linked.currency=json_extract(b.payload_json,'$.currency')
+                    AND linked.currency_scale=CAST(COALESCE(json_extract(b.payload_json,'$.currency_scale'),2) AS INTEGER)
+                    AND date(linked.posting_at)>=date(json_extract(b.payload_json,'$.start_date'))
+                    AND date(linked.posting_at)<=date(json_extract(NEW.payload_json,'$.posting_date'))
+                    AND json_extract(linked_doc.payload_json,'$.company')=json_extract(b.payload_json,'$.company')
+                    AND (
+                      json_extract(b.payload_json,'$.budget_against')='Company'
+                      OR (
+                        json_extract(b.payload_json,'$.budget_against')='Branch'
+                        AND COALESCE(NULLIF(json_extract(linked_doc.payload_json,'$.branch'),''),
+                                     NULLIF(json_extract(linked.dimensions_json,'$.branch'),''),'')
+                            =COALESCE(json_extract(b.payload_json,'$.branch'),'')
+                      )
+                      OR (
+                        json_extract(b.payload_json,'$.budget_against')='Cost Center'
+                        AND COALESCE(NULLIF(linked.cost_center,''),
+                                     NULLIF(json_extract(linked.dimensions_json,'$.cost_center'),''),'')
+                            =COALESCE(json_extract(b.payload_json,'$.cost_center'),'')
+                      )
+                      OR (
+                        json_extract(b.payload_json,'$.budget_against')='Project'
+                        AND COALESCE(NULLIF(json_extract(linked_doc.payload_json,'$.project'),''),
+                                     NULLIF(json_extract(linked.dimensions_json,'$.project'),''),'')
+                            =COALESCE(json_extract(b.payload_json,'$.project'),'')
+                      )
+                    )
+                    AND (
+                      (
+                        sc.source_doctype='Expense Claim'
+                        AND linked.voucher_type='Expense Claim'
+                        AND linked.voucher_no=sc.source_name
+                      )
+                      OR (
+                        sc.source_doctype IN ('Purchase Order','Material Request')
+                        AND linked.voucher_type='Purchase Invoice'
+                        AND EXISTS (
+                          SELECT 1
+                          FROM json_each(json_extract(linked_doc.payload_json,'$.items')) AS item
+                          WHERE (
+                            linked.line_key='EXPENSE-' || COALESCE(json_extract(item.value,'$.row_id'),'')
+                            OR linked.line_key='REV-EXPENSE-' || COALESCE(json_extract(item.value,'$.row_id'),'')
+                          )
+                          AND (
+                            (
+                              sc.source_doctype='Purchase Order'
+                              AND COALESCE(
+                                NULLIF(json_extract(item.value,'$.purchase_order'),''),
+                                NULLIF(json_extract(linked_doc.payload_json,'$.against_purchase_order'),''),
+                                ''
+                              )=sc.source_name
+                            )
+                            OR (
+                              sc.source_doctype='Material Request'
+                              AND COALESCE(NULLIF(json_extract(item.value,'$.material_request'),''),'')=sc.source_name
+                            )
+                          )
+                        )
+                      )
+                    )
+                ),0),0)
+              ),
+              0
+            )
+          )
+          FROM (
+            SELECT source_doctype,source_name,SUM(effect_minor) AS raw_minor
+            FROM (
+              SELECT
+                COALESCE(json_extract(c.payload_json,'$.source_doctype'),'') AS source_doctype,
+                COALESCE(json_extract(c.payload_json,'$.source_name'),'') AS source_name,
+                CASE json_extract(c.payload_json,'$.commitment_type')
+                  WHEN 'Reserve' THEN CAST(COALESCE(json_extract(c.payload_json,'$.amount_minor'),0) AS INTEGER)
+                  WHEN 'Release' THEN -CAST(COALESCE(json_extract(c.payload_json,'$.amount_minor'),0) AS INTEGER)
+                  ELSE 0
+                END AS effect_minor
+              FROM documents c
+              WHERE c.tenant_id=NEW.tenant_id
+                AND c.doctype='Finance Budget Commitment'
+                AND c.docstatus=1
+                AND json_extract(c.payload_json,'$.budget')=b.name
+                AND date(json_extract(c.payload_json,'$.posting_date'))>=date(json_extract(b.payload_json,'$.start_date'))
+                AND date(json_extract(c.payload_json,'$.posting_date'))<=date(json_extract(NEW.payload_json,'$.posting_date'))
+              UNION ALL
+              SELECT
+                COALESCE(json_extract(NEW.payload_json,'$.source_doctype'),''),
+                COALESCE(json_extract(NEW.payload_json,'$.source_name'),''),
+                CASE json_extract(NEW.payload_json,'$.commitment_type')
+                  WHEN 'Reserve' THEN CAST(COALESCE(json_extract(NEW.payload_json,'$.amount_minor'),0) AS INTEGER)
+                  WHEN 'Release' THEN -CAST(COALESCE(json_extract(NEW.payload_json,'$.amount_minor'),0) AS INTEGER)
+                  ELSE 0
+                END
+            ) all_commitments
+            GROUP BY source_doctype,source_name
+          ) sc
+        ),0)
+      ) > (
+        SELECT CASE
+          WHEN distribution_enabled<>1 THEN annual_minor
+          WHEN distribution_weight_total BETWEEN 1 AND 10000
+            AND accumulated_weight BETWEEN 0 AND distribution_weight_total
+            THEN
+              CAST(annual_minor / distribution_weight_total AS INTEGER) * accumulated_weight
+              + CAST((
+                  (annual_minor % distribution_weight_total) * accumulated_weight
+                  + CAST(distribution_weight_total / 2 AS INTEGER)
+                ) / distribution_weight_total AS INTEGER)
+          ELSE -1
+        END
+        FROM (
+          SELECT
+            CAST(COALESCE(json_extract(b.payload_json,'$.budget_amount_minor'),0) AS INTEGER)
+              + COALESCE((
+                SELECT SUM(CAST(COALESCE(json_extract(r.payload_json,'$.delta_amount_minor'),0) AS INTEGER))
+                FROM documents r
+                WHERE r.tenant_id=NEW.tenant_id
+                  AND r.doctype='Finance Budget Revision'
+                  AND r.docstatus=1
+                  AND json_extract(r.payload_json,'$.budget')=b.name
+                  AND date(json_extract(r.payload_json,'$.posting_date'))>=date(json_extract(b.payload_json,'$.start_date'))
+                  AND date(json_extract(r.payload_json,'$.posting_date'))<=date(json_extract(NEW.payload_json,'$.posting_date'))
+              ),0) AS annual_minor,
+            COALESCE(CAST(json_extract(b.payload_json,'$.fiscal_distribution_enabled') AS INTEGER),0) AS distribution_enabled,
+            CAST(COALESCE(json_extract(b.payload_json,'$.distribution_weight_total'),0) AS INTEGER) AS distribution_weight_total,
+            COALESCE((
+              SELECT SUM(CAST(COALESCE(json_extract(dist.value,'$.allocation_weight'),0) AS INTEGER))
+              FROM json_each(COALESCE(json_extract(b.payload_json,'$.budget_distribution'),json('[]'))) AS dist
+              WHERE date(json_extract(dist.value,'$.start_date'))<=date(json_extract(NEW.payload_json,'$.posting_date'))
+            ),0) AS accumulated_weight
+        ) distribution_limit
+      )
+  ) THEN RAISE(ABORT,'FINANCE_BUDGET_TRANSACTION_EXCEEDED') END;
+END;
+
+CREATE TRIGGER finance_budget_commitment_projected_stop_update_guard
+BEFORE UPDATE ON documents
+WHEN NEW.doctype='Finance Budget Commitment' AND OLD.docstatus<>1 AND NEW.docstatus=1
+BEGIN
+  -- Draft -> submitted has no previously submitted OLD row, so the INSERT projection is
+  -- identical except that NEW already occupies the documents slot as a draft. Submitted
+  -- source CTE ignores docstatus 0 and UNION ALL adds the authoritative NEW effect.
+  SELECT CASE WHEN EXISTS (
+    SELECT 1
+    FROM documents b
+    LEFT JOIN finance_historical_accounts a
+      ON a.tenant_id=b.tenant_id
+     AND a.name=json_extract(b.payload_json,'$.account')
+     AND (a.company=json_extract(b.payload_json,'$.company') OR a.company IS NULL OR a.company='')
+    WHERE b.tenant_id=NEW.tenant_id
+      AND b.doctype='Finance Budget'
+      AND b.name=json_extract(NEW.payload_json,'$.budget')
+      AND b.docstatus=1
+      AND COALESCE(json_extract(b.payload_json,'$.control_action'),'Stop')='Stop'
+      AND (
+        COALESCE((
+          SELECT SUM(
+            CASE COALESCE(a.root_type,'')
+              WHEN 'Income' THEN g.credit_minor-g.debit_minor
+              ELSE g.debit_minor-g.credit_minor
+            END
+          )
+          FROM gl_entries g
+          INNER JOIN documents d
+            ON d.tenant_id=g.tenant_id AND d.doctype=g.voucher_type AND d.name=g.voucher_no
+          WHERE g.tenant_id=NEW.tenant_id
+            AND g.voucher_type<>'Period Closing Voucher'
+            AND g.account=json_extract(b.payload_json,'$.account')
+            AND g.currency=json_extract(b.payload_json,'$.currency')
+            AND g.currency_scale=CAST(COALESCE(json_extract(b.payload_json,'$.currency_scale'),2) AS INTEGER)
+            AND json_extract(d.payload_json,'$.company')=json_extract(b.payload_json,'$.company')
+            AND date(g.posting_at)>=date(json_extract(b.payload_json,'$.start_date'))
+            AND date(g.posting_at)<=date(json_extract(NEW.payload_json,'$.posting_date'))
+            AND (
+              json_extract(b.payload_json,'$.budget_against')='Company'
+              OR (
+                json_extract(b.payload_json,'$.budget_against')='Branch'
+                AND COALESCE(NULLIF(json_extract(d.payload_json,'$.branch'),''),
+                             NULLIF(json_extract(g.dimensions_json,'$.branch'),''),'')
+                    =COALESCE(json_extract(b.payload_json,'$.branch'),'')
+              )
+              OR (
+                json_extract(b.payload_json,'$.budget_against')='Cost Center'
+                AND COALESCE(NULLIF(g.cost_center,''),
+                             NULLIF(json_extract(g.dimensions_json,'$.cost_center'),''),'')
+                    =COALESCE(json_extract(b.payload_json,'$.cost_center'),'')
+              )
+              OR (
+                json_extract(b.payload_json,'$.budget_against')='Project'
+                AND COALESCE(NULLIF(json_extract(d.payload_json,'$.project'),''),
+                             NULLIF(json_extract(g.dimensions_json,'$.project'),''),'')
+                    =COALESCE(json_extract(b.payload_json,'$.project'),'')
+              )
+            )
+        ),0)
+        + COALESCE((
+          SELECT SUM(
+            MAX(
+              sc.raw_minor
+              - MIN(
+                MAX(sc.raw_minor,0),
+                MAX(COALESCE((
+                  SELECT SUM(
+                    CASE COALESCE(a.root_type,'')
+                      WHEN 'Income' THEN linked.credit_minor-linked.debit_minor
+                      ELSE linked.debit_minor-linked.credit_minor
+                    END
+                  )
+                  FROM gl_entries linked
+                  INNER JOIN documents linked_doc
+                    ON linked_doc.tenant_id=linked.tenant_id
+                   AND linked_doc.doctype=linked.voucher_type
+                   AND linked_doc.name=linked.voucher_no
+                  WHERE linked.tenant_id=NEW.tenant_id
+                    AND linked.account=json_extract(b.payload_json,'$.account')
+                    AND linked.currency=json_extract(b.payload_json,'$.currency')
+                    AND linked.currency_scale=CAST(COALESCE(json_extract(b.payload_json,'$.currency_scale'),2) AS INTEGER)
+                    AND date(linked.posting_at)>=date(json_extract(b.payload_json,'$.start_date'))
+                    AND date(linked.posting_at)<=date(json_extract(NEW.payload_json,'$.posting_date'))
+                    AND json_extract(linked_doc.payload_json,'$.company')=json_extract(b.payload_json,'$.company')
+                    AND (
+                      json_extract(b.payload_json,'$.budget_against')='Company'
+                      OR (
+                        json_extract(b.payload_json,'$.budget_against')='Branch'
+                        AND COALESCE(NULLIF(json_extract(linked_doc.payload_json,'$.branch'),''),
+                                     NULLIF(json_extract(linked.dimensions_json,'$.branch'),''),'')
+                            =COALESCE(json_extract(b.payload_json,'$.branch'),'')
+                      )
+                      OR (
+                        json_extract(b.payload_json,'$.budget_against')='Cost Center'
+                        AND COALESCE(NULLIF(linked.cost_center,''),
+                                     NULLIF(json_extract(linked.dimensions_json,'$.cost_center'),''),'')
+                            =COALESCE(json_extract(b.payload_json,'$.cost_center'),'')
+                      )
+                      OR (
+                        json_extract(b.payload_json,'$.budget_against')='Project'
+                        AND COALESCE(NULLIF(json_extract(linked_doc.payload_json,'$.project'),''),
+                                     NULLIF(json_extract(linked.dimensions_json,'$.project'),''),'')
+                            =COALESCE(json_extract(b.payload_json,'$.project'),'')
+                      )
+                    )
+                    AND (
+                      (
+                        sc.source_doctype='Expense Claim'
+                        AND linked.voucher_type='Expense Claim'
+                        AND linked.voucher_no=sc.source_name
+                      )
+                      OR (
+                        sc.source_doctype IN ('Purchase Order','Material Request')
+                        AND linked.voucher_type='Purchase Invoice'
+                        AND EXISTS (
+                          SELECT 1
+                          FROM json_each(json_extract(linked_doc.payload_json,'$.items')) AS item
+                          WHERE (
+                            linked.line_key='EXPENSE-' || COALESCE(json_extract(item.value,'$.row_id'),'')
+                            OR linked.line_key='REV-EXPENSE-' || COALESCE(json_extract(item.value,'$.row_id'),'')
+                          )
+                          AND (
+                            (
+                              sc.source_doctype='Purchase Order'
+                              AND COALESCE(
+                                NULLIF(json_extract(item.value,'$.purchase_order'),''),
+                                NULLIF(json_extract(linked_doc.payload_json,'$.against_purchase_order'),''),
+                                ''
+                              )=sc.source_name
+                            )
+                            OR (
+                              sc.source_doctype='Material Request'
+                              AND COALESCE(NULLIF(json_extract(item.value,'$.material_request'),''),'')=sc.source_name
+                            )
+                          )
+                        )
+                      )
+                    )
+                ),0),0)
+              ),
+              0
+            )
+          )
+          FROM (
+            SELECT source_doctype,source_name,SUM(effect_minor) AS raw_minor
+            FROM (
+              SELECT
+                COALESCE(json_extract(c.payload_json,'$.source_doctype'),'') AS source_doctype,
+                COALESCE(json_extract(c.payload_json,'$.source_name'),'') AS source_name,
+                CASE json_extract(c.payload_json,'$.commitment_type')
+                  WHEN 'Reserve' THEN CAST(COALESCE(json_extract(c.payload_json,'$.amount_minor'),0) AS INTEGER)
+                  WHEN 'Release' THEN -CAST(COALESCE(json_extract(c.payload_json,'$.amount_minor'),0) AS INTEGER)
+                  ELSE 0
+                END AS effect_minor
+              FROM documents c
+              WHERE c.tenant_id=NEW.tenant_id
+                AND c.doctype='Finance Budget Commitment'
+                AND c.docstatus=1
+                AND c.doc_key<>OLD.doc_key
+                AND json_extract(c.payload_json,'$.budget')=b.name
+                AND date(json_extract(c.payload_json,'$.posting_date'))>=date(json_extract(b.payload_json,'$.start_date'))
+                AND date(json_extract(c.payload_json,'$.posting_date'))<=date(json_extract(NEW.payload_json,'$.posting_date'))
+              UNION ALL
+              SELECT
+                COALESCE(json_extract(NEW.payload_json,'$.source_doctype'),''),
+                COALESCE(json_extract(NEW.payload_json,'$.source_name'),''),
+                CASE json_extract(NEW.payload_json,'$.commitment_type')
+                  WHEN 'Reserve' THEN CAST(COALESCE(json_extract(NEW.payload_json,'$.amount_minor'),0) AS INTEGER)
+                  WHEN 'Release' THEN -CAST(COALESCE(json_extract(NEW.payload_json,'$.amount_minor'),0) AS INTEGER)
+                  ELSE 0
+                END
+            ) all_commitments
+            GROUP BY source_doctype,source_name
+          ) sc
+        ),0)
+      ) > (
+        SELECT CASE
+          WHEN distribution_enabled<>1 THEN annual_minor
+          WHEN distribution_weight_total BETWEEN 1 AND 10000
+            AND accumulated_weight BETWEEN 0 AND distribution_weight_total
+            THEN
+              CAST(annual_minor / distribution_weight_total AS INTEGER) * accumulated_weight
+              + CAST((
+                  (annual_minor % distribution_weight_total) * accumulated_weight
+                  + CAST(distribution_weight_total / 2 AS INTEGER)
+                ) / distribution_weight_total AS INTEGER)
+          ELSE -1
+        END
+        FROM (
+          SELECT
+            CAST(COALESCE(json_extract(b.payload_json,'$.budget_amount_minor'),0) AS INTEGER)
+              + COALESCE((
+                SELECT SUM(CAST(COALESCE(json_extract(r.payload_json,'$.delta_amount_minor'),0) AS INTEGER))
+                FROM documents r
+                WHERE r.tenant_id=NEW.tenant_id
+                  AND r.doctype='Finance Budget Revision'
+                  AND r.docstatus=1
+                  AND json_extract(r.payload_json,'$.budget')=b.name
+                  AND date(json_extract(r.payload_json,'$.posting_date'))>=date(json_extract(b.payload_json,'$.start_date'))
+                  AND date(json_extract(r.payload_json,'$.posting_date'))<=date(json_extract(NEW.payload_json,'$.posting_date'))
+              ),0) AS annual_minor,
+            COALESCE(CAST(json_extract(b.payload_json,'$.fiscal_distribution_enabled') AS INTEGER),0) AS distribution_enabled,
+            CAST(COALESCE(json_extract(b.payload_json,'$.distribution_weight_total'),0) AS INTEGER) AS distribution_weight_total,
+            COALESCE((
+              SELECT SUM(CAST(COALESCE(json_extract(dist.value,'$.allocation_weight'),0) AS INTEGER))
+              FROM json_each(COALESCE(json_extract(b.payload_json,'$.budget_distribution'),json('[]'))) AS dist
+              WHERE date(json_extract(dist.value,'$.start_date'))<=date(json_extract(NEW.payload_json,'$.posting_date'))
+            ),0) AS accumulated_weight
+        ) distribution_limit
+      )
+  ) THEN RAISE(ABORT,'FINANCE_BUDGET_TRANSACTION_EXCEEDED') END;
+END;
