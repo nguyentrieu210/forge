@@ -482,7 +482,6 @@ export class PaymentAllocationController implements DocumentController<PaymentAl
     const references: PaymentReference[] = [];
     let total = 0;
     let totalTargetBase = 0;
-    let provisionalSourceBase = 0;
     for (const [index, reference] of input.references.entries()) {
       if (reference.reference_doctype !== targetDoctype) {
         throw errors.validation(`Only ${targetDoctype} references are allowed`);
@@ -504,14 +503,6 @@ export class PaymentAllocationController implements DocumentController<PaymentAl
       }
       if (allocated > outstanding) throw errors.reference(`Allocated amount exceeds outstanding for ${reference.reference_name}`);
 
-      const sourceHistoricalBase = convertMinor(
-        allocated,
-        transactionScale,
-        sourceRate,
-        companyScale,
-        `references[${index}].source_base_allocated_amount`,
-      );
-
       const invoiceScale = typeof invoice.data.currency_scale === "number" ? invoice.data.currency_scale : transactionScale;
       const invoiceRate = typeof invoice.data.conversion_rate_micros === "number"
         ? invoice.data.conversion_rate_micros
@@ -529,7 +520,6 @@ export class PaymentAllocationController implements DocumentController<PaymentAl
 
       total = addMinor([total, allocated], "total allocated amount");
       totalTargetBase = addMinor([totalTargetBase, targetBaseAllocated], "total target base allocated amount");
-      provisionalSourceBase = addMinor([provisionalSourceBase, sourceHistoricalBase], "provisional source base allocated amount");
       references.push({
         ...reference,
         row_id: reference.row_id || `ROW-${index + 1}`,
@@ -537,8 +527,6 @@ export class PaymentAllocationController implements DocumentController<PaymentAl
         allocated_amount: fromScaledInt(allocated, transactionScale),
         base_allocated_amount_minor: targetBaseAllocated,
         base_allocated_amount: fromScaledInt(targetBaseAllocated, companyScale),
-        source_base_allocated_amount_minor: sourceHistoricalBase,
-        source_base_allocated_amount: fromScaledInt(sourceHistoricalBase, companyScale),
       });
     }
 
@@ -557,21 +545,34 @@ export class PaymentAllocationController implements DocumentController<PaymentAl
         convertMinor(total, transactionScale, sourceRate, companyScale, "total source base allocated amount"),
         sourceBaseRemaining,
       );
-    if (references.length > 0) {
-      const last = references[references.length - 1]!;
-      const beforeLast = references.slice(0, -1)
-        .reduce((sum, reference) => addMinor([sum, reference.source_base_allocated_amount_minor ?? 0], "source base allocated amount"), 0);
-      const lastSourceBase = desiredSourceBase - beforeLast;
-      if (lastSourceBase < 0) {
-        throw errors.ledger("Payment Allocation source base distribution exceeds the remaining signed-source balance");
+    let cumulativeAllocated = 0;
+    let cumulativeSourceBase = 0;
+    for (const [index, reference] of references.entries()) {
+      cumulativeAllocated = addMinor(
+        [cumulativeAllocated, reference.allocated_amount_minor ?? 0],
+        "cumulative source allocation",
+      );
+      const cumulativeTargetBase = index === references.length - 1
+        ? desiredSourceBase
+        : Math.min(
+          convertMinor(
+            cumulativeAllocated,
+            transactionScale,
+            sourceRate,
+            companyScale,
+            `references[${index}].cumulative_source_base_allocated_amount`,
+          ),
+          desiredSourceBase,
+        );
+      const sourceBaseAllocated = cumulativeTargetBase - cumulativeSourceBase;
+      if (sourceBaseAllocated < 0) {
+        throw errors.ledger("Payment Allocation source base distribution became negative");
       }
-      last.source_base_allocated_amount_minor = lastSourceBase;
-      last.source_base_allocated_amount = fromScaledInt(lastSourceBase, companyScale);
+      reference.source_base_allocated_amount_minor = sourceBaseAllocated;
+      reference.source_base_allocated_amount = fromScaledInt(sourceBaseAllocated, companyScale);
+      cumulativeSourceBase = cumulativeTargetBase;
     }
-    const totalSourceBase = references.reduce(
-      (sum, reference) => addMinor([sum, reference.source_base_allocated_amount_minor ?? 0], "total source base allocated amount"),
-      0,
-    );
+    const totalSourceBase = cumulativeSourceBase;
     if (totalSourceBase > sourceBaseRemaining) {
       throw errors.reference(`Payment Allocation exceeds remaining source ${sourceLabel} base balance`, {
         source_voucher_type: sourceVoucherType,
