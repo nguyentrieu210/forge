@@ -2012,8 +2012,9 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     };
     const workflow = {
       name: "Workflow Update Probe Flow", document_type: "Workflow Update Probe", state_field: "workflow_state", is_active: true,
+      send_email_alert: true,
       states: [
-        { state: "Draft", docstatus: 0, allow_edit: "System Manager" },
+        { state: "Draft", docstatus: 0, allow_edit: "System Manager", send_email: true },
         {
           state: "Approved", docstatus: 0, allow_edit: "System Manager",
           update_field: "resolution_code", update_value: "doc.subject", evaluate_as_expression: true,
@@ -2064,13 +2065,14 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     const initialActions = (await initialEventResponse.json() as any).workflow_actions;
     expect(initialActions).toMatchObject({ created: 1, open: 1 });
     const openAction = await env.DB.prepare(
-      `SELECT workflow_state,status,permitted_roles_json
+      `SELECT workflow_state,status,permitted_roles_json,email_requested
          FROM workflow_actions
         WHERE tenant_id='demo' AND reference_doctype='Workflow Update Probe'
           AND reference_name='WUP-1' AND status='Open'`,
     ).first<any>();
     expect(openAction?.workflow_state).toBe("Draft");
     expect(JSON.parse(openAction?.permitted_roles_json ?? "[]")).toEqual(["System Manager"]);
+    expect(openAction?.email_requested).toBe(1);
 
     const approved = await unwrap(await method("frappe.model.workflow.apply_workflow", {
       doctype: "Workflow Update Probe", name: "WUP-1", action: "Approve",
