@@ -1253,6 +1253,9 @@ export class InMemoryMutationStore implements MutationStore {
   }
 
   private assertFinanceBudgetInvariants<T extends JsonObject>(plan: MutationPlan<T>): void {
+    if (plan.document.doctype === "Finance Budget Commitment" && plan.document.docstatus === 1) {
+      this.assertFinanceBudgetCommitmentPlan(plan);
+    }
     if (plan.gl_entries.length === 0 || plan.command.aggregate.doctype === "Period Closing Voucher") return;
     const tenantId = plan.command.tenant_id;
     const company = typeof plan.document.data.company === "string" ? plan.document.data.company : "";
@@ -1359,6 +1362,76 @@ export class InMemoryMutationStore implements MutationStore {
     }
   }
 
+  private assertFinanceBudgetCommitmentPlan<T extends JsonObject>(plan: MutationPlan<T>): void {
+    const tenantId = plan.command.tenant_id;
+    const budgetName = typeof plan.document.data.budget === "string" ? plan.document.data.budget : "";
+    const postingDate = typeof plan.document.data.posting_date === "string" ? plan.document.data.posting_date : "";
+    if (!budgetName || !postingDate) return;
+    const budget = this.documents.get(this.docKey(tenantId, "Finance Budget", budgetName));
+    if (!budget || budget.docstatus !== 1) return;
+    const company = typeof budget.data.company === "string" ? budget.data.company : "";
+    const account = typeof budget.data.account === "string" ? budget.data.account : "";
+    const startDate = typeof budget.data.start_date === "string" ? budget.data.start_date : "";
+    if (!company || !account || !startDate) return;
+
+    const annualEffective = Number(budget.data.budget_amount_minor ?? 0)
+      + [...this.documents.values()]
+        .filter((document) =>
+          document.tenant_id === tenantId
+          && document.doctype === "Finance Budget Revision"
+          && document.docstatus === 1
+          && document.data.budget === budgetName
+          && typeof document.data.posting_date === "string"
+          && document.data.posting_date >= startDate
+          && document.data.posting_date <= postingDate
+        )
+        .reduce((sum, document) => sum + Number(document.data.delta_amount_minor ?? 0), 0);
+    const accumulatedBudget = this.financeBudgetLimitThroughDate(budget.data, annualEffective, postingDate);
+
+    const accountDocument = this.documents.get(this.docKey(tenantId, "Account", account));
+    const accountMaster = this.masterRecords.get(`${tenantId}:Account:${account}`);
+    const rootType = String(accountDocument?.data.root_type ?? accountMaster?.root_type ?? "");
+    const movement = (line: GeneralLedgerEntry): number =>
+      rootType === "Income" ? line.credit_minor - line.debit_minor : line.debit_minor - line.credit_minor;
+
+    const actual = this.voucherGlEntries
+      .filter((entry) => {
+        if (entry.tenant_id !== tenantId || entry.voucher_type === "Period Closing Voucher") return false;
+        if (entry.line.account !== account) return false;
+        const date = entry.line.posting_at.slice(0, 10);
+        if (date < startDate || date > postingDate) return false;
+        const voucher = this.documents.get(this.docKey(tenantId, entry.voucher_type, entry.voucher_no));
+        return Boolean(voucher && voucher.data.company === company
+          && this.financeBudgetScopeMatches(budget.data, voucher.data, entry.line));
+      })
+      .reduce((sum, entry) => sum + movement(entry.line), 0);
+
+    const outstanding = this.financeBudgetOutstandingCommitmentMinor({
+      tenantId,
+      budgetName,
+      budgetData: budget.data,
+      account,
+      company,
+      startDate,
+      throughDate: postingDate,
+      plan,
+      movement,
+    });
+    const projected = actual + outstanding;
+    const controlAction = typeof budget.data.control_action === "string" ? budget.data.control_action : "Stop";
+    if (controlAction === "Stop" && projected > accumulatedBudget) {
+      throw errors.lifecycle("FINANCE_BUDGET_TRANSACTION_EXCEEDED", {
+        budget: budgetName,
+        posting_date: postingDate,
+        annual_effective_budget_minor: annualEffective,
+        effective_budget_minor: accumulatedBudget,
+        actual_minor: actual,
+        committed_minor: outstanding,
+        exceeded_by_minor: projected - accumulatedBudget,
+      });
+    }
+  }
+
   private financeBudgetLimitThroughDate(
     budget: JsonObject,
     annualEffectiveMinor: number,
@@ -1426,6 +1499,26 @@ export class InMemoryMutationStore implements MutationStore {
       const group = groups.get(key) ?? { sourceDoctype, sourceName, rawMinor: 0 };
       group.rawMinor += document.data.commitment_type === "Release" ? -amount : amount;
       groups.set(key, group);
+    }
+
+    if (args.plan.document.doctype === "Finance Budget Commitment"
+      && args.plan.document.docstatus === 1
+      && args.plan.document.data.budget === args.budgetName
+      && typeof args.plan.document.data.posting_date === "string"
+      && args.plan.document.data.posting_date >= args.startDate
+      && args.plan.document.data.posting_date <= args.throughDate) {
+      const data = args.plan.document.data;
+      const sourceDoctype = typeof data.source_doctype === "string" ? data.source_doctype : "";
+      const sourceName = typeof data.source_name === "string" ? data.source_name : "";
+      const amount = Number(data.amount_minor ?? 0);
+      if (Number.isSafeInteger(amount) && amount > 0) {
+        const key = sourceDoctype && sourceName
+          ? `${sourceDoctype}\u0000${sourceName}`
+          : `__incoming__\u0000${args.plan.document.name}`;
+        const group = groups.get(key) ?? { sourceDoctype, sourceName, rawMinor: 0 };
+        group.rawMinor += data.commitment_type === "Release" ? -amount : amount;
+        groups.set(key, group);
+      }
     }
 
     let outstanding = 0;
