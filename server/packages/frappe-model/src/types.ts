@@ -242,6 +242,8 @@ export interface WorkflowMeta extends JsonObject {
   document_type: string;
   state_field: string;
   is_active: boolean;
+  /** Master switch for Workflow Action email intent, matching Frappe Workflow. */
+  send_email_alert?: boolean;
   states: WorkflowStateMeta[];
   transitions: WorkflowTransitionMeta[];
   revision: number;
