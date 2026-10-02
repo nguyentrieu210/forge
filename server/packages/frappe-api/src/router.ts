@@ -1533,11 +1533,21 @@ async function dispatchMethod(
       return methodResponse({ script: "", html_format: null, execution_time: 0 });
 
     // ---- data import -------------------------------------------------------
+    case "frappe.core.doctype.data_import.data_import.download_template":
+      return importTemplate(args, context);
+
     case "frappe.core.doctype.data_import.data_import.get_preview_from_template":
       return methodResponse(await importPreview(args, context));
 
     case "frappe.core.doctype.data_import.data_import.form_start_import":
+      if (args.text("data_import")) return methodResponse(await startImportJob(args, context));
       return methodResponse(await importApply(args, context));
+
+    case "frappe.core.doctype.data_import.data_import.get_import_status":
+      return methodResponse(await importStatus(args, context));
+
+    case "frappe.core.doctype.data_import.data_import.download_errored_template":
+      return importErroredTemplate(args, context);
 
     // ---- kanban ------------------------------------------------------------
     case "frappe.desk.doctype.kanban_board.kanban_board.get_kanban_boards":
