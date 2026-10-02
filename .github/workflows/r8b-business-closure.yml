@@ -6,6 +6,7 @@ on:
       - "server/packages/clouderp-core/src/types.ts"
       - "server/packages/clouderp-erpnext/**"
       - "server/tests/subcontracting-closure.test.mjs"
+      - "server/tests/r8-erpnext-depth.test.mjs"
       - "server/migrations/tenant/0141_subcontracting_authority.sql"
       - "docs/agents/r8/**"
       - ".github/workflows/r8b-business-closure.yml"
@@ -34,3 +35,5 @@ jobs:
         run: node --test server/tests/subcontracting-closure.test.mjs
       - name: R8 benchmark invariant
         run: node server/scripts/verify-r8-erpnext-depth.mjs --audit-complete
+      - name: R8 matrix regression
+        run: node --test server/tests/r8-erpnext-depth.test.mjs

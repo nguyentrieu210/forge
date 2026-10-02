@@ -39,7 +39,7 @@ test("R8 benchmark stays conservative after resolving the denominator", async ()
     ).length,
     0,
   );
-  assert.equal(matrix.flow_depth.find((x) => x.flow_id === "R8-F12-SUBCONTRACTING")?.classification, "GAP");
+  assert.equal(matrix.flow_depth.find((x) => x.flow_id === "R8-F12-SUBCONTRACTING")?.classification, "PARTIAL");
 });
 
 
@@ -72,7 +72,7 @@ test("R8 O2C remap detects stale oracle-side Forge conclusions", async () => {
 });
 
 
-test("R8 P2P distinguishes transaction depth from landed-cost/subcontracting gaps", async () => {
+test("R8 P2P distinguishes transaction depth from landed-cost and subcontracting residuals", async () => {
   const matrix = await readJson(path.join(repoRoot, "docs/agents/r8/R8_BUSINESS_DEPTH_MATRIX.json"));
   const p2p = await readFile(path.join(serverRoot, "packages/clouderp-core/src/procurement-p2p-controllers.ts"), "utf8");
   const landed = await readFile(path.join(serverRoot, "packages/clouderp-core/src/procurement-landed-cost.ts"), "utf8");
@@ -83,7 +83,7 @@ test("R8 P2P distinguishes transaction depth from landed-cost/subcontracting gap
 
   assert.equal(matrix.flow_depth.find((x) => x.flow_id === "R8-F02-P2P")?.classification, "PARTIAL");
   const subcontracting = matrix.flow_depth.find((x) => x.flow_id === "R8-F12-SUBCONTRACTING");
-  assert.equal(subcontracting?.classification, "GAP");
+  assert.equal(subcontracting?.classification, "PARTIAL");
   assert.ok(Array.isArray(subcontracting?.gaps) && subcontracting.gaps.length >= 3);
 });
 
@@ -139,5 +139,5 @@ test("R8 module denominator is benchmark-complete but business closure stays blo
   assert.ok(matrix.module_depth.every((x) => x.classification === "PARTIAL"));
   assert.ok(matrix.module_depth.every((x) => Array.isArray(x.forge_evidence_roots) && x.forge_evidence_roots.length > 0));
   assert.ok(matrix.module_depth.every((x) => Array.isArray(x.gaps) && x.gaps.length > 0));
-  assert.equal(matrix.flow_depth.find((x) => x.flow_id === "R8-F12-SUBCONTRACTING")?.classification, "GAP");
+  assert.equal(matrix.flow_depth.find((x) => x.flow_id === "R8-F12-SUBCONTRACTING")?.classification, "PARTIAL");
 });
