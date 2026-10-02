@@ -73,7 +73,7 @@ interface HibernationWebSocket extends WebSocket {
   deserializeAttachment(): unknown;
 }
 
-type HibernationContext = Pick<DurableObjectState, "storage"> & {
+type HibernationContext = {
   acceptWebSocket(socket: WebSocket): void;
   getWebSockets(tag?: string): WebSocket[];
 };
