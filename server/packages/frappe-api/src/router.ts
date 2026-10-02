@@ -1268,6 +1268,9 @@ async function dispatchMethod(
         args.requireText("phone", 40),
       ));
 
+    case "frappe.auth.get_logged_user":
+      return methodResponse(context.actor.user_id);
+
     case "metaforge.api.get_boot":
       return methodResponse(await bootPayload(context));
 
