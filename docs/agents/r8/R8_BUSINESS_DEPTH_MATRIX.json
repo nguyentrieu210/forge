@@ -121,10 +121,10 @@
       ],
       "oracle_cases": [],
       "gaps": [
-        "Customer credit-limit/hold, fully-paid return credit, cash refund and same-base reuse against later invoices are closed; cross-rate reuse still requires first-class realized-FX GL.",
+        "Customer credit-limit/hold, fully-paid return credit, cash refund, reusable credit and cross-rate Payment Allocation realized-FX settlement are closed for the declared signed-source boundary.",
         "Full current replay of 115 O2C oracle fixtures remains pending."
       ],
-      "rationale": "Core O2C is one of Forge's deepest areas. R8-B closes customer credit-limit/hold plus fully-paid return -> canonical customer credit -> cash refund or same-base later-invoice allocation, with atomic source/target guards and exact reversal. Cross-rate realized-FX settlement and exact-current ERPNext replay still keep Selling PARTIAL."
+      "rationale": "Core O2C is one of Forge's deepest areas. R8-B closes customer credit-limit/hold plus fully-paid return -> canonical customer credit -> cash refund or later-invoice allocation, including distinct historical source/target bases and server-derived realized-FX GL with exact reversal. Exact-current ERPNext replay and other declared O2C differences still keep Selling PARTIAL."
     },
     {
       "depth_id": "R8-M03-BUYING",
@@ -467,18 +467,17 @@
       ],
       "known_depth_questions": [
         "Re-run the committed ERPNext oracle differential against exact current main; stale gap labels do not count.",
-        "Add realized-FX GL for customer-credit/payment-advance allocation when source and target historical base values differ.",
         "Reconcile current stock valuation/serial-batch behavior against the pinned oracle after later Forge stock work.",
         "Prove partial/multiple delivery, invoice, payment, cancel/amend/backdate and race behavior end to end."
       ],
-      "rationale": "O2C is materially implemented and has a pinned 115-fixture ERPNext oracle plus later transaction closure. R8-B closes credit-limit/hold, fully-paid return credit, bounded cash refund and same-base customer-credit reuse against later invoices with exact cancellation. Cross-rate realized-FX settlement, exact-current oracle replay and remaining stock-policy differences keep the flow PARTIAL.",
+      "rationale": "O2C is materially implemented and has a pinned 115-fixture ERPNext oracle plus later transaction closure. R8-B closes credit-limit/hold, fully-paid return credit, bounded cash refund, reusable customer credit and cross-rate signed-source Payment Allocation with balanced realized-FX GL and exact cancellation. Exact-current oracle replay and remaining stock/tax-policy differences keep the flow PARTIAL.",
       "confirmed_findings": [
         "Pinned oracle capture is valid at 115/115 fixtures, but its older Forge-side gap prose is stale for several capabilities now present on exact current main.",
         "Historical downstream COGS/expense restatement after wider backdated valuation effects remains deferred in transaction convergence.",
         "Current Forge blocks expired-batch delivery while pinned ERPNext v16.20.0 oracle observes expiry as advisory; this is a real semantic divergence requiring an explicit policy disposition.",
         "R8-B now freezes Customer/Customer Group/Company credit policy on submit, enforces customer hold/release-date semantics server-side, and applies the credit ceiling atomically in D1 over canonical Payment Ledger receivables plus still-unbilled submitted Sales Order exposure; Sales Order bypass policy is preserved without creating a shadow AR balance.",
         "A fully-paid return creates canonical negative Receivable against the Credit Note; that signed source can be refunded through Payment Entry or consumed by Payment Allocation against a later Sales Invoice, with atomic source/target bounds and exact cancellation.",
-        "Cross-rate Payment Allocation fails closed when source and target historical base values differ; realized-FX GL is not fabricated."
+        "Cross-rate Payment Allocation freezes distinct source/target historical bases and posts only their company-currency difference to the server-derived Exchange Gain/Loss account; Customer Receivable and Supplier Payable sign directions are both executable-regression proven."
       ]
     },
     {
@@ -520,7 +519,8 @@
         "Purchase Invoice match policy is frozen on PO and a failed receipt/quantity/price match holds before GL, Payment Ledger or procurement-progress commit.",
         "R8-B has a first-class Landed Cost Voucher: exact receipt-row allocation targets canonical Stock Ledger layers; late FIFO cost can split between open inventory and already-consumed direct Material Issue expense; fully consumed sources use GL-only correction; D1 freezes the stock-history fingerprint and exact cancellation reverses committed evidence.",
         "A dedicated pinned ERPNext P2P runtime oracle has not yet been captured, so the normal P2P path cannot be promoted beyond PARTIAL.",
-        "R8-B now binds Purchase Invoice receipt/billing progress and three-way matching to exact Purchase Order child-row identity; duplicate same-item split-price rows fail closed unless an exact row is supplied, and Subcontracting Receipt uses the same row authority for submit/cancel dependencies."
+        "R8-B now binds Purchase Invoice receipt/billing progress and three-way matching to exact Purchase Order child-row identity; duplicate same-item split-price rows fail closed unless an exact row is supplied, and Subcontracting Receipt uses the same row authority for submit/cancel dependencies.",
+        "Supplier Payment Entry advances can now be allocated cross-rate to Purchase Invoices with independent source/target base clearing and balanced realized-FX Payable GL; exact cancellation is regression-proven."
       ],
       "gaps": [
         "Historical Landed Cost repost remains incomplete for backdated future issues, transfers, manufacturing/WIP, deliveries and non-FIFO valuation; direct already-consumed FIFO Material Issue correction is implemented.",
@@ -662,7 +662,10 @@
         "server/packages/clouderp-selling/src/totals.ts",
         "server/packages/clouderp-selling/src/finance-controllers.ts",
         "server/docs/spec/source-exact/oracle/ORACLE_REPORT.json",
-        "server/docs/spec/source-exact/oracle/EVIDENCE_BUNDLE.md"
+        "server/docs/spec/source-exact/oracle/EVIDENCE_BUNDLE.md",
+        "server/tests/customer-credit-authority.test.mjs",
+        "server/migrations/tenant/0156_customer_credit_allocation.sql",
+        "server/scripts/test-customer-credit-allocation-migration.py"
       ],
       "known_depth_questions": [
         "inclusive tax",
@@ -674,10 +677,10 @@
         "pricing-rule precedence",
         "UOM currency precision"
       ],
-      "rationale": "The old advanced-tax/FX missing list understates exact current Forge, but current code still exposes narrower combinations than ERPNext and the 115-fixture differential has not been replayed against the later implementation.",
+      "rationale": "The old advanced-tax/FX missing list understates exact current Forge. Payment Entry and Payment Allocation now both post realized FX from frozen historical bases, including Customer credit and Supplier advance settlement. Narrower tax-composition combinations and the unreplayed 115-fixture exact-current differential keep this flow PARTIAL.",
       "confirmed_findings": [
         "Current totals engine implements included tax for additive On Net Total rows, Actual charges, On Item Quantity, On Previous Row Total, fixed/percentage document discounts and explicit rounding adjustment.",
-        "Current Payment Entry code posts realized exchange differences; the older oracle prose saying FX gain/loss is missing is stale.",
+        "Current Payment Entry and Payment Allocation code post realized exchange differences; Payment Allocation preserves distinct source/target historical bases and balances the company-currency difference through the server-derived Exchange Gain/Loss account.",
         "Included tax combined with document discount is explicitly rejected and included tax is restricted to additive On Net Total, so full ERPNext tax-composition depth is not yet proven."
       ]
     },
