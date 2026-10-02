@@ -2064,6 +2064,16 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     expect(initialEventResponse.status).toBe(200);
     const initialActions = (await initialEventResponse.json() as any).workflow_actions;
     expect(initialActions).toMatchObject({ created: 1, open: 1 });
+    expect(initialActions.emailQueued).toBeGreaterThanOrEqual(1);
+    const workflowEmail = await env.DB.prepare(
+      `SELECT status,source_name,reference_doctype,reference_name
+         FROM email_queue
+        WHERE tenant_id='demo' AND source_kind='workflow'
+          AND reference_doctype='Workflow Update Probe' AND reference_name='WUP-1'
+        LIMIT 1`,
+    ).first<any>();
+    expect(workflowEmail?.status).toBe("Pending");
+    expect(workflowEmail?.source_name).toBe("Workflow Update Probe Flow");
     const openAction = await env.DB.prepare(
       `SELECT workflow_state,status,permitted_roles_json,email_requested
          FROM workflow_actions
