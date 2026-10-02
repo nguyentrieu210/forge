@@ -270,6 +270,12 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
   });
 
   it("matches Frappe token/Basic API-key auth and rotates the one-time secret", async () => {
+    const wrongVerb = await method("frappe.core.doctype.user.user.generate_keys", {
+      user: "sales@example.com",
+    }, "GET");
+    expect(wrongVerb.status).toBe(417);
+    expect(String((await wrongVerb.json() as any).message)).toMatch(/requires POST/i);
+
     const first = await unwrap(await method("frappe.core.doctype.user.user.generate_keys", {
       user: "sales@example.com",
       reason: "R7 Frappe API-key differential",
