@@ -105,23 +105,28 @@
       "domain_id": "FRAPPE-05-AUTHENTICATION-AND-SESSIONS",
       "name": "Authentication and sessions",
       "lane": "R7-03",
-      "classification": "GAP",
+      "classification": "INTENTIONAL_DIFFERENCE",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
       "forge_authority": [
         "server/packages/frappe-api/src/session.ts",
-        "server/packages/frappe-api/src/auth-routes.ts"
+        "server/packages/frappe-api/src/auth-routes.ts",
+        "server/packages/auth/src/api-credentials.ts",
+        "server/packages/auth/src/session-registry.ts"
       ],
       "evidence": [
         "server/packages/frappe-api/src/session.ts",
         "docs/agents/rc/RC-04-kernel-auth.md",
-        "docs/agents/rc/RC3_A2_PLATFORM_IAM_APPFACTORY_EVIDENCE.md"
+        "docs/agents/rc/RC3_A2_PLATFORM_IAM_APPFACTORY_EVIDENCE.md",
+        "server/packages/auth/src/api-credentials.ts",
+        "server/migrations/tenant/0141_r7_auth_api_credentials.sql",
+        "server/apps/tenant-worker/test/frappe-facade.integration.test.mts",
+        "Frappe v16.19.0 frappe/auth.py",
+        "Frappe v16.19.0 frappe/core/doctype/user/user.py",
+        "GitHub Actions R7 Frappe 16 Closure run 36960220755"
       ],
       "oracle_cases": [],
-      "gaps": [
-        "Audited support impersonation is explicitly missing.",
-        "Generic Frappe OAuth/API-key/token lifecycle parity is not closed; provider-specific and connector seams do not equal the full Frappe auth contract."
-      ],
-      "rationale": "Cookie session, CSRF, revocation, MFA and rate-limit behavior are strong, but required Frappe 16 auth/session behaviors are not all implemented."
+      "gaps": [],
+      "rationale": "Forge now closes the Frappe 16 browser-session contract plus User API-key semantics: cookie sessions, CSRF, per-session/global revocation, MFA, login rate limits, frappe.auth.get_logged_user, System-Manager generate_keys, stable api_key with one-time rotating api_secret, Authorization token/Basic authentication, and reason-bound support impersonation with signed impersonator attribution, append-only audit, and target notification. Forge intentionally does not embed Frappe's OAuth authorization server or arbitrary auth_hooks; external/federated identity and connected-app OAuth remain bounded platform/integration authorities and the generic connected-app lifecycle is tracked under FRAPPE-26."
     },
     {
       "domain_id": "FRAPPE-06-REST-AND-RPC",
