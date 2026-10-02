@@ -6,7 +6,7 @@
     "full_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c"
   },
   "generated_from": "docs/agents/r7/R7_FRAPPE_PARITY_MATRIX.json",
-  "gap_count": 10,
+  "gap_count": 9,
   "gaps": [
     {
       "domain_id": "FRAPPE-05-AUTHENTICATION-AND-SESSIONS",
@@ -24,33 +24,6 @@
         "server/packages/frappe-api/src/session.ts",
         "docs/agents/rc/RC-04-kernel-auth.md",
         "docs/agents/rc/RC3_A2_PLATFORM_IAM_APPFACTORY_EVIDENCE.md"
-      ],
-      "closure_gate": [
-        "pinned_frappe16_fixture",
-        "forge_regression",
-        "differential_review",
-        "matrix_update"
-      ]
-    },
-    {
-      "domain_id": "FRAPPE-06-REST-AND-RPC",
-      "name": "REST and RPC",
-      "lane": "R7-09",
-      "gaps": [
-        "Generic Frappe v2 arbitrary Python controller/server-script method dispatch is intentionally unavailable without a Python runtime.",
-        "Frappe v2 group_by and as_dict=false collection shapes are explicitly rejected rather than silently approximated.",
-        "Execution evidence for the new v2 compatibility tests is pending a runner; source/test wiring exists on PR #994."
-      ],
-      "forge_authority": [
-        "server/packages/frappe-api/src/router.ts",
-        "server/packages/frappe-api/src/envelope.ts",
-        "Document Kernel"
-      ],
-      "evidence": [
-        "server/packages/frappe-api/src/router.ts",
-        "server/packages/frappe-api/src/envelope.ts",
-        "server/apps/tenant-worker/test/frappe-facade.integration.test.mts",
-        "Frappe v16.19.0 frappe/api/v2.py"
       ],
       "closure_gate": [
         "pinned_frappe16_fixture",
