@@ -65,6 +65,55 @@ function glPlan(name, account, debitMinor, {
   };
 }
 
+function commitmentPlan(name, budget, amountMinor, {
+  postingDate = "2026-08-03",
+  sourceDoctype = "Purchase Order",
+  sourceName = "PO-DIST",
+  commitmentType = "Reserve",
+} = {}) {
+  const data = {
+    budget,
+    posting_date: postingDate,
+    commitment_type: commitmentType,
+    amount_minor: amountMinor,
+    amount: String(amountMinor),
+    source_doctype: sourceDoctype,
+    source_name: sourceName,
+  };
+  return {
+    command: {
+      schema_version: 1,
+      tenant_id: "demo",
+      command_id: `cmd-${name}`,
+      aggregate: { doctype: "Finance Budget Commitment", name },
+      action: "create",
+      expected_version: null,
+      payload_hash: HASH,
+      document: data,
+      actor: { user_id: "qa@example.test", roles: ["Accounts Manager"] },
+    },
+    document: {
+      tenant_id: "demo",
+      doctype: "Finance Budget Commitment",
+      name,
+      owner: "qa@example.test",
+      docstatus: 1,
+      status: "Committed",
+      version: 1,
+      created_at: NOW,
+      modified_at: NOW,
+      data,
+      children: [],
+    },
+    gl_entries: [],
+    stock_entries: [],
+    payment_entries: [],
+    fulfillment_entries: [],
+    events: [],
+    result: { ok: true },
+  };
+}
+
 function seedBudget(store, name, account, amount, {
   action = "Stop",
   against = "Company",
@@ -226,6 +275,38 @@ test("Expense Claim actual automatically consumes its source commitment", async 
   // 200 actual + 100 outstanding reserve reaches the budget exactly.
   await assert.rejects(
     store.execute(glPlan("JE-EC-OVER", "650", 1)),
+    /FINANCE_BUDGET_TRANSACTION_EXCEEDED/,
+  );
+});
+
+
+test("in-memory fiscal distribution blocks commitment-only mutation against actual plus outstanding", async () => {
+  const store = new InMemoryMutationStore();
+  const distribution = Array.from({ length: 12 }, (_, index) => ({
+    row_id: `DIST-${index + 1}`,
+    start_date: `2026-${String(index + 1).padStart(2, "0")}-01`,
+    end_date: `2026-${String(index + 1).padStart(2, "0")}-28`,
+    percent_bps: index < 4 ? 834 : 833,
+    allocation_weight: 1,
+    amount_minor: 100,
+  }));
+  seedBudget(store, "BUD-DIST-STOP", "651", 1200, {
+    scope: {
+      fiscal_distribution_enabled: true,
+      distribution_frequency: "Monthly",
+      distribute_equally: true,
+      distribution_weight_total: 12,
+      budget_distribution: distribution,
+    },
+  });
+  store.seedDocument("Purchase Order", "PO-DIST", "demo", { company: "Kairo" }, 1);
+
+  await store.execute(glPlan("JE-DIST-ACTUAL", "651", 700, {
+    postingAt: "2026-08-01T12:00:00.000Z",
+  }));
+  await store.execute(commitmentPlan("COM-DIST-EDGE", "BUD-DIST-STOP", 100));
+  await assert.rejects(
+    store.execute(commitmentPlan("COM-DIST-OVER", "BUD-DIST-STOP", 1, { sourceName: "PO-DIST" })),
     /FINANCE_BUDGET_TRANSACTION_EXCEEDED/,
   );
 });
