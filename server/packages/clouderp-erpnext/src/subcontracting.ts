@@ -291,21 +291,15 @@ export class SubcontractingStockEntryController extends StockEntryIntegrityContr
       };
     });
 
-    const adjusted = {
-      ...context,
-      command: {
-        ...context.command,
-        document: { ...raw, items: preparedItems },
-      },
-    } as ControllerContext<StockEntryData>;
-    const normalized = await super.normalize(adjusted) as SubcontractingStockEntryData;
-
+    // Enforce the frozen BOM ceiling before stock valuation. Once a prior transfer has
+    // exhausted the source warehouse, asking the valuation engine first would surface
+    // "insufficient stock" and hide the more authoritative subcontracting over-transfer error.
     if (context.command.action === "submit") {
       const transfers = await context.reader.listDocumentsByDoctype<SubcontractingStockEntryData>(
         context.command.tenant_id,
         "Stock Entry",
       );
-      const currentByBom = sumTransferRows(normalized.items);
+      const currentByBom = sumTransferRows(preparedItems);
       for (const required of order.data.supplied_items) {
         const prior = transfers
           .filter((document) => document.name !== context.command.aggregate.name
@@ -324,6 +318,15 @@ export class SubcontractingStockEntryController extends StockEntryIntegrityContr
         }
       }
     }
+
+    const adjusted = {
+      ...context,
+      command: {
+        ...context.command,
+        document: { ...raw, items: preparedItems },
+      },
+    } as ControllerContext<StockEntryData>;
+    const normalized = await super.normalize(adjusted) as SubcontractingStockEntryData;
     return { ...normalized, subcontracting_order: order.name };
   }
 
