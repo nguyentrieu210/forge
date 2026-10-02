@@ -368,12 +368,14 @@
       "domain_id": "FRAPPE-16-WORKFLOW",
       "name": "Workflow",
       "lane": "R7-04",
-      "classification": "GAP",
+      "classification": "INTENTIONAL_DIFFERENCE",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
       "forge_authority": [
         "server/packages/frappe-model workflow metadata",
         "Document Kernel lifecycle",
-        "organization-security delegation"
+        "organization-security delegation",
+        "server/packages/frappe-api/src/workflow-actions.ts",
+        "server/migrations/tenant/0145_r7_workflow_actions.sql"
       ],
       "evidence": [
         "server/packages/frappe-api/src/desk-surfaces.ts",
@@ -383,14 +385,14 @@
         "server/packages/frappe-model/src/validate.ts",
         "server/apps/tenant-worker/test/frappe-facade.integration.test.mts",
         "Frappe v16.19.0 frappe/model/workflow.py",
-        "Frappe v16.19.0 frappe/workflow/doctype/workflow_action/workflow_action.py"
+        "Frappe v16.19.0 frappe/workflow/doctype/workflow_action/workflow_action.py",
+        "server/packages/frappe-api/src/workflow-actions.ts",
+        "server/migrations/tenant/0145_r7_workflow_actions.sql",
+        "GitHub Actions R7 Frappe 16 Closure run 36969406334"
       ],
       "oracle_cases": [],
-      "gaps": [
-        "Durable Frappe Workflow Action creation/completion and workflow email delivery are not yet implemented.",
-        "Frappe transition_tasks can invoke arbitrary Python hooks; Forge needs a bounded app-method mapping or an explicit intentional-difference closure before FRAPPE-16 can certify."
-      ],
-      "rationale": "State/transition/role enforcement, bounded transition conditions, offer/commit agreement, and Workflow Document State update_field/update_value semantics are implemented. Direct doc.<field> update expressions run under server workflow authority, including read-only targets. Durable Workflow Action lifecycle, email delivery, and a bounded equivalent for arbitrary Python transition_tasks remain open."
+      "gaps": [],
+      "rationale": "Forge now closes the bounded Workflow contract: state/transition/role enforcement, segregation-of-duties and delegation, one shared transition-condition authority, Workflow Document State update_field/update_value (including direct doc.<field> projection under server authority), durable after-commit Workflow Action creation/completion with permitted-role evidence, and durable workflow email intent. Actual email queue/transport remains owned and blocked only by FRAPPE-17 communications. Forge intentionally does not execute Frappe transition_tasks as arbitrary Python or expose signed Guest email-action execution; app validators/versioned document-event hooks and authenticated workflow actions are the bounded multi-tenant equivalents, consistent with FRAPPE-18/27."
     },
     {
       "domain_id": "FRAPPE-17-NOTIFICATIONS-AND-COMMUNICATIONS",
