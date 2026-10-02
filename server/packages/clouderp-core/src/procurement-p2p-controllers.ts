@@ -151,10 +151,14 @@ export class ProcurementP2PPurchaseInvoiceController extends PurchaseInvoiceCont
       const rowId = optionalText(target?.row_id);
       if (!target || !rowId) throw errors.reference(`Purchase Order ${po.name} item row has no row_id`);
 
+      const materialRequest = optionalText(line.item.material_request)
+        || optionalText(target.material_request)
+        || optionalText(po.data.material_request);
       const normalizedLine: PurchaseItem = {
         ...line.item,
         purchase_order: po.name,
         purchase_order_item_row_id: rowId,
+        ...(materialRequest ? { material_request: materialRequest } : {}),
       };
       normalizedData.items[line.index] = normalizedLine;
       resolved.push({
