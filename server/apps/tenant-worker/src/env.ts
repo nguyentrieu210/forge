@@ -40,6 +40,13 @@ export interface TenantEnv {
    */
   PUBLIC_ORIGIN?: string;
   /**
+   * Optional trusted HTTPS mail relay. When absent, Email Queue rows remain durable
+   * Pending work and maintenance reports configured=false; no send is pretended.
+   */
+  EMAIL_TRANSPORT_URL?: string;
+  EMAIL_TRANSPORT_TOKEN?: string;
+  EMAIL_FROM?: string;
+  /**
    * Signing secret for Frappe-shaped `sid` cookies.
    *
    * Kept distinct from INTERNAL_AUTH_SECRET so that rotating platform-internal
