@@ -31,6 +31,7 @@ on:
       - "server/migrations/tenant/0152_period_close_scope_safety.sql"
       - "server/migrations/tenant/0153_finance_budget_transaction_control.sql"
       - "server/migrations/tenant/0154_exchange_rate_revaluation.sql"
+      - "server/migrations/tenant/0155_customer_credit_refund.sql"
       - "server/scripts/test-customer-credit-authority-migration.py"
       - "server/scripts/test-period-closing-authority-migration.py"
       - "server/scripts/test-finance-budget-transaction-control.py"

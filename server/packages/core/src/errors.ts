@@ -80,6 +80,12 @@ export function asCloudForgeError(value: unknown): CloudForgeError {
   if (message.includes("PAYMENT_ADVANCE_EXCEEDED") || message.includes("PAYMENT_ADVANCE_BASE_EXCEEDED")) {
     return errors.reference("Payment allocation exceeds the remaining advance balance");
   }
+  if (message.includes("CUSTOMER_CREDIT_CONTEXT_MISMATCH")) {
+    return errors.reference("Customer credit party, account and currency must match the source Credit Note");
+  }
+  if (message.includes("CUSTOMER_CREDIT_EXCEEDED") || message.includes("CUSTOMER_CREDIT_BASE_EXCEEDED")) {
+    return errors.reference("Customer refund/allocation exceeds the remaining Credit Note customer credit");
+  }
   if (message.includes("DAILY_LEDGER_FREEZE_CONTEXT_MISMATCH")) {
     return errors.reference("Daily ledger freeze snapshot does not match the requested context");
   }

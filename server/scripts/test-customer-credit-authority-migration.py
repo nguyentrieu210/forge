@@ -5,6 +5,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "migrations" / "tenant" / "0150_customer_credit_authority.sql"
+REFUND_MIGRATION = ROOT / "migrations" / "tenant" / "0155_customer_credit_refund.sql"
 
 SCHEMA = """
 CREATE TABLE documents (
@@ -62,6 +63,7 @@ def db() -> sqlite3.Connection:
     connection = sqlite3.connect(":memory:")
     connection.executescript(SCHEMA)
     connection.executescript(MIGRATION.read_text())
+    connection.executescript(REFUND_MIGRATION.read_text())
     return connection
 
 
@@ -175,3 +177,88 @@ else:
     raise AssertionError("standalone invoice crossed the credit limit")
 
 print("customer credit authority migration: PASS")
+
+
+# Fully-paid return customer credit is a negative source balance against the Credit Note.
+# Refund/credit consumption may move it toward zero, but cannot cross above zero and
+# must preserve the exact party/account/currency context.
+connection = db()
+credit_row = (
+    "demo", "Credit Note", "CN-PAID", 2, "CUSTOMER-CREDIT",
+    "Receivable", "Customer", "CUST-1", "Debtors",
+    -4_000, -4_000, "USD", 2,
+    "Credit Note", "CN-PAID", "2026-10-02T09:00:00.000Z",
+)
+connection.execute(
+    """INSERT INTO payment_ledger_entries(
+         tenant_id,voucher_type,voucher_no,voucher_revision,line_key,
+         account_type,party_type,party,account,amount_minor,base_amount_minor,
+         currency,currency_scale,against_voucher_type,against_voucher_no,posting_at
+       ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+    credit_row,
+)
+
+try:
+    connection.execute(
+        """INSERT INTO payment_ledger_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+        (
+            "demo", "Payment Entry", "REFUND-OVER", 2, "ALLOC-1",
+            "Receivable", "Customer", "CUST-1", "Debtors",
+            4_001, 4_001, "USD", 2,
+            "Credit Note", "CN-PAID", "2026-10-02T09:01:00.000Z",
+        ),
+    )
+except sqlite3.IntegrityError as exc:
+    assert "CUSTOMER_CREDIT_EXCEEDED" in str(exc), exc
+else:
+    raise AssertionError("customer refund crossed the Credit Note credit balance")
+
+try:
+    connection.execute(
+        """INSERT INTO payment_ledger_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+        (
+            "demo", "Payment Entry", "REFUND-WRONG-CONTEXT", 2, "ALLOC-1",
+            "Receivable", "Customer", "CUST-OTHER", "Debtors",
+            1_000, 1_000, "USD", 2,
+            "Credit Note", "CN-PAID", "2026-10-02T09:01:00.000Z",
+        ),
+    )
+except sqlite3.IntegrityError as exc:
+    assert "CUSTOMER_CREDIT_CONTEXT_MISMATCH" in str(exc), exc
+else:
+    raise AssertionError("customer refund accepted mismatched party context")
+
+connection.execute(
+    """INSERT INTO payment_ledger_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+    (
+        "demo", "Payment Entry", "REFUND-OK", 2, "ALLOC-1",
+        "Receivable", "Customer", "CUST-1", "Debtors",
+        4_000, 4_000, "USD", 2,
+        "Credit Note", "CN-PAID", "2026-10-02T09:01:00.000Z",
+    ),
+)
+row = connection.execute(
+    """SELECT SUM(amount_minor),SUM(base_amount_minor)
+       FROM payment_ledger_entries
+       WHERE tenant_id='demo' AND against_voucher_type='Credit Note' AND against_voucher_no='CN-PAID'"""
+).fetchone()
+assert row == (0, 0), row
+
+# Exact cancellation restores the negative customer credit and remains inside the same bound.
+connection.execute(
+    """INSERT INTO payment_ledger_entries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+    (
+        "demo", "Payment Entry", "REFUND-OK", 3, "ALLOC-1",
+        "Receivable", "Customer", "CUST-1", "Debtors",
+        -4_000, -4_000, "USD", 2,
+        "Credit Note", "CN-PAID", "2026-10-02T09:02:00.000Z",
+    ),
+)
+row = connection.execute(
+    """SELECT SUM(amount_minor),SUM(base_amount_minor)
+       FROM payment_ledger_entries
+       WHERE tenant_id='demo' AND against_voucher_type='Credit Note' AND against_voucher_no='CN-PAID'"""
+).fetchone()
+assert row == (-4_000, -4_000), row
+
+print("customer credit refund migration: PASS")
