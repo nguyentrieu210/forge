@@ -4,7 +4,7 @@
 
 `R7-A NOT CLOSED`.
 
-The 28-domain Frappe v16.19.0 audit is fully classified and fail-closed. Platform certification remains blocked by 9 concrete GAP domains.
+The 28-domain Frappe v16.19.0 audit is fully classified and fail-closed. Platform certification remains blocked by 8 concrete GAP domains.
 
 ## Exact identity
 
@@ -18,17 +18,20 @@ The 28-domain Frappe v16.19.0 audit is fully classified and fail-closed. Platfor
 | Classification | Count |
 |---|---:|
 | UNRESOLVED | 0 |
-| GAP | 9 |
-| INTENTIONAL_DIFFERENCE | 6 |
+| GAP | 8 |
+| INTENTIONAL_DIFFERENCE | 7 |
 | OUT_OF_SCOPE | 1 |
 | SEMANTIC_PARITY | 12 |
 | EXACT_PARITY | 0 |
 | FORGE_SUPERSET | 0 |
 | **Total** | **28** |
 
-## Latest closure
+## Latest closures
 
-FRAPPE-06 REST/RPC is classified `SEMANTIC_PARITY` after Forge implemented bounded Frappe v2 collection semantics on the canonical Document List authority, including permission-aware `group_by` aggregates and `as_dict=false` tuple output. Workerd regression coverage passed R7 GitHub Actions run `36909990405`.
+- FRAPPE-06 REST/RPC: permission-aware Frappe v2 `group_by`, tuple-shape output and canonical v2 envelopes.
+- FRAPPE-05 Authentication & Sessions: Frappe User API keys with `token`/`Basic`, stable api_key + rotating one-time secret, `frappe.auth.get_logged_user`, and reason-bound audited cookie impersonation with signed original-operator attribution. R7 GitHub Actions run `36960220755` passed.
+
+Forge intentionally does not embed Frappe's OAuth authorization server or arbitrary auth hooks. Generic connected-app/OAuth lifecycle remains a FRAPPE-26 integration concern rather than an untracked auth ambiguity.
 
 ## Gates
 
@@ -45,9 +48,8 @@ npm run r7:frappe:certify
 
 ## Remaining convergence order
 
-1. FRAPPE-05 authentication/session lifecycle.
-2. FRAPPE-10/11 scheduler and realtime.
-3. FRAPPE-15/16/17 data import, workflow, communications.
-4. FRAPPE-19/23/26 migration, portal, integrations.
+1. FRAPPE-10/11 scheduler and realtime.
+2. FRAPPE-15/16/17 data import, workflow and communications.
+3. FRAPPE-19/23/26 migration, portal and integrations.
 
 R7-B ERPNext closure should consume these verified platform contracts rather than compensate for Frappe-layer ambiguity.
