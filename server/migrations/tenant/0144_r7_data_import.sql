@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS data_import_jobs (
   failed_count INTEGER NOT NULL DEFAULT 0 CHECK (failed_count >= 0),
   results_json TEXT NOT NULL DEFAULT '[]',
   created_by TEXT NOT NULL,
+  started_at TEXT,
   created_at TEXT NOT NULL,
   modified_at TEXT NOT NULL,
   PRIMARY KEY (tenant_id, data_import_name)
