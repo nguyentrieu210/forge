@@ -28,3 +28,5 @@ export { canAdoptPlatformDocType } from "./platform-aware-installer.js";
 export * from "./hooks.js";
 export * from "./method-dispatch.js";
 export * from "./validation.js";
+export * from "./cron.js";
+export * from "./scheduler.js";
