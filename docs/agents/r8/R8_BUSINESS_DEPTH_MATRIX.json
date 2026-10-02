@@ -1,0 +1,1046 @@
+{
+  "schema_version": "1.0.0",
+  "program": "R8-A",
+  "purpose": "ERPNext v16 business-semantic depth benchmark against exact Forge main; audit first, implementation closure later.",
+  "upstream": {
+    "app": "erpnext",
+    "tag": "v16.20.0",
+    "full_sha": "ff46d20b259a2d65a7ded959df9f9a42991a3562"
+  },
+  "forge_seed": "b702376ff8b2d4dfe0a53dc2759b71e9df3c99ab",
+  "denominator": {
+    "path": "server/docs/spec/source-exact/erpnext-artifact-resolution-ledger.json",
+    "expected_artifact_count": 109,
+    "module_count": 11,
+    "flow_count": 18
+  },
+  "allowed_classifications": [
+    "DEEP_PARITY",
+    "SEMANTIC_PARITY",
+    "FORGE_SUPERSET",
+    "INTENTIONAL_DIFFERENCE",
+    "PARTIAL",
+    "GAP",
+    "UNRESOLVED",
+    "OUT_OF_SCOPE"
+  ],
+  "module_depth": [
+    {
+      "depth_id": "R8-M01-ACCOUNTING",
+      "module": "Accounting",
+      "classification": "PARTIAL",
+      "declared_artifact_count": 18,
+      "artifact_resolution_ids": [
+        "RES-ERP-ACCOUNTING-COMPANY",
+        "RES-ERP-ACCOUNTING-ACCOUNT",
+        "RES-ERP-ACCOUNTING-FISCAL-YEAR",
+        "RES-ERP-ACCOUNTING-COST-CENTER",
+        "RES-ERP-ACCOUNTING-ACCOUNTING-DIMENSION",
+        "RES-ERP-ACCOUNTING-JOURNAL-ENTRY",
+        "RES-ERP-ACCOUNTING-GL-ENTRY",
+        "RES-ERP-ACCOUNTING-SALES-INVOICE",
+        "RES-ERP-ACCOUNTING-PURCHASE-INVOICE",
+        "RES-ERP-ACCOUNTING-PAYMENT-ENTRY",
+        "RES-ERP-ACCOUNTING-PAYMENT-LEDGER-ENTRY",
+        "RES-ERP-ACCOUNTING-BANK-ACCOUNT",
+        "RES-ERP-ACCOUNTING-BANK-TRANSACTION",
+        "RES-ERP-ACCOUNTING-PAYMENT-RECONCILIATION",
+        "RES-ERP-ACCOUNTING-PERIOD-CLOSING-VOUCHER",
+        "RES-ERP-ACCOUNTING-EXCHANGE-RATE-REVALUATION",
+        "RES-ERP-ACCOUNTING-BUDGET",
+        "RES-ERP-ACCOUNTING-TAX-RULE"
+      ],
+      "forge_evidence_roots": [
+        "docs/agents/r8/R8_FINANCE_REMAP.md",
+        "docs/agents/r8/R8_O2C_REMAP.md",
+        "server/packages/ledger",
+        "server/packages/query/src/finance-closure.ts",
+        "server/packages/clouderp-erpnext/src/finance-budget.ts"
+      ],
+      "upstream_evidence": [
+        "ERPNext v16.20.0 accounts doctypes/controllers at ff46d20b259a2d65a7ded959df9f9a42991a3562"
+      ],
+      "oracle_cases": [],
+      "gaps": [
+        "Period Closing Voucher-equivalent automated close is incomplete.",
+        "Full Exchange Rate Revaluation is incomplete.",
+        "Budget-vs-Actual and consolidation remain incomplete.",
+        "Bank reconciliation exact runtime parity remains unproven."
+      ],
+      "rationale": "GL/payment/period/bank foundations are substantial, but several high-value ERPNext Accounting artifacts remain incomplete or unproven."
+    },
+    {
+      "depth_id": "R8-M02-SELLING",
+      "module": "Selling",
+      "classification": "PARTIAL",
+      "declared_artifact_count": 13,
+      "artifact_resolution_ids": [
+        "RES-ERP-SELLING-CUSTOMER",
+        "RES-ERP-SELLING-CUSTOMER-GROUP",
+        "RES-ERP-SELLING-TERRITORY",
+        "RES-ERP-SELLING-SALES-PERSON",
+        "RES-ERP-SELLING-QUOTATION",
+        "RES-ERP-SELLING-SALES-ORDER",
+        "RES-ERP-SELLING-DELIVERY-NOTE",
+        "RES-ERP-SELLING-SALES-INVOICE",
+        "RES-ERP-SELLING-BLANKET-ORDER",
+        "RES-ERP-SELLING-SALES-PARTNER",
+        "RES-ERP-SELLING-SHIPPING-RULE",
+        "RES-ERP-SELLING-PRICING-RULE",
+        "RES-ERP-SELLING-ITEM-PRICE"
+      ],
+      "forge_evidence_roots": [
+        "docs/agents/r8/R8_O2C_REMAP.md",
+        "docs/agents/transaction-closure/01-SALES-O2C.md",
+        "server/packages/clouderp-selling"
+      ],
+      "upstream_evidence": [
+        "server/docs/spec/source-exact/oracle/ORACLE_REPORT.json",
+        "ERPNext v16.20.0 selling/accounts O2C controllers at pinned SHA"
+      ],
+      "oracle_cases": [],
+      "gaps": [
+        "Credit-limit/hold remains unresolved.",
+        "Fully-paid return/refund/customer-credit policy remains unresolved.",
+        "Full current replay of 115 O2C oracle fixtures remains pending."
+      ],
+      "rationale": "Core O2C is one of Forge's deepest areas, but whole Selling-module parity is blocked by live business-policy and stale-differential remap work."
+    },
+    {
+      "depth_id": "R8-M03-BUYING",
+      "module": "Buying",
+      "classification": "PARTIAL",
+      "declared_artifact_count": 11,
+      "artifact_resolution_ids": [
+        "RES-ERP-BUYING-SUPPLIER",
+        "RES-ERP-BUYING-SUPPLIER-GROUP",
+        "RES-ERP-BUYING-MATERIAL-REQUEST",
+        "RES-ERP-BUYING-REQUEST-FOR-QUOTATION",
+        "RES-ERP-BUYING-SUPPLIER-QUOTATION",
+        "RES-ERP-BUYING-PURCHASE-ORDER",
+        "RES-ERP-BUYING-PURCHASE-RECEIPT",
+        "RES-ERP-BUYING-PURCHASE-INVOICE",
+        "RES-ERP-BUYING-SUPPLIER-SCORECARD",
+        "RES-ERP-BUYING-SUBCONTRACTING-ORDER",
+        "RES-ERP-BUYING-SUBCONTRACTING-RECEIPT"
+      ],
+      "forge_evidence_roots": [
+        "docs/agents/r8/R8_P2P_REMAP.md",
+        "docs/agents/transaction-closure/05-PROCUREMENT-P2P.md",
+        "server/packages/clouderp-core/src/procurement-p2p-controllers.ts"
+      ],
+      "upstream_evidence": [
+        "ERPNext v16.20.0 buying/stock subcontracting and landed-cost controllers at pinned SHA"
+      ],
+      "oracle_cases": [],
+      "gaps": [
+        "Authoritative landed-cost application/reversal is incomplete.",
+        "Subcontracting is a confirmed GAP.",
+        "Ambiguous same-item multi-PO row allocation is incomplete.",
+        "Supplier-management breadth and runtime oracle remain open."
+      ],
+      "rationale": "Normal P2P is strong, but landed cost, subcontracting and remaining Buying breadth prevent closure."
+    },
+    {
+      "depth_id": "R8-M04-STOCK",
+      "module": "Stock",
+      "classification": "PARTIAL",
+      "declared_artifact_count": 16,
+      "artifact_resolution_ids": [
+        "RES-ERP-STOCK-ITEM",
+        "RES-ERP-STOCK-ITEM-GROUP",
+        "RES-ERP-STOCK-UOM",
+        "RES-ERP-STOCK-WAREHOUSE",
+        "RES-ERP-STOCK-BIN",
+        "RES-ERP-STOCK-STOCK-ENTRY",
+        "RES-ERP-STOCK-STOCK-LEDGER-ENTRY",
+        "RES-ERP-STOCK-STOCK-RECONCILIATION",
+        "RES-ERP-STOCK-SERIAL-NO",
+        "RES-ERP-STOCK-BATCH",
+        "RES-ERP-STOCK-SERIAL-AND-BATCH-BUNDLE",
+        "RES-ERP-STOCK-PICK-LIST",
+        "RES-ERP-STOCK-PACKING-SLIP",
+        "RES-ERP-STOCK-DELIVERY-TRIP",
+        "RES-ERP-STOCK-LANDED-COST-VOUCHER",
+        "RES-ERP-STOCK-INVENTORY-DIMENSION"
+      ],
+      "forge_evidence_roots": [
+        "docs/agents/r8/R8_O2C_REMAP.md",
+        "docs/agents/r8/R8_P1_BREADTH_REMAP.md",
+        "docs/agents/transaction-closure/03-INVENTORY-WMS.md",
+        "server/packages/clouderp-stock"
+      ],
+      "upstream_evidence": [
+        "server/docs/spec/source-exact/oracle/EVIDENCE_BUNDLE.md",
+        "ERPNext v16.20.0 stock controllers at pinned SHA"
+      ],
+      "oracle_cases": [],
+      "gaps": [
+        "Landed Cost Voucher-equivalent authoritative valuation application is incomplete.",
+        "Historical downstream COGS restatement is incomplete.",
+        "Persisted WMS task execution and full ATP are incomplete.",
+        "Expired-batch policy differs from pinned ERPNext behavior.",
+        "LIFO is not supported."
+      ],
+      "rationale": "Stock ledger/tracking/valuation/reconciliation are mature, but several ERPNext depth and WMS execution semantics remain open."
+    },
+    {
+      "depth_id": "R8-M05-MANUFACTURING",
+      "module": "Manufacturing",
+      "classification": "PARTIAL",
+      "declared_artifact_count": 10,
+      "artifact_resolution_ids": [
+        "RES-ERP-MANUFACTURING-BOM",
+        "RES-ERP-MANUFACTURING-BOM-ITEM",
+        "RES-ERP-MANUFACTURING-ROUTING",
+        "RES-ERP-MANUFACTURING-OPERATION",
+        "RES-ERP-MANUFACTURING-WORKSTATION",
+        "RES-ERP-MANUFACTURING-WORKSTATION-TYPE",
+        "RES-ERP-MANUFACTURING-PRODUCTION-PLAN",
+        "RES-ERP-MANUFACTURING-WORK-ORDER",
+        "RES-ERP-MANUFACTURING-JOB-CARD",
+        "RES-ERP-MANUFACTURING-DOWNTIME-ENTRY"
+      ],
+      "forge_evidence_roots": [
+        "docs/agents/r8/R8_MANUFACTURING_REMAP.md",
+        "docs/agents/transaction-closure/02-MANUFACTURING.md",
+        "server/packages/clouderp-erpnext/src/manufacturing-lifecycle.ts",
+        "server/packages/clouderp-erpnext/src/manufacturing-mrp.ts"
+      ],
+      "upstream_evidence": [
+        "ERPNext v16.20.0 BOM/Production Plan/Work Order/Job Card controllers at pinned SHA"
+      ],
+      "oracle_cases": [],
+      "gaps": [
+        "Phantom/substitute/full alternate BOM semantics are incomplete.",
+        "MRP is not full ATP/projected netting.",
+        "Posted operation cost/variance and rework are incomplete.",
+        "Subcontracting is a GAP."
+      ],
+      "rationale": "Forge manufacturing execution is strong, but ERPNext planning/cost/rework/subcontracting depth is broader."
+    },
+    {
+      "depth_id": "R8-M06-ASSETS",
+      "module": "Assets",
+      "classification": "PARTIAL",
+      "declared_artifact_count": 8,
+      "artifact_resolution_ids": [
+        "RES-ERP-ASSETS-ASSET",
+        "RES-ERP-ASSETS-ASSET-CATEGORY",
+        "RES-ERP-ASSETS-ASSET-LOCATION",
+        "RES-ERP-ASSETS-ASSET-MOVEMENT",
+        "RES-ERP-ASSETS-ASSET-REPAIR",
+        "RES-ERP-ASSETS-ASSET-CAPITALIZATION",
+        "RES-ERP-ASSETS-ASSET-DEPRECIATION-SCHEDULE",
+        "RES-ERP-ASSETS-ASSET-VALUE-ADJUSTMENT"
+      ],
+      "forge_evidence_roots": [
+        "docs/agents/r8/R8_P1_BREADTH_REMAP.md",
+        "server/packages/clouderp-erpnext/src/controllers.ts",
+        "server/packages/clouderp-erpnext/src/suite-controllers.ts"
+      ],
+      "upstream_evidence": [
+        "ERPNext v16.20.0 erpnext/assets/doctype/asset/asset.py"
+      ],
+      "oracle_cases": [],
+      "gaps": [
+        "Capitalization/CWIP and multi-finance-book schedule behavior are incomplete/unproven.",
+        "Asset Value Adjustment and Repair depth are incomplete/unproven.",
+        "Pinned runtime differential remains open."
+      ],
+      "rationale": "Depreciation/movement/maintenance/disposal are real, but full ERPNext asset-finance lifecycle is not closed."
+    },
+    {
+      "depth_id": "R8-M07-PROJECTS",
+      "module": "Projects",
+      "classification": "PARTIAL",
+      "declared_artifact_count": 8,
+      "artifact_resolution_ids": [
+        "RES-ERP-PROJECTS-PROJECT",
+        "RES-ERP-PROJECTS-TASK",
+        "RES-ERP-PROJECTS-PROJECT-TEMPLATE",
+        "RES-ERP-PROJECTS-PROJECT-TYPE",
+        "RES-ERP-PROJECTS-TIMESHEET",
+        "RES-ERP-PROJECTS-ACTIVITY-TYPE",
+        "RES-ERP-PROJECTS-ACTIVITY-COST",
+        "RES-ERP-PROJECTS-PROJECT-UPDATE"
+      ],
+      "forge_evidence_roots": [
+        "docs/agents/r8/R8_P1_BREADTH_REMAP.md",
+        "docs/agents/rc4/A14-HANDOFF.md",
+        "docs/agents/workstreams/WS07-project-service-field.md",
+        "server/packages/clouderp-erpnext/src/suite-controllers.ts"
+      ],
+      "upstream_evidence": [
+        "ERPNext v16.20.0 erpnext/projects/doctype/timesheet/timesheet.py"
+      ],
+      "oracle_cases": [],
+      "gaps": [
+        "Authoritative project Finance linkage is incomplete.",
+        "Project procurement/inventory attribution remains dependency-bound.",
+        "EVM/retention/cash-flow breadth and runtime differential remain open."
+      ],
+      "rationale": "Project/Task/Timesheet operational depth exists, but full PSA financial closure is incomplete."
+    },
+    {
+      "depth_id": "R8-M08-QUALITY",
+      "module": "Quality",
+      "classification": "PARTIAL",
+      "declared_artifact_count": 7,
+      "artifact_resolution_ids": [
+        "RES-ERP-QUALITY-QUALITY-INSPECTION",
+        "RES-ERP-QUALITY-QUALITY-INSPECTION-TEMPLATE",
+        "RES-ERP-QUALITY-QUALITY-PROCEDURE",
+        "RES-ERP-QUALITY-QUALITY-GOAL",
+        "RES-ERP-QUALITY-QUALITY-REVIEW",
+        "RES-ERP-QUALITY-QUALITY-FEEDBACK",
+        "RES-ERP-QUALITY-QUALITY-MEETING"
+      ],
+      "forge_evidence_roots": [
+        "docs/agents/r8/R8_P1_BREADTH_REMAP.md",
+        "server/packages/clouderp-erpnext/src/qms-controllers.ts",
+        "server/packages/clouderp-erpnext/src/suite-controllers.ts",
+        "server/tests/qms-lifecycle.test.mjs"
+      ],
+      "upstream_evidence": [
+        "ERPNext v16.20.0 quality-management/stock quality artifacts at pinned SHA"
+      ],
+      "oracle_cases": [],
+      "gaps": [
+        "Full ERPNext Procedure/Goal/Review/Feedback/Meeting behavior is unproven.",
+        "Supplier-quality cross-procurement depth is incomplete/unproven.",
+        "Pinned runtime differential remains open."
+      ],
+      "rationale": "Forge QMS includes Inspection/NCR/RCA/CAPA, but the complete ERPNext quality-governance denominator is not closed."
+    },
+    {
+      "depth_id": "R8-M09-SUPPORT",
+      "module": "Support",
+      "classification": "PARTIAL",
+      "declared_artifact_count": 6,
+      "artifact_resolution_ids": [
+        "RES-ERP-SUPPORT-ISSUE",
+        "RES-ERP-SUPPORT-SERVICE-LEVEL-AGREEMENT",
+        "RES-ERP-SUPPORT-SERVICE-LEVEL-PRIORITY",
+        "RES-ERP-SUPPORT-WARRANTY-CLAIM",
+        "RES-ERP-SUPPORT-MAINTENANCE-SCHEDULE",
+        "RES-ERP-SUPPORT-MAINTENANCE-VISIT"
+      ],
+      "forge_evidence_roots": [
+        "docs/agents/r8/R8_P1_BREADTH_REMAP.md",
+        "docs/agents/rc4/A14-HANDOFF.md",
+        "docs/agents/transaction-closure/06-WARRANTY-SERVICE.md",
+        "server/packages/clouderp-erpnext/src/suite-controllers.ts"
+      ],
+      "upstream_evidence": [
+        "ERPNext v16.20.0 support/maintenance artifacts at pinned SHA"
+      ],
+      "oracle_cases": [],
+      "gaps": [
+        "Durable SLA automation is incomplete.",
+        "Email/chat/social/portal ingestion and customer portal are incomplete.",
+        "Assignment READ scope and fully automated service finance/parts remain open."
+      ],
+      "rationale": "Support/warranty/service has meaningful lifecycle depth, but automation/communications/portal and cross-domain execution are incomplete."
+    },
+    {
+      "depth_id": "R8-M10-COMMERCE-POS",
+      "module": "Commerce/POS",
+      "classification": "PARTIAL",
+      "declared_artifact_count": 8,
+      "artifact_resolution_ids": [
+        "RES-ERP-COMMERCE-POS-POS-PROFILE",
+        "RES-ERP-COMMERCE-POS-POS-INVOICE",
+        "RES-ERP-COMMERCE-POS-POS-CLOSING-ENTRY",
+        "RES-ERP-COMMERCE-POS-SUBSCRIPTION",
+        "RES-ERP-COMMERCE-POS-AUTO-REPEAT",
+        "RES-ERP-COMMERCE-POS-ITEM-WEBSITE-SPECIFICATION",
+        "RES-ERP-COMMERCE-POS-WEBSITE-ITEM",
+        "RES-ERP-COMMERCE-POS-PRODUCT-BUNDLE"
+      ],
+      "forge_evidence_roots": [
+        "docs/agents/r8/R8_P1_BREADTH_REMAP.md",
+        "server/packages/clouderp-erpnext/src/suite-controllers.ts",
+        "server/packages/clouderp-erpnext/src/pos-session-hardening.ts",
+        "server/packages/clouderp-erpnext/src/enterprise-controllers.ts"
+      ],
+      "upstream_evidence": [
+        "ERPNext v16.20.0 POS Invoice and Subscription controllers at pinned SHA"
+      ],
+      "oracle_cases": [],
+      "gaps": [
+        "Subscription automatic invoice generation is missing.",
+        "Auto Repeat parity is unproven.",
+        "Website Item/Product Bundle/website runtime depth is incomplete."
+      ],
+      "rationale": "POS is strong, but recurring and website commerce artifacts keep the combined module partial."
+    },
+    {
+      "depth_id": "R8-M11-REGIONAL",
+      "module": "Regional",
+      "classification": "PARTIAL",
+      "declared_artifact_count": 4,
+      "artifact_resolution_ids": [
+        "RES-ERP-REGIONAL-COUNTRY-SPECIFIC-TAX-E-INVOICE-E-WAYBILL-REPORTS",
+        "RES-ERP-REGIONAL-CHART-TEMPLATES",
+        "RES-ERP-REGIONAL-WITHHOLDING-GST-VAT-RULES",
+        "RES-ERP-REGIONAL-LOCALIZED-PRINT-REPORT-INTEGRATION-ARTIFACTS"
+      ],
+      "forge_evidence_roots": [
+        "docs/agents/r8/R8_P1_BREADTH_REMAP.md",
+        "docs/agents/workstreams/WS01-finance-vn.md",
+        "docs/agents/rc4/RC4_A4_FINANCE_VN_STATUTORY.md",
+        "apps-src/vn-accounting"
+      ],
+      "upstream_evidence": [
+        "ERPNext v16.20.0 regional artifacts at pinned SHA"
+      ],
+      "oracle_cases": [],
+      "gaps": [
+        "Official-source exact-current legal validation is incomplete.",
+        "E-invoice provider/signing/retry/status-sync is not fully proven.",
+        "Filing datasets/certification remain open.",
+        "ERPNext multi-country breadth is not fully mapped."
+      ],
+      "rationale": "Vietnam statutory foundations are meaningful, but certification/provider execution/filing and cross-country ERPNext breadth remain open."
+    }
+  ],
+  "flow_depth": [
+    {
+      "flow_id": "R8-F01-O2C",
+      "name": "Order to cash and customer settlement",
+      "path": "Quotation -> Sales Order -> Delivery Note -> Sales Invoice -> Payment/Allocation -> Return/Credit -> Reconciliation",
+      "priority": "P0",
+      "classification": "PARTIAL",
+      "evidence": [
+        "docs/agents/r8/R8_O2C_REMAP.md",
+        "server/docs/spec/source-exact/oracle/ORACLE_REPORT.json",
+        "server/docs/spec/source-exact/oracle/EVIDENCE_BUNDLE.md",
+        "docs/agents/transaction-closure/01-SALES-O2C.md",
+        "docs/agents/transaction-closure/07-CONVERGENCE.md",
+        "server/packages/clouderp-selling/src/controllers.ts",
+        "server/packages/clouderp-selling/src/totals.ts",
+        "server/packages/clouderp-selling/src/finance-controllers.ts",
+        "server/packages/clouderp-stock/src/valuation.ts",
+        "server/packages/clouderp-stock/src/tracking.ts"
+      ],
+      "known_depth_questions": [
+        "Re-run the committed ERPNext oracle differential against exact current main; stale gap labels do not count.",
+        "Close credit-limit/hold semantics against ERPNext.",
+        "Resolve fully-paid return/refund/customer-credit semantics.",
+        "Reconcile current stock valuation/serial-batch behavior against the pinned oracle after later Forge stock work.",
+        "Prove partial/multiple delivery, invoice, payment, cancel/amend/backdate and race behavior end to end."
+      ],
+      "rationale": "O2C is materially implemented and has a pinned 115-fixture ERPNext oracle plus later transaction closure, but exact-current remap proves both stale old gap labels and still-open business-policy/correction differences. Deep parity is not yet supportable.",
+      "confirmed_findings": [
+        "Pinned oracle capture is valid at 115/115 fixtures, but its older Forge-side gap prose is stale for several capabilities now present on exact current main.",
+        "Credit-limit/hold remains an explicit Sales/Finance dependency in the transaction-closure record.",
+        "Fully-paid return/refund/customer-credit policy remains an explicit Finance dependency.",
+        "Historical downstream COGS/expense restatement after wider backdated valuation effects remains deferred in transaction convergence.",
+        "Current Forge blocks expired-batch delivery while pinned ERPNext v16.20.0 oracle observes expiry as advisory; this is a real semantic divergence requiring an explicit policy disposition."
+      ]
+    },
+    {
+      "flow_id": "R8-F02-P2P",
+      "name": "Procure to pay and supplier settlement",
+      "path": "Material Request -> RFQ -> Supplier Quotation -> Purchase Order -> Purchase Receipt -> Purchase Invoice -> Payment -> Reconciliation",
+      "priority": "P0",
+      "classification": "PARTIAL",
+      "evidence": [
+        "docs/agents/r8/R8_P2P_REMAP.md",
+        "docs/agents/transaction-closure/05-PROCUREMENT-P2P.md",
+        "docs/agents/transaction-closure/07-CONVERGENCE.md",
+        "server/packages/clouderp-core/src/procurement-p2p-controllers.ts",
+        "server/packages/clouderp-core/src/procurement-p2p-rollout-controllers.ts",
+        "server/packages/clouderp-core/src/procurement-landed-cost.ts",
+        "server/tests/procurement-p2p-closure.test.mjs",
+        "server/tests/procurement-p2p-correction-boundary.test.mjs",
+        "server/tests/procurement-landed-cost.test.mjs",
+        "ERPNext v16.20.0 erpnext/buying/doctype/purchase_order/purchase_order.py",
+        "ERPNext v16.20.0 erpnext/stock/doctype/landed_cost_voucher/landed_cost_voucher.py"
+      ],
+      "known_depth_questions": [
+        "Partial receipt/billing/payment and over-receipt/over-billing",
+        "landed cost and valuation coupling",
+        "returns/debit notes",
+        "supplier advances/reconciliation",
+        "RFQ/Supplier Quotation depth",
+        "cancel/amend/backdate/race semantics"
+      ],
+      "rationale": "Core source-to-pay behavior is substantial and transaction-closure evidence is strong, but ERPNext authoritative landed-cost semantics and exact runtime differential coverage remain open.",
+      "confirmed_findings": [
+        "Forge has a real P2P authority chain: RFQ/Supplier Quotation selection, Purchase Order, partial Purchase Receipt, Purchase Invoice three-way match, multi-PO invoice support, Supplier Payment/Advance via Finance, Stock Return and Debit Note correction boundaries.",
+        "Purchase Invoice match policy is frozen on PO and a failed receipt/quantity/price match holds before GL, Payment Ledger or procurement-progress commit.",
+        "Forge landed-cost code is allocation/preview evidence only and deliberately emits no Stock Ledger or GL; ERPNext v16.20 Landed Cost Voucher updates receipt valuation, cancels/rebuilds Stock Ledger and GL, and reposts future SLE/GLE.",
+        "Ambiguous same-item split-price PO invoice allocation still lacks authoritative purchase_order_item row identity.",
+        "A dedicated pinned ERPNext P2P runtime oracle has not yet been captured, so the normal P2P path cannot be promoted beyond PARTIAL."
+      ],
+      "gaps": [
+        "Authoritative landed-cost stock-value application, reversal and downstream reconciliation are not implemented end to end.",
+        "Ambiguous same-item split-price multi-PO invoice allocation lacks exact row-level authority.",
+        "Pinned ERPNext P2P runtime differential remains to be captured."
+      ]
+    },
+    {
+      "flow_id": "R8-F03-AR-AP-SETTLEMENT",
+      "name": "AR/AP allocation, advance and reconciliation",
+      "path": "Invoice -> Payment Entry -> allocation/unallocation -> advance -> reconciliation -> reversal",
+      "priority": "P0",
+      "classification": "PARTIAL",
+      "evidence": [
+        "docs/agents/r8/R8_O2C_REMAP.md",
+        "docs/agents/transaction-closure/04-FINANCE-DAILY-LEDGER.md",
+        "docs/agents/transaction-closure/07-CONVERGENCE.md",
+        "server/packages/clouderp-selling/src/finance-controllers.ts",
+        "server/packages/ledger"
+      ],
+      "known_depth_questions": [
+        "payment allocation ordering",
+        "advance treatment",
+        "credit/debit notes",
+        "party currency vs company currency",
+        "reversal and correction lineage",
+        "race/idempotency"
+      ],
+      "rationale": "Meaningful current settlement semantics are proven in Forge, including FX difference posting and canonical Payment Ledger usage, but full ERPNext behavioral depth remains unproven.",
+      "confirmed_findings": [
+        "Current Payment Entry authority includes historical-rate base allocation and explicit exchange-difference GL posting.",
+        "AR/AP settlement and reversal authorities exist with integrated transaction-closure evidence.",
+        "ERPNext-exact settlement ordering, customer-credit/refund policy and branch/dimension depth are not fully closed by R8."
+      ]
+    },
+    {
+      "flow_id": "R8-F04-GL-PERIOD-CLOSE",
+      "name": "General ledger, periods and financial close",
+      "path": "Voucher posting -> GL -> trial balance -> financial statements -> period close -> reopen/correction",
+      "priority": "P0",
+      "classification": "PARTIAL",
+      "evidence": [
+        "docs/agents/r8/R8_FINANCE_REMAP.md",
+        "docs/agents/rc/RC-020-finance-period-posting.md",
+        "docs/agents/workstreams/WS01-finance-vn.md",
+        "docs/agents/transaction-closure/04-FINANCE-DAILY-LEDGER.md",
+        "server/packages/query/src/finance-closure.ts",
+        "server/packages/clouderp-erpnext/src/finance-budget.ts",
+        "server/migrations/tenant/0110_rc020_finance_posting_period_integrity.sql",
+        "ERPNext v16.20.0 erpnext/accounts/doctype/period_closing_voucher/period_closing_voucher.py",
+        "ERPNext v16.20.0 erpnext/accounts/doctype/exchange_rate_revaluation/exchange_rate_revaluation.py",
+        "ERPNext v16.20.0 erpnext/accounts/doctype/budget/budget.py"
+      ],
+      "known_depth_questions": [
+        "account types/root semantics",
+        "period closing voucher",
+        "immutable reversal",
+        "financial statement equivalence",
+        "dimensions/cost centers",
+        "exchange-rate revaluation",
+        "budget enforcement"
+      ],
+      "rationale": "Forge's posting ledger and period integrity are strong, but ERPNext financial-close depth includes closing-entry orchestration, period-end revaluation and budget actuals that remain explicit Forge blockers.",
+      "confirmed_findings": [
+        "Forge has canonical append-only GL, exact reversal, hard/soft accounting-period guards, company/branch scoped General Ledger and Trial Balance, and Finance Daily Detailed Ledger derived from the same GL authority.",
+        "Forge Finance Budget has fixed-point approval/revision/commitment controls, but exact budget-vs-actual remains blocked on a canonical company/branch/account/date GL aggregate.",
+        "Forge workstream evidence explicitly keeps automated year-end close/retained earnings and full period-end FX revaluation blocked.",
+        "Pinned ERPNext Period Closing Voucher validates fiscal continuity and closing account, generates/reverses closing GL and supports background processing for large ledgers.",
+        "Pinned ERPNext Exchange Rate Revaluation calculates period-end account gain/loss and ties booked gain/loss to Journal Entry/GL behavior."
+      ],
+      "gaps": [
+        "No fully authoritative automated year-end closing/retained-earnings flow equivalent to ERPNext Period Closing Voucher is proven.",
+        "Full period-end Exchange Rate Revaluation is not closed.",
+        "Exact Budget-vs-Actual over the authoritative ledger aggregate is not closed.",
+        "Multi-company consolidation/elimination remains unproven."
+      ]
+    },
+    {
+      "flow_id": "R8-F05-CASH-BANK-RECON",
+      "name": "Cash, bank transactions and reconciliation",
+      "path": "Bank statement evidence -> match/allocation -> reconciliation -> reversal -> cash/bank reporting",
+      "priority": "P0",
+      "classification": "PARTIAL",
+      "evidence": [
+        "docs/agents/r8/R8_FINANCE_REMAP.md",
+        "docs/agents/rc/RC-023-finance-cash-bank.md",
+        "docs/agents/workstreams/WS01-finance-vn.md",
+        "server/packages/clouderp-erpnext/src/enterprise-controllers.ts",
+        "server/apps-src/vn-accounting-worker/src/bank-match.ts",
+        "server/packages/query/src/finance-closure.ts",
+        "server/migrations/tenant/0110_rc023_cash_bank_reconciliation.sql",
+        "ERPNext v16.20.0 erpnext/accounts/doctype/bank_transaction/bank_transaction.py"
+      ],
+      "known_depth_questions": [
+        "matching engine",
+        "partial/multi-voucher matching",
+        "unreconcile/reconcile lineage",
+        "bank fees/FX",
+        "statement import",
+        "cash controls"
+      ],
+      "rationale": "Cash/bank authority is substantial and safer than a shallow facade, but exact ERPNext reconciliation behavior has not been closed across the edge-case matrix.",
+      "confirmed_findings": [
+        "Forge treats Bank Transaction as statement evidence and keeps GL as balance authority; Bank Reconciliation supports partial/reversible matching against submitted vouchers with bank-side GL validation.",
+        "Forge prevents over-reconciliation and dangling cancellation, uses append-only reconciliation evidence, and derives cash/bank position from GL rather than a mutable balance.",
+        "Forge has deterministic read-only candidate matching with exact company/currency/bank-account/amount gates and explainable scoring.",
+        "Pinned ERPNext Bank Transaction embeds payment-entry allocations and derives Unreconciled/Reconciled status from remaining allocation; both systems therefore have materially similar objectives but different authority shapes.",
+        "A pinned ERPNext bank-reconciliation differential has not yet proven edge-case equivalence."
+      ],
+      "gaps": [
+        "Exact ERPNext differential for multi-voucher partial allocation, fees, duplicate references, unreconcile/relink and statement import identity remains uncaptured.",
+        "Forge candidate matching is deliberately read-only and exact-amount gated; broader ERPNext reconciliation-tool behavior is not yet behaviorally compared.",
+        "Provider statement-feed execution remains outside the current proven core."
+      ]
+    },
+    {
+      "flow_id": "R8-F06-PRICING-TAX-CURRENCY",
+      "name": "Pricing, taxes, rounding and multi-currency",
+      "path": "Price resolution -> pricing rule -> tax calculation -> rounding -> base/transaction currency -> FX settlement",
+      "priority": "P0",
+      "classification": "PARTIAL",
+      "evidence": [
+        "docs/agents/r8/R8_O2C_REMAP.md",
+        "server/packages/clouderp-selling/src/totals.ts",
+        "server/packages/clouderp-selling/src/finance-controllers.ts",
+        "server/docs/spec/source-exact/oracle/ORACLE_REPORT.json",
+        "server/docs/spec/source-exact/oracle/EVIDENCE_BUNDLE.md"
+      ],
+      "known_depth_questions": [
+        "inclusive tax",
+        "tax-on-tax",
+        "actual/per-quantity charges",
+        "document discount",
+        "round-off",
+        "FX gain/loss",
+        "pricing-rule precedence",
+        "UOM currency precision"
+      ],
+      "rationale": "The old advanced-tax/FX missing list understates exact current Forge, but current code still exposes narrower combinations than ERPNext and the 115-fixture differential has not been replayed against the later implementation.",
+      "confirmed_findings": [
+        "Current totals engine implements included tax for additive On Net Total rows, Actual charges, On Item Quantity, On Previous Row Total, fixed/percentage document discounts and explicit rounding adjustment.",
+        "Current Payment Entry code posts realized exchange differences; the older oracle prose saying FX gain/loss is missing is stale.",
+        "Included tax combined with document discount is explicitly rejected and included tax is restricted to additive On Net Total, so full ERPNext tax-composition depth is not yet proven."
+      ]
+    },
+    {
+      "flow_id": "R8-F07-STOCK-VALUATION-REPOST",
+      "name": "Inventory quantity, valuation, backdate and repost",
+      "path": "Receipt/Issue/Transfer/Reconciliation -> Stock Ledger -> valuation -> backdate -> repost -> GL reconciliation",
+      "priority": "P0",
+      "classification": "PARTIAL",
+      "evidence": [
+        "docs/agents/r8/R8_O2C_REMAP.md",
+        "server/packages/clouderp-stock/src/valuation.ts",
+        "docs/agents/transaction-closure/03-INVENTORY-WMS.md",
+        "docs/agents/transaction-closure/07-CONVERGENCE.md",
+        "server/docs/spec/source-exact/oracle/EVIDENCE_BUNDLE.md"
+      ],
+      "known_depth_questions": [
+        "FIFO/Moving Average exactness",
+        "negative stock policy",
+        "valuation rate precision",
+        "backdated ordering",
+        "repost boundaries",
+        "stock-to-GL reconciliation",
+        "exact reversal"
+      ],
+      "rationale": "Stock valuation is now substantial, but ERPNext depth is broader and current downstream repost/landed-cost behavior is not closed.",
+      "confirmed_findings": [
+        "Current Forge has server-ledger FIFO and Moving Average valuation plus bounded repost/adjustment logic, so the older oracle prose saying no valuation engine exists is stale.",
+        "Pinned ERPNext oracle includes LIFO behavior; current Forge ValuationMethod is FIFO or Moving Average only.",
+        "Historical downstream COGS/expense restatement and authoritative landed-cost application/reversal remain explicit deferred boundaries."
+      ]
+    },
+    {
+      "flow_id": "R8-F08-SERIAL-BATCH-TRACEABILITY",
+      "name": "Serial, batch, expiry and genealogy",
+      "path": "Identity creation -> receipt -> reservation/pick -> consumption/delivery -> return/cancel -> traceability",
+      "priority": "P0",
+      "classification": "PARTIAL",
+      "evidence": [
+        "docs/agents/r8/R8_O2C_REMAP.md",
+        "server/packages/clouderp-stock/src/tracking.ts",
+        "server/tests/batch-valuation.test.mjs",
+        "docs/agents/transaction-closure/03-INVENTORY-WMS.md",
+        "server/docs/spec/source-exact/oracle/EVIDENCE_BUNDLE.md"
+      ],
+      "known_depth_questions": [
+        "Serial and Batch Bundle semantics",
+        "batch-specific valuation",
+        "expiry policy",
+        "serial uniqueness",
+        "return/cancel lifecycle",
+        "manufacturing genealogy"
+      ],
+      "rationale": "Serial/batch behavior is materially implemented but includes at least one confirmed ERPNext semantic divergence and broader unclosed policy depth.",
+      "confirmed_findings": [
+        "Current Forge has a Serial and Batch Bundle model, single-use usage tracking, per-batch valuation and serial quantity/uniqueness guards; the older 'no bundle model' gap is stale.",
+        "Forge rejects an outgoing expired batch; pinned ERPNext v16.20.0 oracle records expired-batch delivery as allowed/advisory.",
+        "Expiry/warranty/recall and complete ERPNext item-master policy remain broader than current Forge evidence."
+      ]
+    },
+    {
+      "flow_id": "R8-F09-WMS",
+      "name": "Reservation, ATP, putaway, pick, pack and replenishment",
+      "path": "Demand -> reservation/ATP -> putaway -> picking -> packing -> transfer/delivery -> release/correction",
+      "priority": "P1",
+      "classification": "PARTIAL",
+      "evidence": [
+        "docs/agents/r8/R8_P1_BREADTH_REMAP.md",
+        "docs/agents/transaction-closure/03-INVENTORY-WMS.md",
+        "docs/agents/workstreams/WS04-inventory-wms.md",
+        "docs/agents/rc4/A12-PROGRESS.md",
+        "server/packages/clouderp-stock"
+      ],
+      "known_depth_questions": [
+        "reservation priority",
+        "warehouse hierarchy",
+        "wave/pick determinism",
+        "cycle count freeze",
+        "scanner semantics",
+        "replenishment",
+        "concurrency"
+      ],
+      "rationale": "Forge has substantial WMS planning and stock-control primitives, but several plans are intentionally non-posting foundations and the persisted execution/task/ATP layer is incomplete.",
+      "confirmed_findings": [
+        "Forge has guarded reservation lifecycle, deterministic putaway/picking/wave/packing planners, replenishment suggestions, scanner normalization, cycle-count freeze through canonical Stock Reconciliation, and mature stock valuation/tracking authority.",
+        "Automatic reservation expiry and evidence-backed reservation consumption remain open.",
+        "Generic projected ATP remains incomplete; current MRP netting is on-hand-only and WMS inventoryPosition inputs do not constitute full ATP.",
+        "Persisted Warehouse Task/action-state orchestration for putaway/pick/pack and permission-aware mobile scanner completion remains open."
+      ],
+      "gaps": [
+        "Persisted Warehouse Task/action state and completion orchestration are not closed.",
+        "Full projected ATP/reservation/open-supply semantics are not closed.",
+        "Automatic reservation expiry/consumption and mobile scanner server-action integration are not closed."
+      ]
+    },
+    {
+      "flow_id": "R8-F10-MFG-BOM-MRP",
+      "name": "BOM, routing, MRP and production planning",
+      "path": "BOM/version -> routing/capacity -> demand -> Production Plan/MRP -> Work Order",
+      "priority": "P0",
+      "classification": "PARTIAL",
+      "evidence": [
+        "docs/agents/r8/R8_MANUFACTURING_REMAP.md",
+        "docs/agents/transaction-closure/02-MANUFACTURING.md",
+        "docs/agents/workstreams/WS05-manufacturing-qms.md",
+        "docs/agents/r5/R5_A4_MANUFACTURING_SERVICE.md",
+        "server/packages/clouderp-erpnext/src/manufacturing-lifecycle.ts",
+        "server/packages/clouderp-erpnext/src/manufacturing-mrp.ts",
+        "server/packages/clouderp-erpnext/src/manufacturing-mrp-netting.ts",
+        "server/packages/clouderp-erpnext/src/manufacturing-capacity.ts",
+        "ERPNext v16.20.0 erpnext/manufacturing/doctype/bom/bom.py",
+        "ERPNext v16.20.0 erpnext/manufacturing/doctype/production_plan/production_plan.py"
+      ],
+      "known_depth_questions": [
+        "multi-level explosion",
+        "effective BOM selection",
+        "substitute/alternative items",
+        "capacity planning",
+        "material request generation",
+        "revision/effective-date semantics"
+      ],
+      "rationale": "Forge has a serious BOM/MRP/capacity foundation, but ERPNext manufacturing planning remains deeper in alternate/phantom/substitute behavior and projected/reserved supply-demand planning.",
+      "confirmed_findings": [
+        "Forge has versioned/effective BOMs, immutable Work Order BOM checksum/snapshot, multi-level gross MRP with cycle/depth guards, Material Request conversion, routing/workstation calendars, downtime and finite day-bucket capacity planning.",
+        "Forge MRP intentionally labels automatic Material Request output gross_only; its only netting preview is ON_HAND_ONLY_NOT_ATP and excludes reservations, open PO/WO supply, lead time and safety stock.",
+        "Current Forge manufacturing audit explicitly marks phantom BOM as missing and substitute material as missing; alternate BOM is only foundation-level because overlapping active alternatives are forbidden.",
+        "Pinned ERPNext BOM exposes phantom/alternative-item semantics, operations, costing and secondary/scrap items, while Production Plan integrates stock reservation and Sales Order/material-request demand."
+      ],
+      "gaps": [
+        "Phantom BOM semantics are missing.",
+        "Substitute-material selection/availability policy is missing.",
+        "Full alternate-BOM policy is not closed.",
+        "MRP netting is not full ATP/projected supply-demand netting; automatic MR conversion remains gross-only.",
+        "Pinned ERPNext BOM/Production Plan runtime differential is not yet captured."
+      ]
+    },
+    {
+      "flow_id": "R8-F11-MFG-EXEC-COST",
+      "name": "Shop-floor execution, WIP, scrap and manufacturing cost",
+      "path": "Work Order -> material transfer/issue -> Job Card -> FG/scrap -> actual cost/variance -> reversal",
+      "priority": "P0",
+      "classification": "PARTIAL",
+      "evidence": [
+        "docs/agents/r8/R8_MANUFACTURING_REMAP.md",
+        "docs/agents/transaction-closure/02-MANUFACTURING.md",
+        "docs/agents/transaction-closure/07-CONVERGENCE.md",
+        "docs/agents/rc4/A13-PROGRESS.md",
+        "server/packages/clouderp-erpnext/src/manufacturing-lifecycle.ts",
+        "server/packages/clouderp-erpnext/src/manufacturing-costing-read.ts",
+        "server/packages/clouderp-erpnext/src/manufacturing-genealogy.ts",
+        "ERPNext v16.20.0 erpnext/manufacturing/doctype/work_order/work_order.py",
+        "ERPNext v16.20.0 erpnext/manufacturing/doctype/job_card/job_card.py"
+      ],
+      "known_depth_questions": [
+        "partial production",
+        "WIP accounting",
+        "operation/labor/machine cost",
+        "scrap/recovery",
+        "variance posting",
+        "rework",
+        "backdated consumption/FG"
+      ],
+      "rationale": "Shop-floor and stock execution are strong, but ERPNext's operation-cost/WIP/corrective execution depth exceeds Forge's current read-only costing and unresolved rework/variance accounting.",
+      "confirmed_findings": [
+        "Forge has guarded partial manufacture, exact retry/cancel/correction, canonical Stock Entry/Stock Ledger posting, scrap/offcut recovery, Job Card completion guards, backdated valuation audit and Work Order genealogy.",
+        "Forge manufacturing cost evidence is explicitly READ_ONLY_CANONICAL_LEDGER with posting_status=NOT_POSTED; labor/machine/overhead and manufacturing variance are not posted through Finance.",
+        "Forge rework remains an explicit unresolved business-policy decision rather than a fabricated universal flow.",
+        "Pinned ERPNext Job Card tracks hour rate/time, corrective operation cost, semi-finished/WIP stock execution, quality inspection and adds operation cost to manufacture Stock Entry valuation.",
+        "Pinned ERPNext manufacturing also connects corrective/subcontracted Job Card paths to stock/procurement execution."
+      ],
+      "gaps": [
+        "Posted labor/machine/overhead operation cost is not closed.",
+        "Manufacturing variance GL posting/reversal and accounting-period semantics are not closed.",
+        "Rework operating model is not defined generically.",
+        "Historical finance correction after wider backdated manufacturing valuation changes remains incomplete.",
+        "Pinned ERPNext Work Order/Job Card runtime differential is not yet captured."
+      ]
+    },
+    {
+      "flow_id": "R8-F12-SUBCONTRACTING",
+      "name": "Subcontracting procurement and supplied-material accounting",
+      "path": "Subcontracting Order -> material supply -> subcontracted receipt -> consumption/valuation -> payable",
+      "priority": "P0",
+      "classification": "GAP",
+      "evidence": [
+        "docs/agents/r8/R8_P2P_REMAP.md",
+        "docs/agents/transaction-closure/02-MANUFACTURING.md",
+        "docs/agents/transaction-closure/05-PROCUREMENT-P2P.md",
+        "ERPNext v16.20.0 erpnext/subcontracting/doctype/subcontracting_order/subcontracting_order.py",
+        "ERPNext v16.20.0 erpnext/subcontracting/doctype/subcontracting_receipt/subcontracting_receipt.py"
+      ],
+      "known_depth_questions": [
+        "supplied material transfer",
+        "consumption rules",
+        "BOM linkage",
+        "valuation",
+        "returns",
+        "supplier warehouse semantics"
+      ],
+      "rationale": "ERPNext v16 has a first-class subcontracting transaction engine with stock, GL, reservation, BOM-consumption and correction semantics. Forge currently has denominator/declaration intent but no comparable production transaction authority.",
+      "confirmed_findings": [
+        "Pinned ERPNext Subcontracting Order validates the subcontract PO, tracks supplied/raw materials, reserves raw material and updates subcontracted PO quantity/status on submit/cancel.",
+        "Pinned ERPNext Subcontracting Receipt validates BOM consumption, updates supplied/consumed material state, posts Stock Ledger and GL, manages serial/batch bundles, reposts future SLE/GLE, and reverses these effects on cancel.",
+        "Current Forge searches resolve Subcontracting Order/Receipt only in declarations/docs/denominators; the transaction-closure manufacturing record explicitly leaves subcontracting dependent on future procurement/material-send/return/valuation contracts."
+      ],
+      "gaps": [
+        "No current Forge production Subcontracting Order transaction authority equivalent to ERPNext's reservation/material-supply lifecycle was found.",
+        "No current Forge production Subcontracting Receipt authority equivalent to ERPNext stock/GL/repost/consumption/cancel lifecycle was found.",
+        "No end-to-end supplier-warehouse raw-material transfer -> consumption -> subcontracted finished-good valuation chain is proven."
+      ]
+    },
+    {
+      "flow_id": "R8-F13-ASSETS",
+      "name": "Asset acquisition, depreciation, movement, repair and disposal",
+      "path": "Acquire/capitalize -> depreciate -> move -> repair -> value adjust -> sell/scrap -> GL",
+      "priority": "P1",
+      "classification": "PARTIAL",
+      "evidence": [
+        "docs/agents/r8/R8_P1_BREADTH_REMAP.md",
+        "server/packages/clouderp-erpnext/src/controllers.ts",
+        "server/packages/clouderp-erpnext/src/suite-controllers.ts",
+        "server/docs/spec/business-rules/erp/asset-lifecycle.md",
+        "ERPNext v16.20.0 erpnext/assets/doctype/asset/asset.py"
+      ],
+      "known_depth_questions": [
+        "depreciation methods/schedules",
+        "capitalization",
+        "asset value adjustment",
+        "repair capitalization",
+        "movement custody",
+        "disposal GL",
+        "backdated depreciation"
+      ],
+      "rationale": "Forge's core asset lifecycle is real and GL-backed, but ERPNext's finance-book/capitalization/schedule/value-adjustment depth is broader than the currently proven Forge authority.",
+      "confirmed_findings": [
+        "Forge has Asset registration, fixed-asset accounts, multiple depreciation methods, GL-backed depreciation with exact reversal, movement/custody lifecycle, maintenance, disposal and gain/loss GL.",
+        "Pinned ERPNext Asset links acquisition to Purchase Receipt/Purchase Invoice, supports finance books, generated depreciation schedules, capitalization/CWIP and richer schedule recreation/cancellation behavior.",
+        "The R8 denominator includes Asset Capitalization, Asset Repair, Asset Depreciation Schedule and Asset Value Adjustment; exact-current search did not establish equivalent first-class Forge transaction authorities for the full ERPNext semantics of all four."
+      ],
+      "gaps": [
+        "ERPNext-style acquisition/capitalization and finance-book schedule lifecycle is not fully proven.",
+        "First-class Asset Value Adjustment parity is not proven.",
+        "Asset Repair capitalization/depreciation interactions and pinned runtime differential remain open."
+      ]
+    },
+    {
+      "flow_id": "R8-F14-PROJECTS",
+      "name": "Projects, tasks, timesheets and profitability",
+      "path": "Project/Task -> time/cost -> billing linkage -> profitability -> correction",
+      "priority": "P1",
+      "classification": "PARTIAL",
+      "evidence": [
+        "docs/agents/r8/R8_P1_BREADTH_REMAP.md",
+        "server/packages/clouderp-erpnext/src/suite-controllers.ts",
+        "docs/agents/workstreams/WS07-project-service-field.md",
+        "docs/agents/rc4/A14-HANDOFF.md",
+        "server/tests/projects-psa.test.mjs",
+        "ERPNext v16.20.0 erpnext/projects/doctype/timesheet/timesheet.py"
+      ],
+      "known_depth_questions": [
+        "timesheet billing",
+        "activity rates",
+        "cost recognition",
+        "task dependencies",
+        "project profitability reconciliation",
+        "multi-currency"
+      ],
+      "rationale": "Operational PSA depth is meaningful, but project-to-Finance/Procurement/Inventory closure remains incomplete relative to ERPNext.",
+      "confirmed_findings": [
+        "Forge has Project/Task lifecycle validation, WBS/dependency checks, Timesheet provenance and server Activity Type rates, Change Order/Acceptance evidence and profitability projections.",
+        "Pinned ERPNext Timesheet updates task/project costing and tracks billable/billed hours and amounts as part of the document lifecycle.",
+        "Forge project Finance integration remains dependency-bound: authoritative expense/budget/billing/revenue/profitability/cash-flow/EVM/retention and invoice/GL linkage are not fully closed.",
+        "Project procurement and project/task stock attribution remain cross-domain dependencies."
+      ],
+      "gaps": [
+        "Authoritative Finance billing/revenue/cost/profitability reconciliation from project evidence is incomplete.",
+        "Project procurement and project/task inventory dimensions are incomplete.",
+        "EVM/retention/cash-flow depth and pinned ERPNext runtime differential remain open."
+      ]
+    },
+    {
+      "flow_id": "R8-F15-QUALITY",
+      "name": "Quality inspection and quality-management loop",
+      "path": "Inspection template -> inspection -> nonconformance/action -> review/goal/feedback",
+      "priority": "P1",
+      "classification": "PARTIAL",
+      "evidence": [
+        "docs/agents/r8/R8_P1_BREADTH_REMAP.md",
+        "server/packages/clouderp-erpnext/src/suite-controllers.ts",
+        "server/packages/clouderp-erpnext/src/qms-controllers.ts",
+        "server/tests/qms-lifecycle.test.mjs",
+        "docs/agents/workstreams/WS05-manufacturing-qms.md",
+        "server/apps-src/manufacturing-qms/app.json"
+      ],
+      "known_depth_questions": [
+        "incoming/in-process/outgoing inspection",
+        "template/spec rules",
+        "rejection linkage",
+        "nonconformance/actions",
+        "quality goals/reviews",
+        "manufacturing/procurement coupling"
+      ],
+      "rationale": "Forge QMS is materially stronger than old metadata-only snapshots, but module-wide ERPNext quality-management depth is not yet behaviorally closed.",
+      "confirmed_findings": [
+        "Exact current Forge is deeper than the historical feature matrix: it has transactional Quality Inspection plus Quality Plan, Non Conformance Report, Root Cause Analysis and CAPA controllers with lifecycle dependencies.",
+        "Forge QMS is integrated with manufacturing metadata and tests, including rejection-to-NCR/RCA/CAPA sequencing.",
+        "The ERPNext denominator also includes Quality Procedure, Goal, Review, Feedback and Meeting; R8 has not proven behavioral equivalence across that entire governance loop.",
+        "Supplier-quality breadth and pinned ERPNext runtime differential remain open."
+      ],
+      "gaps": [
+        "Full ERPNext quality-governance artifact behavior is not proven across Procedure/Goal/Review/Feedback/Meeting.",
+        "Supplier-quality and cross-procurement enforcement depth remain incomplete/unproven.",
+        "Pinned ERPNext QMS runtime differential remains uncaptured."
+      ]
+    },
+    {
+      "flow_id": "R8-F16-SUPPORT",
+      "name": "Issue, SLA, warranty and maintenance service",
+      "path": "Issue/Warranty Claim -> SLA -> maintenance schedule/visit -> parts/billing evidence -> closure",
+      "priority": "P1",
+      "classification": "PARTIAL",
+      "evidence": [
+        "docs/agents/r8/R8_P1_BREADTH_REMAP.md",
+        "server/packages/clouderp-erpnext/src/suite-controllers.ts",
+        "docs/agents/transaction-closure/06-WARRANTY-SERVICE.md",
+        "docs/agents/workstreams/WS07-project-service-field.md",
+        "docs/agents/rc4/A14-HANDOFF.md",
+        "server/tests/support-helpdesk.test.mjs"
+      ],
+      "known_depth_questions": [
+        "SLA calendars/pauses",
+        "email ingestion",
+        "portal",
+        "warranty entitlement",
+        "maintenance scheduling",
+        "parts consumption",
+        "service billing"
+      ],
+      "rationale": "Manual/online support and service lifecycle is substantial, but ERPNext-style service depth plus communications/portal/SLA automation is incomplete.",
+      "confirmed_findings": [
+        "Forge has Issue/Support Ticket lifecycle, server-owned SLA targets, teams/assignment seams, CSAT validation, Warranty/Service/Maintenance lifecycle evidence and cross-domain warranty/service provenance.",
+        "Durable business-calendar SLA recomputation, pause/resume, breach transitions and automatic escalation/outbox delivery remain explicit dependencies.",
+        "Email/chat/social/portal intake with dedupe/provenance and a complete customer portal remain open.",
+        "Assignment-based READ row-scope hardening and authoritative service billing/automatic spare-parts transaction orchestration remain open."
+      ],
+      "gaps": [
+        "Durable automatic SLA clock/escalation is not closed.",
+        "Inbound email/chat/social/portal ticket ingestion and customer portal are not closed.",
+        "Assignment confidentiality plus fully authoritative service billing/parts automation remain open."
+      ]
+    },
+    {
+      "flow_id": "R8-F17-COMMERCE-POS",
+      "name": "POS, product bundle, subscription and repeat commerce",
+      "path": "POS opening -> sale/payment/stock -> closing plus subscription/auto-repeat/product bundle",
+      "priority": "P1",
+      "classification": "PARTIAL",
+      "evidence": [
+        "docs/agents/r8/R8_P1_BREADTH_REMAP.md",
+        "server/packages/clouderp-erpnext/src/suite-controllers.ts",
+        "server/packages/clouderp-erpnext/src/pos-session-hardening.ts",
+        "server/packages/clouderp-erpnext/src/enterprise-controllers.ts",
+        "server/BUILD_REPORT.md",
+        "ERPNext v16.20.0 erpnext/accounts/doctype/pos_invoice/pos_invoice.py",
+        "ERPNext v16.20.0 erpnext/accounts/doctype/subscription/subscription.py"
+      ],
+      "known_depth_questions": [
+        "POS session controls",
+        "offline/retry",
+        "returns",
+        "mixed payments",
+        "closing reconciliation",
+        "subscription schedules",
+        "auto-repeat",
+        "website item/product bundle"
+      ],
+      "rationale": "POS itself is strong, but the denominator combines POS with recurring and website commerce where Forge remains materially incomplete.",
+      "confirmed_findings": [
+        "Forge POS has session opening, server pricing, stock/COGS/accounting, payment/session guards and hardened closing reconciliation.",
+        "Forge Subscription derives plan item/rate/interval and next-invoice schedule.",
+        "Forge explicitly does not run an automatic subscription invoice scheduler, while pinned ERPNext Subscription creates Sales/Purchase Invoices for billing periods and supports richer trial/discount/due-date behavior.",
+        "R8 did not find an equivalent first-class Auto Repeat controller, and Website Item/Product Bundle/website runtime parity is not proven."
+      ],
+      "gaps": [
+        "Automatic recurring invoice generation is not implemented for Subscription.",
+        "Auto Repeat business lifecycle parity is not proven.",
+        "Website Item/Product Bundle and complete website/portal commerce behavior are not closed.",
+        "Pinned ERPNext POS/Subscription runtime differential remains open."
+      ]
+    },
+    {
+      "flow_id": "R8-F18-REGIONAL",
+      "name": "Regional accounting, tax, e-invoice and statutory localization",
+      "path": "Country profile -> chart/tax/withholding -> statutory document -> filing/e-invoice/report",
+      "priority": "P0",
+      "classification": "PARTIAL",
+      "evidence": [
+        "docs/agents/r8/R8_P1_BREADTH_REMAP.md",
+        "docs/agents/workstreams/WS01-finance-vn.md",
+        "docs/agents/rc4/RC4_A4_FINANCE_VN_STATUTORY.md",
+        "docs/agents/rc4/RC4_A8_INTEGRATION_PROVIDER.md",
+        "docs/agents/rc/RC3_A1_ERP_VN_EVIDENCE.md",
+        "apps-src/vn-accounting"
+      ],
+      "known_depth_questions": [
+        "Vietnam statutory authority vs generic ERPNext regional modules",
+        "VAT/e-invoice",
+        "withholding",
+        "localized chart/templates",
+        "statutory reports",
+        "legal certification boundary"
+      ],
+      "rationale": "Forge has serious Vietnam statutory foundations, but legal certification/provider execution/filing depth remains open and ERPNext regional breadth is wider/different.",
+      "confirmed_findings": [
+        "Forge has a Vietnam-specific effective-dated/source-hashed legal-rules foundation, deterministic fixed-point VAT/tax evaluation, TT99-oriented mappings/registries and a canonical E-Invoice Submission evidence boundary.",
+        "Country-specific legal certification is intentionally separate from ERPNext generic regional parity; neither is inferred from the other.",
+        "Exact-current statutory validation against official sources remains a required gate.",
+        "E-invoice provider transport/signing/idempotent retry/status synchronization and complete filing datasets remain explicit dependencies."
+      ],
+      "gaps": [
+        "Exact-current official-source statutory validation is not complete for all Vietnam pack claims.",
+        "Certified provider transport/signing/retry/status synchronization is not proven end to end.",
+        "Complete statutory filing datasets/reports and legal certification remain open.",
+        "ERPNext multi-country regional breadth is not equivalent to the Vietnam-specific Forge scope and is not fully mapped."
+      ]
+    }
+  ]
+}
