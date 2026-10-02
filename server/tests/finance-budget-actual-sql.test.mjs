@@ -178,3 +178,17 @@ test('actual SQL consumes Material Request commitment only from the exact PI row
   assert.equal(row.committed_minor,400);
   assert.equal(row.available_minor,100);
 });
+
+
+test('actual SQL consumes Expense Claim commitment from its own GL',()=>{
+  const f=fixture({budget:300});
+  document(f,'Finance Budget Commitment','COM-EC',{
+    budget:'BUD',posting_date:'2026-04-01',commitment_type:'Reserve',amount_minor:300,
+    source_doctype:'Expense Claim',source_name:'EC-1'
+  });
+  ledger(f,{name:'EC-1',type:'Expense Claim',debit:200,lineKey:'EXPENSE-1'});
+  const [row]=report(f);
+  assert.equal(row.actual_minor,200);
+  assert.equal(row.committed_minor,100);
+  assert.equal(row.available_minor,0);
+});
