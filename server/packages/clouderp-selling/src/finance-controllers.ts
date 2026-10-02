@@ -243,10 +243,6 @@ export class FinancePaymentEntryController extends PaymentEntryController {
 
     return {
       ...input,
-      ...(sourcePaymentEntry ? { source_payment_entry: sourcePaymentEntry } : {}),
-      ...(sourceCreditNote ? { source_credit_note: sourceCreditNote } : {}),
-      source_voucher_type: sourceVoucherType,
-      source_voucher_no: sourceVoucherNo,
       references,
       currency_scale: transactionScale,
       company_currency: currency.companyCurrency,
@@ -523,6 +519,10 @@ export class PaymentAllocationController implements DocumentController<PaymentAl
     }
     return {
       ...input,
+      ...(sourcePaymentEntry ? { source_payment_entry: sourcePaymentEntry } : {}),
+      ...(sourceCreditNote ? { source_credit_note: sourceCreditNote } : {}),
+      source_voucher_type: sourceVoucherType,
+      source_voucher_no: sourceVoucherNo,
       references,
       currency_scale: transactionScale,
       company_currency: source.data.company_currency ?? input.currency,
