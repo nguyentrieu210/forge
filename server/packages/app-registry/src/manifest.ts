@@ -436,7 +436,7 @@ export interface AppManifest {
    * Frappe-shaped scheduler_events. Methods execute in this app's Worker; arbitrary
    * platform/Python function lookup is intentionally unavailable.
    */
-  scheduler_events: AppSchedulerEvents;
+  scheduler_events?: AppSchedulerEvents;
   /** Pre-commit checks. Like `hooks`, useless without a `worker`. */
   validators: AppValidator[];
   /**
