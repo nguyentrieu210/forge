@@ -12,7 +12,7 @@
  */
 
 import {
-  appMethodTarget, areaTierBasisSqm, assertItemPriceTierIsUnambiguous, blocksSelfApproval, combinedNavigation, derivePurchaseQuantityAxis, dispatchAppMethod, errors, mergeCustomizations,
+  appMethodTarget, areaTierBasisSqm, assertItemPriceTierIsUnambiguous, blocksSelfApproval, combinedNavigation, derivePurchaseQuantityAxis, dispatchAppMethod, errors, evaluateWorkflowCondition, mergeCustomizations,
   navItemPath, parseCsvImport, parseCustomField, parseDocTypeMeta, parsePropertySetter, parseQueryRequest,
   permissionAllows, renderPrintFormat, resolveAutoname, sha256Hex, validateWorkflow,
   type Actor, type AppInstaller, type AppMethodEnv, type AppReportService, type AppReportSpec,
@@ -1883,6 +1883,7 @@ async function applyWorkflow(args: FrappeArgs, context: FrappeRouterContext): Pr
   let transition: typeof workflow.transitions[number] | undefined;
   let delegation: { allowed: boolean; delegation?: string; grantor?: string } | undefined;
   for (const entry of workflow.transitions.filter((candidate) => candidate.state === state && candidate.action === action)) {
+    if (entry.condition && !evaluateWorkflowCondition(entry.condition, current.data, current.data)) continue;
     const next = workflow.states.find((candidate) => candidate.state === entry.next_state);
     const delegationAction = next && next.docstatus > current.docstatus ? "submit" : entry.action;
     const decision = await workflowTransitionAccess(context, entry.allowed_role, doctype, delegationAction, current.data);
@@ -1959,6 +1960,7 @@ async function workflowTransitions(args: FrappeArgs, context: FrappeRouterContex
 
   const transitions: JsonObject[] = [];
   for (const entry of workflow.transitions.filter((candidate) => candidate.state === state)) {
+    if (entry.condition && !evaluateWorkflowCondition(entry.condition, document.data, document.data)) continue;
     const targetDocstatus = docstatusOf(entry.next_state);
     if (blocksSelfApproval(entry, document.owner, context.actor.user_id, currentDocstatus, targetDocstatus)) continue;
     const delegationAction = targetDocstatus > currentDocstatus ? "submit" : entry.action;
