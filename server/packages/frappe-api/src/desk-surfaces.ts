@@ -1,5 +1,5 @@
 import {
-  blocksSelfApproval, combinedNavigation, errors, parseQueryRequest, permissionAllows,
+  blocksSelfApproval, combinedNavigation, errors, evaluateWorkflowCondition, parseQueryRequest, permissionAllows,
   type Actor, type DocTypeMeta, type ExtendedPermissionAction, type JsonObject, type JsonValue,
   type AppReportSpec, type CanonicalDocument, type ListFilter, type QueryFilter,
 } from "./router-platform.js";
@@ -121,6 +121,7 @@ export async function approvalInbox(args: FrappeArgs, context: FrappeRouterConte
 
       const actions: JsonObject[] = [];
       for (const transition of candidates) {
+        if (transition.condition && !evaluateWorkflowCondition(transition.condition, document.data, document.data)) continue;
         const target = workflow.states.find((candidate) => candidate.state === transition.next_state);
         const targetDocstatus = Number(target?.docstatus ?? document.docstatus);
         if (blocksSelfApproval(transition, document.owner, context.actor.user_id, document.docstatus, targetDocstatus)) continue;

@@ -14,6 +14,7 @@ import { errors } from "../../core/src/index.js";
 import { parseCustomField, parseDocTypeMeta, validateWorkflow } from "../../frappe-model/src/index.js";
 import type { CustomFieldRecord, DocTypeMeta, PrintFormatMeta, WorkflowMeta } from "../../frappe-model/src/index.js";
 import type { JsonObject, JsonValue } from "../../contracts/src/index.js";
+import { validateCronExpression } from "./cron.js";
 
 export interface AppDependency {
   id: string;
@@ -103,6 +104,39 @@ export interface AppNavItem {
  */
 export interface AppHook {
   event: string;
+}
+
+
+export type AppSchedulerFrequency =
+  | "all"
+  | "hourly"
+  | "hourly_long"
+  | "hourly_maintenance"
+  | "daily"
+  | "daily_long"
+  | "daily_maintenance"
+  | "weekly"
+  | "weekly_long"
+  | "monthly"
+  | "monthly_long"
+  | "yearly"
+  | "annual";
+
+export interface AppSchedulerEvents {
+  all?: string[];
+  hourly?: string[];
+  hourly_long?: string[];
+  hourly_maintenance?: string[];
+  daily?: string[];
+  daily_long?: string[];
+  daily_maintenance?: string[];
+  weekly?: string[];
+  weekly_long?: string[];
+  monthly?: string[];
+  monthly_long?: string[];
+  yearly?: string[];
+  annual?: string[];
+  cron?: Record<string, string[]>;
 }
 
 /**
@@ -398,6 +432,11 @@ export interface AppManifest {
    */
   worker?: string;
   hooks: AppHook[];
+  /**
+   * Frappe-shaped scheduler_events. Methods execute in this app's Worker; arbitrary
+   * platform/Python function lookup is intentionally unavailable.
+   */
+  scheduler_events?: AppSchedulerEvents;
   /** Pre-commit checks. Like `hooks`, useless without a `worker`. */
   validators: AppValidator[];
   /**
@@ -528,11 +567,15 @@ export function parseAppManifest(value: unknown): AppManifest {
   });
 
   const hooks = array(input.hooks ?? [], "hooks").map((entry, index) => parseHook(entry, index));
+  const schedulerEvents = parseSchedulerEvents(input.scheduler_events, id);
   const worker = input.worker === undefined ? undefined : text(input.worker, "worker", 128);
   // A subscription with nowhere to deliver would queue events that can never be
   // processed, and the backlog would look like a broken platform rather than a
   // misdeclared app.
   if (hooks.length && !worker) throw errors.validation(`${id} declares hooks but no worker to deliver them to`);
+  if (schedulerEventMethods(schedulerEvents).length && !worker) {
+    throw errors.validation(`${id} declares scheduler_events but no worker to run them`);
+  }
 
   const validators = array(input.validators ?? [], "validators").map((entry, index) => parseValidator(entry, index));
   // A validator with nowhere to ask would have to be treated as either always-allow —
@@ -578,6 +621,7 @@ export function parseAppManifest(value: unknown): AppManifest {
     ...(storefront === undefined ? {} : { storefront }),
     nav,
     hooks,
+    scheduler_events: schedulerEvents,
     validators,
     reports,
     externalDocTypes,
@@ -1195,6 +1239,71 @@ function parseScreen(
     columns,
     blocks,
   };
+}
+
+const SCHEDULER_FREQUENCIES = new Set<AppSchedulerFrequency>([
+  "all", "hourly", "hourly_long", "hourly_maintenance",
+  "daily", "daily_long", "daily_maintenance",
+  "weekly", "weekly_long", "monthly", "monthly_long", "yearly", "annual",
+]);
+
+function parseSchedulerEvents(value: JsonValue | undefined, appId: string): AppSchedulerEvents {
+  if (value === undefined) return {};
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw errors.validation("scheduler_events must be an object");
+  }
+  const input = value as JsonObject;
+  for (const key of Object.keys(input)) {
+    if (key !== "cron" && !SCHEDULER_FREQUENCIES.has(key as AppSchedulerFrequency)) {
+      throw errors.validation(`Unknown scheduler_events frequency: ${key}`);
+    }
+  }
+
+  const output: AppSchedulerEvents = {};
+  for (const frequency of SCHEDULER_FREQUENCIES) {
+    const raw = input[frequency];
+    if (raw === undefined) continue;
+    const methods = parseSchedulerMethods(raw, `scheduler_events.${frequency}`, appId);
+    if (methods.length) output[frequency] = methods;
+  }
+
+  if (input.cron !== undefined) {
+    if (!input.cron || typeof input.cron !== "object" || Array.isArray(input.cron)) {
+      throw errors.validation("scheduler_events.cron must be an object");
+    }
+    const cron: Record<string, string[]> = {};
+    for (const [expressionRaw, methodsRaw] of Object.entries(input.cron as JsonObject)) {
+      const expression = validateCronExpression(expressionRaw);
+      const methods = parseSchedulerMethods(methodsRaw, `scheduler_events.cron.${expression}`, appId);
+      if (methods.length) cron[expression] = methods;
+    }
+    if (Object.keys(cron).length) output.cron = cron;
+  }
+
+  const methods = schedulerEventMethods(output);
+  if (methods.length > 100) throw errors.validation("An app may declare at most 100 scheduled methods");
+  assertUnique(methods, "scheduled method");
+  return output;
+}
+
+function parseSchedulerMethods(value: JsonValue | undefined, field: string, appId: string): string[] {
+  return array(value, field).map((entry, index) => {
+    const method = text(entry, `${field}[${index}]`, 240);
+    if (!method.startsWith(`${appId}.`)) {
+      throw errors.validation(`${field} method must belong to app ${appId}: ${method}`);
+    }
+    if (!/^[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_]+)+$/.test(method)) {
+      throw errors.validation(`${field} contains an invalid method path: ${method}`);
+    }
+    return method;
+  });
+}
+
+function schedulerEventMethods(events: AppSchedulerEvents): string[] {
+  const methods: string[] = [];
+  for (const frequency of SCHEDULER_FREQUENCIES) methods.push(...(events[frequency] ?? []));
+  for (const cronMethods of Object.values(events.cron ?? {})) methods.push(...cronMethods);
+  return methods;
 }
 
 function parseHook(value: JsonValue, index: number): AppHook {

@@ -15,6 +15,8 @@ export interface BrowserRunBinding {
 export interface TenantEnv {
   DB: D1Database;
   AGGREGATES: DurableObjectNamespace;
+  /** Tenant-wide hibernatable Frappe room hub. */
+  REALTIME?: DurableObjectNamespace;
   OUTBOX_QUEUE?: Queue<DomainEvent>;
   FILES?: R2Bucket;
   /** Cloudflare Browser Run Quick Actions binding for trusted server-side PDF rendering. */
@@ -37,6 +39,21 @@ export interface TenantEnv {
    * on a tenant reached by a different hostname.
    */
   PUBLIC_ORIGIN?: string;
+  /**
+   * Optional trusted HTTPS mail relay. When absent, Email Queue rows remain durable
+   * Pending work and maintenance reports configured=false; no send is pretended.
+   */
+  EMAIL_TRANSPORT_URL?: string;
+  EMAIL_TRANSPORT_TOKEN?: string;
+  EMAIL_FROM?: string;
+  /** Operator-managed tenant outbound host allowlists. Missing means webhooks stay queued. */
+  INTEGRATION_ALLOWED_HOSTS_JSON?: string;
+  /** Secret binding: tenant -> secret reference -> headers/signing secret or OAuth identity. */
+  INTEGRATION_CREDENTIALS_JSON?: string;
+  /** Secret binding: tenant -> app id -> trusted OAuth config and client credentials. */
+  CONNECTED_APPS_JSON?: string;
+  /** AES-GCM 256-bit vault key as 64 hexadecimal characters; never stored in tenant data. */
+  CONNECTED_APP_VAULT_KEY?: string;
   /**
    * Signing secret for Frappe-shaped `sid` cookies.
    *

@@ -1,0 +1,48 @@
+{
+  "schema_version": "1.0.0",
+  "domain_id": "FRAPPE-19-MIGRATIONS-AND-PATCHES",
+  "upstream": {
+    "app": "frappe",
+    "tag": "v16.19.0",
+    "full_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c"
+  },
+  "evidence_kind": "pinned_source_review",
+  "classification": "INTENTIONAL_DIFFERENCE",
+  "runtime_oracle_captured": false,
+  "sources": [
+    {
+      "path": "frappe/modules/patch_handler.py",
+      "blob_sha": "90d5a74cc92c9cd8144c6a93b090d413d4b4a6c9",
+      "observations": [
+        "run_all derives pending work from Patch Log and installed-app patches.",
+        "execute_patch commits before a patch, executes the patch and Patch Log update, rolls back on exception and commits on success.",
+        "Patch identity is the patch module/string and the normal model is forward application rather than a generic reverse patch."
+      ]
+    },
+    {
+      "path": "frappe/migrate.py",
+      "blob_sha": "87287408bc5e441620e76658b6f42e463feb70c9",
+      "observations": [
+        "pre-schema, schema/patch and post-schema phases use an atomic wrapper that commits on success and rolls back on failure.",
+        "Schema migration composes pre-model patches, schema sync and post-model patches inside the site migration lifecycle."
+      ]
+    }
+  ],
+  "forge_authority": [
+    "server/scripts/lib/d1-migration-journal.mjs",
+    "server/scripts/lib/d1-migration-reconciliation.mjs",
+    "server/scripts/d1-migrate-remote.mjs",
+    "server/scripts/d1-reconcile-migrations.mjs",
+    "server/docs/ops/D1_MIGRATION_RECONCILIATION.md"
+  ],
+  "regression": [
+    "server/tests/d1-migration-journal.test.mjs",
+    "server/tests/d1-migration-reconciliation.test.mjs"
+  ],
+  "intentional_differences": [
+    "Wrangler remote file execution and Forge's journal completion cannot be represented as one provider transaction. Forge reserves exact SQL content identity first and treats any missing completion as uncertain instead of assuming rollback or replay safety.",
+    "An uncertain or historical name-only migration cannot silently adopt current source bytes; replay requires explicit evidence-bound reconciliation and a one-use verified outcome.",
+    "Workers-for-Platforms deployment rollback and production provider mutation remain release/operations evidence, not a source-level migration primitive. R7 does not fabricate that evidence."
+  ],
+  "closure_claim": "Forge does not claim Frappe transaction parity for provider transport; it closes the domain on an explicit fail-closed migration contract that prevents blind replay under the weaker transport boundary."
+}

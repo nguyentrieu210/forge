@@ -90,3 +90,8 @@ Trong cùng PR phải xem xét cập nhật:
 - docs index nếu thêm/bỏ canonical document.
 
 Không cập nhật score Sentrux vào docs như một hằng số kiến trúc; score là measurement của exact scan.
+
+
+## Active program
+
+- `agents/r7/R7_PROGRAM.md` — R7-A Frappe 16 platform closure. Machine truth for current dispositions is `agents/r7/R7_FRAPPE_PARITY_MATRIX.json`; this program must remain fail-closed until GAP/UNRESOLVED are zero.

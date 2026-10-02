@@ -65,7 +65,7 @@ test("notification delivery fails closed when recipient cannot read the document
     dbWithRule(), store, "demo", event(), "2026-08-03T01:00:00Z",
     { canReceive: async () => false, allowsInApp: async () => true },
   );
-  assert.deepEqual(result, { matched: 1, delivered: 0, skipped: 1 });
+  assert.deepEqual(result, { matched: 1, delivered: 0, queued: 0, skipped: 1 });
   assert.equal(writes.length, 0);
 });
 
@@ -75,7 +75,7 @@ test("notification preference can mute an otherwise-authorized recipient", async
     dbWithRule(), store, "demo", event(), "2026-08-03T01:00:00Z",
     { canReceive: async () => true, allowsInApp: async (_user, eventKey) => eventKey !== "submitted" },
   );
-  assert.deepEqual(result, { matched: 1, delivered: 0, skipped: 1 });
+  assert.deepEqual(result, { matched: 1, delivered: 0, queued: 0, skipped: 1 });
   assert.equal(writes.length, 0);
 });
 
@@ -85,19 +85,38 @@ test("authorized recipient with notifications enabled gets one deterministic inb
     dbWithRule(), store, "demo", event(), "2026-08-03T01:00:00Z",
     { canReceive: async () => true, allowsInApp: async () => true },
   );
-  assert.deepEqual(result, { matched: 1, delivered: 1, skipped: 0 });
+  assert.deepEqual(result, { matched: 1, delivered: 1, queued: 0, skipped: 0 });
   assert.equal(writes.length, 1);
   assert.equal(writes[0].input.name, "evt-1:Leave submitted:manager@example.test");
   assert.equal(writes[0].input.documentName, "LEAVE-1");
   assert.equal(writes[0].input.subject, "NV-1 xin nghỉ");
 });
 
-test("unavailable email transport remains skipped before inbox delivery", async () => {
+test("authorized Email rule is queued durably, never counted as physical delivery", async () => {
   const { store, writes } = inbox();
+  const emails = [];
   const result = await runNotificationRules(
-    dbWithRule({ channel: "Email" }), store, "demo", event(), "2026-08-03T01:00:00Z",
-    { canReceive: async () => true, allowsInApp: async () => true },
+    dbWithRule({ channel: "Email", message: "Please review" }),
+    store,
+    "demo",
+    event(),
+    "2026-08-03T01:00:00Z",
+    {
+      canReceive: async () => true,
+      allowsInApp: async () => true,
+      allowsEmail: async () => true,
+      emailAddress: async (user) => user,
+    },
+    {
+      async enqueue(tenantId, input, now) {
+        emails.push({ tenantId, input, now });
+        return { name: "EMAIL-1", created: true };
+      },
+    },
   );
-  assert.deepEqual(result, { matched: 1, delivered: 0, skipped: 1 });
+  assert.deepEqual(result, { matched: 1, delivered: 0, queued: 1, skipped: 0 });
   assert.equal(writes.length, 0);
+  assert.equal(emails.length, 1);
+  assert.equal(emails[0].input.recipientEmail, "manager@example.test");
+  assert.equal(emails[0].input.referenceName, "LEAVE-1");
 });

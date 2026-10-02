@@ -550,6 +550,22 @@ export interface CompiledCount {
   params: JsonValue[];
 }
 
+export type DocumentGroupAggregate = "count" | "sum" | "avg" | "min" | "max";
+export interface DocumentGroupProjection {
+  field: string;
+  alias: string;
+  aggregate?: DocumentGroupAggregate;
+}
+export interface CompiledGroup {
+  sql: string;
+  params: JsonValue[];
+  limit: number;
+}
+export interface DocumentGroupPage {
+  rows: Array<Record<string, JsonValue>>;
+  has_more: boolean;
+}
+
 /**
  * One authoritative read surface for configurable master data.
  *
@@ -632,6 +648,71 @@ SELECT ${selectSql} FROM catalog_documents AS documents WHERE ${where.join(" AND
     const sql = `${CATALOG_DOCUMENTS_CTE}
 SELECT COUNT(*) AS count FROM catalog_documents AS documents WHERE ${where.join(" AND ")}`;
     return { sql, params };
+  }
+
+
+  compileGroup(
+    tenantId: string,
+    request: DocumentListRequest,
+    definition: DocumentListDefinition,
+    groupBy: string[],
+    projections: DocumentGroupProjection[],
+    scope?: DocumentReadScope,
+  ): CompiledGroup {
+    if (!groupBy.length) throw errors.validation("group_by requires at least one field");
+    if (groupBy.length > 4) throw errors.validation("group_by exceeds the field budget");
+    if (!projections.length || projections.length > 20) throw errors.validation("group fields exceed the projection budget");
+
+    for (const field of groupBy) {
+      if (!Object.hasOwn(definition.fields, field)) throw errors.validation(`Group field is not allowed: ${field}`);
+    }
+
+    const aliases = new Set<string>();
+    const selected = projections.map((projection) => {
+      if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(projection.alias)) {
+        throw errors.validation(`Unsafe group alias: ${projection.alias}`);
+      }
+      if (aliases.has(projection.alias)) throw errors.validation(`Duplicate group alias: ${projection.alias}`);
+      aliases.add(projection.alias);
+      if (!Object.hasOwn(definition.fields, projection.field)) {
+        throw errors.validation(`Group projection field is not allowed: ${projection.field}`);
+      }
+      const expression = fieldExpression(definition, projection.field);
+      if (!projection.aggregate) {
+        if (!groupBy.includes(projection.field)) {
+          throw errors.validation(`Non-aggregate projection must be grouped: ${projection.field}`);
+        }
+        return `${expression} AS ${quoteIdentifier(projection.alias)}`;
+      }
+      const aggregate = projection.aggregate === "count"
+        ? "COUNT(*)"
+        : projection.aggregate === "sum"
+          ? `COALESCE(SUM(CAST(${expression} AS REAL)),0)`
+          : projection.aggregate === "avg"
+            ? `AVG(CAST(${expression} AS REAL))`
+            : projection.aggregate === "min"
+              ? `MIN(${expression})`
+              : `MAX(${expression})`;
+      return `${aggregate} AS ${quoteIdentifier(projection.alias)}`;
+    });
+
+    const params: JsonValue[] = [tenantId, definition.doctype];
+    const where = this.selectionPredicate(params, request, definition, scope);
+    const limit = request.limit ?? DEFAULT_LIMIT;
+    params.push(limit + 1);
+    const limitParam = params.length;
+    let tail = ` LIMIT ?${limitParam}`;
+    if (request.offset) {
+      params.push(request.offset);
+      tail += ` OFFSET ?${params.length}`;
+    }
+    assertParamBudget(params);
+    const groupSql = groupBy.map((field) => fieldExpression(definition, field)).join(", ");
+    const sql = `${CATALOG_DOCUMENTS_CTE}
+SELECT ${selected.join(", ")} FROM catalog_documents AS documents
+WHERE ${where.join(" AND ")}
+GROUP BY ${groupSql}${tail}`;
+    return { sql, params, limit };
   }
 
   private selectionPredicate(params: JsonValue[], request: DocumentListRequest, definition: DocumentListDefinition, scope?: DocumentReadScope): string[] {
@@ -764,6 +845,14 @@ const SO_THANH_TOAN_THEO_DOCTYPE: Record<string, {
 export interface DocumentListStore {
   list(tenantId: string, request: DocumentListRequest, definition: DocumentListDefinition, scope?: DocumentReadScope): Promise<DocumentListPage>;
   count(tenantId: string, request: DocumentListRequest, definition: DocumentListDefinition, scope?: DocumentReadScope): Promise<number>;
+  group(
+    tenantId: string,
+    request: DocumentListRequest,
+    definition: DocumentListDefinition,
+    groupBy: string[],
+    projections: DocumentGroupProjection[],
+    scope?: DocumentReadScope,
+  ): Promise<DocumentGroupPage>;
 }
 
 export class D1DocumentListStore implements DocumentListStore {
@@ -863,6 +952,19 @@ export class D1DocumentListStore implements DocumentListStore {
     const row = await this.reader.prepare(compiled.sql).bind(...compiled.params).first<{ count: number }>();
     return Number(row?.count ?? 0);
   }
+
+  async group(
+    tenantId: string, request: DocumentListRequest, definition: DocumentListDefinition,
+    groupBy: string[], projections: DocumentGroupProjection[], scope?: DocumentReadScope,
+  ): Promise<DocumentGroupPage> {
+    const compiled = this.compiler.compileGroup(tenantId, request, definition, groupBy, projections, scope);
+    const result = await this.reader.prepare(compiled.sql).bind(...compiled.params).all<Record<string, JsonValue>>();
+    const all = result.results ?? [];
+    return {
+      rows: all.length > compiled.limit ? all.slice(0, compiled.limit) : all,
+      has_more: all.length > compiled.limit,
+    };
+  }
 }
 
 /** Structural read-authorizer (satisfied by policy.PermissionService) so this
@@ -908,4 +1010,19 @@ export class DocumentListService {
     const request = parseDocumentListRequest(body, definition);
     return { count: await this.store.count(tenantId, request, definition, scope) };
   }
+  async group(
+    actor: Actor,
+    tenantId: string,
+    body: JsonObject,
+    groupBy: string[],
+    projections: DocumentGroupProjection[],
+  ): Promise<DocumentGroupPage> {
+    const definition = await this.definitions.resolve(tenantId, body, actor);
+    const scope = this.authorizer.getReadScope
+      ? await this.authorizer.getReadScope(actor, tenantId, definition.doctype)
+      : (await this.authorizer.assert({ actor, doctype: definition.doctype, action: "read", tenantId }), undefined);
+    const request = parseDocumentListRequest(body, definition);
+    return this.store.group(tenantId, request, definition, groupBy, projections, scope);
+  }
+
 }

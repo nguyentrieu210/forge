@@ -233,3 +233,8 @@ A Sentrux improvement is accepted only when architecture health does not regress
 - Docs retention/index: `docs/README.md`.
 
 Do not create another file with the same authority under root/client/server. Update the owner above instead.
+
+
+## R7 integration runtime ownership
+
+`integration-hub` owns immutable webhook fanout/delivery state and encrypted Connected App lifecycle. Tenant Worker `integration-runtime.ts` binds trusted tenant-specific operator credentials/config and outbound host policy; `index-core-base.ts` enqueues committed source events before ACK and runs bounded delivery during maintenance. `frappe-api/integration-methods.ts` owns browser-session and admin control checks, never token disclosure. Website response validators and owner-scoped Web Form services remain in `frappe-api`; all document updates use the existing kernel. No client/server or vertical dependency was introduced.

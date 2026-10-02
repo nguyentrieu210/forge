@@ -1,4 +1,5 @@
 import type { DomainEvent } from "../../contracts/src/index.js";
+import { taskToSubscription, validateDeliveryTask, type WebhookDeliveryTask } from "./delivery-planner.js";
 import {
   assertAllowedWebhookTarget,
   buildWebhookEnvelope,
@@ -65,6 +66,31 @@ export async function executeWebhookDelivery(input: ExecuteWebhookInput): Promis
   if (!Number.isSafeInteger(attempt) || attempt <= 0) throw new Error("Invalid delivery attempt");
 
   const envelope = await buildWebhookEnvelope(event, subscription);
+  return executeEnvelope(envelope, subscription, attempt, resolver, transport, input.now ?? new Date());
+}
+
+/** Execute the committed snapshot; mapping/config changes must not alter queued bytes. */
+export async function executeWebhookTask(input: {
+  task: WebhookDeliveryTask;
+  attempt: number;
+  credential_resolver: WebhookCredentialResolver;
+  transport: WebhookTransport;
+  now?: Date;
+}): Promise<WebhookExecutionResult> {
+  const task = validateDeliveryTask(input.task);
+  if (!Number.isSafeInteger(input.attempt) || input.attempt <= 0) throw new Error("Invalid delivery attempt");
+  return executeEnvelope(task.envelope, taskToSubscription(task), input.attempt,
+    input.credential_resolver, input.transport, input.now ?? new Date());
+}
+
+async function executeEnvelope(
+  envelope: WebhookDeliveryEnvelope,
+  subscription: WebhookSubscription,
+  attempt: number,
+  resolver: WebhookCredentialResolver,
+  transport: WebhookTransport,
+  now: Date,
+): Promise<WebhookExecutionResult> {
   const body = stableJsonStringify(envelope);
   const credential = await resolver.resolve(subscription);
   if (subscription.auth_kind !== "none" && Object.keys(credential.headers ?? {}).length === 0) {
@@ -80,6 +106,7 @@ export async function executeWebhookDelivery(input: ExecuteWebhookInput): Promis
       redirect: "manual",
       credentials: "omit",
       cache: "no-store",
+      signal: AbortSignal.timeout(15_000),
     });
 
     // Never follow redirects. Following a provider-controlled redirect would let a
@@ -94,7 +121,7 @@ export async function executeWebhookDelivery(input: ExecuteWebhookInput): Promis
       };
     }
 
-    const retryAfter = parseRetryAfterSeconds(response.headers.get("retry-after"), input.now ?? new Date());
+    const retryAfter = parseRetryAfterSeconds(response.headers.get("retry-after"), now);
     const decision = decideDelivery({
       attempt,
       http_status: response.status,
