@@ -123,7 +123,13 @@ export interface SalesFulfillmentReader {
 }
 
 export interface ProcurementProgressReader {
-  getProcuredQuantityMicros(tenantId: string, purchaseOrder: string, kind?: "Receipt" | "Billing", itemCode?: string): Promise<number>;
+  getProcuredQuantityMicros(
+    tenantId: string,
+    purchaseOrder: string,
+    kind?: "Receipt" | "Billing",
+    itemCode?: string,
+    purchaseOrderItemRowId?: string,
+  ): Promise<number>;
 }
 
 export interface MasterDataReader {
