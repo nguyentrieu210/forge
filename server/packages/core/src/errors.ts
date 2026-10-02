@@ -57,6 +57,9 @@ export function asCloudForgeError(value: unknown): CloudForgeError {
   if (value instanceof TypeError) return errors.validation(value.message);
   const message = value instanceof Error ? value.message : "Unknown failure";
   if (message.includes("PURCHASE_ALLOCATION_REVISION_CONFLICT")) return errors.purchaseAllocationConflict();
+  if (message.includes("CUSTOMER_CREDIT_LIMIT_EXCEEDED")) {
+    return errors.reference("Customer credit limit has been exceeded");
+  }
   if (message.includes("VERSION_CONFLICT")) return errors.version();
   if (message.includes("DOCUMENT_NOT_FOUND")) return errors.notFound();
   if (message.includes("DOCUMENT_ALREADY_EXISTS")) return errors.exists();
