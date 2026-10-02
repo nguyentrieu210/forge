@@ -24,7 +24,7 @@ import { errors } from "../../core/src/index.js";
 import { fromScaledInt, toScaledInt } from "../../money/src/index.js";
 import { deriveDeliveryNoteStatus, deriveO2CStatus } from "./status.js";
 import { deriveSalesOrderProgress } from "./sales-order-progress.js";
-import type { GlAccountBalance, GlAccountBalanceQuery, MutationStore, SubmittedQuantityQuery, TrackedStockPosition, TrackedStockState } from "./store.js";
+import type { GlAccountBalance, GlAccountBalanceQuery, MutationStore, OpenPaymentBalance, OpenPaymentBalanceQuery, SubmittedQuantityQuery, TrackedStockPosition, TrackedStockState } from "./store.js";
 
 class KeyedMutex {
   private tails = new Map<string, Promise<void>>();
@@ -52,6 +52,7 @@ interface BundleCheckpoint {
   stockEntriesLength: number;
   voucherStockEntriesLength: number;
   paymentEntriesLength: number;
+  voucherPaymentEntriesLength: number;
   fulfillmentEntriesLength: number;
   lineFulfillmentEntriesLength: number;
   procurementEntriesLength: number;
@@ -86,6 +87,13 @@ export class InMemoryMutationStore implements MutationStore {
     line: StockLedgerEntry;
   }> = [];
   private readonly paymentEntries: PaymentLedgerEntry[] = [];
+  private readonly voucherPaymentEntries: Array<{
+    tenant_id: string;
+    voucher_type: string;
+    voucher_no: string;
+    voucher_revision: number;
+    line: PaymentLedgerEntry;
+  }> = [];
   private readonly fulfillmentEntries: FulfillmentEntry[] = [];
   private readonly lineFulfillmentEntries: FulfillmentEntry[] = [];
   private readonly procurementEntries: ProcurementEntry[] = [];
@@ -202,15 +210,56 @@ export class InMemoryMutationStore implements MutationStore {
   }
 
   async getOutstandingMinor(tenantId: string, voucherType: string, voucherNo: string): Promise<number> {
-    return this.paymentEntries
-      .filter((line) => line.against_voucher_type === voucherType && line.against_voucher_no === voucherNo)
-      .reduce((total, line) => total + line.amount_minor, 0);
+    return this.voucherPaymentEntries
+      .filter((entry) => entry.tenant_id === tenantId
+        && entry.line.against_voucher_type === voucherType
+        && entry.line.against_voucher_no === voucherNo)
+      .reduce((total, entry) => total + entry.line.amount_minor, 0);
   }
 
   async getBaseOutstandingMinor(tenantId: string, voucherType: string, voucherNo: string): Promise<number> {
-    return this.paymentEntries
-      .filter((line) => line.against_voucher_type === voucherType && line.against_voucher_no === voucherNo)
-      .reduce((total, line) => total + line.base_amount_minor, 0);
+    return this.voucherPaymentEntries
+      .filter((entry) => entry.tenant_id === tenantId
+        && entry.line.against_voucher_type === voucherType
+        && entry.line.against_voucher_no === voucherNo)
+      .reduce((total, entry) => total + entry.line.base_amount_minor, 0);
+  }
+
+  async listOpenPaymentBalances(query: OpenPaymentBalanceQuery): Promise<OpenPaymentBalance[]> {
+    const grouped = new Map<string, OpenPaymentBalance>();
+    for (const entry of this.voucherPaymentEntries) {
+      const line = entry.line;
+      if (entry.tenant_id !== query.tenantId) continue;
+      if (line.against_voucher_type !== "Sales Invoice" && line.against_voucher_type !== "Purchase Invoice") continue;
+      if (line.posting_at.slice(0, 10) > query.throughDate) continue;
+      const source = this.documents.get(this.docKey(query.tenantId, line.against_voucher_type, line.against_voucher_no ?? ""));
+      if (!source || source.data.company !== query.company) continue;
+      const key = [line.account_type,line.party_type,line.party,line.account,line.against_voucher_type,line.against_voucher_no,line.currency,line.currency_scale].join("\u0000");
+      const current = grouped.get(key) ?? {
+        account_type: line.account_type,
+        party_type: line.party_type,
+        party: line.party,
+        account: line.account,
+        against_voucher_type: line.against_voucher_type,
+        against_voucher_no: line.against_voucher_no ?? "",
+        currency: line.currency,
+        currency_scale: line.currency_scale,
+        amount_minor: 0,
+        base_amount_minor: 0,
+        row_count: 0,
+      };
+      current.amount_minor += line.amount_minor;
+      current.base_amount_minor += line.base_amount_minor;
+      current.row_count += 1;
+      grouped.set(key, current);
+    }
+    return [...grouped.values()]
+      .filter((row) => row.amount_minor !== 0 || row.base_amount_minor !== 0)
+      .sort((left, right) => left.account.localeCompare(right.account)
+        || left.party.localeCompare(right.party)
+        || left.against_voucher_type.localeCompare(right.against_voucher_type)
+        || left.against_voucher_no.localeCompare(right.against_voucher_no))
+      .map((row) => structuredClone(row));
   }
 
   async getStockBalanceMicros(tenantId: string, itemCode: string, warehouse: string): Promise<number> {
@@ -623,6 +672,13 @@ export class InMemoryMutationStore implements MutationStore {
       line: structuredClone(line),
     })));
     this.paymentEntries.push(...structuredClone(plan.payment_entries));
+    this.voucherPaymentEntries.push(...plan.payment_entries.map((line) => ({
+      tenant_id: command.tenant_id,
+      voucher_type: command.aggregate.doctype,
+      voucher_no: command.aggregate.name,
+      voucher_revision: plan.document.version,
+      line: structuredClone(line),
+    })));
     const fulfillment = structuredClone(plan.fulfillment_entries);
     this.lineFulfillmentEntries.push(...fulfillment.filter((line) => Boolean(line.sales_order_line_key)));
     this.fulfillmentEntries.push(...fulfillment.filter((line) => !line.skip_legacy_projection));
@@ -659,6 +715,7 @@ export class InMemoryMutationStore implements MutationStore {
       stockEntriesLength: this.stockEntries.length,
       voucherStockEntriesLength: this.voucherStockEntries.length,
       paymentEntriesLength: this.paymentEntries.length,
+      voucherPaymentEntriesLength: this.voucherPaymentEntries.length,
       fulfillmentEntriesLength: this.fulfillmentEntries.length,
       lineFulfillmentEntriesLength: this.lineFulfillmentEntries.length,
       procurementEntriesLength: this.procurementEntries.length,
@@ -684,6 +741,7 @@ export class InMemoryMutationStore implements MutationStore {
     this.stockEntries.splice(checkpoint.stockEntriesLength);
     this.voucherStockEntries.splice(checkpoint.voucherStockEntriesLength);
     this.paymentEntries.splice(checkpoint.paymentEntriesLength);
+    this.voucherPaymentEntries.splice(checkpoint.voucherPaymentEntriesLength);
     this.fulfillmentEntries.splice(checkpoint.fulfillmentEntriesLength);
     this.lineFulfillmentEntries.splice(checkpoint.lineFulfillmentEntriesLength);
     this.procurementEntries.splice(checkpoint.procurementEntriesLength);
@@ -906,14 +964,18 @@ export class InMemoryMutationStore implements MutationStore {
     for (const line of plan.payment_entries) {
       if (!line.against_voucher_type || !line.against_voucher_no) continue;
       const referenceKey = `${line.against_voucher_type}:${line.against_voucher_no}`;
-      const existing = this.paymentEntries
-        .filter((entry) => entry.against_voucher_type === line.against_voucher_type && entry.against_voucher_no === line.against_voucher_no)
-        .reduce((total, entry) => total + entry.amount_minor, 0);
+      const existing = this.voucherPaymentEntries
+        .filter((entry) => entry.tenant_id === plan.command.tenant_id
+          && entry.line.against_voucher_type === line.against_voucher_type
+          && entry.line.against_voucher_no === line.against_voucher_no)
+        .reduce((total, entry) => total + entry.line.amount_minor, 0);
       const next = existing + (pending.get(referenceKey) ?? 0) + line.amount_minor;
       if (next < 0) throw errors.reference(`Allocation exceeds outstanding for ${referenceKey}`, { outstanding_minor: existing, requested_delta_minor: line.amount_minor });
-      const existingBase = this.paymentEntries
-        .filter((entry) => entry.against_voucher_type === line.against_voucher_type && entry.against_voucher_no === line.against_voucher_no)
-        .reduce((total, entry) => total + entry.base_amount_minor, 0);
+      const existingBase = this.voucherPaymentEntries
+        .filter((entry) => entry.tenant_id === plan.command.tenant_id
+          && entry.line.against_voucher_type === line.against_voucher_type
+          && entry.line.against_voucher_no === line.against_voucher_no)
+        .reduce((total, entry) => total + entry.line.base_amount_minor, 0);
       const pendingBaseKey = `${referenceKey}:base`;
       const nextBase = existingBase + (pending.get(pendingBaseKey) ?? 0) + line.base_amount_minor;
       if (nextBase < 0) throw errors.reference(`Base allocation exceeds outstanding for ${referenceKey}`, { base_outstanding_minor: existingBase, requested_base_delta_minor: line.base_amount_minor });
