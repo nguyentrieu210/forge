@@ -1286,7 +1286,7 @@ function parseSchedulerEvents(value: JsonValue | undefined, appId: string): AppS
   return output;
 }
 
-function parseSchedulerMethods(value: JsonValue, field: string, appId: string): string[] {
+function parseSchedulerMethods(value: JsonValue | undefined, field: string, appId: string): string[] {
   return array(value, field).map((entry, index) => {
     const method = text(entry, `${field}[${index}]`, 240);
     if (!method.startsWith(`${appId}.`)) {
