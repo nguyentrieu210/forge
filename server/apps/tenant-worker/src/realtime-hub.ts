@@ -62,6 +62,27 @@ interface RealtimeEventRow {
   created_at: string;
 }
 
+
+/**
+ * The repo's generated Workers types predate the hibernation declarations used by the
+ * deployed compatibility date. Keep the compatibility shim local instead of widening
+ * global types or forcing an unrelated platform-wide dependency upgrade.
+ */
+interface HibernationWebSocket extends WebSocket {
+  serializeAttachment(value: unknown): void;
+  deserializeAttachment(): unknown;
+}
+
+type HibernationContext = Pick<DurableObjectState, "storage"> & {
+  acceptWebSocket(socket: WebSocket): void;
+  getWebSockets(tag?: string): WebSocket[];
+};
+
+type WebSocketPairShape = { 0: WebSocket; 1: WebSocket };
+type WebSocketPairConstructor = new () => WebSocketPairShape;
+type ResponseInitWithWebSocket = ResponseInit & { webSocket: WebSocket };
+
+
 /**
  * One hibernatable Durable Object per tenant.
  *
@@ -72,7 +93,6 @@ interface RealtimeEventRow {
 export class RealtimeHub extends DurableObject<TenantEnv> {
   constructor(ctx: DurableObjectState, env: TenantEnv) {
     super(ctx, env);
-    this.ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair("ping", "pong"));
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -204,9 +224,10 @@ export class RealtimeHub extends DurableObject<TenantEnv> {
       resumeFrom,
     };
 
-    const pair = new WebSocketPair();
+    const Pair = (globalThis as unknown as { WebSocketPair: WebSocketPairConstructor }).WebSocketPair;
+    const pair = new Pair();
     const [client, server] = Object.values(pair) as [WebSocket, WebSocket];
-    this.ctx.acceptWebSocket(server);
+    this.hibernationContext().acceptWebSocket(server);
     this.saveState(server, state);
     server.send(JSON.stringify({
       type: "ready",
@@ -216,7 +237,7 @@ export class RealtimeHub extends DurableObject<TenantEnv> {
       resume_from: resumeFrom,
     }));
     await this.replayRooms(server, state, rooms);
-    return new Response(null, { status: 101, webSocket: client });
+    return new Response(null, { status: 101, webSocket: client } as ResponseInitWithWebSocket);
   }
 
   private async receivePublish(request: Request): Promise<Response> {
@@ -231,7 +252,7 @@ export class RealtimeHub extends DurableObject<TenantEnv> {
     };
     let delivered = 0;
     const encoded = encodeWireEvent(normalized, false);
-    for (const ws of this.ctx.getWebSockets()) {
+    for (const ws of this.hibernationContext().getWebSockets()) {
       const state = this.stateFor(ws);
       if (state.tenantId !== tenantId || !state.rooms.includes(normalized.room)) continue;
       if (ws.readyState !== WebSocket.OPEN) continue;
@@ -324,7 +345,7 @@ export class RealtimeHub extends DurableObject<TenantEnv> {
     const key = documentKey(doctype, docname);
     const users = new Set<string>();
     const sockets: WebSocket[] = [];
-    for (const ws of this.ctx.getWebSockets()) {
+    for (const ws of this.hibernationContext().getWebSockets()) {
       if (ws === exclude || ws.readyState !== WebSocket.OPEN) continue;
       const state = this.stateFor(ws);
       if (!state.openDocs.includes(key)) continue;
@@ -350,7 +371,7 @@ export class RealtimeHub extends DurableObject<TenantEnv> {
   }
 
   private stateFor(ws: WebSocket): ConnectionState {
-    const state = ws.deserializeAttachment() as ConnectionState | null;
+    const state = (ws as HibernationWebSocket).deserializeAttachment() as ConnectionState | null;
     if (!state?.tenantId || !state.actor?.user_id || !Array.isArray(state.rooms)) {
       throw errors.authentication("Realtime connection state is invalid");
     }
@@ -358,7 +379,11 @@ export class RealtimeHub extends DurableObject<TenantEnv> {
   }
 
   private saveState(ws: WebSocket, state: ConnectionState): void {
-    ws.serializeAttachment(state);
+    (ws as HibernationWebSocket).serializeAttachment(state);
+  }
+
+  private hibernationContext(): HibernationContext {
+    return this.ctx as unknown as HibernationContext;
   }
 
   private sendError(ws: WebSocket, code: string, message: string): void {
