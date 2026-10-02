@@ -60,6 +60,8 @@ R7-B ERPNext closure should consume these verified platform contracts rather tha
 
 ## Continued convergence — 2026-10-02
 
-Migration SHA256 journal and explicit evidence-bound reconciliation, conditional Website cache, authenticated owner Web Form read/list/update, atomic durable webhook fanout and tenant-maintenance delivery, Connected App state/PKCE/encrypted cache/refresh/disconnect, and integration API authorization are implemented. Source-runtime verification passed 65 targeted tests; the workflow now compiles the changed authorities and runs the runtime suite plus Workerd facade regressions. The new Workerd scenario withholds event ACK on fanout failure and proves retry uses original committed source bytes.
+Migration SHA256 journal and explicit evidence-bound reconciliation, conditional Website cache, authenticated owner Web Form read/list/update, atomic durable webhook fanout and tenant-maintenance delivery, Connected App state/PKCE/encrypted cache/refresh/disconnect, and integration API authorization are implemented. Source-runtime verification passed 66 targeted tests; the workflow now compiles the changed authorities and runs the runtime suite plus Workerd facade regressions. The new Workerd scenario withholds event ACK on fanout failure and proves retry uses original committed source bytes.
 
 FRAPPE-19/23/26 remain GAP for the exact residual contracts in the synchronized backlog. Source implementation and fake-provider tests do not constitute live provider or production evidence. `certify` stays fail-closed.
+
+Verified implementation head: `bf5457ff295efaacdbda4e5578a23d5abe202e66`. GitHub Actions R7 run `36972661090` passed the changed-authority TypeScript guard, 6 control tests, 60 runtime safety tests and Workerd Frappe facade regression. This evidence verifies the source continuation; it does not change the three GAP dispositions or authorize production operations.
