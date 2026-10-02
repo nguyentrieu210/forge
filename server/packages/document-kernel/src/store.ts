@@ -39,6 +39,8 @@ export interface GlAccountBalance {
   currency_scale: number;
   debit_minor: number;
   credit_minor: number;
+  /** Immutable GL row count contributing to this aggregate slice. */
+  row_count: number;
   /** Natural signed ledger movement: debit minus credit. */
   balance_minor: number;
 }
