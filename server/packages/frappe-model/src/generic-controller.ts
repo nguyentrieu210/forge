@@ -7,6 +7,7 @@ import type { MetadataStore } from "./store.js";
 import type { DocFieldMeta, DocTypeMeta, WorkflowMeta } from "./types.js";
 import { isLayoutField } from "./validate.js";
 import { evaluateFieldCondition } from "./field-condition.js";
+import { evaluateWorkflowCondition } from "./workflow-condition.js";
 import { canWriteField } from "./permission.js";
 
 export class GenericMetadataController implements DocumentController<JsonObject> {
@@ -415,7 +416,7 @@ function applyWorkflow(context: ControllerContext<JsonObject>, data: JsonObject,
   if (blocksSelfApproval(transition, context.existing.owner, context.command.actor.user_id, context.existing.docstatus, target.docstatus)) {
     throw errors.permission("Self approval is not allowed for this transition");
   }
-  if (transition.condition && !evaluateCondition(transition.condition, data)) throw errors.validation(`Workflow condition is not satisfied for ${transition.action}`);
+  if (transition.condition && !evaluateWorkflowCondition(transition.condition, data, context.existing.data)) throw errors.validation(`Workflow condition is not satisfied for ${transition.action}`);
   const expectedAction = target.docstatus === 2 ? "cancel" : target.docstatus === 1 && context.existing.docstatus === 0 ? "submit" : "save";
   if (context.command.action !== expectedAction) throw errors.lifecycle(`Transition to ${requested} requires ${expectedAction}`);
   return { state: requested, docstatus: target.docstatus };
@@ -451,28 +452,6 @@ export function blocksSelfApproval(
   return targetDocstatus > currentDocstatus;
 }
 
-function evaluateCondition(condition: string, data: JsonObject): boolean {
-  const trimmed = condition.trim();
-  const match = trimmed.match(/^(?:doc\.)?([a-zA-Z][a-zA-Z0-9_]*)\s*(==|!=|>=|<=|>|<)\s*(?:'([^']*)'|"([^"]*)"|(-?\d+(?:\.\d+)?)|(true|false|null))$/);
-  if (!match) throw errors.validation("Workflow condition uses unsupported syntax");
-  const left = data[match[1]!];
-  const literal = match[3] ?? match[4] ?? match[5] ?? match[6];
-  let right: JsonValue = literal as string;
-  if (match[5] !== undefined) right = Number(match[5]);
-  else if (literal === "true") right = true;
-  else if (literal === "false") right = false;
-  else if (literal === "null") right = null;
-  switch (match[2]) {
-    case "==": return left === right;
-    case "!=": return left !== right;
-    case ">": return Number(left) > Number(right);
-    case "<": return Number(left) < Number(right);
-    case ">=": return Number(left) >= Number(right);
-    case "<=": return Number(left) <= Number(right);
-    default: return false;
-  }
-}
-function isAdministrator(context: ControllerContext<JsonObject>): boolean { return context.command.actor.user_id === "Administrator" || context.command.actor.roles.includes("Administrator") || context.command.actor.roles.includes("System Manager"); }
 
 function requireExisting(context: ControllerContext<JsonObject>): CanonicalDocument<JsonObject> { if (!context.existing) throw errors.notFound(); return context.existing; }
 function sameJsonValue(left: JsonValue | undefined, right: JsonValue | undefined): boolean { return JSON.stringify(left) === JSON.stringify(right); }
