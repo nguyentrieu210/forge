@@ -405,6 +405,9 @@ function compileFinanceBudgetVsActual(
         json_extract(b.payload_json,'$.currency') AS currency,
         CAST(COALESCE(json_extract(b.payload_json,'$.currency_scale'),2) AS INTEGER) AS currency_scale,
         CAST(COALESCE(json_extract(b.payload_json,'$.budget_amount_minor'),0) AS INTEGER) AS budget_amount_minor,
+        COALESCE(CAST(json_extract(b.payload_json,'$.fiscal_distribution_enabled') AS INTEGER),0) AS fiscal_distribution_enabled,
+        CAST(COALESCE(json_extract(b.payload_json,'$.distribution_weight_total'),0) AS INTEGER) AS distribution_weight_total,
+        COALESCE(json_extract(b.payload_json,'$.budget_distribution'),json('[]')) AS budget_distribution_json,
         COALESCE(json_extract(b.payload_json,'$.control_action'),'Stop') AS control_action
       FROM documents b
       LEFT JOIN finance_historical_accounts a
@@ -570,29 +573,54 @@ function compileFinanceBudgetVsActual(
       SELECT
         metrics.*,
         budget_amount_minor+revision_minor AS effective_budget_minor,
-        CASE WHEN invalid_gl_entry_count=0 THEN valid_actual_minor ELSE NULL END AS actual_minor
+        CASE WHEN invalid_gl_entry_count=0 THEN valid_actual_minor ELSE NULL END AS actual_minor,
+        CASE
+          WHEN fiscal_distribution_enabled=1 THEN COALESCE((
+            SELECT SUM(CAST(COALESCE(json_extract(dist.value,'$.allocation_weight'),0) AS INTEGER))
+            FROM json_each(metrics.budget_distribution_json) AS dist
+            WHERE date(json_extract(dist.value,'$.start_date'))<=date(metrics.through_date)
+          ),0)
+          ELSE 0
+        END AS accumulated_distribution_weight
       FROM metrics
-    ), calculated AS (
-      SELECT effective.*,effective_budget_minor-actual_minor-committed_minor AS available_minor
+    ), distributed AS (
+      SELECT
+        effective.*,
+        CASE
+          WHEN fiscal_distribution_enabled<>1 THEN effective_budget_minor
+          WHEN distribution_weight_total<=0 OR distribution_weight_total>10000 THEN NULL
+          WHEN accumulated_distribution_weight<0 OR accumulated_distribution_weight>distribution_weight_total THEN NULL
+          ELSE
+            CAST(effective_budget_minor / distribution_weight_total AS INTEGER) * accumulated_distribution_weight
+            + CAST((
+                (effective_budget_minor % distribution_weight_total) * accumulated_distribution_weight
+                + CAST(distribution_weight_total / 2 AS INTEGER)
+              ) / distribution_weight_total AS INTEGER)
+        END AS accumulated_budget_minor
       FROM effective
+    ), calculated AS (
+      SELECT distributed.*,accumulated_budget_minor-actual_minor-committed_minor AS available_minor
+      FROM distributed
     ), report AS (
       SELECT
         budget,company,account,budget_against,scope_key,start_date,end_date,through_date,
         currency,currency_scale,control_action,
-        budget_amount_minor,revision_minor,effective_budget_minor,actual_minor,committed_minor,available_minor,invalid_gl_entry_count,
+        budget_amount_minor,revision_minor,effective_budget_minor,accumulated_budget_minor,actual_minor,committed_minor,available_minor,invalid_gl_entry_count,
         CAST(budget_amount_minor AS REAL)/${moneyDivisor("currency_scale")} AS budget_amount,
         CAST(effective_budget_minor AS REAL)/${moneyDivisor("currency_scale")} AS effective_budget_amount,
+        CAST(accumulated_budget_minor AS REAL)/${moneyDivisor("currency_scale")} AS accumulated_budget_amount,
         CAST(actual_minor AS REAL)/${moneyDivisor("currency_scale")} AS actual_amount,
         CAST(committed_minor AS REAL)/${moneyDivisor("currency_scale")} AS committed_amount,
         CAST(available_minor AS REAL)/${moneyDivisor("currency_scale")} AS available_amount,
         CASE
-          WHEN invalid_gl_entry_count>0 THEN NULL
-          WHEN effective_budget_minor=0 AND actual_minor+committed_minor<>0 THEN NULL
-          WHEN effective_budget_minor=0 THEN 0.0
-          ELSE CAST(actual_minor+committed_minor AS REAL)*100.0/CAST(effective_budget_minor AS REAL)
+          WHEN invalid_gl_entry_count>0 OR accumulated_budget_minor IS NULL THEN NULL
+          WHEN accumulated_budget_minor=0 AND actual_minor+committed_minor<>0 THEN NULL
+          WHEN accumulated_budget_minor=0 THEN 0.0
+          ELSE CAST(actual_minor+committed_minor AS REAL)*100.0/CAST(accumulated_budget_minor AS REAL)
         END AS utilization_pct,
         CASE
           WHEN invalid_gl_entry_count>0 THEN 'Invalid GL Currency / Scale'
+          WHEN accumulated_budget_minor IS NULL THEN 'Invalid Fiscal Distribution'
           WHEN available_minor>=0 THEN 'Within Budget'
           WHEN control_action='Warn' THEN 'Exceeded / Warn'
           WHEN control_action='Ignore' THEN 'Exceeded / Ignore'
@@ -738,13 +766,15 @@ function budgetActualColumns(): ReportColumn[] {
     { field: "currency_scale", label: "Currency Scale", type: "Int" },
     { field: "budget_amount_minor", label: "Budget Minor", type: "Int" },
     { field: "revision_minor", label: "Revision Minor", type: "Int" },
-    { field: "effective_budget_minor", label: "Effective Budget Minor", type: "Int" },
+    { field: "effective_budget_minor", label: "Annual Effective Budget Minor", type: "Int" },
+    { field: "accumulated_budget_minor", label: "Accumulated Budget Minor", type: "Int" },
     { field: "actual_minor", label: "Actual Minor", type: "Int" },
     { field: "invalid_gl_entry_count", label: "Invalid GL Currency / Scale Entries", type: "Int" },
     { field: "committed_minor", label: "Committed Minor", type: "Int" },
     { field: "available_minor", label: "Available Minor", type: "Int" },
     { field: "budget_amount", label: "Budget", type: "Currency" },
-    { field: "effective_budget_amount", label: "Effective Budget", type: "Currency" },
+    { field: "effective_budget_amount", label: "Annual Effective Budget", type: "Currency" },
+    { field: "accumulated_budget_amount", label: "Accumulated Budget", type: "Currency" },
     { field: "actual_amount", label: "Actual", type: "Currency" },
     { field: "committed_amount", label: "Committed", type: "Currency" },
     { field: "available_amount", label: "Available", type: "Currency" },
