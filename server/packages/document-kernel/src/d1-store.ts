@@ -292,7 +292,8 @@ export class D1MutationStore implements MutationStore {
     const rows = await this.writer.prepare(
       `SELECT g.account,g.currency,g.currency_scale,
               COALESCE(SUM(g.debit_minor),0) AS debit_minor,
-              COALESCE(SUM(g.credit_minor),0) AS credit_minor
+              COALESCE(SUM(g.credit_minor),0) AS credit_minor,
+              COUNT(*) AS row_count
        FROM gl_entries g
        INNER JOIN documents d
          ON d.tenant_id=g.tenant_id
@@ -324,6 +325,7 @@ export class D1MutationStore implements MutationStore {
       currency_scale: number;
       debit_minor: number;
       credit_minor: number;
+      row_count: number;
     }>();
     return (rows.results ?? []).map((row) => ({
       account: String(row.account),
@@ -331,6 +333,7 @@ export class D1MutationStore implements MutationStore {
       currency_scale: Number(row.currency_scale),
       debit_minor: Number(row.debit_minor),
       credit_minor: Number(row.credit_minor),
+      row_count: Number(row.row_count),
       balance_minor: Number(row.debit_minor) - Number(row.credit_minor),
     }));
   }
