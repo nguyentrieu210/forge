@@ -3,11 +3,16 @@ name: R8-B Business Closure
 on:
   pull_request:
     paths:
-      - "server/packages/clouderp-core/src/types.ts"
+      - "server/packages/contracts/**"
+      - "server/packages/document-kernel/**"
+      - "server/packages/clouderp-core/**"
+      - "server/packages/clouderp-stock/**"
       - "server/packages/clouderp-erpnext/**"
       - "server/tests/subcontracting-closure.test.mjs"
+      - "server/tests/landed-cost-authority.test.mjs"
       - "server/tests/r8-erpnext-depth.test.mjs"
       - "server/migrations/tenant/0141_subcontracting_authority.sql"
+      - "server/migrations/tenant/0142_landed_cost_valuation_identity.sql"
       - "docs/agents/r8/**"
       - ".github/workflows/r8b-business-closure.yml"
   workflow_dispatch:
@@ -33,6 +38,8 @@ jobs:
         run: pnpm --dir server run build
       - name: Subcontracting regression
         run: node --test server/tests/subcontracting-closure.test.mjs
+      - name: Landed Cost authority regression
+        run: node --test server/tests/landed-cost-authority.test.mjs
       - name: R8 benchmark invariant
         run: node server/scripts/verify-r8-erpnext-depth.mjs --audit-complete
       - name: R8 matrix regression
