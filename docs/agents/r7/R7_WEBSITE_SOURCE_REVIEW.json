@@ -1,0 +1,99 @@
+{
+  "schema_version": "1.0.0",
+  "domain_id": "FRAPPE-23-WEBSITE-AND-PORTAL",
+  "upstream": {
+    "app": "frappe",
+    "tag": "v16.19.0",
+    "full_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c"
+  },
+  "evidence_kind": "pinned_source_review",
+  "runtime_oracle_captured": false,
+  "sources": [
+    {
+      "path": "frappe/website/router.py",
+      "blob_sha": "766d13fb6dbc69b1c98ff3be8b82d5d135ad765a",
+      "observations": [
+        "Published Web Forms have root/list/new/name/name-edit routes.",
+        "Dynamic route arguments disable page caching.",
+        "Website routes include installed-app www and templates/pages files.",
+        "clear_routing_cache invalidates published Web Form, dynamic Web Page and home-page caches."
+      ]
+    },
+    {
+      "path": "frappe/website/page_renderers/template_page.py",
+      "blob_sha": "55243ab5db0f5b3b544471cc895d4aaa0fb3bb36",
+      "observations": [
+        "Reverse installed-app precedence chooses existing static HTML/Markdown/index route.",
+        "Template context includes controller get_context, frontmatter, sidebar/breadcrumbs and colocated JS/CSS.",
+        "get_html is decorated with cache_html; rendered response adds CSRF token."
+      ]
+    },
+    {
+      "path": "frappe/website/doctype/portal_settings/portal_settings.py",
+      "blob_sha": "6885fbb82a68315a04a3ef90d58e6f03c12c3b71",
+      "observations": [
+        "Portal Settings composes standard/custom menu items and default home.",
+        "Updating Portal Settings invalidates website and user/role home-page caches."
+      ]
+    },
+    {
+      "path": "frappe/website/utils.py",
+      "blob_sha": "9467c4eb052d067e5ea0f201743cb646d39f8722",
+      "observations": [
+        "get_portal_sidebar_items filters enabled menu entries by actor role.",
+        "Portal sidebar cache is keyed by session user.",
+        "clear_cache invalidates routing, HTML/page and portal/menu/home-page data."
+      ]
+    },
+    {
+      "path": "frappe/website/doctype/web_form/web_form.py",
+      "blob_sha": "772f864373bf9f83e8fa51e0ffb4dbc4ba1ff050",
+      "observations": [
+        "Web Form self-service read/write applies owner, website permission or DocPerm according to settings.",
+        "allow_edit guards accept updates; allow_delete and session ownership guard deletion.",
+        "Authenticated submissions normally retain session owner; anonymous forms temporarily use Guest.",
+        "Published form routing data uses a one-hour Redis cache.",
+        "Authenticated allow_multiple=false form loading resolves the actor's existing owned document instead of opening an unconstrained second entry.",
+        "Web Form delete calls frappe.delete_doc(ignore_permissions=True) only after allow_delete and session-owner checks."
+      ]
+    }
+  ],
+  "forge_cache_slice": {
+    "authority": [
+      "server/packages/frappe-api/src/website-response.ts",
+      "server/packages/frappe-api/src/website-router.ts"
+    ],
+    "tests": "server/tests/website-response.test.mjs",
+    "behavior": [
+      "Every conditional read resolves the current tenant and publication state first.",
+      "SHA256 validator covers trusted tenant id, API pathname and complete public representation.",
+      "Browser cache must revalidate; shared caching is disabled with private cache control.",
+      "Full public page/navigation/theme/preset changes invalidate validators.",
+      "Unpublishing and lookup errors cannot revive cached public content."
+    ],
+    "classification": "bounded observable invalidation behavior; different implementation from Redis/HTML cache"
+  },
+  "scope_note": "Customer/supplier ERP business workflows belong to ERPNext comparison, rather than being implied by the Frappe framework denominator's portal permission behavior.",
+  "classification": "INTENTIONAL_DIFFERENCE",
+  "forge_portal_slice": {
+    "authority": [
+      "server/packages/frappe-api/src/web-form-portal.ts",
+      "server/packages/frappe-api/src/web-form-routes.ts",
+      "server/packages/frappe-model/src/web-form.ts"
+    ],
+    "tests": "server/tests/web-form-portal.test.mjs",
+    "behavior": [
+      "Authenticated portal read/list/update remains owner-scoped and passes current DocPerm/redaction.",
+      "Updates use deterministic kernel commands with OCC and preserve non-form fields.",
+      "Portal deletion never falls back to the existing unversioned delete store; it fails 501.",
+      "Authenticated allow_multiple=false creation fails 501 until an atomic uniqueness primitive exists."
+    ]
+  },
+  "intentional_differences": [
+    "Forge Website is a bounded, data-defined published page API; it does not execute installed-app HTML/Markdown/Jinja/Python controllers or dynamic route arguments.",
+    "Forge public navigation is publication configuration rather than Frappe Portal Settings role/home composition; authenticated self-service is kept on explicit owner-scoped APIs.",
+    "Portal hard-delete and authenticated single-entry creation are intentionally fail-closed until canonical kernel delete/uniqueness contracts can preserve OCC, idempotency, audit and name/replay semantics.",
+    "No upstream runtime oracle is used to claim exact or semantic template parity; the closure claim is the pinned-source-reviewed intentional difference plus Forge regressions."
+  ],
+  "closure_claim": "intentional_difference_only"
+}

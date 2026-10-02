@@ -6,13 +6,13 @@ import {
   verifyTrustedIdentity,
 } from "../../../packages/auth/src/index.js";
 import {
-  assertSessionCsrf, D1DeskViewStore, D1TranslationStore, establishSession, faultResponse, isFrappePath, isPublicFrappePath,
-  buildCommand, isPublicFilePath, isStorefrontPath, isWebFormPath, routeFileDownload, routeFrappeApi, routeFrappeAuth, runAutoRepeat, runNotificationRules, slideSession,
-  type AuthRouteContext, type AutoRepeatRunResult, type EstablishedSession,
+  assertSessionCsrf, D1DeskViewStore, D1TranslationStore, establishFrappeApiCredential, establishSession, faultResponse, isFrappePath, isPublicFrappePath,
+  buildCommand, HttpEmailTransport, isPublicFilePath, isStorefrontPath, isWebFormPath, routeFileDownload, routeFrappeApi, routeFrappeAuth, runAutoRepeat, runEmailQueue, runNotificationRules, slideSession, syncWorkflowActions,
+  type AuthRouteContext, type AutoRepeatRunResult, type EmailQueueRunResult, type EstablishedSession,
 } from "../../../packages/frappe-api/src/index.js";
 import {
-  AppHookDispatcher, AppInstaller, runAppValidators, subscribersFor, validatorsFor,
-  type AppManifest, type HookDeliveryOutcome,
+  AppHookDispatcher, AppInstaller, dispatchAppMethod, runAppScheduler, runAppValidators, subscribersFor, validatorsFor,
+  type AppManifest, type AppSchedulerResult, type HookDeliveryOutcome,
 } from "../../../packages/app-registry/src/index.js";
 import type { TrustedIdentityKey } from "../../../packages/auth/src/index.js";
 import type { Actor, CanonicalDocument, DomainEvent, JsonObject, MutationCommand, MutationReceipt } from "../../../packages/contracts/src/index.js";
@@ -34,12 +34,22 @@ import {
 import { AggregateCoordinator } from "./aggregate-do.js";
 import { askAssistant, readReceiptImage } from "./ai-assistant.js";
 import { publishPendingOutbox } from "../../../packages/outbox/src/index.js";
+import { D1IntegrationSubscriptionService } from "../../../packages/integration-hub/src/subscription-store.js";
+import { D1WebhookDeliveryStore, enqueueCommittedWebhookEvent } from "../../../packages/integration-hub/src/durable-delivery.js";
+import { createIntegrationApi, runTenantWebhooks } from "./integration-runtime.js";
 import { AppReportService, D1ReportService } from "../../../packages/query/src/index.js";
 import { FinanceClosureQueryCompiler } from "../../../packages/query/src/finance-closure.js";
 import { D1OrganizationSecurityGuard } from "../../../packages/organization-security/src/index.js";
 import type { TenantEnv } from "./env.js";
 import { routeAuthenticatedSocialRequest, routeInternalSocialRequest } from "./social-routes.js";
 import { readableSubmittedSupplierOrders } from "./supplier-price-history-access.js";
+import {
+  REALTIME_CONNECT_PATH,
+  INTERNAL_REALTIME_PUBLISH_PATH,
+  domainRealtimePublications,
+  publishRealtime,
+} from "./realtime-hub.js";
+export { RealtimeHub } from "./realtime-hub.js";
 import type {
   AlumDoorAttendanceStationLiteInput,
   AlumDoorEmployeeLiteInput,
@@ -160,6 +170,21 @@ async function routeInternalMaintenanceRequest(
   return undefined;
 }
 
+async function routeInternalRealtimeRequest(
+  request: Request,
+  url: URL,
+  env: TenantEnv,
+  traceId: string,
+): Promise<Response | undefined> {
+  if (request.method !== "POST" || url.pathname !== INTERNAL_REALTIME_PUBLISH_PATH) return undefined;
+  assertInternalService(request, env.INTERNAL_SERVICE_TOKEN);
+  const tenant = resolveTenant(request, env);
+  if (!tenant) throw new Error("Missing tenant context");
+  const input = await readJson<JsonObject>(request, 256_000);
+  const result = await publishRealtime(env, tenant, input, new Date().toISOString());
+  return jsonResponse({ message: result }, 200, { "x-cloudforge-trace-id": traceId });
+}
+
 async function routeInternalDomainEventRequest(
   request: Request,
   url: URL,
@@ -168,7 +193,7 @@ async function routeInternalDomainEventRequest(
 ): Promise<Response | undefined> {
   if (request.method === "POST" && url.pathname === "/internal/events") {
     assertInternalService(request, env.INTERNAL_SERVICE_TOKEN);
-    const event = await readJson<JsonObject>(request, 512_000) as unknown as DomainEvent;
+    let event = await readJson<JsonObject>(request, 512_000) as unknown as DomainEvent;
     const tenant = resolveTenant(request, env);
     if (!tenant || event.tenant_id !== tenant) throw new Error("Inbound event tenant mismatch");
     // Dedup and the committed-confirmation key off the trusted idempotency-key
@@ -182,6 +207,34 @@ async function routeInternalDomainEventRequest(
     // The confirmation reflects the actual write result — a fresh insert or an
     // already-present row (both durably committed) — never a bare body echo.
     const inserted = (result.meta?.changes ?? 0) === 1;
+    // A retry must project the original durable source, never a replacement body
+    // carrying an already-seen event id. Snapshot intents BEFORE acknowledging: if
+    // enqueue fails, the caller retries and the immutable fanout receipt deduplicates.
+    const committedEvent = await env.DB.prepare(
+      "SELECT payload_json FROM inbound_events WHERE tenant_id=?1 AND event_id=?2",
+    ).bind(tenant, idempotencyKey).first<{ payload_json: string }>();
+    if (!committedEvent) throw new Error("Committed event receipt is unavailable");
+    event = JSON.parse(committedEvent.payload_json) as DomainEvent;
+    if (event.tenant_id !== tenant || event.event_id !== idempotencyKey) throw new Error("Committed event identity mismatch");
+    const webhooks = await enqueueCommittedWebhookEvent(tenant, event,
+      new D1IntegrationSubscriptionService(env.DB), new D1WebhookDeliveryStore(env.DB));
+
+    const realtime: JsonObject[] = [];
+    if (inserted) {
+      for (const publication of domainRealtimePublications(event)) {
+        try {
+          realtime.push(await publishRealtime(env, tenant, publication, new Date().toISOString()) as unknown as JsonObject);
+        } catch (error) {
+          // The source event is already durable. A transient live-fanout problem must not
+          // make the queue redeliver that source event; publishRealtime persists its replay
+          // row before touching the Durable Object, so connected clients can recover.
+          console.error(JSON.stringify({
+            level: "error", trace_id: traceId, code: "REALTIME_PUBLISH_FAILED",
+            detail: error instanceof Error ? error.message : String(error),
+          }));
+        }
+      }
+    }
 
     // Fan out to app Workers AFTER the event is durably recorded. Deliveries are
     // tracked per app, so a failing app is retried by the scheduled sweep
@@ -199,7 +252,21 @@ async function routeInternalDomainEventRequest(
         level: "error", trace_id: traceId, code: "NOTIFICATION_RULES_FAILED",
         detail: error instanceof Error ? error.message : String(error),
       }));
-      return { matched: 0, delivered: 0, skipped: 0 };
+      return { matched: 0, delivered: 0, queued: 0, skipped: 0 };
+    });
+
+    // Workflow Action is a durable after-commit projection of the SAME workflow
+    // authority the mutation already passed. It never decides whether a transition is
+    // legal; it records which role has work to do and closes that record when the
+    // document leaves the state. Idempotence is keyed by the source domain event.
+    const workflowActions = await syncWorkflowActions(
+      env.DB, tenant, event, new Date().toISOString(),
+    ).catch((error) => {
+      console.error(JSON.stringify({
+        level: "error", trace_id: traceId, code: "WORKFLOW_ACTION_SYNC_FAILED",
+        detail: error instanceof Error ? error.message : String(error),
+      }));
+      return { completed: 0, created: 0, open: 0 };
     });
 
     let hookOutcomes: HookDeliveryOutcome[] = [];
@@ -215,7 +282,7 @@ async function routeInternalDomainEventRequest(
       }));
     }
     return jsonResponse(
-      { committed: true, event_id: idempotencyKey, inserted, hooks: hookOutcomes, notifications },
+      { committed: true, event_id: idempotencyKey, inserted, hooks: hookOutcomes, notifications, workflow_actions: workflowActions, realtime, webhooks },
       200,
       { "x-cloudforge-event-committed": idempotencyKey },
     );
@@ -239,7 +306,7 @@ async function routeInternalRequest(
 }
 
 export default {
-  async fetch(request: Request, env: TenantEnv): Promise<Response> {
+  async fetch(request: Request, env: TenantEnv, ctx?: ExecutionContext): Promise<Response> {
     const traceId = request.headers.get("x-cloudforge-trace-id") ?? randomId("trace");
     try {
       const url = new URL(request.url);
@@ -249,6 +316,14 @@ export default {
       const tenantId = resolveTenant(request, env);
       if (!tenantId) throw new Error("Missing tenant context");
 
+      if (url.pathname === REALTIME_CONNECT_PATH) {
+        try {
+          return await connectRealtime(request, url, env, tenantId, traceId);
+        } catch (error) {
+          return faultResponse(error, traceId);
+        }
+      }
+
       // ---- Frappe-shaped surface -------------------------------------------
       // Mounted ahead of the native routes and authenticated by cookie session
       // rather than by the gateway's trusted identity, so that revocation is
@@ -257,7 +332,7 @@ export default {
       // file, not at all: it is the URL that ends up inside an `<img src>` on the public
       // catalogue, so it must resolve for a browser that has never logged in.
       if (isFrappePath(url.pathname) || isPublicFilePath(url.pathname)) {
-        const frappeResponse = await serveFrappeApi(request, url, env, tenantId, traceId);
+        const frappeResponse = await serveFrappeApi(request, url, env, tenantId, traceId, ctx);
         if (frappeResponse) return frappeResponse;
       }
 
@@ -697,7 +772,10 @@ export async function runMaintenance(
 ): Promise<{
   outbox: { published: number; failed: number; skipped: number } | null;
   hooks: number;
+  scheduler: AppSchedulerResult;
   auto_repeat: AutoRepeatRunResult;
+  email: EmailQueueRunResult;
+  webhooks: Awaited<ReturnType<typeof runTenantWebhooks>>;
   reservations: { expired: number; failed: number };
   alumdoor: { reconciliation_reminders: number; daily_reports: number };
 }> {
@@ -720,6 +798,28 @@ export async function runMaintenance(
   // dispatch namespace — so it lives here, driven by the jobs Worker, exactly like the
   // outbox drain above.
   const now = new Date().toISOString();
+  const scheduler = await runAppScheduler({
+    db: env.DB,
+    tenantId,
+    now,
+    timeZone: await tenantSystemTimeZone(env.DB, tenantId),
+    invoke: async (job) => {
+      await dispatchAppMethod({
+        env: {
+          ...(env.DISPATCHER ? { DISPATCHER: env.DISPATCHER } : {}),
+          ...(env.INTERNAL_AUTH_SECRET ? { INTERNAL_AUTH_SECRET: env.INTERNAL_AUTH_SECRET } : {}),
+          ...(env.INTERNAL_AUTH_KEY_ID ? { INTERNAL_AUTH_KEY_ID: env.INTERNAL_AUTH_KEY_ID } : {}),
+          ...(env.PUBLIC_ORIGIN ? { PUBLIC_ORIGIN: env.PUBLIC_ORIGIN } : {}),
+        },
+        tenantId,
+        target: { appId: job.appId, worker: job.worker },
+        methodName: job.method,
+        args: {},
+        actor: job.actor,
+        traceId: randomId("scheduler"),
+      });
+    },
+  });
   const documents = new D1MutationStore(env.DB);
   const directory = new D1UserStore(env.DB);
   const auto_repeat = await runAutoRepeat({
@@ -754,15 +854,34 @@ export async function runMaintenance(
     },
   });
 
+  const emailTransport = env.EMAIL_TRANSPORT_URL && env.EMAIL_FROM
+    ? new HttpEmailTransport(env.EMAIL_TRANSPORT_URL, env.EMAIL_FROM, env.EMAIL_TRANSPORT_TOKEN)
+    : null;
+  const email = await runEmailQueue(env.DB, tenantId, emailTransport, now);
+  const webhooks = await runTenantWebhooks(env, tenantId, now);
+
   const reservations = await expireStockReservations(env, tenantId, now);
   const alumdoor = await runAlumdoorMaintenance(env.DB, tenantId, now);
   await recordMaintenanceState(env.DB, tenantId, { last_success_at: new Date().toISOString(), last_error: null });
-  return { outbox, hooks, auto_repeat, reservations, alumdoor };
+  return { outbox, hooks, scheduler, auto_repeat, email, webhooks, reservations, alumdoor };
   } catch (error) {
     await recordMaintenanceState(env.DB, tenantId, {
       last_error: error instanceof Error ? error.message.slice(0, 1000) : String(error).slice(0, 1000),
     });
     throw error;
+  }
+}
+
+async function tenantSystemTimeZone(db: D1Database, tenantId: string): Promise<string> {
+  const row = await db.prepare(
+    "SELECT data_json FROM master_records WHERE tenant_id=?1 AND record_type='System Settings' AND name='System Settings' AND disabled=0",
+  ).bind(tenantId).first<{ data_json: string }>();
+  if (!row?.data_json) return "UTC";
+  try {
+    const data = JSON.parse(row.data_json) as { time_zone?: unknown };
+    return typeof data.time_zone === "string" && data.time_zone.trim() ? data.time_zone.trim() : "UTC";
+  } catch {
+    return "UTC";
   }
 }
 
@@ -1017,6 +1136,72 @@ async function fanOutAppHooks(env: TenantEnv, tenantId: string, event: DomainEve
   return dispatcher.fanOut(tenantId, event, targets, new Date().toISOString());
 }
 
+async function connectRealtime(
+  request: Request,
+  url: URL,
+  env: TenantEnv,
+  tenantId: string,
+  traceId: string,
+): Promise<Response> {
+  if (request.method.toUpperCase() !== "GET") throw errors.validation("Realtime connect requires GET");
+  if ((request.headers.get("upgrade") ?? "").toLowerCase() !== "websocket") {
+    throw errors.validation("Realtime connect requires a WebSocket upgrade");
+  }
+  if (!env.REALTIME) throw errors.misconfigured("Realtime hub is not configured");
+
+  // Frappe's socket middleware refuses cross-origin sockets before it trusts the cookie.
+  const origin = request.headers.get("origin");
+  if (!origin) throw errors.authentication("Realtime origin is required");
+  let originHost = "";
+  try { originHost = new URL(origin).hostname; }
+  catch { throw errors.authentication("Realtime origin is invalid"); }
+  if (originHost !== url.hostname) throw errors.authentication("Realtime origin does not match tenant host");
+
+  const users = new D1UserStore(env.DB);
+  const authContext: AuthRouteContext = {
+    tenantId,
+    users,
+    sessionSecret: env.SESSION_SECRET ?? "",
+    traceId,
+    now: () => new Date().toISOString(),
+  };
+
+  const established = env.SESSION_SECRET ? await establishSession(request, authContext) : null;
+  const apiCredential = !established
+    ? await establishFrappeApiCredential(request, authContext)
+    : null;
+
+  let actor: Actor;
+  let userType: "System User" | "Website User";
+  if (established) {
+    actor = established.actor;
+    userType = established.user.user_type;
+  } else if (apiCredential) {
+    actor = apiCredential.actor;
+    userType = apiCredential.user.user_type;
+  } else if (!env.SESSION_SECRET && env.AUTH_MODE === "development") {
+    actor = staticDevelopmentActor(env.DEV_ACTOR_JSON);
+    userType = "System User";
+  } else {
+    throw errors.permission("Login to access realtime");
+  }
+  if (actor.user_id === "Guest") throw errors.permission("Guest realtime sessions are not supported");
+
+  const resumeRaw = url.searchParams.get("last_sequence") ?? "0";
+  const resume = Number(resumeRaw);
+  if (!Number.isSafeInteger(resume) || resume < 0) throw errors.validation("last_sequence must be a non-negative integer");
+
+  const headers = new Headers({
+    upgrade: "websocket",
+    "x-realtime-tenant": tenantId,
+    "x-realtime-user-type": userType,
+    "x-realtime-actor": encodeURIComponent(JSON.stringify(actor)),
+    "x-realtime-resume-from": String(resume),
+  });
+  const stub = env.REALTIME.getByName(tenantId);
+  return stub.fetch(new Request("https://realtime.internal/connect", { method: "GET", headers }));
+}
+
 /**
  * Serves the Frappe-compatible surface.
  *
@@ -1030,11 +1215,12 @@ async function serveFrappeApi(
   env: TenantEnv,
   tenantId: string,
   traceId: string,
+  ctx?: ExecutionContext,
 ): Promise<Response | null> {
   const sessionSecret = env.SESSION_SECRET;
   if (!sessionSecret && env.AUTH_MODE !== "development") return null;
   try {
-    return await serveFrappeApiInner(request, url, env, tenantId, traceId, sessionSecret);
+    return await serveFrappeApiInner(request, url, env, tenantId, traceId, sessionSecret, ctx);
   } catch (error) {
     // Faults raised OUTSIDE the router — failed authentication, a revoked session,
     // a missing CSRF header — must still be reported in Frappe's error shape.
@@ -1053,6 +1239,7 @@ async function serveFrappeApiInner(
   tenantId: string,
   traceId: string,
   sessionSecret: string | undefined,
+  ctx?: ExecutionContext,
 ): Promise<Response | null> {
   const requestStarted = performance.now();
   const now = (): string => new Date().toISOString();
@@ -1091,6 +1278,9 @@ async function serveFrappeApiInner(
   // Not even attempted on an app callback: the gateway deletes the cookie on that path,
   // and trying both would mean one request with two answers to "who is this".
   if (sessionSecret && !appCallback) established = await establishSession(request, authContext);
+  const apiCredential = !established && !appCallback
+    ? await establishFrappeApiCredential(request, authContext)
+    : null;
 
   let actor;
   let fullName = "";
@@ -1102,6 +1292,12 @@ async function serveFrappeApiInner(
     fullName = established.user.full_name;
     language = established.user.language;
     csrfToken = established.session.csrfToken;
+  } else if (apiCredential) {
+    // Frappe token/Basic credentials are header-authenticated, so CSRF does not apply.
+    // Roles and enabled state were rehydrated from first-primary D1 during authentication.
+    actor = apiCredential.actor;
+    fullName = apiCredential.user.full_name;
+    language = apiCredential.user.language;
   } else if (appCallback) {
     const keys = trustedIdentityKeys(env);
     const identity = await verifyTrustedIdentity(request, {
@@ -1359,6 +1555,7 @@ async function serveFrappeApiInner(
     translations: new D1TranslationStore(requestDb),
     apps: installedApps,
     users,
+    ...(established ? { authContext, establishedSession: established } : {}),
     search: new D1SearchStore(requestDb),
     // Trình biên dịch mặc định không biết các báo cáo tài chính, nên tuổi nợ chết bằng
     // `Unknown report: Accounts Receivable Aging` dù SQL và view đã có đủ.
@@ -1463,8 +1660,10 @@ async function serveFrappeApiInner(
     now,
     csrfToken,
     ...(established ? { authenticatedAt: established.session.authenticatedAt } : {}),
+    ...(ctx ? { defer: (work: Promise<unknown>) => ctx.waitUntil(work.then(() => undefined)) } : {}),
     fullName,
     language,
+    integrations: createIntegrationApi({ ...env, DB: requestDb as D1Database }, tenantId, actor.user_id),
     // Present only when this deployment can reach app Workers. Absent, an unknown
     // method stays an honest 404 instead of a binding error.
     //

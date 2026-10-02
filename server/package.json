@@ -73,7 +73,12 @@
     "verify:alumdoor-meta": "node scripts/verify-alumdoor-meta-completeness.mjs",
     "brief:check": "node scripts/forge-app.mjs briefs/assets.json --dry-run && node scripts/forge-app.mjs briefs/center.json --dry-run && node scripts/forge-app.mjs briefs/alumdoor.json --dry-run && node scripts/forge-app.mjs briefs/alumdoor-v2.json --dry-run && node scripts/verify-alumdoor-meta-completeness.mjs && node scripts/forge-app.mjs briefs/phanbon.json --dry-run",
     "dev:seed": "node scripts/seed-local.mjs",
-    "smoke:http": "node scripts/http-smoke.mjs"
+    "smoke:http": "node scripts/http-smoke.mjs",
+    "r7:frappe:audit": "node scripts/verify-r7-frappe-closure.mjs",
+    "r7:frappe:certify": "node scripts/verify-r7-frappe-closure.mjs --certify",
+    "test:r7-frappe": "node --test tests/r7-frappe-closure.test.mjs",
+    "test:r7-runtime": "node --test tests/d1-migration-journal.test.mjs tests/d1-migration-reconciliation.test.mjs tests/website-response.test.mjs tests/web-form-portal.test.mjs tests/integration-webhook-target-policy.test.mjs tests/r7-webhook-delivery.test.mjs tests/r7-connected-app.test.mjs tests/r7-integration-runtime.test.mjs tests/r7-integration-api.test.mjs",
+    "r7:frappe:audit-complete": "node scripts/verify-r7-frappe-closure.mjs --audit-complete"
   },
   "dependencies": {
     "@cloudforge/alumdoor-hr-payroll-contract": "workspace:*",

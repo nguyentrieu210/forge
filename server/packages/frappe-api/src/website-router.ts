@@ -7,7 +7,9 @@ import {
 } from "./router.js";
 import { listSecurityAlerts } from "./security-alerts.js";
 import { isSessionManagementPath, routeSessionManagementApi } from "./session-manager.js";
+import { routeIntegrationMethod } from "./integration-methods.js";
 import { WEBSITE_MANIFEST, WEBSITE_PAGE, websiteManifest, websitePage } from "./website.js";
+import { websiteReadResponse } from "./website-response.js";
 
 // Preserve every existing router export for package consumers. The explicit
 // `routeFrappeApi` below shadows the star-exported name with the Website-aware wrapper.
@@ -37,6 +39,7 @@ const RECENT_AUTH_ADMIN_METHODS = new Set([
   "frappe.custom.doctype.customize_form.customize_form.save_customization",
   "forge.apps.install",
   "forge.apps.uninstall",
+  "forge.integrations.replay",
 ]);
 
 /** Platform-shaping Frappe resources whose writes are equivalent to native admin writes. */
@@ -170,6 +173,8 @@ export async function routeFrappeApi(
   if (url.pathname !== WEBSITE_MANIFEST && url.pathname !== WEBSITE_PAGE) {
     try {
       await assertSecurityStepUp(request, url, context);
+      const integrationResponse = await routeIntegrationMethod(request, url, context);
+      if (integrationResponse) return integrationResponse;
       if (url.pathname === SECURITY_ALERTS_PATH) return await securityAlertsResponse(request, url, context);
       if (isSessionManagementPath(url.pathname)) {
         requireCookieSession(context);
@@ -203,10 +208,11 @@ export async function routeFrappeApi(
     }
     if (!context.webForms) throw errors.notFound("This deployment has no public surface");
     const website = { db: context.webForms.db, tenantId: context.tenantId };
-    if (url.pathname === WEBSITE_MANIFEST) return methodResponse(await websiteManifest(website));
-
-    const args = await readFrappeArgs(request, url);
-    return methodResponse(await websitePage(website, args.text("slug") ?? ""));
+    return await websiteReadResponse(request, context.tenantId, async () => {
+      if (url.pathname === WEBSITE_MANIFEST) return methodResponse(await websiteManifest(website));
+      const args = await readFrappeArgs(request, url);
+      return methodResponse(await websitePage(website, args.text("slug") ?? ""));
+    });
   } catch (error) {
     return faultResponse(error, context.traceId);
   }

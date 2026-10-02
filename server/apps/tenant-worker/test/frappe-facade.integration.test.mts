@@ -9,7 +9,9 @@
  */
 import { env, exports } from "cloudflare:workers";
 import { beforeAll, describe, expect, it } from "vitest";
-import { hashPassword, mintSession, toFrappeModified } from "../../../packages/frappe-api/src/index.js";
+import { D1EmailQueueStore, hashPassword, mintSession, runEmailQueue, toFrappeModified, verifySession } from "../../../packages/frappe-api/src/index.js";
+import { D1DocumentAccessStore } from "../../../packages/frappe-model/src/index.js";
+import { parseAppManifest, runAppScheduler } from "../../../packages/app-registry/src/index.js";
 
 const NOW = "2026-07-26T10:00:00.000Z";
 const PASSWORD = "supersecret-password";
@@ -115,6 +117,20 @@ async function seed(): Promise<void> {
      ON CONFLICT DO NOTHING`,
   ).bind().run();
 
+  await env.DB.prepare(
+    `INSERT INTO roles(tenant_id,role,modified_at) VALUES('demo','Field Visit Reader',?1)
+     ON CONFLICT(tenant_id,role) DO NOTHING`,
+  ).bind(NOW).run();
+  await env.DB.prepare(
+    `INSERT INTO users(tenant_id,user_id,full_name,email,password_hash,language,time_zone,created_at,modified_at)
+     VALUES('demo','reader@example.com','Scoped Reader','reader@example.com',?1,'vi','Asia/Ho_Chi_Minh',?2,?2)
+     ON CONFLICT(tenant_id,user_id) DO UPDATE SET password_hash=excluded.password_hash,enabled=1`,
+  ).bind(await hashPassword(PASSWORD, 1_000), NOW).run();
+  await env.DB.prepare(
+    `INSERT INTO user_roles(tenant_id,user_id,role) VALUES('demo','reader@example.com','Field Visit Reader')
+     ON CONFLICT DO NOTHING`,
+  ).bind().run();
+
   // A metadata-driven DocType, so the generic runtime is what answers.
   const meta = {
     name: "Field Visit",
@@ -136,7 +152,10 @@ async function seed(): Promise<void> {
       { fieldname: "fee", label: "Fee", fieldtype: "Currency", non_negative: true },
       { fieldname: "visit_date", label: "Visit Date", fieldtype: "Date", default: "Today" },
     ],
-    permissions: [{ role: "System Manager", read: true, write: true, create: true, delete: true, submit: true, cancel: true, amend: true, print: true, email: true, report: true, import: true, export: true, share: true }],
+    permissions: [
+      { role: "System Manager", read: true, write: true, create: true, delete: true, submit: true, cancel: true, amend: true, print: true, email: true, report: true, import: true, export: true, share: true },
+      { role: "Field Visit Reader", read: true, write: false, create: false, delete: false, print: true, report: true, export: true },
+    ],
     revision: 1,
   };
   await env.DB.prepare(
@@ -152,6 +171,44 @@ async function seed(): Promise<void> {
 }
 
 beforeAll(seed);
+
+describe("R7 durable webhook committed-event boundary", () => {
+  it("withholds ACK on enqueue failure and retries the original stored source exactly once", async () => {
+    const subscription = { event_pattern: "r7_webhook.*", target_url: "https://hooks.example.test/receive",
+      status: "active", auth_kind: "none", allowed_hosts: ["hooks.example.test"] };
+    await env.DB.prepare(
+      `INSERT INTO documents(tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json)
+       VALUES('demo','Integration Subscription:R7-HOOK','Integration Subscription','R7-HOOK','sales@example.com',0,'active',1,?1,?1,?2)`,
+    ).bind(NOW, JSON.stringify(subscription)).run();
+    const source = { event_id: "evt-r7-atomic-hook", event_type: "r7_webhook.created", tenant_id: "demo",
+      aggregate: { doctype: "R7 Webhook Fixture", name: "original" }, aggregate_version: 1,
+      actor: "sales@example.com", command_id: "cmd-r7-atomic-hook", occurred_at: NOW,
+      schema_version: 1, payload: { value: "original committed bytes" } };
+    const send = (event: typeof source) => call("/internal/events", { method: "POST",
+      headers: { "content-type": "application/json", authorization: "Bearer test-internal-service-token",
+        "x-cloudforge-idempotency-key": source.event_id }, body: JSON.stringify(event) }, { auth: false });
+    await env.DB.prepare(`CREATE TRIGGER r7_hook_enqueue_failure BEFORE INSERT ON integration_webhook_deliveries
+      BEGIN SELECT RAISE(ABORT,'injected enqueue failure'); END;`).run();
+    try {
+      const failed = await send(source);
+      expect(failed.status).not.toBe(200);
+      expect(failed.headers.get("x-cloudforge-event-committed")).toBeNull();
+      expect(await env.DB.prepare("SELECT COUNT(*) AS n FROM inbound_events WHERE tenant_id='demo' AND event_id=?1").bind(source.event_id).first<{ n: number }>()).toEqual({ n: 1 });
+      expect(await env.DB.prepare("SELECT COUNT(*) AS n FROM integration_webhook_fanouts WHERE tenant_id='demo' AND event_id=?1").bind(source.event_id).first<{ n: number }>()).toEqual({ n: 0 });
+    } finally { await env.DB.prepare("DROP TRIGGER r7_hook_enqueue_failure").run(); }
+    const altered = { ...source, event_type: "r7_webhook.changed", payload: { value: "replacement rejected" } };
+    const retry = await send(altered);
+    expect(retry.status).toBe(200);
+    expect(retry.headers.get("x-cloudforge-event-committed")).toBe(source.event_id);
+    const row = await env.DB.prepare("SELECT task_json FROM integration_webhook_deliveries WHERE tenant_id='demo' AND event_id=?1").bind(source.event_id).first<{ task_json: string }>();
+    expect(row).not.toBeNull();
+    expect(row!.task_json).toContain("original committed bytes");
+    expect(row!.task_json).not.toContain("replacement rejected");
+    expect((await send(altered)).status).toBe(200);
+    expect(await env.DB.prepare("SELECT COUNT(*) AS n FROM integration_webhook_deliveries WHERE tenant_id='demo' AND event_id=?1").bind(source.event_id).first<{ n: number }>()).toEqual({ n: 1 });
+    await env.DB.prepare("UPDATE documents SET status='disabled' WHERE tenant_id='demo' AND doctype='Integration Subscription' AND name='R7-HOOK'").run();
+  });
+});
 
 describe("frappe facade over real workerd, D1 and Durable Objects", () => {
   it("refuses an unauthenticated method the way frappe does, so the client can detect a lost session", async () => {
@@ -249,6 +306,122 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     expect(boot.csrf_token).toBe(csrf);
     expect(boot.lang).toBe("vi");
     expect(boot.sysdefaults.currency).toBe("USD");
+  });
+
+  it("matches Frappe token/Basic API-key auth and rotates the one-time secret", async () => {
+    const wrongVerb = await method("frappe.core.doctype.user.user.generate_keys", {
+      user: "sales@example.com",
+    }, "GET");
+    expect(wrongVerb.status).toBe(417);
+    expect(String((await wrongVerb.json() as any).message)).toMatch(/requires POST/i);
+
+    const first = await unwrap(await method("frappe.core.doctype.user.user.generate_keys", {
+      user: "sales@example.com",
+      reason: "R7 Frappe API-key differential",
+    }));
+    expect(typeof first.api_key).toBe("string");
+    expect(typeof first.api_secret).toBe("string");
+
+    const tokenAuth = await call("/api/method/frappe.auth.get_logged_user", {
+      method: "GET",
+      headers: { authorization: `token ${first.api_key}:${first.api_secret}` },
+    }, { auth: false });
+    expect(tokenAuth.status).toBe(200);
+    expect(await unwrap(tokenAuth)).toBe("sales@example.com");
+
+    const basic = btoa(`${first.api_key}:${first.api_secret}`);
+    const basicAuth = await call("/api/method/frappe.auth.get_logged_user", {
+      method: "GET",
+      headers: { authorization: `Basic ${basic}` },
+    }, { auth: false });
+    expect(basicAuth.status).toBe(200);
+    expect(await unwrap(basicAuth)).toBe("sales@example.com");
+
+    const stored = await env.DB.prepare(
+      `SELECT api_key,secret_salt,secret_hash FROM user_api_credentials
+       WHERE tenant_id='demo' AND user_id='sales@example.com' AND revoked_at IS NULL`,
+    ).first<{ api_key: string; secret_salt: string; secret_hash: string }>();
+    expect(stored?.api_key).toBe(first.api_key);
+    expect(stored?.secret_hash).toMatch(/^[0-9a-f]{64}$/);
+    expect(JSON.stringify(stored)).not.toContain(first.api_secret);
+
+    const second = await unwrap(await method("frappe.core.doctype.user.user.generate_keys", {
+      user: "sales@example.com",
+      reason: "rotate R7 credential",
+    }));
+    expect(second.api_key).toBe(first.api_key);
+    expect(second.api_secret).not.toBe(first.api_secret);
+
+    const oldCredential = await call("/api/method/frappe.auth.get_logged_user", {
+      method: "GET",
+      headers: { authorization: `token ${first.api_key}:${first.api_secret}` },
+    }, { auth: false });
+    expect(oldCredential.status).not.toBe(200);
+
+    const apiImpersonation = await call("/api/method/frappe.core.doctype.user.user.impersonate", {
+      method: "POST",
+      headers: {
+        authorization: `token ${second.api_key}:${second.api_secret}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ user: "reader@example.com", reason: "must require browser session" }),
+    }, { auth: false });
+    expect(apiImpersonation.status).toBe(403);
+    expect(String((await apiImpersonation.json() as any).message)).toMatch(/browser session/i);
+  });
+
+  it("starts an audited cookie-only support impersonation session with durable attribution", async () => {
+    const reason = "R7 support diagnosis";
+    const response = await method("frappe.core.doctype.user.user.impersonate", {
+      user: "reader@example.com",
+      reason,
+    });
+    expect(response.status).toBe(200);
+
+    const cookie = response.headers.get("set-cookie") ?? "";
+    const impersonatedSid = decodeURIComponent(cookie.slice(cookie.indexOf("=") + 1).split(";")[0]!);
+    const impersonatedCsrf = response.headers.get("x-frappe-csrf-token") ?? "";
+    expect(impersonatedSid).not.toBe("");
+    expect(impersonatedCsrf).not.toBe("");
+
+    const signed = await verifySession(
+      impersonatedSid,
+      "demo",
+      "test-session-secret-at-least-32-characters-long",
+    );
+    expect(signed.actor.user_id).toBe("reader@example.com");
+    expect(signed.actor.impersonator_user_id).toBe("sales@example.com");
+    expect(signed.impersonatorUserId).toBe("sales@example.com");
+
+    const audit = await env.DB.prepare(
+      `SELECT actor_user_id,target_user_id,reason,source
+         FROM rbac_audit_events
+        WHERE tenant_id='demo' AND event_type='support.impersonation.start'
+        ORDER BY created_at DESC LIMIT 1`,
+    ).first<{ actor_user_id: string; target_user_id: string; reason: string; source: string }>();
+    expect(audit).toEqual({
+      actor_user_id: "sales@example.com",
+      target_user_id: "reader@example.com",
+      reason,
+      source: "frappe.core.doctype.user.user.impersonate",
+    });
+
+    const notice = await env.DB.prepare(
+      `SELECT subject,from_user FROM notification_log
+        WHERE tenant_id='demo' AND for_user='reader@example.com'
+          AND subject LIKE '%impersonated as you%'
+        ORDER BY created_at DESC LIMIT 1`,
+    ).first<{ subject: string; from_user: string }>();
+    expect(notice?.from_user).toBe("sales@example.com");
+    expect(notice?.subject).toContain(reason);
+
+    sid = impersonatedSid;
+    csrf = impersonatedCsrf;
+    const boot = await unwrap(await method("metaforge.api.get_boot", {}, "GET"));
+    expect(boot.user).toBe("reader@example.com");
+
+    // Restore the suite's manager identity so later ordered scenarios remain independent.
+    expect((await switchSession("sales@example.com")).status).toBe(200);
   });
 
   it("locks and unlocks one accounting period through the authorised API with an append-only audit trail", async () => {
@@ -514,7 +687,8 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     expect(snapshot.count).toBeGreaterThanOrEqual(1);
     expect(snapshot.capabilities.create).toBe(true);
     expect(snapshot.capabilities.delete).toBe(true);
-    expect(snapshot.display_values).toContainEqual({ doctype: "Customer", name: "CUST-1", label: "CUST-1" });
+    // Customer has a title field; display values must resolve the human title, not fall back to the ID.
+    expect(snapshot.display_values).toContainEqual({ doctype: "Customer", name: "CUST-1", label: "Acme Corporation" });
   });
 
   it("resolves link searches and display values through the permission layer", async () => {
@@ -525,6 +699,124 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
       items: [{ doctype: "Field Visit", name: createdName }],
     }));
     expect(labels[0].label).toBe("Renamed subject");
+  });
+
+  it("serves the pinned Frappe 16 v2 document envelope and pagination marker", async () => {
+    const response = await call("/api/v2/document/Field%20Visit?fields=%5B%22name%22%2C%22subject%22%5D&limit=1");
+    expect(response.status).toBe(200);
+    const body: any = await response.json();
+    expect(Array.isArray(body.data)).toBe(true);
+    expect(body.data.length).toBe(1);
+    expect(typeof body.has_next_page).toBe("boolean");
+    expect(body.message).toBeUndefined();
+  });
+
+  it("supports Frappe 16 v2 meta, count and ping on the canonical authorities", async () => {
+    const metaResponse = await call("/api/v2/doctype/Field%20Visit/meta");
+    expect(metaResponse.status).toBe(200);
+    const meta: any = await metaResponse.json();
+    expect(meta.data.name).toBe("Field Visit");
+    expect(Array.isArray(meta.data.fields)).toBe(true);
+
+    const countResponse = await call("/api/v2/doctype/Field%20Visit/count");
+    expect(countResponse.status).toBe(200);
+    expect(Number((await countResponse.json() as any).data)).toBeGreaterThanOrEqual(1);
+
+    const ping = await call("/api/v2/method/ping");
+    expect(ping.status).toBe(200);
+    expect((await ping.json() as any).data).toBe("pong");
+  });
+
+  it("runs Frappe 16 v2 create/read/PATCH/copy/delete without creating another write authority", async () => {
+    const created = await call("/api/v2/document/Field%20Visit", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ subject: "V2 visit", customer: "CUST-2", external_ref: "V2-EXT" }),
+    });
+    expect(created.status).toBe(200);
+    const createdDoc: any = (await created.json() as any).data;
+    expect(createdDoc.subject).toBe("V2 visit");
+    expect(createdDoc.name).toMatch(/^FV-2026-/);
+
+    const read = await call(`/api/v2/document/Field%20Visit/${encodeURIComponent(createdDoc.name)}/`);
+    expect(read.status).toBe(200);
+    expect((await read.json() as any).data.name).toBe(createdDoc.name);
+
+    // Forge deliberately keeps stronger OCC than upstream Frappe v2.
+    const missingToken = await call(`/api/v2/document/Field%20Visit/${encodeURIComponent(createdDoc.name)}/`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ subject: "Unsafe overwrite" }),
+    });
+    expect(missingToken.status).toBe(417);
+    const missingBody: any = await missingToken.json();
+    expect(missingBody.errors[0].type).toBe("TimestampMismatchError");
+
+    const patched = await call(`/api/v2/document/Field%20Visit/${encodeURIComponent(createdDoc.name)}/`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ subject: "V2 updated", modified: createdDoc.modified }),
+    });
+    expect(patched.status).toBe(200);
+    const patchedDoc: any = (await patched.json() as any).data;
+    expect(patchedDoc.subject).toBe("V2 updated");
+
+    const copied = await call(`/api/v2/document/Field%20Visit/${encodeURIComponent(createdDoc.name)}/copy`);
+    expect(copied.status).toBe(200);
+    const copy: any = (await copied.json() as any).data;
+    expect(copy.doctype).toBe("Field Visit");
+    expect(copy.subject).toBe("V2 updated");
+    expect(copy.external_ref).toBeUndefined();
+    expect(copy.name).toBeUndefined();
+
+    const deleted = await call(`/api/v2/document/Field%20Visit/${encodeURIComponent(createdDoc.name)}/`, { method: "DELETE" });
+    expect(deleted.status).toBe(202);
+    expect((await deleted.json() as any).data).toBe("ok");
+
+    const missing = await call(`/api/v2/document/Field%20Visit/${encodeURIComponent(createdDoc.name)}/`);
+    expect(missing.status).toBe(404);
+    const missingJson: any = await missing.json();
+    expect(missingJson.errors[0].type).toBe("DoesNotExistError");
+    expect(missingJson.exc_type).toBeUndefined();
+  });
+
+  it("keeps v2 group_by inside User Permission scope", async () => {
+    await env.DB.prepare(
+      `INSERT INTO user_permissions(
+         tenant_id,user,allow_doctype,allow_name,applicable_for_doctype,is_default,hide_descendants,created_by,created_at
+       ) VALUES('demo','reader@example.com','Customer','CUST-1','Field Visit',0,0,'Administrator',?1)
+       ON CONFLICT(tenant_id,user,allow_doctype,allow_name,applicable_for_doctype)
+       DO UPDATE SET hide_descendants=0`,
+    ).bind(NOW).run();
+
+    expect((await switchSession("reader@example.com")).status).toBe(200);
+    const fields = encodeURIComponent(JSON.stringify(["customer", "count(name) as count"]));
+    const grouped = await call(`/api/v2/document/Field%20Visit?group_by=customer&fields=${fields}&limit=20`);
+    expect(grouped.status).toBe(200);
+    const payload: any = await grouped.json();
+    expect(payload.data.length).toBeGreaterThan(0);
+    expect(payload.data.every((row: any) => row.customer === "CUST-1")).toBe(true);
+    expect(payload.data.every((row: any) => Number(row.count) >= 1)).toBe(true);
+
+    await env.DB.prepare(
+      `DELETE FROM user_permissions
+       WHERE tenant_id='demo' AND user='reader@example.com'
+         AND allow_doctype='Customer' AND applicable_for_doctype='Field Visit'`,
+    ).run();
+    expect((await switchSession("sales@example.com")).status).toBe(200);
+  });
+
+  it("fails closed on v2 collection shapes Forge has not implemented instead of silently changing meaning", async () => {
+    const invalidGrouped = await call("/api/v2/document/Field%20Visit?group_by=customer&fields=%5B%22subject%22%5D");
+    expect(invalidGrouped.status).toBe(417);
+    expect(String((await invalidGrouped.json() as any).errors[0].message)).toMatch(/grouped field/i);
+
+    const tuples = await call("/api/v2/document/Field%20Visit?fields=%5B%22name%22%2C%22subject%22%5D&as_dict=0&limit=1");
+    expect(tuples.status).toBe(200);
+    const tupleBody: any = await tuples.json();
+    expect(Array.isArray(tupleBody.data)).toBe(true);
+    expect(Array.isArray(tupleBody.data[0])).toBe(true);
+    expect(tupleBody.data[0]).toHaveLength(2);
   });
 
   it("submits the document and then reports capabilities that match the new state", async () => {
@@ -768,6 +1060,42 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     expect(children.map((node: any) => node.value)).toEqual(["Hanoi"]);
   });
 
+  it("expands User Permission descendants exactly like Frappe 16 unless hide_descendants is set", async () => {
+    // The previous tree scenario created North -> Hanoi. Add one more level so
+    // the permission expansion proves recursion, not just one-hop inclusion.
+    await unwrap(await method("metaforge.api.add_tree_node", {
+      doctype: "Visit Region", parent: "Hanoi", name: "Ba Dinh", region_name: "Ba Dinh",
+    }));
+
+    await env.DB.prepare(
+      `INSERT INTO user_permissions(
+         tenant_id,user,allow_doctype,allow_name,applicable_for_doctype,is_default,hide_descendants,created_by,created_at
+       ) VALUES('demo','sales@example.com','Visit Region','North','Field Visit',0,0,'Administrator',?1)
+       ON CONFLICT(tenant_id,user,allow_doctype,allow_name,applicable_for_doctype)
+       DO UPDATE SET hide_descendants=0`,
+    ).bind(NOW).run();
+
+    const expanded = await new D1DocumentAccessStore(env.DB)
+      .listUserPermissions("demo", "sales@example.com", "Field Visit");
+    expect(expanded.filter((row) => row.allow_doctype === "Visit Region").map((row) => row.allow_name).sort())
+      .toEqual(["Ba Dinh", "Hanoi", "North"]);
+
+    await env.DB.prepare(
+      `UPDATE user_permissions SET hide_descendants=1
+       WHERE tenant_id='demo' AND user='sales@example.com' AND allow_doctype='Visit Region'
+         AND allow_name='North' AND applicable_for_doctype='Field Visit'`,
+    ).run();
+    const hidden = await new D1DocumentAccessStore(env.DB)
+      .listUserPermissions("demo", "sales@example.com", "Field Visit");
+    expect(hidden.filter((row) => row.allow_doctype === "Visit Region").map((row) => row.allow_name))
+      .toEqual(["North"]);
+
+    await env.DB.prepare(
+      `DELETE FROM user_permissions
+       WHERE tenant_id='demo' AND user='sales@example.com' AND allow_doctype='Visit Region'`,
+    ).run();
+  });
+
   it("refuses to walk a doctype that was never modelled as a tree", async () => {
     // An empty tree would read as "no data" while the real problem is the model.
     const response = await method("frappe.desk.treeview.get_children", { doctype: "Field Visit", parent: "" }, "GET");
@@ -817,6 +1145,92 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     expect(applied.failed).toBe(1);
     expect(applied.status).toBe("Partial Success");
     expect(applied.results[1].error).toBeTruthy();
+  });
+
+  it("runs the Data Import document lifecycle with polling, errors and update mode", async () => {
+    const createImport = async (importType: "Insert New Records" | "Update Existing Records") => {
+      const response = await call("/api/resource/Data%20Import", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ reference_doctype: "Field Visit", import_type: importType }),
+      });
+      expect(response.status).toBe(201);
+      return (await response.json() as any).data;
+    };
+    const uploadCsv = async (dataImport: string, name: string, csv: string) => {
+      const form = new FormData();
+      form.set("file", new File([csv], name, { type: "text/csv" }));
+      form.set("doctype", "Data Import");
+      form.set("docname", dataImport);
+      form.set("fieldname", "import_file");
+      form.set("is_private", "1");
+      const response = await call("/api/method/upload_file", { method: "POST", body: form });
+      expect(response.status).toBe(200);
+      return (await response.json() as any).message.file_url as string;
+    };
+
+    const insertControl = await createImport("Insert New Records");
+    const insertFile = await uploadCsv(
+      insertControl.name,
+      "field-visits.csv",
+      csvOf(["subject,customer", "Queued import OK,CUST-1", ",CUST-2"]),
+    );
+    const preview = await unwrap(await method(
+      "frappe.core.doctype.data_import.data_import.get_preview_from_template",
+      { data_import: insertControl.name, import_file: insertFile },
+      "GET",
+    ));
+    expect(preview.columns.map((column: any) => column.header_title)).toEqual(["subject", "customer"]);
+    expect(preview.total_rows).toBe(2);
+
+    await unwrap(await method("frappe.core.doctype.data_import.data_import.form_start_import", {
+      data_import: insertControl.name,
+    }));
+    const insertStatus = await unwrap(await method(
+      "frappe.core.doctype.data_import.data_import.get_import_status",
+      { data_import_name: insertControl.name },
+      "GET",
+    ));
+    expect(insertStatus).toMatchObject({ status: "Partial Success", success: 1, failed: 1, total_records: 2 });
+
+    const errorFile = await method(
+      "frappe.core.doctype.data_import.data_import.download_errored_template",
+      { data_import_name: insertControl.name },
+      "GET",
+    );
+    expect(errorFile.status).toBe(200);
+    expect(errorFile.headers.get("content-type")).toMatch(/text\/csv/);
+    expect(await errorFile.text()).toMatch(/__error/);
+
+    const existingPayload = { subject: "Before update", customer: "CUST-1", workflow_state: "Draft" };
+    await env.DB.prepare(
+      `INSERT INTO documents(
+         tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json,modified_by
+       ) VALUES('demo','Field Visit:DI-UPD-1','Field Visit','DI-UPD-1','sales@example.com',0,'Draft',1,?1,?1,?2,'sales@example.com')`,
+    ).bind(NOW, JSON.stringify(existingPayload)).run();
+
+    const updateControl = await createImport("Update Existing Records");
+    const updateFile = await uploadCsv(
+      updateControl.name,
+      "field-visits-update.csv",
+      csvOf(["name,subject", "DI-UPD-1,Updated by Data Import"]),
+    );
+    await unwrap(await method(
+      "frappe.core.doctype.data_import.data_import.get_preview_from_template",
+      { data_import: updateControl.name, import_file: updateFile },
+      "GET",
+    ));
+    await unwrap(await method("frappe.core.doctype.data_import.data_import.form_start_import", {
+      data_import: updateControl.name,
+    }));
+    const updateStatus = await unwrap(await method(
+      "frappe.core.doctype.data_import.data_import.get_import_status",
+      { data_import_name: updateControl.name },
+      "GET",
+    ));
+    expect(updateStatus).toMatchObject({ status: "Success", success: 1, failed: 0, total_records: 1 });
+    const updated = (await (await call("/api/resource/Field%20Visit/DI-UPD-1")).json() as any).data;
+    expect(updated.subject).toBe("Updated by Data Import");
   });
 
   it("rejects an import column the doctype does not have, rather than dropping it", async () => {
@@ -1552,6 +1966,203 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     expect(published.version_no).toBe(1);
   });
 
+  it("uses one bounded workflow-condition authority for offer and commit", async () => {
+    const meta = {
+      name: "Conditional Approval", module: "R7", title_field: "subject",
+      fields: [
+        { fieldname: "subject", label: "Subject", fieldtype: "Data", required: true },
+        { fieldname: "amount", label: "Amount", fieldtype: "Currency", required: true },
+        { fieldname: "blocked", label: "Blocked", fieldtype: "Check", default: false },
+        { fieldname: "workflow_state", label: "State", fieldtype: "Data", read_only: true },
+      ],
+      permissions: [{ role: "System Manager", read: true, write: true, create: true, report: true }],
+      revision: 1,
+    };
+    const workflow = {
+      name: "Conditional Approval Flow", document_type: "Conditional Approval", state_field: "workflow_state", is_active: true,
+      states: [{ state: "Draft", docstatus: 0, allow_edit: "System Manager" }, { state: "Approved", docstatus: 0, allow_edit: "System Manager" }],
+      transitions: [{
+        state: "Draft", action: "Approve", next_state: "Approved", allowed_role: "System Manager",
+        condition: "doc.amount >= 100 and not doc.blocked",
+      }],
+      revision: 1,
+    };
+    await env.DB.prepare(
+      `INSERT INTO doctype_definitions(tenant_id,doctype,module,revision,metadata_json,modified_by,modified_at)
+       VALUES('demo','Conditional Approval','R7',1,?1,'Administrator',?2)`,
+    ).bind(JSON.stringify(meta), NOW).run();
+    await env.DB.prepare(
+      `INSERT INTO workflows(tenant_id,name,document_type,is_active,revision,workflow_json,modified_by,modified_at)
+       VALUES('demo','Conditional Approval Flow','Conditional Approval',1,1,?1,'Administrator',?2)`,
+    ).bind(JSON.stringify(workflow), NOW).run();
+
+    const insert = async (name: string, subject: string, amount: number, blocked = false) => {
+      const payload = { subject, amount, blocked, workflow_state: "Draft" };
+      await env.DB.prepare(
+        `INSERT INTO documents(
+           tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json,modified_by
+         ) VALUES('demo',?1,'Conditional Approval',?2,'owner@example.com',0,'Draft',1,?3,?3,?4,'owner@example.com')`,
+      ).bind(`Conditional Approval:${name}`, name, NOW, JSON.stringify(payload)).run();
+      return { name };
+    };
+
+    const low = await insert("COND-LOW", "Below threshold", 50);
+    const eligible = await insert("COND-OK", "Eligible", 150);
+    const blocked = await insert("COND-BLOCK", "Explicitly blocked", 150, true);
+
+    const lowTransitions = await unwrap(await method("metaforge.api.get_workflow_transitions", {
+      doctype: "Conditional Approval", name: low.name,
+    }, "GET"));
+    expect(lowTransitions.transitions).toHaveLength(0);
+
+    const blockedTransitions = await unwrap(await method("metaforge.api.get_workflow_transitions", {
+      doctype: "Conditional Approval", name: blocked.name,
+    }, "GET"));
+    expect(blockedTransitions.transitions).toHaveLength(0);
+
+    const eligibleTransitions = await unwrap(await method("metaforge.api.get_workflow_transitions", {
+      doctype: "Conditional Approval", name: eligible.name,
+    }, "GET"));
+    expect(eligibleTransitions.transitions.some((entry: any) => entry.action === "Approve")).toBe(true);
+
+    const denied = await method("frappe.model.workflow.apply_workflow", {
+      doctype: "Conditional Approval", name: low.name, action: "Approve",
+    });
+    expect(denied.status).toBe(403);
+
+    const approved = await unwrap(await method("frappe.model.workflow.apply_workflow", {
+      doctype: "Conditional Approval", name: eligible.name, action: "Approve",
+    }));
+    expect(approved.workflow_state).toBe("Approved");
+  });
+
+
+  it("applies workflow state update fields through server authority", async () => {
+    const meta = {
+      name: "Workflow Update Probe", module: "R7", title_field: "subject",
+      fields: [
+        { fieldname: "subject", label: "Subject", fieldtype: "Data", required: true },
+        { fieldname: "resolution_code", label: "Resolution", fieldtype: "Data", read_only: true },
+        { fieldname: "workflow_state", label: "State", fieldtype: "Data", read_only: true },
+      ],
+      permissions: [{ role: "System Manager", read: true, write: true, create: true, report: true }],
+      revision: 1,
+    };
+    const workflow = {
+      name: "Workflow Update Probe Flow", document_type: "Workflow Update Probe", state_field: "workflow_state", is_active: true,
+      send_email_alert: true,
+      states: [
+        { state: "Draft", docstatus: 0, allow_edit: "System Manager", send_email: true },
+        {
+          state: "Approved", docstatus: 0, allow_edit: "System Manager",
+          update_field: "resolution_code", update_value: "doc.subject", evaluate_as_expression: true,
+        },
+      ],
+      transitions: [{
+        state: "Draft", action: "Approve", next_state: "Approved",
+        allowed_role: "System Manager", allow_self_approval: true,
+      }],
+      revision: 1,
+    };
+    await env.DB.prepare(
+      `INSERT INTO doctype_definitions(tenant_id,doctype,module,revision,metadata_json,modified_by,modified_at)
+       VALUES('demo','Workflow Update Probe','R7',1,?1,'Administrator',?2)`,
+    ).bind(JSON.stringify(meta), NOW).run();
+    await env.DB.prepare(
+      `INSERT INTO workflows(tenant_id,name,document_type,is_active,revision,workflow_json,modified_by,modified_at)
+       VALUES('demo','Workflow Update Probe Flow','Workflow Update Probe',1,1,?1,'Administrator',?2)`,
+    ).bind(JSON.stringify(workflow), NOW).run();
+    await env.DB.prepare(
+      `INSERT INTO documents(
+         tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json,modified_by
+       ) VALUES('demo','Workflow Update Probe:WUP-1','Workflow Update Probe','WUP-1','owner@example.com',0,'Draft',1,?1,?1,?2,'owner@example.com')`,
+    ).bind(NOW, JSON.stringify({ subject: "COPIED-BY-WORKFLOW", workflow_state: "Draft" })).run();
+
+    const initialEvent = {
+      event_id: "evt-wfa-initial",
+      event_type: "workflow_update_probe.created",
+      tenant_id: "demo",
+      aggregate: { doctype: "Workflow Update Probe", name: "WUP-1" },
+      aggregate_version: 1,
+      actor: "owner@example.com",
+      command_id: "cmd-wfa-initial",
+      occurred_at: NOW,
+      schema_version: 1,
+      payload: {},
+    };
+    const initialEventResponse = await call("/internal/events", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer test-internal-service-token",
+        "x-cloudforge-idempotency-key": initialEvent.event_id,
+      },
+      body: JSON.stringify(initialEvent),
+    }, { auth: false });
+    expect(initialEventResponse.status).toBe(200);
+    const initialActions = (await initialEventResponse.json() as any).workflow_actions;
+    expect(initialActions).toMatchObject({ created: 1, open: 1 });
+    expect(initialActions.emailQueued).toBeGreaterThanOrEqual(1);
+    const workflowEmail = await env.DB.prepare(
+      `SELECT status,source_name,reference_doctype,reference_name
+         FROM email_queue
+        WHERE tenant_id='demo' AND source_kind='workflow'
+          AND reference_doctype='Workflow Update Probe' AND reference_name='WUP-1'
+        LIMIT 1`,
+    ).first<any>();
+    expect(workflowEmail?.status).toBe("Pending");
+    expect(workflowEmail?.source_name).toBe("Workflow Update Probe Flow");
+    const openAction = await env.DB.prepare(
+      `SELECT workflow_state,status,permitted_roles_json,email_requested
+         FROM workflow_actions
+        WHERE tenant_id='demo' AND reference_doctype='Workflow Update Probe'
+          AND reference_name='WUP-1' AND status='Open'`,
+    ).first<any>();
+    expect(openAction?.workflow_state).toBe("Draft");
+    expect(JSON.parse(openAction?.permitted_roles_json ?? "[]")).toEqual(["System Manager"]);
+    expect(openAction?.email_requested).toBe(1);
+
+    const approved = await unwrap(await method("frappe.model.workflow.apply_workflow", {
+      doctype: "Workflow Update Probe", name: "WUP-1", action: "Approve",
+    }));
+    expect(approved.workflow_state).toBe("Approved");
+    expect(approved.resolution_code).toBe("COPIED-BY-WORKFLOW");
+
+    const approvedEvent = {
+      event_id: "evt-wfa-approved",
+      event_type: "workflow_update_probe.updated",
+      tenant_id: "demo",
+      aggregate: { doctype: "Workflow Update Probe", name: "WUP-1" },
+      aggregate_version: 2,
+      actor: "sales@example.com",
+      command_id: "cmd-wfa-approved",
+      occurred_at: NOW,
+      schema_version: 1,
+      payload: {},
+    };
+    const approvedEventResponse = await call("/internal/events", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer test-internal-service-token",
+        "x-cloudforge-idempotency-key": approvedEvent.event_id,
+      },
+      body: JSON.stringify(approvedEvent),
+    }, { auth: false });
+    expect(approvedEventResponse.status).toBe(200);
+    const completedActions = (await approvedEventResponse.json() as any).workflow_actions;
+    expect(completedActions).toMatchObject({ completed: 1, created: 0, open: 0 });
+    const completedAction = await env.DB.prepare(
+      `SELECT status,completed_by,completed_by_role
+         FROM workflow_actions
+        WHERE tenant_id='demo' AND reference_doctype='Workflow Update Probe'
+          AND reference_name='WUP-1'`,
+    ).first<any>();
+    expect(completedAction?.status).toBe("Completed");
+    expect(completedAction?.completed_by).toBe("sales@example.com");
+    expect(completedAction?.completed_by_role).toBe("System Manager");
+  });
+
   it("logs out and the session stops working", async () => {
     const response = await call("/api/method/logout", { method: "POST" });
     expect(response.status).toBe(200);
@@ -1759,6 +2370,137 @@ describe("mechanisms that must actually run, not merely exist", () => {
     expect(alert.document_name).toBe("FV-NOTIFY");
   });
 
+  it("queues Email notifications durably and records physical delivery evidence", async () => {
+    await env.DB.prepare(
+      `INSERT INTO notification_rules(tenant_id,name,document_type,event,enabled,rule_json,modified_by,modified_at)
+       VALUES('demo','Email visit','Field Visit','submitted',1,?2,'Administrator',?1)`,
+    ).bind(NOW, JSON.stringify({
+      subject: "Email {{ subject }}",
+      message: "Please review {{ subject }}",
+      channel: "Email",
+      recipients: [{ kind: "user", value: "sales@example.com" }],
+    })).run();
+
+    await env.DB.prepare(
+      `INSERT INTO documents(
+         tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json
+       ) VALUES('demo','Field Visit:FV-EMAIL','Field Visit','FV-EMAIL','sales@example.com',1,'Submitted',2,?1,?1,?2)`,
+    ).bind(NOW, JSON.stringify({ subject: "Email proof", is_billable: 1 })).run();
+
+    const event = {
+      event_id: "evt-notify-email-1", event_type: "field_visit.submitted", tenant_id: "demo",
+      aggregate: { doctype: "Field Visit", name: "FV-EMAIL" }, aggregate_version: 2,
+      actor: "sales@example.com", command_id: "cmd-notify-email-1", occurred_at: NOW,
+      schema_version: 1, payload: { subject: "Email proof", is_billable: 1 },
+    };
+    const response = await call("/internal/events", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer test-internal-service-token",
+        "x-cloudforge-idempotency-key": event.event_id,
+      },
+      body: JSON.stringify(event),
+    }, { auth: false });
+    expect(response.status).toBe(200);
+    const body = await response.json() as any;
+    expect(body.notifications.queued).toBe(1);
+
+    const pending = await env.DB.prepare(
+      `SELECT name,status,recipient_email,subject,message
+         FROM email_queue
+        WHERE tenant_id='demo' AND source_kind='notification' AND source_name='Email visit'`,
+    ).first<any>();
+    expect(pending?.status).toBe("Pending");
+    expect(pending?.recipient_email).toBe("sales@example.com");
+    expect(pending?.subject).toBe("Email Email proof");
+    expect(pending?.message).toBe("Please review Email proof");
+
+    const sentMessages: any[] = [];
+    const delivery = await runEmailQueue(env.DB, "demo", {
+      async send(message) {
+        sentMessages.push(message);
+        return { providerMessageId: `provider-${message.queueName}` };
+      },
+    }, new Date().toISOString());
+    expect(delivery.configured).toBe(true);
+    expect(delivery.sent).toBeGreaterThanOrEqual(1);
+
+    const sent = await env.DB.prepare(
+      `SELECT status,attempt_count,provider_message_id,last_error,sent_at
+         FROM email_queue
+        WHERE tenant_id='demo' AND source_kind='notification' AND source_name='Email visit'`,
+    ).first<any>();
+    expect(sent?.status).toBe("Sent");
+    expect(sent?.attempt_count).toBe(1);
+    expect(sent?.provider_message_id).toMatch(/^provider-EMAIL-/);
+    expect(sent?.last_error).toBeNull();
+    expect(sent?.sent_at).toBeTruthy();
+    expect(sentMessages.some((message) => message.to === "sales@example.com")).toBe(true);
+  });
+
+  it("retries failed Email Queue rows with bounded backoff and preserves evidence", async () => {
+    const queue = new D1EmailQueueStore(env.DB);
+    const start = new Date().toISOString();
+    const queued = await queue.enqueue("demo", {
+      dedupeKey: "retry-proof-1",
+      sourceKind: "notification",
+      sourceName: "Retry proof",
+      recipientUser: "sales@example.com",
+      recipientEmail: "sales@example.com",
+      subject: "Retry proof",
+      message: "Retry me once",
+      referenceDoctype: "Field Visit",
+      referenceName: "FV-EMAIL",
+    }, start);
+    expect(queued.created).toBe(true);
+
+    const first = await runEmailQueue(env.DB, "demo", {
+      async send(message) {
+        if (message.queueName === queued.name) throw new Error("relay unavailable");
+        return { providerMessageId: "other" };
+      },
+    }, start);
+    expect(first.failed).toBeGreaterThanOrEqual(1);
+
+    const failed = await env.DB.prepare(
+      `SELECT status,attempt_count,send_after,last_error
+         FROM email_queue WHERE tenant_id='demo' AND name=?1`,
+    ).bind(queued.name).first<any>();
+    expect(failed?.status).toBe("Error");
+    expect(failed?.attempt_count).toBe(1);
+    expect(failed?.last_error).toBe("relay unavailable");
+    expect(Date.parse(failed!.send_after)).toBe(Date.parse(start) + 60_000);
+
+    const tooEarly = new Date(Date.parse(start) + 30_000).toISOString();
+    await runEmailQueue(env.DB, "demo", {
+      async send() {
+        throw new Error("must not be called before send_after");
+      },
+    }, tooEarly);
+    const unchanged = await env.DB.prepare(
+      `SELECT status,attempt_count FROM email_queue WHERE tenant_id='demo' AND name=?1`,
+    ).bind(queued.name).first<any>();
+    expect(unchanged?.status).toBe("Error");
+    expect(unchanged?.attempt_count).toBe(1);
+
+    const retryAt = new Date(Date.parse(start) + 61_000).toISOString();
+    const retried = await runEmailQueue(env.DB, "demo", {
+      async send(message) {
+        return { providerMessageId: `retry-${message.queueName}` };
+      },
+    }, retryAt);
+    expect(retried.sent).toBeGreaterThanOrEqual(1);
+    const sent = await env.DB.prepare(
+      `SELECT status,attempt_count,provider_message_id,last_error
+         FROM email_queue WHERE tenant_id='demo' AND name=?1`,
+    ).bind(queued.name).first<any>();
+    expect(sent?.status).toBe("Sent");
+    expect(sent?.attempt_count).toBe(2);
+    expect(sent?.provider_message_id).toBe(`retry-${queued.name}`);
+    expect(sent?.last_error).toBeNull();
+  });
+
   it("a rule whose condition does not hold produces nothing", async () => {
     const event = {
       event_id: "evt-notify-2", event_type: "field_visit.submitted", tenant_id: "demo",
@@ -1871,5 +2613,336 @@ describe("public web form — the one surface with no session", () => {
     expect((await send("198.51.100.1")).status).toBe(417);
     // Another visitor still has their own allowance.
     expect((await send("198.51.100.2")).status).toBe(200);
+  });
+});
+
+
+describe("R7 Frappe scheduler compatibility", () => {
+  it("validates scheduler_events fail-closed and runs merged schedules once per due slot", async () => {
+    const baseManifest = {
+      id: "schedapp",
+      name: "Scheduler Test App",
+      version: "1.0.0",
+      requires: [],
+      doctypes: [],
+      workflows: [],
+      print_formats: [],
+      roles: [],
+      fixtures: [],
+      custom_fields: [],
+      nav: [],
+      hooks: [],
+      validators: [],
+      reports: [],
+      externalDocTypes: [],
+      charts: [],
+      actions: [],
+      screens: [],
+      worker: "schedapp-worker",
+    };
+
+    expect(() => parseAppManifest({
+      ...baseManifest,
+      scheduler_events: { cron: { "0 0 L * *": ["schedapp.bad"] } },
+    })).toThrow(/cron/i);
+
+    expect(() => parseAppManifest({
+      ...baseManifest,
+      scheduler_events: {
+        hourly: ["schedapp.duplicate"],
+        daily: ["schedapp.duplicate"],
+      },
+    })).toThrow(/Duplicate scheduled method/i);
+
+    expect(() => parseAppManifest({
+      ...baseManifest,
+      worker: undefined,
+      scheduler_events: { hourly: ["schedapp.hourly"] },
+    })).toThrow(/worker/i);
+
+    const manifest = parseAppManifest({
+      ...baseManifest,
+      scheduler_events: {
+        all: ["schedapp.all"],
+        hourly: ["schedapp.hourly"],
+        daily: ["schedapp.fail"],
+        cron: { "0/5 * * * *": ["schedapp.cron"] },
+      },
+    });
+    await env.DB.prepare(
+      "INSERT INTO installed_apps(tenant_id,app_id,app_name,version,content_hash,manifest_json,installed_by,installed_at,modified_at) " +
+      "VALUES('demo','schedapp','Scheduler Test App','1.0.0',?1,?2,'Administrator',?3,?3) " +
+      "ON CONFLICT(tenant_id,app_id) DO UPDATE SET manifest_json=excluded.manifest_json,modified_at=excluded.modified_at",
+    ).bind("a".repeat(64), JSON.stringify(manifest), "2026-07-25T09:58:00.000Z").run();
+
+    const invoked: string[] = [];
+    const run = (now: string) => runAppScheduler({
+      db: env.DB,
+      tenantId: "demo",
+      now,
+      timeZone: "Asia/Ho_Chi_Minh",
+      invoke: async (job) => {
+        invoked.push(job.method + "@" + job.dueKey);
+        if (job.method === "schedapp.fail") throw new Error("planned failure");
+      },
+    });
+
+    const first = await run("2026-07-26T10:00:00.000Z");
+    expect(first.declared).toBe(4);
+    expect(first.started).toBe(4);
+    expect(first.completed).toBe(3);
+    expect(first.failed).toBe(1);
+    expect(invoked.map((entry) => entry.split("@")[0]).sort()).toEqual([
+      "schedapp.all", "schedapp.cron", "schedapp.fail", "schedapp.hourly",
+    ]);
+
+    const firstInvocationCount = invoked.length;
+    const duplicate = await run("2026-07-26T10:00:00.000Z");
+    expect(duplicate.started).toBe(0);
+    expect(invoked).toHaveLength(firstInvocationCount);
+
+    const nextTick = await run("2026-07-26T10:04:00.000Z");
+    expect(nextTick.started).toBe(1);
+    expect(invoked.at(-1)?.startsWith("schedapp.all@")).toBe(true);
+
+    const failed = await env.DB.prepare(
+      "SELECT last_status,last_error FROM app_scheduler_runs " +
+      "WHERE tenant_id='demo' AND app_id='schedapp' AND method='schedapp.fail'",
+    ).first<{ last_status: string; last_error: string }>();
+    expect(failed?.last_status).toBe("failed");
+    expect(failed?.last_error).toContain("planned failure");
+
+    const noSchedules = { ...manifest, scheduler_events: {} };
+    await env.DB.prepare(
+      "UPDATE installed_apps SET manifest_json=?3,modified_at=?4 WHERE tenant_id=?1 AND app_id=?2",
+    ).bind("demo", "schedapp", JSON.stringify(noSchedules), "2026-07-26T10:05:00.000Z").run();
+    const pruned = await run("2026-07-26T10:05:00.000Z");
+    expect(pruned.declared).toBe(0);
+    expect(pruned.pruned).toBeGreaterThanOrEqual(4);
+
+    const remaining = await env.DB.prepare(
+      "SELECT COUNT(*) AS count FROM app_scheduler_runs WHERE tenant_id='demo' AND app_id='schedapp'",
+    ).first<{ count: number }>();
+    expect(Number(remaining?.count ?? 0)).toBe(0);
+
+    await env.DB.prepare("DELETE FROM installed_apps WHERE tenant_id='demo' AND app_id='schedapp'").run();
+  });
+});
+
+
+describe("R7 Frappe realtime compatibility", () => {
+  function nextSocketJson(
+    socket: WebSocket,
+    predicate: (value: any) => boolean,
+    timeoutMs = 3000,
+  ): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        socket.removeEventListener("message", onMessage);
+        reject(new Error("Timed out waiting for realtime message"));
+      }, timeoutMs);
+      const onMessage = (event: MessageEvent) => {
+        if (typeof event.data !== "string") return;
+        let value: any;
+        try { value = JSON.parse(event.data); }
+        catch { return; }
+        if (!predicate(value)) return;
+        clearTimeout(timer);
+        socket.removeEventListener("message", onMessage);
+        resolve(value);
+      };
+      socket.addEventListener("message", onMessage);
+    });
+  }
+
+  async function openRealtime(lastSequence = 0): Promise<WebSocket> {
+    const response = await call(
+      "/api/method/frappe.realtime.connect?last_sequence=" + lastSequence,
+      { headers: { Upgrade: "websocket", Origin: "https://tenant.test" } },
+    );
+    expect(response.status).toBe(101);
+    expect(response.webSocket).toBeTruthy();
+    const socket = response.webSocket!;
+    const ready = nextSocketJson(socket, (value) => value.type === "ready");
+    socket.accept();
+    expect((await ready).user).toBeTruthy();
+    return socket;
+  }
+
+  async function closeSocket(socket: WebSocket): Promise<void> {
+    if (socket.readyState === WebSocket.CLOSED) return;
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, 500);
+      socket.addEventListener("close", () => {
+        clearTimeout(timer);
+        resolve();
+      }, { once: true });
+      socket.close(1000, "test complete");
+    });
+  }
+
+  async function committedEvent(id: string, name: string, version: number): Promise<any> {
+    const event = {
+      event_id: id,
+      event_type: "field_visit.updated",
+      tenant_id: "demo",
+      aggregate: { doctype: "Field Visit", name },
+      aggregate_version: version,
+      actor: "sales@example.com",
+      command_id: "cmd-" + id,
+      occurred_at: new Date().toISOString(),
+      schema_version: 1,
+      payload: {},
+    };
+    const response = await exports.default.fetch(new Request("https://tenant.test/internal/events", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer test-internal-service-token",
+        "content-type": "application/json",
+        "x-cloudforge-tenant": "demo",
+        "x-cloudforge-idempotency-key": id,
+      },
+      body: JSON.stringify(event),
+    }));
+    expect(response.status).toBe(200);
+    return response.json();
+  }
+
+  it("authenticates the socket, authorizes rooms, orders live events and replays a disconnect gap", async () => {
+    expect((await switchSession("sales@example.com")).status).toBe(200);
+
+    const unauthenticated = await exports.default.fetch(new Request(
+      "https://tenant.test/api/method/frappe.realtime.connect",
+      { headers: { Upgrade: "websocket", Origin: "https://tenant.test" } },
+    ));
+    expect(unauthenticated.status).toBe(403);
+
+    const socket = await openRealtime();
+    const subscribed = nextSocketJson(
+      socket,
+      (value) => value.type === "subscribed" && value.room === "doctype:Field Visit",
+    );
+    socket.send(JSON.stringify({ type: "doctype_subscribe", doctype: "Field Visit" }));
+    await subscribed;
+
+    const firstLivePromise = nextSocketJson(
+      socket,
+      (value) => value.type === "event"
+        && value.event === "list_update"
+        && value.message?.name === "FV-RT-1",
+    );
+    const first = await committedEvent("evt-realtime-1", "FV-RT-1", 1);
+    expect(first.inserted).toBe(true);
+    expect(first.realtime).toHaveLength(2);
+    expect(first.realtime[0].room).toBe("doctype:Field Visit");
+    expect(first.realtime[1].room).toBe("doc:Field Visit/FV-RT-1");
+    expect(first.realtime[0].sequence).toBeLessThan(first.realtime[1].sequence);
+    const firstLive = await firstLivePromise;
+    expect(firstLive.sequence).toBe(first.realtime[0].sequence);
+    expect(firstLive.replay).toBe(false);
+
+    const secondLivePromise = nextSocketJson(
+      socket,
+      (value) => value.type === "event"
+        && value.event === "list_update"
+        && value.message?.name === "FV-RT-2",
+    );
+    const second = await committedEvent("evt-realtime-2", "FV-RT-2", 2);
+    const secondLive = await secondLivePromise;
+    expect(secondLive.sequence).toBe(second.realtime[0].sequence);
+    expect(secondLive.sequence).toBeGreaterThan(firstLive.sequence);
+
+    const duplicate = await committedEvent("evt-realtime-2", "FV-RT-2", 2);
+    expect(duplicate.inserted).toBe(false);
+    expect(duplicate.realtime).toEqual([]);
+
+    // Pin live ordering independently from notify-request ordering. Persist A then B,
+    // intentionally notify the hub about B first, and require the socket to receive
+    // the D1 sequence order A -> B.
+    const orderedRows: Array<{ sequence: number; name: string }> = [];
+    for (const name of ["FV-ORDER-A", "FV-ORDER-B"]) {
+      const row = await env.DB.prepare(
+        "INSERT INTO realtime_events(tenant_id,event,room,message_json,created_at) " +
+        "VALUES('demo','list_update','doctype:Field Visit',?1,?2) RETURNING sequence",
+      ).bind(JSON.stringify({ doctype: "Field Visit", name }), new Date().toISOString())
+        .first<{ sequence: number }>();
+      orderedRows.push({ sequence: Number(row!.sequence), name });
+    }
+    const orderedA = nextSocketJson(
+      socket,
+      (value) => value.type === "event" && value.message?.name === "FV-ORDER-A",
+    );
+    const orderedB = nextSocketJson(
+      socket,
+      (value) => value.type === "event" && value.message?.name === "FV-ORDER-B",
+    );
+    const hub = env.REALTIME.getByName("demo");
+    const notify = (sequence: number) => hub.fetch(new Request("https://realtime.internal/publish", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ tenant_id: "demo", sequence }),
+    }));
+    expect((await notify(orderedRows[1]!.sequence)).status).toBe(200);
+    expect((await notify(orderedRows[0]!.sequence)).status).toBe(200);
+    const [deliveredA, deliveredB] = await Promise.all([orderedA, orderedB]);
+    expect(deliveredA.sequence).toBe(orderedRows[0]!.sequence);
+    expect(deliveredB.sequence).toBe(orderedRows[1]!.sequence);
+    expect(deliveredA.sequence).toBeLessThan(deliveredB.sequence);
+
+    await closeSocket(socket);
+
+    const offline = await committedEvent("evt-realtime-3", "FV-RT-3", 3);
+    expect(offline.realtime[0].sequence).toBeGreaterThan(secondLive.sequence);
+
+    const resumed = await openRealtime(secondLive.sequence);
+    const resumedSubscribed = nextSocketJson(
+      resumed,
+      (value) => value.type === "subscribed" && value.room === "doctype:Field Visit",
+    );
+    const replayed = nextSocketJson(
+      resumed,
+      (value) => value.type === "event"
+        && value.replay === true
+        && value.event === "list_update"
+        && value.message?.name === "FV-RT-3",
+    );
+    resumed.send(JSON.stringify({ type: "doctype_subscribe", doctype: "Field Visit" }));
+    await resumedSubscribed;
+    const replay = await replayed;
+    expect(replay.sequence).toBe(offline.realtime[0].sequence);
+    await closeSocket(resumed);
+
+    const secretMeta = {
+      name: "Realtime Secret",
+      module: "Custom",
+      fields: [{ fieldname: "title", label: "Title", fieldtype: "Data" }],
+      permissions: [{ role: "System Manager", read: true }],
+      revision: 1,
+    };
+    await env.DB.prepare(
+      "INSERT INTO doctype_definitions(tenant_id,doctype,module,revision,metadata_json,modified_by,modified_at) " +
+      "VALUES('demo','Realtime Secret','Custom',1,?1,'Administrator',?2) " +
+      "ON CONFLICT(tenant_id,doctype) DO UPDATE SET metadata_json=excluded.metadata_json",
+    ).bind(JSON.stringify(secretMeta), new Date().toISOString()).run();
+
+    expect((await switchSession("reader@example.com")).status).toBe(200);
+    const reader = await openRealtime(offline.realtime[0].sequence);
+
+    const allowed = nextSocketJson(
+      reader,
+      (value) => value.type === "subscribed" && value.room === "doctype:Field Visit",
+    );
+    reader.send(JSON.stringify({ type: "doctype_subscribe", doctype: "Field Visit" }));
+    await allowed;
+
+    const denied = nextSocketJson(
+      reader,
+      (value) => value.type === "error" && value.code === "COMMAND_DENIED",
+    );
+    reader.send(JSON.stringify({ type: "doctype_subscribe", doctype: "Realtime Secret" }));
+    expect(String((await denied).message)).toMatch(/not allowed|permission/i);
+
+    await closeSocket(reader);
+    expect((await switchSession("sales@example.com")).status).toBe(200);
   });
 });

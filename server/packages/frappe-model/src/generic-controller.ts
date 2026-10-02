@@ -4,9 +4,10 @@ import type { ControllerContext, DocumentController } from "../../document-kerne
 import { nextDocStatus } from "../../document-kernel/src/lifecycle.js";
 import { domainEvent } from "../../outbox/src/index.js";
 import type { MetadataStore } from "./store.js";
-import type { DocFieldMeta, DocTypeMeta, WorkflowMeta } from "./types.js";
+import type { DocFieldMeta, DocTypeMeta, WorkflowMeta, WorkflowStateMeta } from "./types.js";
 import { isLayoutField } from "./validate.js";
 import { evaluateFieldCondition } from "./field-condition.js";
+import { evaluateWorkflowCondition } from "./workflow-condition.js";
 import { canWriteField } from "./permission.js";
 
 export class GenericMetadataController implements DocumentController<JsonObject> {
@@ -27,6 +28,16 @@ export class GenericMetadataController implements DocumentController<JsonObject>
       : await normalizeDocument(context, meta, this.metadata);
     const workflow = await this.metadata.getWorkflow(context.command.tenant_id, doctype);
     const workflowResult = workflow?.is_active ? applyWorkflow(context, data, workflow) : null;
+    if (workflowResult?.update) {
+      const field = meta.fields.find((candidate) => candidate.fieldname === workflowResult.update!.field);
+      if (!field || isLayoutField(field)) {
+        throw errors.validation(`Workflow ${workflow?.name ?? "active workflow"} update field is not writable metadata: ${workflowResult.update.field}`);
+      }
+      // The value is produced by server-held workflow metadata AFTER ordinary user
+      // input has passed field permissions/read-only checks. Workflow authority can
+      // therefore update a read-only target without making that field client-writable.
+      data[field.fieldname] = normalizeValue(field, workflowResult.update.value, context.command.action);
+    }
     const docstatus = workflowResult?.docstatus ?? (meta.is_submittable ? nextDocStatus(context.command.action) : 0);
     const status = docstatus === 0 ? "Draft" : docstatus === 1 ? "Submitted" : "Cancelled";
     const workflowState = workflowResult?.state ?? (typeof data.workflow_state === "string" ? data.workflow_state : undefined);
@@ -388,7 +399,11 @@ function extractChildren(meta: DocTypeMeta, data: JsonObject): ChildRow[] {
   return children;
 }
 
-function applyWorkflow(context: ControllerContext<JsonObject>, data: JsonObject, workflow: WorkflowMeta): { state: string; docstatus: 0 | 1 | 2 } {
+function applyWorkflow(
+  context: ControllerContext<JsonObject>,
+  data: JsonObject,
+  workflow: WorkflowMeta,
+): { state: string; docstatus: 0 | 1 | 2; update?: { field: string; value: JsonValue } } {
   if (!workflow.states.length) throw errors.validation(`Workflow ${workflow.name} has no states`);
   const stateField = workflow.state_field;
   const current = context.existing ? String(context.existing.data[stateField] ?? workflow.states[0]!.state) : null;
@@ -415,10 +430,22 @@ function applyWorkflow(context: ControllerContext<JsonObject>, data: JsonObject,
   if (blocksSelfApproval(transition, context.existing.owner, context.command.actor.user_id, context.existing.docstatus, target.docstatus)) {
     throw errors.permission("Self approval is not allowed for this transition");
   }
-  if (transition.condition && !evaluateCondition(transition.condition, data)) throw errors.validation(`Workflow condition is not satisfied for ${transition.action}`);
+  if (transition.condition && !evaluateWorkflowCondition(transition.condition, data, context.existing.data)) throw errors.validation(`Workflow condition is not satisfied for ${transition.action}`);
   const expectedAction = target.docstatus === 2 ? "cancel" : target.docstatus === 1 && context.existing.docstatus === 0 ? "submit" : "save";
   if (context.command.action !== expectedAction) throw errors.lifecycle(`Transition to ${requested} requires ${expectedAction}`);
-  return { state: requested, docstatus: target.docstatus };
+  const update = target.update_field
+    ? { field: target.update_field, value: resolveWorkflowUpdateValue(target, data) }
+    : undefined;
+  return { state: requested, docstatus: target.docstatus, ...(update ? { update } : {}) };
+}
+
+function resolveWorkflowUpdateValue(state: WorkflowStateMeta, document: JsonObject): JsonValue {
+  const configured = state.update_value ?? "";
+  if (!state.evaluate_as_expression) return structuredClone(configured);
+  if (typeof configured !== "string") throw errors.validation("Workflow update expression must be a string");
+  const match = /^doc\.([A-Za-z_][A-Za-z0-9_]*)$/.exec(configured.trim());
+  if (!match) throw errors.validation("Workflow update expression must be a direct doc.<field> reference");
+  return structuredClone(document[match[1]!] ?? null);
 }
 
 /**
@@ -451,28 +478,11 @@ export function blocksSelfApproval(
   return targetDocstatus > currentDocstatus;
 }
 
-function evaluateCondition(condition: string, data: JsonObject): boolean {
-  const trimmed = condition.trim();
-  const match = trimmed.match(/^(?:doc\.)?([a-zA-Z][a-zA-Z0-9_]*)\s*(==|!=|>=|<=|>|<)\s*(?:'([^']*)'|"([^"]*)"|(-?\d+(?:\.\d+)?)|(true|false|null))$/);
-  if (!match) throw errors.validation("Workflow condition uses unsupported syntax");
-  const left = data[match[1]!];
-  const literal = match[3] ?? match[4] ?? match[5] ?? match[6];
-  let right: JsonValue = literal as string;
-  if (match[5] !== undefined) right = Number(match[5]);
-  else if (literal === "true") right = true;
-  else if (literal === "false") right = false;
-  else if (literal === "null") right = null;
-  switch (match[2]) {
-    case "==": return left === right;
-    case "!=": return left !== right;
-    case ">": return Number(left) > Number(right);
-    case "<": return Number(left) < Number(right);
-    case ">=": return Number(left) >= Number(right);
-    case "<=": return Number(left) <= Number(right);
-    default: return false;
-  }
+function isAdministrator(context: ControllerContext<JsonObject>): boolean {
+  return context.command.actor.user_id === "Administrator"
+    || context.command.actor.roles.includes("Administrator")
+    || context.command.actor.roles.includes("System Manager");
 }
-function isAdministrator(context: ControllerContext<JsonObject>): boolean { return context.command.actor.user_id === "Administrator" || context.command.actor.roles.includes("Administrator") || context.command.actor.roles.includes("System Manager"); }
 
 function requireExisting(context: ControllerContext<JsonObject>): CanonicalDocument<JsonObject> { if (!context.existing) throw errors.notFound(); return context.existing; }
 function sameJsonValue(left: JsonValue | undefined, right: JsonValue | undefined): boolean { return JSON.stringify(left) === JSON.stringify(right); }

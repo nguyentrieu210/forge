@@ -20,7 +20,7 @@ import baseWorker, {
 } from "./index-core-base.js";
 import type { TenantEnv } from "./env.js";
 
-export { AggregateCoordinator, runAlumdoorMaintenance } from "./index-core-base.js";
+export { AggregateCoordinator, RealtimeHub, runAlumdoorMaintenance } from "./index-core-base.js";
 
 function withoutDispatcher(env: TenantEnv): TenantEnv {
   const clone = { ...env } as TenantEnv & { DISPATCHER?: DispatchNamespace };

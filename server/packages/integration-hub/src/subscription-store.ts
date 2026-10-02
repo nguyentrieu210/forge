@@ -9,6 +9,10 @@ import {
 } from "./index.js";
 
 const ACTIVE_SUBSCRIPTION_SCAN_LIMIT = 5_000;
+const UNSUPPORTED_FRAPPE_WEBHOOK_FIELDS = [
+  "condition", "webhook_json", "webhook_headers", "is_dynamic_url",
+  "request_method", "request_structure", "webhook_docevent", "webhook_doctype",
+] as const;
 
 export interface ActiveSubscriptionDocumentReader {
   listActiveSubscriptionDocuments(tenantId: string): Promise<Array<CanonicalDocument<JsonObject>>>;
@@ -103,6 +107,7 @@ export class D1IntegrationSubscriptionService extends IntegrationSubscriptionSer
 
 export function subscriptionFromDocument(document: CanonicalDocument<JsonObject>): WebhookSubscription {
   const data = document.data;
+  rejectUnsupportedFrappeWebhookFields(data);
   const status = requireEnum(data.status, ["draft", "active", "disabled", "error"] as const, "status");
   const authKind = requireEnum(data.auth_kind, ["none", "api_key", "oauth2", "service_account"] as const, "auth_kind");
   const subscription: WebhookSubscription = {
@@ -126,6 +131,14 @@ export function subscriptionFromDocument(document: CanonicalDocument<JsonObject>
     },
   };
   return validateWebhookSubscription(subscription);
+}
+
+function rejectUnsupportedFrappeWebhookFields(data: JsonObject): void {
+  const configured = UNSUPPORTED_FRAPPE_WEBHOOK_FIELDS.filter((field) => {
+    const value = data[field];
+    return value !== undefined && value !== null && value !== "" && value !== false && value !== 0;
+  });
+  if (configured.length) throw new Error(`Unsupported Frappe dynamic webhook fields: ${configured.join(", ")}`);
 }
 
 function parsePayload(value: string): JsonObject {

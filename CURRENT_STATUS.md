@@ -45,3 +45,8 @@ Root `ARCHITECTURE.md` cũ được hợp nhất vào `docs/ARCHITECTURE.md` đ�
 ## Production boundary
 
 Checkpoint source không phải bằng chứng production deployment. Mọi production mutation vẫn cần explicit authorization và exact release evidence theo policy/runbook hiện hành.
+
+
+## R7 certified source checkpoint — 2026-10-02
+
+PR #994 on `codex/r7-frappe-platform-closure` has completed the pinned Frappe v16.19.0 platform denominator. Certified implementation head `ce64f77f8c2a1991a6d88ced76592d44aecd23d5` passed R7 GitHub Actions run `36984495200`: executable `r7:frappe:certify`, changed-authority TypeScript guard, runtime safety regression and Workerd Frappe facade regression. Canonical matrix: **12 SEMANTIC_PARITY / 15 INTENTIONAL_DIFFERENCE / 0 GAP / 1 OUT_OF_SCOPE / 0 UNRESOLVED**. R7-A may claim `FRAPPE_PLATFORM_CLOSED` for this pinned source/runtime contract. Production deploy/migration/provider/customer-data mutation remains separately authorized.

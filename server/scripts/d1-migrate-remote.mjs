@@ -24,8 +24,11 @@
  * client-side with wrangler's own splitter, which handles the nested CASE, and sends
  * the statements individually. So this script drives that path and keeps the
  * `d1_migrations` bookkeeping itself, which is all `migrations apply` was doing for
- * us. `wrangler d1 migrations list` stays truthful afterwards, and the two commands
- * remain interchangeable.
+ * us. `wrangler d1 migrations list` stays truthful afterwards. The Forge journal
+ * additionally requires exact-content evidence: name-only legacy receipts or
+ * migrations applied outside this runner require explicit operator reconciliation.
+ * A reserved outcome is never automatically retried, because file import and the
+ * receipt are not proven to share an atomic remote transaction.
  *
  * Dry-run is a hard read-only contract: it may inspect sqlite_schema and the existing
  * d1_migrations rows, but it must never create the bookkeeping table or apply SQL.
@@ -34,10 +37,12 @@
  *   node scripts/d1-migrate-remote.mjs --config apps/tenant-worker/wrangler.jsonc
  *   node scripts/d1-migrate-remote.mjs --config … --dry-run
  */
-import { readdirSync } from "node:fs";
+import { readdirSync, readFileSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { readAppliedMigrationNames } from "./lib/d1-migration-bookkeeping.mjs";
+import { migrationContentIdentity, inspectMigrationJournal, applyJournaledMigration } from "./lib/d1-migration-journal.mjs";
 import { d1BindingOf, d1Query, fail, serverRoot, wrangler } from "./wrangler-cli.mjs";
 
 const args = process.argv.slice(2);
@@ -54,7 +59,8 @@ console.log(`database   ${database.name} (${database.id ?? "id not pinned"})`);
 console.log(`migrations ${path.relative(serverRoot, database.migrationsDir)}`);
 console.log(`mode       ${dryRun ? "dry run (read-only)" : "APPLY (remote)"}\n`);
 
-const migrationState = readAppliedMigrationNames({ database, dryRun, query: d1Query });
+// Inspect before creating any table, even in live mode.
+const migrationState = readAppliedMigrationNames({ database, dryRun: true, query: d1Query });
 const applied = new Set(migrationState.names);
 if (dryRun && !migrationState.trackingTablePresent) {
   console.log("tracking  d1_migrations is absent; read-only dry run treats the applied set as empty");
@@ -63,14 +69,15 @@ if (dryRun && !migrationState.trackingTablePresent) {
 const files = readdirSync(database.migrationsDir).filter((name) => name.endsWith(".sql")).sort();
 if (files.length === 0) fail(`no .sql files in ${path.relative(serverRoot, database.migrationsDir)}`);
 
-const pending = files.filter((name) => !applied.has(name));
+const migrations = files.map((name) => migrationContentIdentity(name, readFileSync(path.join(database.migrationsDir, name))));
+const { pending } = inspectMigrationJournal({ database, query: d1Query, migrations, appliedNames: [...applied] });
 if (pending.length === 0) {
   console.log(`nothing to do — all ${files.length} migrations are recorded as applied.`);
   process.exit(0);
 }
 
 console.log(`${applied.size} applied, ${pending.length} pending:`);
-for (const name of pending) console.log(`  · ${name}`);
+for (const migration of pending) console.log(`  · ${migration.name} sha256=${migration.sha256}`);
 console.log();
 
 if (dryRun) {
@@ -78,15 +85,25 @@ if (dryRun) {
   process.exit(0);
 }
 
-for (const name of pending) {
-  if (!/^[0-9A-Za-z._-]+$/.test(name)) fail(`migration filename is not safe to record: ${name}`);
+readAppliedMigrationNames({ database, dryRun: false, query: d1Query });
+for (const migration of pending) {
+  const { name } = migration;
   process.stdout.write(`applying ${name} … `);
-  wrangler([
-    "d1", "execute", database.name,
-    "--config", database.configArg,
-    "--remote", "--file", path.relative(serverRoot, path.join(database.migrationsDir, name)),
-  ]);
-  d1Query(database, `INSERT INTO d1_migrations (name) VALUES ('${name}')`);
+  const scratch = mkdtempSync(path.join(os.tmpdir(), "forge-d1-migration-"));
+  try {
+    // Execute the bytes hashed during preflight, not a file that may have changed.
+    const capturedFile = path.join(scratch, name);
+    writeFileSync(capturedFile, migration.content, { mode: 0o600 });
+    applyJournaledMigration({
+      database, query: d1Query, migration,
+      execute: () => wrangler([
+        "d1", "execute", database.name, "--config", database.configArg,
+        "--remote", "--file", capturedFile,
+      ]),
+    });
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
   console.log("ok");
 }
 

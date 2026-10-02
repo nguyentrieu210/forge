@@ -47,3 +47,15 @@ Mọi product/domain work mới phải bắt đầu từ exact current `main`, x
 ## 5. Production boundary
 
 Release/deploy/migration/provider/customer-data work chỉ thực hiện khi user authorize rõ. Source cleanup hoặc Sentrux improvement không tự mở quyền production mutation.
+
+
+## R7-A — Frappe 16 Platform Closure — CLOSED
+
+Certified source/runtime contract: Frappe `v16.19.0` / `ba18090b141740e75d52aa97bfc525ff2f831f6c`. Implementation head `ce64f77f8c2a1991a6d88ced76592d44aecd23d5` passed R7 run `36984495200` with `GAP=0` and `UNRESOLVED=0`.
+
+Follow-on work must consume the certified R7 contract rather than reopen it implicitly:
+
+1. ERPNext/R8 business-domain comparison should build on these platform dispositions.
+2. A later .NET implementation should port the language-neutral observable contracts and preserve Forge safety invariants, not clone Frappe internals.
+3. Any proposed change to an R7 `INTENTIONAL_DIFFERENCE` must be an explicit architecture/product decision with new evidence.
+4. Production deploy/migration/provider/customer-data mutation still requires separate authorization and release evidence.

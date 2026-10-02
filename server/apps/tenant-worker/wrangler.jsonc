@@ -24,11 +24,13 @@
   ],
   "durable_objects": {
     "bindings": [
-      { "name": "AGGREGATES", "class_name": "AggregateCoordinator" }
+      { "name": "AGGREGATES", "class_name": "AggregateCoordinator" },
+      { "name": "REALTIME", "class_name": "RealtimeHub" }
     ]
   },
   "migrations": [
-    { "tag": "v1", "new_sqlite_classes": ["AggregateCoordinator"] }
+    { "tag": "v1", "new_sqlite_classes": ["AggregateCoordinator"] },
+    { "tag": "v2", "new_sqlite_classes": ["RealtimeHub"] }
   ],
   "triggers": { "crons": ["*/1 * * * *"] },
   "queues": {
