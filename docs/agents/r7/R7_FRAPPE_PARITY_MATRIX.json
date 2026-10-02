@@ -343,22 +343,26 @@
       "domain_id": "FRAPPE-15-DATA-IMPORT-EXPORT",
       "name": "Data import/export",
       "lane": "R7-07",
-      "classification": "GAP",
+      "classification": "INTENTIONAL_DIFFERENCE",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
       "forge_authority": [
-        "frappe-shaped synchronous import/export",
-        "server/packages/migration"
+        "server/packages/frappe-api/src/router.ts",
+        "server/migrations/tenant/0144_r7_data_import.sql",
+        "server/packages/frappe-api/src/files.ts",
+        "Document Kernel"
       ],
       "evidence": [
-        "docs/API_SURFACE.md",
-        "docs/agents/workstreams/WS13-migration-implementation.md"
+        "server/packages/frappe-api/src/router.ts",
+        "server/migrations/tenant/0144_r7_data_import.sql",
+        "server/apps/tenant-worker/test/frappe-facade.integration.test.mts",
+        "client/packages/adapter-frappe/src/frappe-adapter.ts",
+        "Frappe v16.19.0 frappe/core/doctype/data_import/data_import.py",
+        "Frappe v16.19.0 frappe/core/doctype/data_import/importer.py",
+        "GitHub Actions R7 Frappe 16 Closure run 36967357569"
       ],
       "oracle_cases": [],
-      "gaps": [
-        "Frappe background/queued Data Import status lifecycle is not exposed on the facade.",
-        "Large import/error-workbook/update-mode parity remains incomplete."
-      ],
-      "rationale": "CSV preview/apply/export is usable, but Frappe 16 import/export includes asynchronous lifecycle behavior that Forge has not closed."
+      "gaps": [],
+      "rationale": "Forge now exposes the Frappe-shaped Data Import control lifecycle end to end: Data Import document, permission-aware uploaded source file, preview, idempotent queued start, durable status/count polling, row-isolated insert/update execution through the canonical Document Kernel, error-template download and permission-aware CSV export. Workerd regression run 36967357569 proves create/upload/preview/start/status/partial-success/error-download/update-existing behavior. Forge intentionally keeps server-side spreadsheet decoding out of the Worker runtime: the durable importer accepts bounded CSV (100,000 rows per job) while XLS/XLSX normalization belongs to the browser/CLI boundary; unsupported input fails closed rather than silently changing semantics."
     },
     {
       "domain_id": "FRAPPE-16-WORKFLOW",
