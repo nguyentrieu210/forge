@@ -459,6 +459,7 @@ export class SubcontractingReceiptController implements DocumentController<Subco
     const procurement: ProcurementEntry[] = [{
       line_key: "SUBCONTRACT-RECEIPT",
       purchase_order: data.purchase_order,
+      purchase_order_item_row_id: data.purchase_order_row_id,
       kind: "Receipt",
       item_code: data.service_item,
       qty_micros: data.received_qty_micros,
@@ -556,6 +557,7 @@ export class SubcontractingReceiptController implements DocumentController<Subco
       po.name,
       "Receipt",
       order.data.service_item,
+      order.data.purchase_order_row_id,
     );
     const serviceLine = selectServiceLine(po, order.data.service_item, order.data.purchase_order_row_id);
     const approvedQty = serviceLine.qty_micros ?? toScaledInt(serviceLine.qty, 6);
@@ -627,8 +629,20 @@ export class SubcontractingReceiptController implements DocumentController<Subco
     );
     if (checked((po.data as JsonObject).receipt_match_required)) {
       const [receiptProgress, billedProgress] = await Promise.all([
-        context.reader.getProcuredQuantityMicros(context.command.tenant_id, po.name, "Receipt", data.service_item),
-        context.reader.getProcuredQuantityMicros(context.command.tenant_id, po.name, "Billing", data.service_item),
+        context.reader.getProcuredQuantityMicros(
+          context.command.tenant_id,
+          po.name,
+          "Receipt",
+          data.service_item,
+          data.purchase_order_row_id,
+        ),
+        context.reader.getProcuredQuantityMicros(
+          context.command.tenant_id,
+          po.name,
+          "Billing",
+          data.service_item,
+          data.purchase_order_row_id,
+        ),
       ]);
       if (billedProgress > receiptProgress - data.received_qty_micros) {
         throw errors.reference("Cannot cancel Subcontracting Receipt while matched Purchase Invoice quantity depends on it");
@@ -669,6 +683,7 @@ export class SubcontractingReceiptController implements DocumentController<Subco
     const procurement: ProcurementEntry[] = [{
       line_key: "REV-SUBCONTRACT-RECEIPT",
       purchase_order: data.purchase_order,
+      purchase_order_item_row_id: data.purchase_order_row_id,
       kind: "Receipt",
       item_code: data.service_item,
       qty_micros: -data.received_qty_micros,
