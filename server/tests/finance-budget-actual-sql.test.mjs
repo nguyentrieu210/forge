@@ -192,3 +192,36 @@ test('actual SQL consumes Expense Claim commitment from its own GL',()=>{
   assert.equal(row.committed_minor,100);
   assert.equal(row.available_minor,0);
 });
+
+
+test('actual SQL applies accumulated fiscal distribution to base plus dated revisions',()=>{
+  const f=fixture({budget:1200});
+  const budget=f.documents.find(r=>r[1]==='Finance Budget'&&r[2]==='BUD')[4];
+  budget.fiscal_distribution_enabled=true;
+  budget.distribution_frequency='Monthly';
+  budget.distribute_equally=true;
+  budget.distribution_weight_total=12;
+  budget.budget_distribution=Array.from({length:12},(_,index)=>({
+    row_id:'DIST-'+(index+1),
+    start_date:'2026-'+String(index+1).padStart(2,'0')+'-01',
+    end_date:'2026-'+String(index+1).padStart(2,'0')+'-28',
+    allocation_weight:1,
+    percent_bps:index<4?834:833,
+  }));
+
+  document(f,'Finance Budget Revision','REV-DIST',{
+    budget:'BUD',posting_date:'2026-07-01',delta_amount_minor:1200
+  });
+  ledger(f,{debit:700,date:'2026-08-01'});
+  document(f,'Finance Budget Commitment','COM-DIST',{
+    budget:'BUD',posting_date:'2026-08-01',commitment_type:'Reserve',amount_minor:100
+  });
+
+  const [row]=report(f,'2026-08-15');
+  assert.equal(row.effective_budget_minor,2400);
+  assert.equal(row.accumulated_budget_minor,1600);
+  assert.equal(row.actual_minor,700);
+  assert.equal(row.committed_minor,100);
+  assert.equal(row.available_minor,800);
+  assert.equal(row.utilization_pct,50);
+});
