@@ -31,7 +31,11 @@ interface PaymentAllocationData extends JsonObject {
   company_currency?: string;
   company_currency_scale?: number;
   posting_at: string;
-  source_payment_entry: string;
+  source_payment_entry?: string;
+  source_credit_note?: string;
+  /** Server-owned normalized source identity; keeps ledger replay independent of UI aliases. */
+  source_voucher_type?: "Payment Entry" | "Credit Note";
+  source_voucher_no?: string;
   reason?: string;
   references: PaymentReference[];
   total_allocated_amount?: string;
@@ -239,6 +243,10 @@ export class FinancePaymentEntryController extends PaymentEntryController {
 
     return {
       ...input,
+      ...(sourcePaymentEntry ? { source_payment_entry: sourcePaymentEntry } : {}),
+      ...(sourceCreditNote ? { source_credit_note: sourceCreditNote } : {}),
+      source_voucher_type: sourceVoucherType,
+      source_voucher_no: sourceVoucherNo,
       references,
       currency_scale: transactionScale,
       company_currency: currency.companyCurrency,
@@ -407,8 +415,8 @@ export class PaymentAllocationController implements DocumentController<PaymentAl
 
   private async normalize(context: ControllerContext<PaymentAllocationData>): Promise<PaymentAllocationData> {
     const input = context.command.document;
-    if (!input.company || !input.party || !input.party_account || !input.currency || !input.posting_at || !input.source_payment_entry) {
-      throw errors.validation("Company, party, party account, currency, posting date and source payment are required");
+    if (!input.company || !input.party || !input.party_account || !input.currency || !input.posting_at) {
+      throw errors.validation("Company, party, party account, currency and posting date are required");
     }
     if (input.party_type !== "Customer" && input.party_type !== "Supplier") {
       throw errors.validation("Party type must be Customer or Supplier");
@@ -416,17 +424,50 @@ export class PaymentAllocationController implements DocumentController<PaymentAl
     if (!Array.isArray(input.references) || input.references.length === 0) {
       throw errors.validation("Payment Allocation requires at least one invoice reference");
     }
-    const source = await requireSubmitted<PaymentEntryData>(context as unknown as ControllerContext<JsonObject>, "Payment Entry", input.source_payment_entry);
-    const sourcePartyAccount = source.data.payment_type === "Receive" ? source.data.paid_from : source.data.paid_to;
-    if (source.data.company !== input.company || source.data.party_type !== input.party_type || source.data.party !== input.party
-      || sourcePartyAccount !== input.party_account || source.data.currency !== input.currency) {
-      throw errors.reference("Source Payment Entry does not match company, party, account or currency");
+
+    const sourcePaymentEntry = typeof input.source_payment_entry === "string" ? input.source_payment_entry.trim() : "";
+    const sourceCreditNote = typeof input.source_credit_note === "string" ? input.source_credit_note.trim() : "";
+    if (Boolean(sourcePaymentEntry) === Boolean(sourceCreditNote)) {
+      throw errors.validation("Payment Allocation requires exactly one source: Payment Entry advance or Credit Note customer credit");
     }
-    const transactionScale = source.data.currency_scale ?? 2;
-    const companyScale = source.data.company_currency_scale ?? transactionScale;
-    const sourceRemaining = -await context.reader.getOutstandingMinor(context.command.tenant_id, "Payment Entry", input.source_payment_entry);
-    const sourceBaseRemaining = -await context.reader.getBaseOutstandingMinor(context.command.tenant_id, "Payment Entry", input.source_payment_entry);
-    if (sourceRemaining <= 0 || sourceBaseRemaining < 0) throw errors.reference("Source Payment Entry has no remaining advance");
+    if (sourceCreditNote && input.party_type !== "Customer") {
+      throw errors.validation("Credit Note source is available only for Customer receivable allocation");
+    }
+
+    const sourceVoucherType = sourceCreditNote ? "Credit Note" as const : "Payment Entry" as const;
+    const sourceVoucherNo = sourceCreditNote || sourcePaymentEntry;
+    const source = await requireSubmitted<JsonObject>(
+      context as unknown as ControllerContext<JsonObject>,
+      sourceVoucherType,
+      sourceVoucherNo,
+    );
+    const sourcePartyType = sourceVoucherType === "Credit Note" ? "Customer" : source.data.party_type;
+    const sourceParty = sourceVoucherType === "Credit Note" ? source.data.customer : source.data.party;
+    const sourcePartyAccount = sourceVoucherType === "Credit Note"
+      ? source.data.debit_to
+      : source.data.payment_type === "Receive" ? source.data.paid_from : source.data.paid_to;
+    if (source.data.company !== input.company || sourcePartyType !== input.party_type || sourceParty !== input.party
+      || sourcePartyAccount !== input.party_account || source.data.currency !== input.currency) {
+      throw errors.reference(`Source ${sourceVoucherType} does not match company, party, account or currency`);
+    }
+    const transactionScale = typeof source.data.currency_scale === "number" ? source.data.currency_scale : 2;
+    const companyScale = typeof source.data.company_currency_scale === "number"
+      ? source.data.company_currency_scale
+      : transactionScale;
+    const sourceRemaining = -await context.reader.getOutstandingMinor(
+      context.command.tenant_id,
+      sourceVoucherType,
+      sourceVoucherNo,
+    );
+    const sourceBaseRemaining = -await context.reader.getBaseOutstandingMinor(
+      context.command.tenant_id,
+      sourceVoucherType,
+      sourceVoucherNo,
+    );
+    const sourceLabel = sourceVoucherType === "Credit Note" ? "customer credit" : "advance";
+    if (sourceRemaining <= 0 || sourceBaseRemaining < 0) {
+      throw errors.reference(`Source ${sourceVoucherType} has no remaining ${sourceLabel}`);
+    }
     const targetDoctype = input.party_type === "Customer" ? "Sales Invoice" : "Purchase Invoice";
     const seen = new Set<string>();
     const references: PaymentReference[] = [];
@@ -449,7 +490,11 @@ export class PaymentAllocationController implements DocumentController<PaymentAl
       const outstanding = await context.reader.getOutstandingMinor(context.command.tenant_id, targetDoctype, reference.reference_name);
       const baseOutstanding = await context.reader.getBaseOutstandingMinor(context.command.tenant_id, targetDoctype, reference.reference_name);
       if (allocated > outstanding) throw errors.reference(`Allocated amount exceeds outstanding for ${reference.reference_name}`);
-      const sourceRate = source.data.source_exchange_rate_micros ?? 1_000_000;
+      const sourceRate = typeof source.data.source_exchange_rate_micros === "number"
+        ? source.data.source_exchange_rate_micros
+        : typeof source.data.conversion_rate_micros === "number"
+          ? source.data.conversion_rate_micros
+          : 1_000_000;
       const currentBase = convertMinor(allocated, transactionScale, sourceRate, companyScale, `references[${index}].base_allocated_amount`);
       const baseAllocated = allocated === outstanding ? baseOutstanding : Math.min(currentBase, baseOutstanding);
       total = addMinor([total, allocated], "total allocated amount");
@@ -465,7 +510,9 @@ export class PaymentAllocationController implements DocumentController<PaymentAl
     }
     if (context.command.action === "submit") {
       if (total > sourceRemaining || totalBase > sourceBaseRemaining) {
-        throw errors.reference("Payment Allocation exceeds remaining source advance", {
+        throw errors.reference(`Payment Allocation exceeds remaining source ${sourceLabel}`, {
+          source_voucher_type: sourceVoucherType,
+          source_voucher_no: sourceVoucherNo,
           source_remaining_minor: sourceRemaining,
           requested_minor: total,
           source_base_remaining_minor: sourceBaseRemaining,
@@ -506,8 +553,8 @@ export class PaymentAllocationController implements DocumentController<PaymentAl
           base_amount_minor: base,
           currency: data.currency,
           currency_scale: scale,
-          against_voucher_type: "Payment Entry",
-          against_voucher_no: data.source_payment_entry,
+          against_voucher_type: data.source_voucher_type ?? (data.source_credit_note ? "Credit Note" : "Payment Entry"),
+          against_voucher_no: data.source_voucher_no ?? data.source_credit_note ?? data.source_payment_entry!,
           posting_at: data.posting_at,
         },
         {
