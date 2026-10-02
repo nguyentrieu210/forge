@@ -4,7 +4,7 @@
 
 `R7-A NOT CLOSED`.
 
-The 28-domain Frappe v16.19.0 audit is fully classified and fail-closed. Platform certification remains blocked by 8 concrete GAP domains.
+The 28-domain Frappe v16.19.0 audit is fully classified and fail-closed. Platform certification remains blocked by 7 concrete GAP domains.
 
 ## Exact identity
 
@@ -18,8 +18,8 @@ The 28-domain Frappe v16.19.0 audit is fully classified and fail-closed. Platfor
 | Classification | Count |
 |---|---:|
 | UNRESOLVED | 0 |
-| GAP | 8 |
-| INTENTIONAL_DIFFERENCE | 7 |
+| GAP | 7 |
+| INTENTIONAL_DIFFERENCE | 8 |
 | OUT_OF_SCOPE | 1 |
 | SEMANTIC_PARITY | 12 |
 | EXACT_PARITY | 0 |
@@ -29,9 +29,10 @@ The 28-domain Frappe v16.19.0 audit is fully classified and fail-closed. Platfor
 ## Latest closures
 
 - FRAPPE-06 REST/RPC: permission-aware Frappe v2 `group_by`, tuple-shape output and canonical v2 envelopes.
-- FRAPPE-05 Authentication & Sessions: Frappe User API keys with `token`/`Basic`, stable api_key + rotating one-time secret, `frappe.auth.get_logged_user`, and reason-bound audited cookie impersonation with signed original-operator attribution. R7 GitHub Actions run `36960220755` passed.
+- FRAPPE-05 Authentication & Sessions: Frappe User API keys with `token`/`Basic`, stable api_key + rotating one-time secret, `frappe.auth.get_logged_user`, and reason-bound audited cookie impersonation with signed original-operator attribution. Final R7 run `36960547760` passed.
+- FRAPPE-10 Scheduler: installed-app `scheduler_events` for all/hourly/daily/weekly/monthly/yearly/annual and bounded five-field cron, tenant timezone evaluation, jobs-worker fan-out, D1 claim-before-execute dedupe, failure state and stale-state pruning. R7 run `36961538818` passed.
 
-Forge intentionally does not embed Frappe's OAuth authorization server or arbitrary auth hooks. Generic connected-app/OAuth lifecycle remains a FRAPPE-26 integration concern rather than an untracked auth ambiguity.
+Forge intentionally does not embed Frappe's Python/Redis scheduler or croniter-only extensions. Generic app cadence is executed through bounded app Workers and D1 state.
 
 ## Gates
 
@@ -48,7 +49,7 @@ npm run r7:frappe:certify
 
 ## Remaining convergence order
 
-1. FRAPPE-10/11 scheduler and realtime.
+1. FRAPPE-11 realtime.
 2. FRAPPE-15/16/17 data import, workflow and communications.
 3. FRAPPE-19/23/26 migration, portal and integrations.
 
