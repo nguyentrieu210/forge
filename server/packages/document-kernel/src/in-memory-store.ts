@@ -1314,20 +1314,17 @@ export class InMemoryMutationStore implements MutationStore {
             )
             .reduce((sum, document) => sum + Number(document.data.delta_amount_minor ?? 0), 0);
 
-        const committed = [...this.documents.values()]
-          .filter((document) =>
-            document.tenant_id === tenantId
-            && document.doctype === "Finance Budget Commitment"
-            && document.docstatus === 1
-            && document.data.budget === budget.name
-            && typeof document.data.posting_date === "string"
-            && document.data.posting_date >= startDate
-            && document.data.posting_date <= throughDate
-          )
-          .reduce((sum, document) => {
-            const amount = Number(document.data.amount_minor ?? 0);
-            return sum + (document.data.commitment_type === "Release" ? -amount : amount);
-          }, 0);
+        const committed = this.financeBudgetOutstandingCommitmentMinor({
+          tenantId,
+          budgetName: budget.name,
+          budgetData: budget.data,
+          account,
+          company,
+          startDate,
+          throughDate,
+          plan,
+          movement,
+        });
 
         const existingActual = this.voucherGlEntries
           .filter((entry) => {
@@ -1358,6 +1355,116 @@ export class InMemoryMutationStore implements MutationStore {
         }
       }
     }
+  }
+
+  private financeBudgetOutstandingCommitmentMinor<T extends JsonObject>(args: {
+    tenantId: string;
+    budgetName: string;
+    budgetData: JsonObject;
+    account: string;
+    company: string;
+    startDate: string;
+    throughDate: string;
+    plan: MutationPlan<T>;
+    movement: (line: GeneralLedgerEntry) => number;
+  }): number {
+    const groups = new Map<string, { sourceDoctype: string; sourceName: string; rawMinor: number }>();
+    for (const document of this.documents.values()) {
+      if (document.tenant_id !== args.tenantId
+        || document.doctype !== "Finance Budget Commitment"
+        || document.docstatus !== 1
+        || document.data.budget !== args.budgetName
+        || typeof document.data.posting_date !== "string"
+        || document.data.posting_date < args.startDate
+        || document.data.posting_date > args.throughDate) continue;
+      const sourceDoctype = typeof document.data.source_doctype === "string" ? document.data.source_doctype : "";
+      const sourceName = typeof document.data.source_name === "string" ? document.data.source_name : "";
+      const amount = Number(document.data.amount_minor ?? 0);
+      if (!sourceDoctype || !sourceName || !Number.isSafeInteger(amount)) continue;
+      const key = `${sourceDoctype}\u0000${sourceName}`;
+      const group = groups.get(key) ?? { sourceDoctype, sourceName, rawMinor: 0 };
+      group.rawMinor += document.data.commitment_type === "Release" ? -amount : amount;
+      groups.set(key, group);
+    }
+
+    let outstanding = 0;
+    for (const group of groups.values()) {
+      if (group.rawMinor <= 0) continue;
+      let linkedActual = 0;
+
+      for (const entry of this.voucherGlEntries) {
+        if (entry.tenant_id !== args.tenantId || entry.voucher_type === "Period Closing Voucher") continue;
+        if (entry.line.account !== args.account) continue;
+        const postingDate = entry.line.posting_at.slice(0, 10);
+        if (postingDate < args.startDate || postingDate > args.throughDate) continue;
+        const voucher = this.documents.get(this.docKey(args.tenantId, entry.voucher_type, entry.voucher_no));
+        if (!voucher || voucher.data.company !== args.company
+          || !this.financeBudgetScopeMatches(args.budgetData, voucher.data, entry.line)) continue;
+        if (!this.financeBudgetCommitmentSourceMatches(
+          group.sourceDoctype,
+          group.sourceName,
+          entry.voucher_type,
+          entry.voucher_no,
+          voucher.data,
+          entry.line.line_key,
+        )) continue;
+        linkedActual += args.movement(entry.line);
+      }
+
+      const incomingDateEligible = args.plan.gl_entries.some((line) => line.posting_at.slice(0, 10) <= args.throughDate);
+      if (incomingDateEligible) {
+        for (const line of args.plan.gl_entries) {
+          if (line.account !== args.account) continue;
+          const postingDate = line.posting_at.slice(0, 10);
+          if (postingDate < args.startDate || postingDate > args.throughDate) continue;
+          if (!this.financeBudgetScopeMatches(args.budgetData, args.plan.document.data, line)) continue;
+          if (!this.financeBudgetCommitmentSourceMatches(
+            group.sourceDoctype,
+            group.sourceName,
+            args.plan.command.aggregate.doctype,
+            args.plan.command.aggregate.name,
+            args.plan.document.data,
+            line.line_key,
+          )) continue;
+          linkedActual += args.movement(line);
+        }
+      }
+
+      const consumed = Math.min(group.rawMinor, Math.max(0, linkedActual));
+      outstanding += group.rawMinor - consumed;
+    }
+    return outstanding;
+  }
+
+  private financeBudgetCommitmentSourceMatches(
+    sourceDoctype: string,
+    sourceName: string,
+    voucherType: string,
+    voucherNo: string,
+    voucherData: JsonObject,
+    lineKey: string,
+  ): boolean {
+    if (sourceDoctype === "Expense Claim") {
+      return voucherType === "Expense Claim" && voucherNo === sourceName;
+    }
+    if (voucherType !== "Purchase Invoice") return false;
+    const canonicalLineKey = lineKey.startsWith("REV-") ? lineKey.slice(4) : lineKey;
+    if (!canonicalLineKey.startsWith("EXPENSE-")) return false;
+    const rowId = canonicalLineKey.slice("EXPENSE-".length);
+    const items = Array.isArray(voucherData.items) ? voucherData.items : [];
+    const item = items.find((raw): raw is JsonObject =>
+      Boolean(raw && typeof raw === "object" && !Array.isArray(raw) && String((raw as JsonObject).row_id ?? "") === rowId));
+    if (!item) return false;
+    if (sourceDoctype === "Purchase Order") {
+      const purchaseOrder = typeof item.purchase_order === "string" && item.purchase_order
+        ? item.purchase_order
+        : typeof voucherData.against_purchase_order === "string" ? voucherData.against_purchase_order : "";
+      return purchaseOrder === sourceName;
+    }
+    if (sourceDoctype === "Material Request") {
+      return typeof item.material_request === "string" && item.material_request === sourceName;
+    }
+    return false;
   }
 
   private financeBudgetScopeMatches(
