@@ -398,20 +398,29 @@
       "domain_id": "FRAPPE-17-NOTIFICATIONS-AND-COMMUNICATIONS",
       "name": "Notifications and communications",
       "lane": "R7-08",
-      "classification": "GAP",
+      "classification": "INTENTIONAL_DIFFERENCE",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
       "forge_authority": [
-        "server/packages/frappe-model/src/notification-rules.ts"
+        "server/packages/frappe-model/src/notification-rules.ts",
+        "server/packages/frappe-api/src/notification-runner.ts",
+        "server/packages/frappe-api/src/email-queue.ts",
+        "server/migrations/tenant/0146_r7_email_queue.sql",
+        "tenant maintenance Email Queue runner"
       ],
       "evidence": [
         "server/packages/frappe-model/src/notification-rules.ts",
-        "server/tests/notifications-auto-repeat.test.mjs"
+        "server/tests/notifications-auto-repeat.test.mjs",
+        "server/packages/frappe-api/src/notification-runner.ts",
+        "server/packages/frappe-api/src/email-queue.ts",
+        "server/packages/frappe-api/src/workflow-actions.ts",
+        "server/migrations/tenant/0146_r7_email_queue.sql",
+        "server/apps/tenant-worker/src/index-core-base.ts",
+        "server/apps/tenant-worker/test/frappe-facade.integration.test.mts",
+        "GitHub Actions R7 Frappe 16 Closure run 36970284103"
       ],
       "oracle_cases": [],
-      "gaps": [
-        "Frappe Email notification delivery/queue semantics are not implemented because no mail transport is configured; Email intents are recorded with skipped_reason."
-      ],
-      "rationale": "This is a real capability gap for Frappe 16 communications semantics, not a parity success."
+      "gaps": [],
+      "rationale": "Forge now implements committed Notification delivery plus durable Email Queue semantics: document-read authorization before disclosure, per-user channel preference, deterministic event/rule/recipient dedupe, durable Pending/Sending/Sent/Error state, bounded exponential retry, stale-claim recovery, provider message evidence, workflow-action email enqueue, and tenant-maintenance delivery. Forge intentionally uses a trusted provider-neutral HTTPS relay instead of Frappe SMTP/Email Account internals and keeps arbitrary Jinja/Python email execution outside the multi-tenant runtime. With no relay configured, mail remains visibly Pending and maintenance reports configured=false; the platform never records a fake send."
     },
     {
       "domain_id": "FRAPPE-18-HOOKS-AND-APP-COMPOSITION",
