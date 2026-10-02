@@ -39,3 +39,39 @@ WHERE doctype='Payment Allocation'
     SELECT 1 FROM json_each(metadata_json,'$.fields')
     WHERE json_extract(value,'$.fieldname')='source_credit_note'
   );
+
+
+-- Freeze server-derived cross-rate allocation evidence in the canonical document schema.
+UPDATE doctype_definitions
+SET metadata_json=json_insert(
+      metadata_json,
+      '$.fields[#]',
+      json('{"fieldname":"total_source_base_allocated_amount","label":"Source Base Allocated","fieldtype":"Currency","read_only":true}'),
+      '$.fields[#]',
+      json('{"fieldname":"exchange_gain_loss_account","label":"Exchange Gain/Loss Account","fieldtype":"Link","options":"Account","read_only":true}'),
+      '$.fields[#]',
+      json('{"fieldname":"exchange_difference","label":"Realized Exchange Difference","fieldtype":"Currency","read_only":true}')
+    ),
+    revision=revision+1,
+    modified_by='migration-0156',
+    modified_at='2026-10-02T00:00:00.000Z'
+WHERE doctype='Payment Allocation'
+  AND NOT EXISTS(
+    SELECT 1 FROM json_each(metadata_json,'$.fields')
+    WHERE json_extract(value,'$.fieldname')='exchange_difference'
+  );
+
+UPDATE doctype_definitions
+SET metadata_json=json_insert(
+      metadata_json,
+      '$.fields[#]',
+      json('{"fieldname":"source_base_allocated_amount","label":"Source Base Allocated","fieldtype":"Currency","read_only":true,"in_list_view":true}')
+    ),
+    revision=revision+1,
+    modified_by='migration-0156',
+    modified_at='2026-10-02T00:00:00.000Z'
+WHERE doctype='Payment Allocation Reference'
+  AND NOT EXISTS(
+    SELECT 1 FROM json_each(metadata_json,'$.fields')
+    WHERE json_extract(value,'$.fieldname')='source_base_allocated_amount'
+  );
