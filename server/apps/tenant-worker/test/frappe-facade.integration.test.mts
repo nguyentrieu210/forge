@@ -9,7 +9,7 @@
  */
 import { env, exports } from "cloudflare:workers";
 import { beforeAll, describe, expect, it } from "vitest";
-import { hashPassword, mintSession, syncWorkflowActions, toFrappeModified, verifySession } from "../../../packages/frappe-api/src/index.js";
+import { hashPassword, mintSession, toFrappeModified, verifySession } from "../../../packages/frappe-api/src/index.js";
 import { D1DocumentAccessStore } from "../../../packages/frappe-model/src/index.js";
 import { parseAppManifest, runAppScheduler } from "../../../packages/app-registry/src/index.js";
 
@@ -2039,7 +2039,7 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
        ) VALUES('demo','Workflow Update Probe:WUP-1','Workflow Update Probe','WUP-1','owner@example.com',0,'Draft',1,?1,?1,?2,'owner@example.com')`,
     ).bind(NOW, JSON.stringify({ subject: "COPIED-BY-WORKFLOW", workflow_state: "Draft" })).run();
 
-    const initialActions = await syncWorkflowActions(env.DB, "demo", {
+    const initialEvent = {
       event_id: "evt-wfa-initial",
       event_type: "workflow_update_probe.created",
       tenant_id: "demo",
@@ -2050,7 +2050,18 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
       occurred_at: NOW,
       schema_version: 1,
       payload: {},
-    }, NOW);
+    };
+    const initialEventResponse = await call("/internal/events", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer test-internal-service-token",
+        "x-cloudforge-idempotency-key": initialEvent.event_id,
+      },
+      body: JSON.stringify(initialEvent),
+    }, { auth: false });
+    expect(initialEventResponse.status).toBe(200);
+    const initialActions = (await initialEventResponse.json() as any).workflow_actions;
     expect(initialActions).toMatchObject({ created: 1, open: 1 });
     const openAction = await env.DB.prepare(
       `SELECT workflow_state,status,permitted_roles_json
@@ -2067,7 +2078,7 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     expect(approved.workflow_state).toBe("Approved");
     expect(approved.resolution_code).toBe("COPIED-BY-WORKFLOW");
 
-    const completedActions = await syncWorkflowActions(env.DB, "demo", {
+    const approvedEvent = {
       event_id: "evt-wfa-approved",
       event_type: "workflow_update_probe.updated",
       tenant_id: "demo",
@@ -2078,7 +2089,18 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
       occurred_at: NOW,
       schema_version: 1,
       payload: {},
-    }, NOW);
+    };
+    const approvedEventResponse = await call("/internal/events", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer test-internal-service-token",
+        "x-cloudforge-idempotency-key": approvedEvent.event_id,
+      },
+      body: JSON.stringify(approvedEvent),
+    }, { auth: false });
+    expect(approvedEventResponse.status).toBe(200);
+    const completedActions = (await approvedEventResponse.json() as any).workflow_actions;
     expect(completedActions).toMatchObject({ completed: 1, created: 0, open: 0 });
     const completedAction = await env.DB.prepare(
       `SELECT status,completed_by,completed_by_role
