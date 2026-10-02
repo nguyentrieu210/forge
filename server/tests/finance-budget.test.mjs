@@ -180,3 +180,114 @@ test("Warn budget records exceeded state instead of silently pretending it fits"
   assert.equal(plan.document.data.exceeded_by_minor, 50_000);
   assert.equal(plan.document.data.available_after_minor, -50_000);
 });
+
+
+test("Finance Budget generates exact equal fiscal distribution without minor-unit drift", async () => {
+  const controller = new FinanceBudgetController();
+  const input = {
+    ...budgetInput,
+    budget_amount: "1200000",
+    fiscal_distribution_enabled: true,
+    distribution_frequency: "Monthly",
+    distribute_equally: true,
+  };
+  const plan = await controller.buildPlan(context("Finance Budget", "BUD-DIST", "submit", input, {
+    existing: canonical("Finance Budget", "BUD-DIST", input, 0, "maker@example.test"),
+  }));
+  const rows = plan.document.data.budget_distribution;
+  assert.equal(rows.length, 12);
+  assert.equal(plan.document.data.distribution_weight_total, 12);
+  assert.equal(rows.reduce((sum, row) => sum + row.allocation_weight, 0), 12);
+  assert.equal(rows.reduce((sum, row) => sum + row.percent_bps, 0), 10_000);
+  assert.equal(rows.reduce((sum, row) => sum + row.amount_minor, 0), 1_200_000);
+  assert.deepEqual(rows.map((row) => row.amount_minor), Array.from({ length: 12 }, () => 100_000));
+  assert.equal(rows[0].start_date, "2026-01-01");
+  assert.equal(rows[0].end_date, "2026-01-31");
+  assert.equal(rows[11].end_date, "2026-12-31");
+});
+
+test("Finance Budget validates manual quarterly distribution and freezes deterministic amounts", async () => {
+  const controller = new FinanceBudgetController();
+  const input = {
+    ...budgetInput,
+    budget_amount: "1000000",
+    fiscal_distribution_enabled: true,
+    distribution_frequency: "Quarterly",
+    distribute_equally: false,
+    budget_distribution: [
+      { start_date: "2026-01-01", end_date: "2026-03-31", percent: "10" },
+      { start_date: "2026-04-01", end_date: "2026-06-30", percent: "20" },
+      { start_date: "2026-07-01", end_date: "2026-09-30", percent: "30" },
+      { start_date: "2026-10-01", end_date: "2026-12-31", percent: "40" },
+    ],
+  };
+  const plan = await controller.buildPlan(context("Finance Budget", "BUD-MANUAL", "submit", input, {
+    existing: canonical("Finance Budget", "BUD-MANUAL", input, 0, "maker@example.test"),
+  }));
+  assert.equal(plan.document.data.distribution_weight_total, 10_000);
+  assert.deepEqual(
+    plan.document.data.budget_distribution.map((row) => row.amount_minor),
+    [100_000, 200_000, 300_000, 400_000],
+  );
+
+  await assert.rejects(
+    controller.buildPlan(context("Finance Budget", "BUD-MANUAL-BAD", "submit", {
+      ...input,
+      budget_distribution: [
+        { start_date: "2026-01-01", end_date: "2026-03-31", percent: "10" },
+        { start_date: "2026-04-01", end_date: "2026-06-30", percent: "20" },
+        { start_date: "2026-07-01", end_date: "2026-09-30", percent: "30" },
+        { start_date: "2026-10-01", end_date: "2026-12-31", percent: "30" },
+      ],
+    }, {
+      existing: canonical("Finance Budget", "BUD-MANUAL-BAD", input, 0, "maker@example.test"),
+    })),
+    /total exactly 100%/,
+  );
+});
+
+test("Budget commitment Stop uses accumulated fiscal distribution through posting date", async () => {
+  const budgetController = new FinanceBudgetController();
+  const budgetPlan = await budgetController.buildPlan(context("Finance Budget", "BUD-MONTHLY", "submit", {
+    ...budgetInput,
+    budget_amount: "1200000",
+    fiscal_distribution_enabled: true,
+    distribution_frequency: "Monthly",
+    distribute_equally: true,
+  }, {
+    existing: canonical("Finance Budget", "BUD-MONTHLY", budgetInput, 0, "maker@example.test"),
+  }));
+  const budget = canonical("Finance Budget", "BUD-MONTHLY", budgetPlan.document.data);
+  const po = canonical("Purchase Order", "PO-MONTHLY", { company: "Kairo" });
+  const controller = new FinanceBudgetCommitmentController();
+
+  const allowed = await controller.buildPlan(context("Finance Budget Commitment", "COM-MONTHLY-OK", "submit", {
+    budget: "BUD-MONTHLY",
+    posting_date: "2026-08-03",
+    commitment_type: "Reserve",
+    amount: "800000",
+    source_doctype: "Purchase Order",
+    source_name: "PO-MONTHLY",
+  }, {
+    existing: canonical("Finance Budget Commitment", "COM-MONTHLY-OK", {}, 0),
+    documents: [budget, po],
+  }));
+  assert.equal(allowed.document.data.annual_effective_budget_amount_minor, 1_200_000);
+  assert.equal(allowed.document.data.effective_budget_amount_minor, 800_000);
+  assert.equal(allowed.document.data.available_after_minor, 0);
+
+  await assert.rejects(
+    controller.buildPlan(context("Finance Budget Commitment", "COM-MONTHLY-OVER", "submit", {
+      budget: "BUD-MONTHLY",
+      posting_date: "2026-08-03",
+      commitment_type: "Reserve",
+      amount: "800001",
+      source_doctype: "Purchase Order",
+      source_name: "PO-MONTHLY",
+    }, {
+      existing: canonical("Finance Budget Commitment", "COM-MONTHLY-OVER", {}, 0),
+      documents: [budget, po],
+    })),
+    /exceeds the effective budget/,
+  );
+});
