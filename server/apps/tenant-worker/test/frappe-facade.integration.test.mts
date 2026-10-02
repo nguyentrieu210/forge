@@ -1842,6 +1842,72 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     expect(published.version_no).toBe(1);
   });
 
+  it("uses one bounded workflow-condition authority for offer and commit", async () => {
+    const meta = {
+      name: "Conditional Approval", module: "R7", title_field: "subject",
+      fields: [
+        { fieldname: "subject", label: "Subject", fieldtype: "Data", required: true },
+        { fieldname: "amount", label: "Amount", fieldtype: "Currency", required: true },
+        { fieldname: "blocked", label: "Blocked", fieldtype: "Check", default: false },
+        { fieldname: "workflow_state", label: "State", fieldtype: "Data", read_only: true },
+      ],
+      permissions: [{ role: "System Manager", read: true, write: true, create: true, report: true }],
+      revision: 1,
+    };
+    const workflow = {
+      name: "Conditional Approval Flow", document_type: "Conditional Approval", state_field: "workflow_state", is_active: true,
+      states: [{ state: "Draft", docstatus: 0, allow_edit: "System Manager" }, { state: "Approved", docstatus: 0, allow_edit: "System Manager" }],
+      transitions: [{
+        state: "Draft", action: "Approve", next_state: "Approved", allowed_role: "System Manager",
+        condition: "doc.amount >= 100 and not doc.blocked",
+      }],
+      revision: 1,
+    };
+    await env.DB.prepare(
+      `INSERT INTO doctype_definitions(tenant_id,doctype,module,revision,metadata_json,modified_by,modified_at)
+       VALUES('demo','Conditional Approval','R7',1,?1,'Administrator',?2)`,
+    ).bind(JSON.stringify(meta), NOW).run();
+    await env.DB.prepare(
+      `INSERT INTO workflows(tenant_id,name,document_type,is_active,revision,workflow_json,modified_by,modified_at)
+       VALUES('demo','Conditional Approval Flow','Conditional Approval',1,1,?1,'Administrator',?2)`,
+    ).bind(JSON.stringify(workflow), NOW).run();
+
+    const create = async (subject: string, amount: number, blocked = false) =>
+      (await (await call("/api/resource/Conditional Approval", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ subject, amount, blocked }),
+      })).json() as any).data;
+
+    const low = await create("Below threshold", 50);
+    const eligible = await create("Eligible", 150);
+    const blocked = await create("Explicitly blocked", 150, true);
+
+    const lowTransitions = await unwrap(await method("metaforge.api.get_workflow_transitions", {
+      doctype: "Conditional Approval", name: low.name,
+    }, "GET"));
+    expect(lowTransitions.transitions).toHaveLength(0);
+
+    const blockedTransitions = await unwrap(await method("metaforge.api.get_workflow_transitions", {
+      doctype: "Conditional Approval", name: blocked.name,
+    }, "GET"));
+    expect(blockedTransitions.transitions).toHaveLength(0);
+
+    const eligibleTransitions = await unwrap(await method("metaforge.api.get_workflow_transitions", {
+      doctype: "Conditional Approval", name: eligible.name,
+    }, "GET"));
+    expect(eligibleTransitions.transitions.some((entry: any) => entry.action === "Approve")).toBe(true);
+
+    const denied = await method("frappe.model.workflow.apply_workflow", {
+      doctype: "Conditional Approval", name: low.name, action: "Approve",
+    });
+    expect(denied.status).toBe(403);
+
+    const approved = await unwrap(await method("frappe.model.workflow.apply_workflow", {
+      doctype: "Conditional Approval", name: eligible.name, action: "Approve",
+    }));
+    expect(approved.workflow_state).toBe("Approved");
+  });
+
   it("logs out and the session stops working", async () => {
     const response = await call("/api/method/logout", { method: "POST" });
     expect(response.status).toBe(200);
