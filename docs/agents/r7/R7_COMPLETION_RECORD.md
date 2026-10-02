@@ -4,7 +4,7 @@
 
 `R7-A NOT CLOSED`.
 
-The 28-domain Frappe v16.19.0 audit is fully classified and fail-closed. Platform certification remains blocked by 7 concrete GAP domains.
+The 28-domain Frappe v16.19.0 audit is fully classified and fail-closed. Platform certification remains blocked by 6 concrete GAP domains.
 
 ## Exact identity
 
@@ -18,8 +18,8 @@ The 28-domain Frappe v16.19.0 audit is fully classified and fail-closed. Platfor
 | Classification | Count |
 |---|---:|
 | UNRESOLVED | 0 |
-| GAP | 7 |
-| INTENTIONAL_DIFFERENCE | 8 |
+| GAP | 6 |
+| INTENTIONAL_DIFFERENCE | 9 |
 | OUT_OF_SCOPE | 1 |
 | SEMANTIC_PARITY | 12 |
 | EXACT_PARITY | 0 |
@@ -28,11 +28,11 @@ The 28-domain Frappe v16.19.0 audit is fully classified and fail-closed. Platfor
 
 ## Latest closures
 
-- FRAPPE-06 REST/RPC: permission-aware Frappe v2 `group_by`, tuple-shape output and canonical v2 envelopes.
-- FRAPPE-05 Authentication & Sessions: Frappe User API keys with `token`/`Basic`, stable api_key + rotating one-time secret, `frappe.auth.get_logged_user`, and reason-bound audited cookie impersonation with signed original-operator attribution. Final R7 run `36960547760` passed.
-- FRAPPE-10 Scheduler: installed-app `scheduler_events` for all/hourly/daily/weekly/monthly/yearly/annual and bounded five-field cron, tenant timezone evaluation, jobs-worker fan-out, D1 claim-before-execute dedupe, failure state and stale-state pruning. R7 run `36961538818` passed.
+- FRAPPE-05 Authentication & Sessions — final R7 auth run `36960547760`.
+- FRAPPE-10 Scheduler — app scheduler composition, cadence/dedupe and Workerd run `36961538818`.
+- FRAPPE-11 Realtime — same-origin session auth, automatic Frappe rooms, DocPerm-gated doctype/doc rooms, task/progress and open-doc presence, committed `list_update`/`docinfo_update`, D1 monotonic sequence, deterministic live ordering, reconnect replay and duplicate-source suppression. R7 run `36964256721` passed.
 
-Forge intentionally does not embed Frappe's Python/Redis scheduler or croniter-only extensions. Generic app cadence is executed through bounded app Workers and D1 state.
+Forge intentionally uses Durable Objects + D1 + raw JSON WebSocket rather than Frappe Socket.IO + Redis. The semantic room/order/reconnect contract is closed; arbitrary Python/app realtime handlers are not a Forge kernel extension surface.
 
 ## Gates
 
@@ -49,8 +49,7 @@ npm run r7:frappe:certify
 
 ## Remaining convergence order
 
-1. FRAPPE-11 realtime.
-2. FRAPPE-15/16/17 data import, workflow and communications.
-3. FRAPPE-19/23/26 migration, portal and integrations.
+1. FRAPPE-15/16/17 data import, workflow and communications.
+2. FRAPPE-19/23/26 migration, portal and integrations.
 
 R7-B ERPNext closure should consume these verified platform contracts rather than compensate for Frappe-layer ambiguity.
