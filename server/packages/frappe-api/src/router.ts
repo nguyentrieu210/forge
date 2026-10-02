@@ -136,6 +136,8 @@ export interface FrappeRouterContext extends VerticalRouterHooks {
   csrfToken: string;
   /** Epoch seconds of the last password login; absent for app callbacks and dev actors. */
   authenticatedAt?: number;
+  /** Continue bounded background work after the HTTP response (Cloudflare waitUntil). */
+  defer?: (work: Promise<unknown>) => void;
   fullName: string;
   language: string;
   /**
