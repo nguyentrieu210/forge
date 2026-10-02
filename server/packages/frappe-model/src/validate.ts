@@ -447,6 +447,7 @@ export function validateWorkflow(value: unknown, expectedDoctype?: string): Work
     document_type: documentType,
     state_field: identifier(input.state_field ?? "workflow_state", "state_field"),
     is_active: bool(input.is_active, true),
+    send_email_alert: bool(input.send_email_alert, false),
     states,
     transitions,
     revision: safeInt(input.revision ?? 1, "revision", 1, Number.MAX_SAFE_INTEGER),
