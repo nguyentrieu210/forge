@@ -402,7 +402,7 @@ test("Payment Allocation reuses Credit Note customer credit against a later Sale
 });
 
 
-test("customer credit allocation fails closed when source and target historical FX bases differ", async () => {
+test("customer credit allocation posts realized FX when source and target historical bases differ", async () => {
   const store = new InMemoryMutationStore();
   store.seedO2CMasters({
     company: "Demo",
@@ -410,7 +410,11 @@ test("customer credit allocation fails closed when source and target historical 
     currency: "EUR",
     companyCurrency: "USD",
     items: ["ITEM-1"],
-    accounts: ["Debtors", "Sales", "Bank"],
+    accounts: ["Debtors", "Sales", "Bank", "FX Gain/Loss"],
+  });
+  store.seedMaster("Company", "Demo", "demo", {
+    default_currency: "USD",
+    exchange_gain_loss_account: "FX Gain/Loss",
   });
   store.seedMaster("Exchange Rate", "EUR:USD:2026-10-02", "demo", { rate: "1.000000" });
   const registry = registerErpNextCoreControllers(
@@ -488,29 +492,64 @@ test("customer credit allocation fails closed when source and target historical 
     },
   });
 
-  await assert.rejects(
-    createAndSubmit(kernel, {
-      doctype: "Payment Allocation",
-      name: "PA-FX-BLOCKED",
-      document: {
-        company: "Demo",
-        party_type: "Customer",
-        party: "CUST-1",
-        party_account: "Debtors",
-        currency: "EUR",
-        posting_at: NOW,
-        source_credit_note: "CN-FX-CREDIT",
-        references: [{
-          row_id: "FX-ALLOC",
-          reference_doctype: "Sales Invoice",
-          reference_name: "SI-FX-LATER",
-          allocated_amount: "25",
-        }],
-      },
-    }),
-    /historical exchange rates requires realized FX posting/i,
+  await createAndSubmit(kernel, {
+    doctype: "Payment Allocation",
+    name: "PA-FX-REALIZED",
+    document: {
+      company: "Demo",
+      party_type: "Customer",
+      party: "CUST-1",
+      party_account: "Debtors",
+      currency: "EUR",
+      posting_at: NOW,
+      source_credit_note: "CN-FX-CREDIT",
+      references: [{
+        row_id: "FX-ALLOC",
+        reference_doctype: "Sales Invoice",
+        reference_name: "SI-FX-LATER",
+        allocated_amount: "25",
+      }],
+    },
+  });
+
+  assert.equal(await store.getOutstandingMinor("demo", "Credit Note", "CN-FX-CREDIT"), -1_500);
+  assert.equal(await store.getBaseOutstandingMinor("demo", "Credit Note", "CN-FX-CREDIT"), -1_800);
+  assert.equal(await store.getOutstandingMinor("demo", "Sales Invoice", "SI-FX-LATER"), 0);
+  assert.equal(await store.getBaseOutstandingMinor("demo", "Sales Invoice", "SI-FX-LATER"), 0);
+
+  const allocation = await store.getDocument("demo", "Payment Allocation", "PA-FX-REALIZED");
+  assert.equal(allocation.data.total_source_base_allocated_amount_minor, 3_000);
+  assert.equal(allocation.data.total_base_allocated_amount_minor, 2_750);
+  assert.equal(allocation.data.exchange_difference_minor, 250);
+  assert.equal(allocation.data.exchange_gain_loss_account, "FX Gain/Loss");
+  assert.equal(allocation.data.references[0].source_base_allocated_amount_minor, 3_000);
+  assert.equal(allocation.data.references[0].base_allocated_amount_minor, 2_750);
+
+  const gl = await store.getVoucherGlEntries("demo", "Payment Allocation", "PA-FX-REALIZED", 2);
+  assert.equal(gl.length, 2);
+  assert.equal(
+    gl.filter((line) => line.account === "Debtors")
+      .reduce((sum, line) => sum + line.debit_minor - line.credit_minor, 0),
+    250,
+  );
+  assert.equal(
+    gl.filter((line) => line.account === "FX Gain/Loss")
+      .reduce((sum, line) => sum + line.debit_minor - line.credit_minor, 0),
+    -250,
+  );
+  assert.equal(
+    gl.reduce((sum, line) => sum + line.debit_minor - line.credit_minor, 0),
+    0,
   );
 
+  await mutate(kernel, {
+    commandId: "PA-FX-REALIZED-cancel",
+    doctype: "Payment Allocation",
+    name: "PA-FX-REALIZED",
+    action: "cancel",
+    expectedVersion: 2,
+    document: {},
+  });
   assert.equal(await store.getOutstandingMinor("demo", "Credit Note", "CN-FX-CREDIT"), -4_000);
   assert.equal(await store.getBaseOutstandingMinor("demo", "Credit Note", "CN-FX-CREDIT"), -4_800);
   assert.equal(await store.getOutstandingMinor("demo", "Sales Invoice", "SI-FX-LATER"), 2_500);
