@@ -278,7 +278,7 @@ async function routeInternalRequest(
 }
 
 export default {
-  async fetch(request: Request, env: TenantEnv): Promise<Response> {
+  async fetch(request: Request, env: TenantEnv, ctx?: ExecutionContext): Promise<Response> {
     const traceId = request.headers.get("x-cloudforge-trace-id") ?? randomId("trace");
     try {
       const url = new URL(request.url);
@@ -304,7 +304,7 @@ export default {
       // file, not at all: it is the URL that ends up inside an `<img src>` on the public
       // catalogue, so it must resolve for a browser that has never logged in.
       if (isFrappePath(url.pathname) || isPublicFilePath(url.pathname)) {
-        const frappeResponse = await serveFrappeApi(request, url, env, tenantId, traceId);
+        const frappeResponse = await serveFrappeApi(request, url, env, tenantId, traceId, ctx);
         if (frappeResponse) return frappeResponse;
       }
 
@@ -1179,11 +1179,12 @@ async function serveFrappeApi(
   env: TenantEnv,
   tenantId: string,
   traceId: string,
+  ctx?: ExecutionContext,
 ): Promise<Response | null> {
   const sessionSecret = env.SESSION_SECRET;
   if (!sessionSecret && env.AUTH_MODE !== "development") return null;
   try {
-    return await serveFrappeApiInner(request, url, env, tenantId, traceId, sessionSecret);
+    return await serveFrappeApiInner(request, url, env, tenantId, traceId, sessionSecret, ctx);
   } catch (error) {
     // Faults raised OUTSIDE the router — failed authentication, a revoked session,
     // a missing CSRF header — must still be reported in Frappe's error shape.
@@ -1202,6 +1203,7 @@ async function serveFrappeApiInner(
   tenantId: string,
   traceId: string,
   sessionSecret: string | undefined,
+  ctx?: ExecutionContext,
 ): Promise<Response | null> {
   const requestStarted = performance.now();
   const now = (): string => new Date().toISOString();
@@ -1622,6 +1624,7 @@ async function serveFrappeApiInner(
     now,
     csrfToken,
     ...(established ? { authenticatedAt: established.session.authenticatedAt } : {}),
+    ...(ctx ? { defer: (work: Promise<unknown>) => ctx.waitUntil(work.then(() => undefined)) } : {}),
     fullName,
     language,
     // Present only when this deployment can reach app Workers. Absent, an unknown
