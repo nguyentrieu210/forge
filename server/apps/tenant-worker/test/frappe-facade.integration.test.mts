@@ -9,7 +9,7 @@
  */
 import { env, exports } from "cloudflare:workers";
 import { beforeAll, describe, expect, it } from "vitest";
-import { hashPassword, mintSession, toFrappeModified } from "../../../packages/frappe-api/src/index.js";
+import { hashPassword, mintSession, toFrappeModified, verifySession } from "../../../packages/frappe-api/src/index.js";
 import { D1DocumentAccessStore } from "../../../packages/frappe-model/src/index.js";
 
 const NOW = "2026-07-26T10:00:00.000Z";
@@ -267,6 +267,116 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     expect(boot.csrf_token).toBe(csrf);
     expect(boot.lang).toBe("vi");
     expect(boot.sysdefaults.currency).toBe("USD");
+  });
+
+  it("matches Frappe token/Basic API-key auth and rotates the one-time secret", async () => {
+    const first = await unwrap(await method("frappe.core.doctype.user.user.generate_keys", {
+      user: "sales@example.com",
+      reason: "R7 Frappe API-key differential",
+    }));
+    expect(typeof first.api_key).toBe("string");
+    expect(typeof first.api_secret).toBe("string");
+
+    const tokenAuth = await call("/api/method/frappe.auth.get_logged_user", {
+      method: "GET",
+      headers: { authorization: `token ${first.api_key}:${first.api_secret}` },
+    }, { auth: false });
+    expect(tokenAuth.status).toBe(200);
+    expect(await unwrap(tokenAuth)).toBe("sales@example.com");
+
+    const basic = btoa(`${first.api_key}:${first.api_secret}`);
+    const basicAuth = await call("/api/method/frappe.auth.get_logged_user", {
+      method: "GET",
+      headers: { authorization: `Basic ${basic}` },
+    }, { auth: false });
+    expect(basicAuth.status).toBe(200);
+    expect(await unwrap(basicAuth)).toBe("sales@example.com");
+
+    const stored = await env.DB.prepare(
+      `SELECT api_key,secret_salt,secret_hash FROM user_api_credentials
+       WHERE tenant_id='demo' AND user_id='sales@example.com' AND revoked_at IS NULL`,
+    ).first<{ api_key: string; secret_salt: string; secret_hash: string }>();
+    expect(stored?.api_key).toBe(first.api_key);
+    expect(stored?.secret_hash).toMatch(/^[0-9a-f]{64}$/);
+    expect(JSON.stringify(stored)).not.toContain(first.api_secret);
+
+    const second = await unwrap(await method("frappe.core.doctype.user.user.generate_keys", {
+      user: "sales@example.com",
+      reason: "rotate R7 credential",
+    }));
+    expect(second.api_key).not.toBe(first.api_key);
+    expect(second.api_secret).not.toBe(first.api_secret);
+
+    const oldCredential = await call("/api/method/frappe.auth.get_logged_user", {
+      method: "GET",
+      headers: { authorization: `token ${first.api_key}:${first.api_secret}` },
+    }, { auth: false });
+    expect(oldCredential.status).not.toBe(200);
+
+    const apiImpersonation = await call("/api/method/frappe.core.doctype.user.user.impersonate", {
+      method: "POST",
+      headers: {
+        authorization: `token ${second.api_key}:${second.api_secret}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ user: "reader@example.com", reason: "must require browser session" }),
+    }, { auth: false });
+    expect(apiImpersonation.status).toBe(403);
+    expect(String((await apiImpersonation.json() as any).message)).toMatch(/browser session/i);
+  });
+
+  it("starts an audited cookie-only support impersonation session with durable attribution", async () => {
+    const reason = "R7 support diagnosis";
+    const response = await method("frappe.core.doctype.user.user.impersonate", {
+      user: "reader@example.com",
+      reason,
+    });
+    expect(response.status).toBe(200);
+
+    const cookie = response.headers.get("set-cookie") ?? "";
+    const impersonatedSid = decodeURIComponent(cookie.slice(cookie.indexOf("=") + 1).split(";")[0]!);
+    const impersonatedCsrf = response.headers.get("x-frappe-csrf-token") ?? "";
+    expect(impersonatedSid).not.toBe("");
+    expect(impersonatedCsrf).not.toBe("");
+
+    const signed = await verifySession(
+      impersonatedSid,
+      "demo",
+      "test-session-secret-at-least-32-characters-long",
+    );
+    expect(signed.actor.user_id).toBe("reader@example.com");
+    expect(signed.actor.impersonator_user_id).toBe("sales@example.com");
+    expect(signed.impersonatorUserId).toBe("sales@example.com");
+
+    const audit = await env.DB.prepare(
+      `SELECT actor_user_id,target_user_id,reason,source
+         FROM rbac_audit_events
+        WHERE tenant_id='demo' AND event_type='support.impersonation.start'
+        ORDER BY created_at DESC LIMIT 1`,
+    ).first<{ actor_user_id: string; target_user_id: string; reason: string; source: string }>();
+    expect(audit).toEqual({
+      actor_user_id: "sales@example.com",
+      target_user_id: "reader@example.com",
+      reason,
+      source: "frappe.core.doctype.user.user.impersonate",
+    });
+
+    const notice = await env.DB.prepare(
+      `SELECT subject,from_user FROM notification_log
+        WHERE tenant_id='demo' AND for_user='reader@example.com'
+          AND subject LIKE '%impersonated as you%'
+        ORDER BY created_at DESC LIMIT 1`,
+    ).first<{ subject: string; from_user: string }>();
+    expect(notice?.from_user).toBe("sales@example.com");
+    expect(notice?.subject).toContain(reason);
+
+    sid = impersonatedSid;
+    csrf = impersonatedCsrf;
+    const boot = await unwrap(await method("metaforge.api.get_boot", {}, "GET"));
+    expect(boot.user).toBe("reader@example.com");
+
+    // Restore the suite's manager identity so later ordered scenarios remain independent.
+    expect((await switchSession("sales@example.com")).status).toBe(200);
   });
 
   it("locks and unlocks one accounting period through the authorised API with an append-only audit trail", async () => {
