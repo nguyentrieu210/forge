@@ -34,6 +34,7 @@ on:
       - "server/migrations/tenant/0154_exchange_rate_revaluation.sql"
       - "server/migrations/tenant/0155_customer_credit_refund.sql"
       - "server/migrations/tenant/0156_customer_credit_allocation.sql"
+      - "server/migrations/tenant/0157_finance_budget_commitment_actualization.sql"
       - "server/scripts/test-customer-credit-authority-migration.py"
       - "server/scripts/test-customer-credit-allocation-migration.py"
       - "server/scripts/test-period-closing-authority-migration.py"
