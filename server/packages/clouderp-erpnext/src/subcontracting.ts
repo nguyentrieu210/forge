@@ -622,7 +622,7 @@ export class SubcontractingReceiptController implements DocumentController<Subco
       "Purchase Order",
       data.purchase_order,
     );
-    if (checked(po.data.receipt_match_required)) {
+    if (checked((po.data as JsonObject).receipt_match_required)) {
       const [receiptProgress, billedProgress] = await Promise.all([
         context.reader.getProcuredQuantityMicros(context.command.tenant_id, po.name, "Receipt", data.service_item),
         context.reader.getProcuredQuantityMicros(context.command.tenant_id, po.name, "Billing", data.service_item),
