@@ -26,6 +26,28 @@ The SQL report is a read-only canonical GL projection. It does not yet consume t
 aggregate port, whose current contract lacks Project/Cost Center/closing-voucher exclusions.
 No balance snapshot, shadow actual ledger or additional accounting write authority is added.
 
+
+## Transactional Budget Stop/Warn/Ignore
+
+R8-B now evaluates submitted GL against the same Finance Budget scope/date/account model
+at commit time. D1 migration 0153 runs a `BEFORE INSERT` GL guard inside the mutation
+batch, so a `Stop` budget cannot be crossed by two concurrent submits that both passed a
+controller-side read. The in-memory store mirrors the same actual + submitted commitment
++ dated revision calculation under its database mutex.
+
+The guard:
+- uses company, Branch, Cost Center and Project scope matching consistent with the report;
+- treats Income consumption as credit-minus-debit and other accounts as debit-minus-credit;
+- excludes Period Closing Voucher GL from operating budget consumption;
+- rejects mixed GL currency/scale instead of comparing heterogeneous minor units;
+- clips revisions and commitments through the posting date;
+- blocks only `Stop`; `Warn` and `Ignore` remain non-blocking and are visible through
+  the canonical Budget-vs-Actual status projection.
+
+This closes the race-prone actual-aware Stop boundary. Automatic commitment consumption
+when a source document turns into actual GL is still separate work; until then, a source
+commitment must be explicitly released or it continues to count alongside actuals.
+
 ## Period-close safety
 
 The controller validates complete UTC posting timestamps, including valid calendar dates.
@@ -53,8 +75,8 @@ planner that consumes historical account metadata remains future work.
 
 ## Still open
 
-Budget actual-aware transactional Stop/Warn/Ignore enforcement, fiscal distribution,
-automatic commitment consumption and pinned ERPNext differential fixtures remain open.
+Fiscal distribution, automatic commitment consumption and pinned ERPNext differential
+fixtures remain open. Actual-aware transactional Stop/Warn/Ignore is now commit-time guarded.
 Period close still needs previous-year/future-close lifecycle depth, historical-account
 planner support, large-ledger processing and in-memory/D1 commit-guard parity.
 FX revaluation, consolidation, downstream Landed Cost repost, broader subcontracting
