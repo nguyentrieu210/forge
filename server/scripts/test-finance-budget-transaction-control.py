@@ -192,8 +192,8 @@ db.commit()
 
 
 # Canonical Purchase Order commitment is consumed automatically by linked PI expense actual.
-account("648")
-budget("BUD-AUTO", "648", 1000)
+account("649")
+budget("BUD-AUTO", "649", 1000)
 insert_doc("Purchase Order", "PO-AUTO", {
     "company": "Kairo", "currency": "VND",
     "items": [{"row_id": "PO-ROW", "item_code": "ITEM-1", "material_request": "MR-AUTO"}],
@@ -214,22 +214,22 @@ ensure_voucher(
 )
 # This would be 1600 if the raw commitment were double-counted. 0157 reduces the
 # outstanding commitment to 400 inside the same INSERT that posts the 600 actual.
-insert_gl("Purchase Invoice", "PI-AUTO", "EXPENSE-PI-ROW", "648", 600, 0)
+insert_gl("Purchase Invoice", "PI-AUTO", "EXPENSE-PI-ROW", "649", 600, 0)
 db.commit()
 
 ensure_voucher("Journal Entry", "JE-AUTO-OVER")
 db.commit()
 expect_rejected("FINANCE_BUDGET_TRANSACTION_EXCEEDED", lambda: insert_gl(
-    "Journal Entry", "JE-AUTO-OVER", "L1", "648", 1, 0
+    "Journal Entry", "JE-AUTO-OVER", "L1", "649", 1, 0
 ))
 
 # Exact cancellation reversal removes the actual and restores the original reservation.
-insert_gl("Purchase Invoice", "PI-AUTO", "REV-EXPENSE-PI-ROW", "648", 0, 600)
+insert_gl("Purchase Invoice", "PI-AUTO", "REV-EXPENSE-PI-ROW", "649", 0, 600)
 db.commit()
 ensure_voucher("Journal Entry", "JE-AUTO-AFTER-CANCEL")
 db.commit()
 expect_rejected("FINANCE_BUDGET_TRANSACTION_EXCEEDED", lambda: insert_gl(
-    "Journal Entry", "JE-AUTO-AFTER-CANCEL", "L1", "648", 1, 0
+    "Journal Entry", "JE-AUTO-AFTER-CANCEL", "L1", "649", 1, 0
 ))
 
 assert db.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
