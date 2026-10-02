@@ -4,7 +4,6 @@ Audit state: **complete** for the declared 28-domain denominator. Platform closu
 
 | Domain | Gap summary | Closure evidence |
 |---|---|---|
-| FRAPPE-11 — Realtime | Generic frappe.publish_realtime-compatible room authorization/order/reconnect behavior is not proven as a platform-wide authority. | Pinned Frappe 16 source/runtime fixture + Forge regression/differential + updated matrix |
 | FRAPPE-15 — Data import/export | Frappe background/queued Data Import status lifecycle is not exposed on the facade.<br>Large import/error-workbook/update-mode parity remains incomplete. | Pinned Frappe 16 source/runtime fixture + Forge regression/differential + updated matrix |
 | FRAPPE-16 — Workflow | Workflow email/action delivery is not complete because mail transport is absent.<br>Exact Frappe condition/evaluation and all workflow side-effect semantics require closure. | Pinned Frappe 16 source/runtime fixture + Forge regression/differential + updated matrix |
 | FRAPPE-17 — Notifications and communications | Frappe Email notification delivery/queue semantics are not implemented because no mail transport is configured; Email intents are recorded with skipped_reason. | Pinned Frappe 16 source/runtime fixture + Forge regression/differential + updated matrix |
@@ -14,11 +13,10 @@ Audit state: **complete** for the declared 28-domain denominator. Platform closu
 
 ## Closure order
 
-1. **Realtime execution fabric** — FRAPPE-11 Realtime.
-2. **Data/workflow communication** — FRAPPE-15 Data import/export, FRAPPE-16 Workflow, FRAPPE-17 Notifications/communications.
-3. **Migration/product/integration surface** — FRAPPE-19 Migrations/patches, FRAPPE-23 Website/portal, FRAPPE-26 Integrations.
+1. **Data/workflow communication** — FRAPPE-15 Data import/export, FRAPPE-16 Workflow, FRAPPE-17 Notifications/communications.
+2. **Migration/product/integration surface** — FRAPPE-19 Migrations/patches, FRAPPE-23 Website/portal, FRAPPE-26 Integrations.
 
-FRAPPE-10 Scheduler left this backlog after installed-app scheduler composition, timezone cadence, D1 slot claiming/dedupe and Workerd regression passed R7 GitHub Actions run `36961538818`.
+FRAPPE-11 Realtime left this backlog after room authorization, durable sequence ordering, source-event dedupe and reconnect replay passed Workerd in GitHub Actions run `36964256721`.
 
 ## Rule
 
