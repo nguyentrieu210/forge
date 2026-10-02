@@ -11,6 +11,7 @@ import { env, exports } from "cloudflare:workers";
 import { beforeAll, describe, expect, it } from "vitest";
 import { hashPassword, mintSession, toFrappeModified, verifySession } from "../../../packages/frappe-api/src/index.js";
 import { D1DocumentAccessStore } from "../../../packages/frappe-model/src/index.js";
+import { parseAppManifest, runAppScheduler } from "../../../packages/app-registry/src/index.js";
 
 const NOW = "2026-07-26T10:00:00.000Z";
 const PASSWORD = "supersecret-password";
@@ -2160,5 +2161,118 @@ describe("public web form — the one surface with no session", () => {
     expect((await send("198.51.100.1")).status).toBe(417);
     // Another visitor still has their own allowance.
     expect((await send("198.51.100.2")).status).toBe(200);
+  });
+});
+
+
+describe("R7 Frappe scheduler compatibility", () => {
+  it("validates scheduler_events fail-closed and runs merged schedules once per due slot", async () => {
+    const baseManifest = {
+      id: "schedapp",
+      name: "Scheduler Test App",
+      version: "1.0.0",
+      requires: [],
+      doctypes: [],
+      workflows: [],
+      print_formats: [],
+      roles: [],
+      fixtures: [],
+      custom_fields: [],
+      nav: [],
+      hooks: [],
+      validators: [],
+      reports: [],
+      externalDocTypes: [],
+      charts: [],
+      actions: [],
+      screens: [],
+      worker: "schedapp-worker",
+    };
+
+    expect(() => parseAppManifest({
+      ...baseManifest,
+      scheduler_events: { cron: { "0 0 L * *": ["schedapp.bad"] } },
+    })).toThrow(/cron/i);
+
+    expect(() => parseAppManifest({
+      ...baseManifest,
+      scheduler_events: {
+        hourly: ["schedapp.duplicate"],
+        daily: ["schedapp.duplicate"],
+      },
+    })).toThrow(/Duplicate scheduled method/i);
+
+    expect(() => parseAppManifest({
+      ...baseManifest,
+      worker: undefined,
+      scheduler_events: { hourly: ["schedapp.hourly"] },
+    })).toThrow(/worker/i);
+
+    const manifest = parseAppManifest({
+      ...baseManifest,
+      scheduler_events: {
+        all: ["schedapp.all"],
+        hourly: ["schedapp.hourly"],
+        daily: ["schedapp.fail"],
+        cron: { "0/5 * * * *": ["schedapp.cron"] },
+      },
+    });
+    await env.DB.prepare(
+      "INSERT INTO installed_apps(tenant_id,app_id,app_name,version,content_hash,manifest_json,installed_by,installed_at,modified_at) " +
+      "VALUES('demo','schedapp','Scheduler Test App','1.0.0',?1,?2,'Administrator',?3,?3) " +
+      "ON CONFLICT(tenant_id,app_id) DO UPDATE SET manifest_json=excluded.manifest_json,modified_at=excluded.modified_at",
+    ).bind("a".repeat(64), JSON.stringify(manifest), "2026-07-25T09:58:00.000Z").run();
+
+    const invoked: string[] = [];
+    const run = (now: string) => runAppScheduler({
+      db: env.DB,
+      tenantId: "demo",
+      now,
+      timeZone: "Asia/Ho_Chi_Minh",
+      invoke: async (job) => {
+        invoked.push(job.method + "@" + job.dueKey);
+        if (job.method === "schedapp.fail") throw new Error("planned failure");
+      },
+    });
+
+    const first = await run("2026-07-26T10:00:00.000Z");
+    expect(first.declared).toBe(4);
+    expect(first.started).toBe(4);
+    expect(first.completed).toBe(3);
+    expect(first.failed).toBe(1);
+    expect(invoked.map((entry) => entry.split("@")[0]).sort()).toEqual([
+      "schedapp.all", "schedapp.cron", "schedapp.fail", "schedapp.hourly",
+    ]);
+
+    const firstInvocationCount = invoked.length;
+    const duplicate = await run("2026-07-26T10:00:00.000Z");
+    expect(duplicate.started).toBe(0);
+    expect(invoked).toHaveLength(firstInvocationCount);
+
+    const nextTick = await run("2026-07-26T10:04:00.000Z");
+    expect(nextTick.started).toBe(1);
+    expect(invoked.at(-1)?.startsWith("schedapp.all@")).toBe(true);
+
+    const failed = await env.DB.prepare(
+      "SELECT last_status,last_error FROM app_scheduler_runs " +
+      "WHERE tenant_id='demo' AND app_id='schedapp' AND method='schedapp.fail'",
+    ).first<{ last_status: string; last_error: string }>();
+    expect(failed?.last_status).toBe("failed");
+    expect(failed?.last_error).toContain("planned failure");
+
+    const noSchedules = { ...manifest, scheduler_events: {} };
+    await env.DB.prepare(
+      "UPDATE installed_apps SET manifest_json=?3,modified_at=?4 WHERE tenant_id=?1 AND app_id=?2",
+    ).bind("demo", "schedapp", JSON.stringify(noSchedules), "2026-07-26T10:05:00.000Z").run();
+    const pruned = await run("2026-07-26T10:05:00.000Z");
+    expect(pruned.declared).toBe(0);
+    expect(pruned.pruned).toBeGreaterThanOrEqual(4);
+
+    const remaining = await env.DB.prepare(
+      "SELECT COUNT(*) AS count FROM app_scheduler_runs WHERE tenant_id='demo' AND app_id='schedapp'",
+    ).first<{ count: number }>();
+    expect(Number(remaining?.count ?? 0)).toBe(0);
+
+    await env.DB.prepare("DELETE FROM installed_apps WHERE tenant_id='demo' AND app_id='schedapp'").run();
   });
 });
