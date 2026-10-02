@@ -4,7 +4,6 @@ Audit state: **complete** for the declared 28-domain denominator. Platform closu
 
 | Domain | Gap summary | Closure evidence |
 |---|---|---|
-| FRAPPE-05 — Authentication and sessions | Audited support impersonation is explicitly missing.<br>Generic Frappe OAuth/API-key/token lifecycle parity is not closed; provider-specific and connector seams do not equal the full Frappe auth contract. | Pinned Frappe 16 source/runtime fixture + Forge regression/differential + updated matrix |
 | FRAPPE-10 — Scheduler | Generic merged Frappe cron/all/daily/hourly app scheduler event semantics are not implemented; current scheduled handler primarily runs Forge maintenance. | Pinned Frappe 16 source/runtime fixture + Forge regression/differential + updated matrix |
 | FRAPPE-11 — Realtime | Generic frappe.publish_realtime-compatible room authorization/order/reconnect behavior is not proven as a platform-wide authority. | Pinned Frappe 16 source/runtime fixture + Forge regression/differential + updated matrix |
 | FRAPPE-15 — Data import/export | Frappe background/queued Data Import status lifecycle is not exposed on the facade.<br>Large import/error-workbook/update-mode parity remains incomplete. | Pinned Frappe 16 source/runtime fixture + Forge regression/differential + updated matrix |
@@ -16,12 +15,11 @@ Audit state: **complete** for the declared 28-domain denominator. Platform closu
 
 ## Closure order
 
-1. **Identity/auth correctness** — FRAPPE-05.
-2. **Execution fabric** — FRAPPE-10, FRAPPE-11.
-3. **Data/workflow communication** — FRAPPE-15, FRAPPE-16, FRAPPE-17.
-4. **Migration/product/integration surface** — FRAPPE-19, FRAPPE-23, FRAPPE-26.
+1. **Execution fabric** — FRAPPE-10 Scheduler, FRAPPE-11 Realtime.
+2. **Data/workflow communication** — FRAPPE-15 Data import/export, FRAPPE-16 Workflow, FRAPPE-17 Notifications/communications.
+3. **Migration/product/integration surface** — FRAPPE-19 Migrations/patches, FRAPPE-23 Website/portal, FRAPPE-26 Integrations.
 
-FRAPPE-06 REST/RPC left the backlog after permission-aware v2 `group_by` and tuple-shape regression coverage passed R7 GitHub Actions run `36909990405`.
+FRAPPE-05 Authentication & Sessions left this backlog after Frappe `token`/`Basic` API-key semantics and audited impersonation passed R7 GitHub Actions run `36960220755`.
 
 ## Rule
 
