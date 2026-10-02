@@ -8,12 +8,13 @@ interface __BaseEnv_TenantWorkerBindings {
 	TENANT_ID: "demo";
 	AUTH_MODE: "production";
 	AGGREGATES: DurableObjectNamespace /* AggregateCoordinator */;
+	REALTIME: DurableObjectNamespace /* RealtimeHub */;
 	SOCIAL_INGRESS: Fetcher /* cloudforge-social-ingress */;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {
 		mainModule: typeof import("./src/index-cf6");
-		durableNamespaces: "AggregateCoordinator";
+		durableNamespaces: "AggregateCoordinator" | "RealtimeHub";
 	}
 	interface Env extends __BaseEnv_TenantWorkerBindings {}
 }
