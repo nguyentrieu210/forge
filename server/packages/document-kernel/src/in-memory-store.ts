@@ -892,6 +892,30 @@ export class InMemoryMutationStore implements MutationStore {
     }
   }
   private assertStockInvariants<T extends JsonObject>(plan: MutationPlan<T>): void {
+    if (plan.command.aggregate.doctype === "Landed Cost Voucher"
+      && plan.command.action === "submit"
+      && Array.isArray(plan.document.data.allocations)) {
+      const postingAt = String(plan.document.data.posting_at ?? "");
+      for (const raw of plan.document.data.allocations) {
+        if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
+        const allocation = raw as JsonObject;
+        const itemCode = String(allocation.item_code ?? "");
+        const warehouse = String(allocation.warehouse ?? "");
+        const history = this.stockEntries.filter((line) =>
+          line.item_code === itemCode
+          && line.warehouse === warehouse
+          && line.posting_at <= postingAt);
+        const rowCount = history.length;
+        const qty = history.reduce((sum, line) => sum + line.actual_qty_micros, 0);
+        const value = history.reduce((sum, line) => sum + line.stock_value_difference_minor, 0);
+        if (rowCount !== Number(allocation.history_row_count)
+          || qty !== Number(allocation.history_qty_micros)
+          || value !== Number(allocation.history_value_minor)) {
+          throw errors.reference("Landed Cost stock history changed after planning; retry submit");
+        }
+      }
+    }
+
     const pending = new Map<string, number>();
     const pendingSerial = new Map<string, number>();
     const pendingBatch = new Map<string, number>();
