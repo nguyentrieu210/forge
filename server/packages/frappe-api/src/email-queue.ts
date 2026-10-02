@@ -51,6 +51,7 @@ export interface EmailTransport {
 
 export interface EmailQueueRunResult {
   configured: boolean;
+  pending: number;
   claimed: number;
   sent: number;
   failed: number;
@@ -196,6 +197,7 @@ export async function runEmailQueue(
   if (!transport) {
     return {
       configured: false,
+      pending: await new D1EmailQueueStore(db).pendingCount(tenantId),
       claimed: 0,
       sent: 0,
       failed: 0,
@@ -271,5 +273,12 @@ export async function runEmailQueue(
     }
   }
 
-  return { configured: true, claimed, sent, failed, exhausted };
+  return {
+    configured: true,
+    pending: await new D1EmailQueueStore(db).pendingCount(tenantId),
+    claimed,
+    sent,
+    failed,
+    exhausted,
+  };
 }
