@@ -80,23 +80,20 @@ BEGIN
         OR date(json_extract(row.value,'$.start_date'))<date(json_extract(NEW.payload_json,'$.start_date'))
         OR date(json_extract(row.value,'$.end_date'))>date(json_extract(NEW.payload_json,'$.end_date'))
     )
-    OR date(json_extract(json_extract(NEW.payload_json,'$.budget_distribution'),'$[0]'),'$.start_date'))
+    OR date(json_extract(NEW.payload_json,'$.budget_distribution[0].start_date'))
        <>date(json_extract(NEW.payload_json,'$.start_date'))
     OR date(json_extract(
-         json_extract(NEW.payload_json,'$.budget_distribution'),
-         '$[' || (json_array_length(json_extract(NEW.payload_json,'$.budget_distribution'))-1) || ']'
-       ),'$.end_date'))<>date(json_extract(NEW.payload_json,'$.end_date'))
+         NEW.payload_json,
+         '$.budget_distribution[' || (json_array_length(json_extract(NEW.payload_json,'$.budget_distribution'))-1) || '].end_date'
+       ))<>date(json_extract(NEW.payload_json,'$.end_date'))
     OR EXISTS(
       SELECT 1
       FROM json_each(json_extract(NEW.payload_json,'$.budget_distribution')) AS row
       WHERE CAST(row.key AS INTEGER)>0
         AND date(json_extract(row.value,'$.start_date'))<>date(
           json_extract(
-            json_extract(
-              json_extract(NEW.payload_json,'$.budget_distribution'),
-              '$[' || (CAST(row.key AS INTEGER)-1) || ']'
-            ),
-            '$.end_date'
+            NEW.payload_json,
+            '$.budget_distribution[' || (CAST(row.key AS INTEGER)-1) || '].end_date'
           ),
           '+1 day'
         )
@@ -136,23 +133,20 @@ BEGIN
         OR date(json_extract(row.value,'$.start_date'))<date(json_extract(NEW.payload_json,'$.start_date'))
         OR date(json_extract(row.value,'$.end_date'))>date(json_extract(NEW.payload_json,'$.end_date'))
     )
-    OR date(json_extract(json_extract(NEW.payload_json,'$.budget_distribution'),'$[0]'),'$.start_date'))
+    OR date(json_extract(NEW.payload_json,'$.budget_distribution[0].start_date'))
        <>date(json_extract(NEW.payload_json,'$.start_date'))
     OR date(json_extract(
-         json_extract(NEW.payload_json,'$.budget_distribution'),
-         '$[' || (json_array_length(json_extract(NEW.payload_json,'$.budget_distribution'))-1) || ']'
-       ),'$.end_date'))<>date(json_extract(NEW.payload_json,'$.end_date'))
+         NEW.payload_json,
+         '$.budget_distribution[' || (json_array_length(json_extract(NEW.payload_json,'$.budget_distribution'))-1) || '].end_date'
+       ))<>date(json_extract(NEW.payload_json,'$.end_date'))
     OR EXISTS(
       SELECT 1
       FROM json_each(json_extract(NEW.payload_json,'$.budget_distribution')) AS row
       WHERE CAST(row.key AS INTEGER)>0
         AND date(json_extract(row.value,'$.start_date'))<>date(
           json_extract(
-            json_extract(
-              json_extract(NEW.payload_json,'$.budget_distribution'),
-              '$[' || (CAST(row.key AS INTEGER)-1) || ']'
-            ),
-            '$.end_date'
+            NEW.payload_json,
+            '$.budget_distribution[' || (CAST(row.key AS INTEGER)-1) || '].end_date'
           ),
           '+1 day'
         )
