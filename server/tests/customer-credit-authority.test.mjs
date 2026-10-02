@@ -555,3 +555,120 @@ test("customer credit allocation posts realized FX when source and target histor
   assert.equal(await store.getOutstandingMinor("demo", "Sales Invoice", "SI-FX-LATER"), 2_500);
   assert.equal(await store.getBaseOutstandingMinor("demo", "Sales Invoice", "SI-FX-LATER"), 2_750);
 });
+
+
+test("supplier advance allocation posts the opposite realized FX party sign", async () => {
+  const store = new InMemoryMutationStore();
+  store.seedO2CMasters({
+    company: "Demo",
+    customer: "CUST-1",
+    currency: "EUR",
+    companyCurrency: "USD",
+    items: ["ITEM-1"],
+    accounts: ["Creditors", "Expense", "Bank", "FX Gain/Loss"],
+  });
+  store.seedMaster("Company", "Demo", "demo", {
+    default_currency: "USD",
+    exchange_gain_loss_account: "FX Gain/Loss",
+  });
+  store.seedMaster("Supplier", "SUP-1", "demo", {});
+  store.seedMaster("Exchange Rate", "EUR:USD:2026-10-02", "demo", { rate: "1.200000" });
+  const registry = registerErpNextCoreControllers(
+    registerStockControllers(registerErpCoreControllers(createO2CControllerRegistry())),
+  );
+  const kernel = new DocumentKernel(registry, store, undefined, () => NOW);
+
+  await createAndSubmit(kernel, {
+    doctype: "Payment Entry",
+    name: "PE-SUP-ADV-FX",
+    document: {
+      company: "Demo",
+      posting_at: NOW,
+      payment_type: "Pay",
+      party_type: "Supplier",
+      party: "SUP-1",
+      paid_from: "Bank",
+      paid_to: "Creditors",
+      paid_amount: "40",
+      received_amount: "48",
+      currency: "EUR",
+      references: [],
+    },
+  });
+  assert.equal(await store.getOutstandingMinor("demo", "Payment Entry", "PE-SUP-ADV-FX"), -4_000);
+  assert.equal(await store.getBaseOutstandingMinor("demo", "Payment Entry", "PE-SUP-ADV-FX"), -4_800);
+
+  store.seedMaster("Exchange Rate", "EUR:USD:2026-10-02", "demo", { rate: "1.100000" });
+  await createAndSubmit(kernel, {
+    doctype: "Purchase Invoice",
+    name: "PI-SUP-FX",
+    document: {
+      supplier: "SUP-1",
+      company: "Demo",
+      currency: "EUR",
+      posting_at: NOW,
+      credit_to: "Creditors",
+      items: [{
+        row_id: "PI-FX-1",
+        item_code: "ITEM-1",
+        qty: "1",
+        rate: "25",
+        expense_account: "Expense",
+      }],
+      taxes: [],
+    },
+  });
+  assert.equal(await store.getOutstandingMinor("demo", "Purchase Invoice", "PI-SUP-FX"), 2_500);
+  assert.equal(await store.getBaseOutstandingMinor("demo", "Purchase Invoice", "PI-SUP-FX"), 2_750);
+
+  await createAndSubmit(kernel, {
+    doctype: "Payment Allocation",
+    name: "PA-SUP-FX",
+    document: {
+      company: "Demo",
+      party_type: "Supplier",
+      party: "SUP-1",
+      party_account: "Creditors",
+      currency: "EUR",
+      posting_at: NOW,
+      source_payment_entry: "PE-SUP-ADV-FX",
+      references: [{
+        row_id: "SUP-FX-ALLOC",
+        reference_doctype: "Purchase Invoice",
+        reference_name: "PI-SUP-FX",
+        allocated_amount: "25",
+      }],
+    },
+  });
+
+  assert.equal(await store.getOutstandingMinor("demo", "Payment Entry", "PE-SUP-ADV-FX"), -1_500);
+  assert.equal(await store.getBaseOutstandingMinor("demo", "Payment Entry", "PE-SUP-ADV-FX"), -1_800);
+  assert.equal(await store.getOutstandingMinor("demo", "Purchase Invoice", "PI-SUP-FX"), 0);
+  assert.equal(await store.getBaseOutstandingMinor("demo", "Purchase Invoice", "PI-SUP-FX"), 0);
+
+  const gl = await store.getVoucherGlEntries("demo", "Payment Allocation", "PA-SUP-FX", 2);
+  assert.equal(
+    gl.filter((line) => line.account === "Creditors")
+      .reduce((sum, line) => sum + line.debit_minor - line.credit_minor, 0),
+    -250,
+  );
+  assert.equal(
+    gl.filter((line) => line.account === "FX Gain/Loss")
+      .reduce((sum, line) => sum + line.debit_minor - line.credit_minor, 0),
+    250,
+  );
+  assert.equal(gl.reduce((sum, line) => sum + line.debit_minor - line.credit_minor, 0), 0);
+
+  await mutate(kernel, {
+    commandId: "PA-SUP-FX-cancel",
+    doctype: "Payment Allocation",
+    name: "PA-SUP-FX",
+    action: "cancel",
+    expectedVersion: 2,
+    document: {},
+  });
+  assert.equal(await store.getOutstandingMinor("demo", "Payment Entry", "PE-SUP-ADV-FX"), -4_000);
+  assert.equal(await store.getBaseOutstandingMinor("demo", "Payment Entry", "PE-SUP-ADV-FX"), -4_800);
+  assert.equal(await store.getOutstandingMinor("demo", "Purchase Invoice", "PI-SUP-FX"), 2_500);
+  assert.equal(await store.getBaseOutstandingMinor("demo", "Purchase Invoice", "PI-SUP-FX"), 2_750);
+});
