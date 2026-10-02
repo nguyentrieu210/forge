@@ -13,6 +13,7 @@ on:
       - "server/packages/policy/**"
       - "server/tests/subcontracting-closure.test.mjs"
       - "server/tests/landed-cost-authority.test.mjs"
+      - "server/scripts/test-landed-cost-repost-migration.py"
       - "server/tests/customer-credit-authority.test.mjs"
       - "server/tests/period-closing-authority.test.mjs"
       - "server/tests/period-close-timestamp.test.mjs"
@@ -64,6 +65,8 @@ jobs:
         run: node --test server/tests/subcontracting-closure.test.mjs
       - name: Landed Cost authority regression
         run: node --test server/tests/landed-cost-authority.test.mjs
+      - name: Landed Cost repost migration regression
+        run: python3 server/scripts/test-landed-cost-repost-migration.py
       - name: P2P row authority regression
         run: node --test server/tests/procurement-p2p-closure.test.mjs
       - name: Customer credit policy regression
