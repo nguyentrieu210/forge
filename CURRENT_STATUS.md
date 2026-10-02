@@ -45,3 +45,8 @@ Root `ARCHITECTURE.md` cũ được hợp nhất vào `docs/ARCHITECTURE.md` đ�
 ## Production boundary
 
 Checkpoint source không phải bằng chứng production deployment. Mọi production mutation vẫn cần explicit authorization và exact release evidence theo policy/runbook hiện hành.
+
+
+## R7 active source checkpoint — 2026-10-02
+
+PR #994 continues on `codex/r7-frappe-platform-closure`. Exact prior verified head: `52b153dc0b4026056207c03d30d85f4dfb4706b0`, R7 CI run `36970460835` passed. The continuation adds migration identity/reconciliation, Website cache and owner portal APIs, durable webhook runtime and bounded Connected App lifecycle. Local targeted source-runtime tests pass; exact new-head CI is required before claiming convergence. Canonical R7 matrix: 12 SEMANTIC_PARITY, 12 INTENTIONAL_DIFFERENCE, 3 GAP, 1 OUT_OF_SCOPE, 0 UNRESOLVED. Remaining detailed contracts live in the R7 matrix/backlog.

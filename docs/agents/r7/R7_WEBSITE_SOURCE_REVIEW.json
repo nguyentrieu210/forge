@@ -1,0 +1,81 @@
+{
+  "schema_version": "1.0.0",
+  "domain_id": "FRAPPE-23-WEBSITE-AND-PORTAL",
+  "upstream": {
+    "app": "frappe",
+    "tag": "v16.19.0",
+    "full_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c"
+  },
+  "evidence_kind": "pinned_source_review",
+  "runtime_oracle_captured": false,
+  "sources": [
+    {
+      "path": "frappe/website/router.py",
+      "blob_sha": "766d13fb6dbc69b1c98ff3be8b82d5d135ad765a",
+      "observations": [
+        "Published Web Forms have root/list/new/name/name-edit routes.",
+        "Dynamic route arguments disable page caching.",
+        "Website routes include installed-app www and templates/pages files.",
+        "clear_routing_cache invalidates published Web Form, dynamic Web Page and home-page caches."
+      ]
+    },
+    {
+      "path": "frappe/website/page_renderers/template_page.py",
+      "blob_sha": "55243ab5db0f5b3b544471cc895d4aaa0fb3bb36",
+      "observations": [
+        "Reverse installed-app precedence chooses existing static HTML/Markdown/index route.",
+        "Template context includes controller get_context, frontmatter, sidebar/breadcrumbs and colocated JS/CSS.",
+        "get_html is decorated with cache_html; rendered response adds CSRF token."
+      ]
+    },
+    {
+      "path": "frappe/website/doctype/portal_settings/portal_settings.py",
+      "blob_sha": "6885fbb82a68315a04a3ef90d58e6f03c12c3b71",
+      "observations": [
+        "Portal Settings composes standard/custom menu items and default home.",
+        "Updating Portal Settings invalidates website and user/role home-page caches."
+      ]
+    },
+    {
+      "path": "frappe/website/utils.py",
+      "blob_sha": "9467c4eb052d067e5ea0f201743cb646d39f8722",
+      "observations": [
+        "get_portal_sidebar_items filters enabled menu entries by actor role.",
+        "Portal sidebar cache is keyed by session user.",
+        "clear_cache invalidates routing, HTML/page and portal/menu/home-page data."
+      ]
+    },
+    {
+      "path": "frappe/website/doctype/web_form/web_form.py",
+      "blob_sha": "772f864373bf9f83e8fa51e0ffb4dbc4ba1ff050",
+      "observations": [
+        "Web Form self-service read/write applies owner, website permission or DocPerm according to settings.",
+        "allow_edit guards accept updates; allow_delete and session ownership guard deletion.",
+        "Authenticated submissions normally retain session owner; anonymous forms temporarily use Guest.",
+        "Published form routing data uses a one-hour Redis cache."
+      ]
+    }
+  ],
+  "forge_cache_slice": {
+    "authority": [
+      "server/packages/frappe-api/src/website-response.ts",
+      "server/packages/frappe-api/src/website-router.ts"
+    ],
+    "tests": "server/tests/website-response.test.mjs",
+    "behavior": [
+      "Every conditional read resolves the current tenant and publication state first.",
+      "SHA256 validator covers trusted tenant id, API pathname and complete public representation.",
+      "Browser cache must revalidate; shared caching is disabled with private cache control.",
+      "Full public page/navigation/theme/preset changes invalidate validators.",
+      "Unpublishing and lookup errors cannot revive cached public content."
+    ],
+    "classification": "bounded observable invalidation behavior; different implementation from Redis/HTML cache"
+  },
+  "remaining_gap": [
+    "Dynamic and nested website/web-form route matching and rendering remain absent in flat-slug client routing.",
+    "Installed-app HTML/Markdown/Jinja templates, frontmatter, controller context and colocated assets remain unsupported; arbitrary Python context execution is an intentional architecture/security difference.",
+    "Role-filtered Portal Settings menus/home composition is separate from ERPNext customer/supplier business self-service.",
+    "Captured upstream runtime fixtures and differential execution are still required for a full closure claim."
+  ],
+  "scope_note": "Customer/supplier ERP business workflows belong to ERPNext comparison, rather than being implied by the Frappe framework denominator's portal permission behavior."
+}

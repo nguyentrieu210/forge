@@ -45,6 +45,9 @@ import { assertModifiedMatches, buildCommand, stripServerOwnedFields } from "./c
 import { fromFrappeDoc, toFrappeDoc, toFrappeListRow } from "./doc-shape.js";
 import { faultResponse, methodResponse, resourceResponse, responseFieldsResponse, v2DataResponse, v2FaultResponse } from "./envelope.js";
 import { consumeSubmissionAllowance, loadPublishedForm, publicFormShape, submissionActor, submissionDocument } from "./web-form-routes.js";
+import type { IntegrationApi } from "./integration-methods.js";
+import { CloudForgeError } from "../../core/src/index.js";
+import { WEB_FORM_READ, WEB_FORM_LIST, WEB_FORM_UPDATE, WEB_FORM_DELETE, webFormPortalRead, webFormPortalList, webFormPortalUpdate, webFormPortalDelete } from "./web-form-portal.js";
 import { handleUploadFile, matchFilePath, readFileContent, serveFile, UPLOAD_FILE_PATH, type FileStore } from "./files.js";
 import {
   assertStorefrontSpec, buildStorefrontOrder, consumeOrderAllowance, storefrontCatalog,
@@ -155,6 +158,8 @@ export interface FrappeRouterContext extends VerticalRouterHooks {
    * deployment does not serve, rather than failing obscurely.
    */
   webForms?: { db: D1Database; salt: string; clientAddress: string };
+  /** Trusted tenant/user-bound integration control service; never exposes credential material. */
+  integrations?: IntegrationApi;
   /**
    * Where attachments live: the database row and the object store.
    *
@@ -1234,6 +1239,18 @@ async function dispatchMethod(
   if (verticalMethod) return methodResponse(await verticalMethod(args, context));
 
   switch (methodName) {
+    case WEB_FORM_READ.slice("/api/method/".length):
+      if (request.method.toUpperCase() !== "GET") throw errors.validation("Portal read requires GET");
+      return methodResponse(await webFormPortalRead(args, context));
+    case WEB_FORM_LIST.slice("/api/method/".length):
+      if (request.method.toUpperCase() !== "GET") throw errors.validation("Portal list requires GET");
+      return methodResponse(await webFormPortalList(args, context));
+    case WEB_FORM_UPDATE.slice("/api/method/".length):
+      if (request.method.toUpperCase() !== "POST") throw errors.validation("Portal update requires POST");
+      return methodResponse(await webFormPortalUpdate(args, context));
+    case WEB_FORM_DELETE.slice("/api/method/".length):
+      if (request.method.toUpperCase() !== "POST") throw errors.validation("Portal delete requires POST");
+      return methodResponse(await webFormPortalDelete(args, context));
     // ---- public web forms ---------------------------------------------------
     // Reachable without a session. Everything they may do comes from the form's own
     // `submit_as_role` and the tenant's ordinary DocPerm grant for it.
@@ -4003,7 +4020,10 @@ async function acceptWebForm(args: FrappeArgs, context: FrappeRouterContext): Pr
 
   // The submission's own actor — Guest carrying only the form's role — so the ordinary
   // permission layer decides. Nothing here grants anything.
-  const actor = submissionActor(form);
+  const actor = submissionActor(form, context.actor);
+  if (actor.user_id !== "Guest" && !form.allow_multiple) {
+    throw new CloudForgeError("NOT_IMPLEMENTED", "Single-entry portal forms require an atomic kernel uniqueness contract", 501);
+  }
   await context.permissions.assert({
     actor, tenantId: context.tenantId, doctype: form.doc_type,
     action: "create", owner: actor.user_id,

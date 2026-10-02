@@ -6,6 +6,11 @@ on:
       - "docs/agents/r7/**"
       - "server/packages/frappe-api/**"
       - "server/packages/auth/**"
+      - "server/packages/integration-hub/**"
+      - "server/tests/**"
+      - "server/scripts/d1-*.mjs"
+      - "server/scripts/lib/d1-migration*.mjs"
+      - "server/apps/tenant-worker/src/integration-runtime.ts"
       - "server/packages/contracts/src/index.ts"
       - "server/packages/app-registry/src/manifest.ts"
       - "server/packages/app-registry/src/cron.ts"
@@ -54,10 +59,10 @@ jobs:
         shell: bash
         run: |
           set +e
-          pnpm --filter cloudforge exec tsc -p tsconfig.json --noEmit 2>&1 | tee /tmp/r7-tsc.log
+          pnpm --filter cloudforge exec tsc -p tsconfig.json 2>&1 | tee /tmp/r7-tsc.log
           code=${PIPESTATUS[0]}
           set -e
-          if grep -E 'packages/frappe-api/src/(router|router-platform|desk-surfaces|envelope|auth-routes|session|workflow-actions|notification-runner|email-queue)\.ts|packages/frappe-model/src/(workflow-condition|generic-controller|validate|index)\.ts|packages/auth/src/(api-credentials|user-store|session-registry)\.ts|packages/contracts/src/index\.ts|packages/app-registry/src/(manifest|cron|scheduler|index)\.ts|apps/tenant-worker/src/(index-core-base|realtime-hub|env)\.ts|apps/tenant-worker/test/frappe-facade\.integration\.test\.mts' /tmp/r7-tsc.log; then
+          if grep -E 'packages/frappe-api/src/(router|router-platform|desk-surfaces|envelope|auth-routes|session|workflow-actions|notification-runner|email-queue|website-router|website-response|integration-methods|web-form-portal|web-form-routes)\.ts|packages/frappe-model/src/(workflow-condition|generic-controller|validate|index|web-form)\.ts|packages/auth/src/(api-credentials|user-store|session-registry)\.ts|packages/integration-hub/src/(index|executor|durable-delivery|connected-app|connected-app-store)\.ts|packages/contracts/src/index\.ts|packages/app-registry/src/(manifest|cron|scheduler|index)\.ts|apps/tenant-worker/src/(index-core-base|realtime-hub|env|integration-runtime)\.ts|apps/tenant-worker/test/frappe-facade\.integration\.test\.mts' /tmp/r7-tsc.log; then
             echo "Changed R7 authority has TypeScript errors"
             exit 1
           fi
@@ -65,6 +70,11 @@ jobs:
             echo "Global server TypeScript baseline remains non-zero outside this R7 delta; changed-authority guard is clean."
           fi
 
+      - name: R7 runtime safety regression
+        working-directory: server
+        run: pnpm run test:r7-runtime
+
       - name: Workerd Frappe facade regression
         working-directory: server
         run: pnpm exec vitest run --config apps/tenant-worker/vitest.config.mts apps/tenant-worker/test/frappe-facade.integration.test.mts
+

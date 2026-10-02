@@ -12,6 +12,7 @@ const readJson = async (p) => JSON.parse(await readFile(p, "utf8"));
 const lock = await readJson(path.join(serverRoot, "source-lock.json"));
 const ledger = await readJson(path.join(serverRoot, "docs/spec/source-exact/frappe-framework-domain-ledger.json"));
 const matrix = await readJson(path.join(repoRoot, "docs/agents/r7/R7_FRAPPE_PARITY_MATRIX.json"));
+const backlog = await readJson(path.join(repoRoot, "docs/agents/r7/R7_GAP_BACKLOG.json"));
 
 test("R7 Frappe matrix is bound to canonical Frappe 16 source lock", () => {
   const frappe = lock.sources.find((x) => x.app === "frappe");
@@ -51,6 +52,15 @@ test("R7 closed dispositions carry evidence and out-of-scope rows carry rational
 test("R7 audit has no unresolved Frappe 16 domains", () => {
   const unresolved = matrix.domains.filter((row) => row.classification === "UNRESOLVED");
   assert.deepEqual(unresolved, [], "every denominator domain must have an evidence-backed audit disposition");
+});
+
+test("R7 gap backlog contains exactly the current matrix gaps", () => {
+  const gaps = matrix.domains.filter((row) => row.classification === "GAP");
+  assert.equal(backlog.gap_count, gaps.length);
+  assert.deepEqual(backlog.gaps.map((row) => row.domain_id), gaps.map((row) => row.domain_id));
+  for (const row of backlog.gaps) {
+    assert.deepEqual(row.gaps, gaps.find((gap) => gap.domain_id === row.domain_id).gaps);
+  }
 });
 
 test("R7 platform certification remains blocked while GAP exists", () => {

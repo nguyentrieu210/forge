@@ -172,6 +172,44 @@ async function seed(): Promise<void> {
 
 beforeAll(seed);
 
+describe("R7 durable webhook committed-event boundary", () => {
+  it("withholds ACK on enqueue failure and retries the original stored source exactly once", async () => {
+    const subscription = { event_pattern: "r7_webhook.*", target_url: "https://hooks.example.test/receive",
+      status: "active", auth_kind: "none", allowed_hosts: ["hooks.example.test"] };
+    await env.DB.prepare(
+      `INSERT INTO documents(tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json)
+       VALUES('demo','Integration Subscription:R7-HOOK','Integration Subscription','R7-HOOK','sales@example.com',0,'active',1,?1,?1,?2)`,
+    ).bind(NOW, JSON.stringify(subscription)).run();
+    const source = { event_id: "evt-r7-atomic-hook", event_type: "r7_webhook.created", tenant_id: "demo",
+      aggregate: { doctype: "R7 Webhook Fixture", name: "original" }, aggregate_version: 1,
+      actor: "sales@example.com", command_id: "cmd-r7-atomic-hook", occurred_at: NOW,
+      schema_version: 1, payload: { value: "original committed bytes" } };
+    const send = (event: typeof source) => call("/internal/events", { method: "POST",
+      headers: { "content-type": "application/json", authorization: "Bearer test-internal-service-token",
+        "x-cloudforge-idempotency-key": source.event_id }, body: JSON.stringify(event) }, { auth: false });
+    await env.DB.prepare(`CREATE TRIGGER r7_hook_enqueue_failure BEFORE INSERT ON integration_webhook_deliveries
+      BEGIN SELECT RAISE(ABORT,'injected enqueue failure'); END;`).run();
+    try {
+      const failed = await send(source);
+      expect(failed.status).not.toBe(200);
+      expect(failed.headers.get("x-cloudforge-event-committed")).toBeNull();
+      expect(await env.DB.prepare("SELECT COUNT(*) AS n FROM inbound_events WHERE tenant_id='demo' AND event_id=?1").bind(source.event_id).first<{ n: number }>()).toEqual({ n: 1 });
+      expect(await env.DB.prepare("SELECT COUNT(*) AS n FROM integration_webhook_fanouts WHERE tenant_id='demo' AND event_id=?1").bind(source.event_id).first<{ n: number }>()).toEqual({ n: 0 });
+    } finally { await env.DB.prepare("DROP TRIGGER r7_hook_enqueue_failure").run(); }
+    const altered = { ...source, event_type: "r7_webhook.changed", payload: { value: "replacement rejected" } };
+    const retry = await send(altered);
+    expect(retry.status).toBe(200);
+    expect(retry.headers.get("x-cloudforge-event-committed")).toBe(source.event_id);
+    const row = await env.DB.prepare("SELECT task_json FROM integration_webhook_deliveries WHERE tenant_id='demo' AND event_id=?1").bind(source.event_id).first<{ task_json: string }>();
+    expect(row).not.toBeNull();
+    expect(row!.task_json).toContain("original committed bytes");
+    expect(row!.task_json).not.toContain("replacement rejected");
+    expect((await send(altered)).status).toBe(200);
+    expect(await env.DB.prepare("SELECT COUNT(*) AS n FROM integration_webhook_deliveries WHERE tenant_id='demo' AND event_id=?1").bind(source.event_id).first<{ n: number }>()).toEqual({ n: 1 });
+    await env.DB.prepare("UPDATE documents SET status='disabled' WHERE tenant_id='demo' AND doctype='Integration Subscription' AND name='R7-HOOK'").run();
+  });
+});
+
 describe("frappe facade over real workerd, D1 and Durable Objects", () => {
   it("refuses an unauthenticated method the way frappe does, so the client can detect a lost session", async () => {
     // Real Frappe answers PermissionError/403 with "Login to access" — NOT 401.

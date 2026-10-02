@@ -6,90 +6,23 @@
     "full_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c"
   },
   "generated_from": "docs/agents/r7/R7_FRAPPE_PARITY_MATRIX.json",
-  "gap_count": 6,
+  "gap_count": 3,
   "gaps": [
-    {
-      "domain_id": "FRAPPE-15-DATA-IMPORT-EXPORT",
-      "name": "Data import/export",
-      "lane": "R7-07",
-      "gaps": [
-        "Frappe background/queued Data Import status lifecycle is not exposed on the facade.",
-        "Large import/error-workbook/update-mode parity remains incomplete."
-      ],
-      "forge_authority": [
-        "frappe-shaped synchronous import/export",
-        "server/packages/migration"
-      ],
-      "evidence": [
-        "docs/API_SURFACE.md",
-        "docs/agents/workstreams/WS13-migration-implementation.md"
-      ],
-      "closure_gate": [
-        "pinned_frappe16_fixture",
-        "forge_regression",
-        "differential_review",
-        "matrix_update"
-      ]
-    },
-    {
-      "domain_id": "FRAPPE-16-WORKFLOW",
-      "name": "Workflow",
-      "lane": "R7-04",
-      "gaps": [
-        "Workflow email/action delivery is not complete because mail transport is absent.",
-        "Exact Frappe condition/evaluation and all workflow side-effect semantics require closure."
-      ],
-      "forge_authority": [
-        "server/packages/frappe-model workflow metadata",
-        "Document Kernel lifecycle",
-        "organization-security delegation"
-      ],
-      "evidence": [
-        "server/packages/frappe-api/src/desk-surfaces.ts",
-        "server/apps/tenant-worker/src/index-core-base.ts",
-        "server/packages/frappe-model/src/notification-rules.ts"
-      ],
-      "closure_gate": [
-        "pinned_frappe16_fixture",
-        "forge_regression",
-        "differential_review",
-        "matrix_update"
-      ]
-    },
-    {
-      "domain_id": "FRAPPE-17-NOTIFICATIONS-AND-COMMUNICATIONS",
-      "name": "Notifications and communications",
-      "lane": "R7-08",
-      "gaps": [
-        "Frappe Email notification delivery/queue semantics are not implemented because no mail transport is configured; Email intents are recorded with skipped_reason."
-      ],
-      "forge_authority": [
-        "server/packages/frappe-model/src/notification-rules.ts"
-      ],
-      "evidence": [
-        "server/packages/frappe-model/src/notification-rules.ts",
-        "server/tests/notifications-auto-repeat.test.mjs"
-      ],
-      "closure_gate": [
-        "pinned_frappe16_fixture",
-        "forge_regression",
-        "differential_review",
-        "matrix_update"
-      ]
-    },
     {
       "domain_id": "FRAPPE-19-MIGRATIONS-AND-PATCHES",
       "name": "Migrations and patches",
       "lane": "R7-07",
       "gaps": [
-        "Remote migration ledger crash-window/content-identity closure remains open; an applied migration must be durably and immutably attributable to exact content.",
-        "Workers-for-Platforms tenant/app rollback remains partial at provider evidence level; compatible source redeploy exists, but canonical provider rollback is not yet proven."
+        "Wrangler remote SQL and journal completion remain separate transport operations: exact-content reservation, immutable receipt and explicit evidenced reconciliation now prevent blind replay, but provider transport atomicity/crash recovery evidence remains unproven.",
+        "Workers-for-Platforms tenant/app provider rollback evidence remains unproven; no production/provider mutation was performed."
       ],
       "forge_authority": [
         "server/migrations",
         "server/scripts/migrate-tenant.mjs",
         "server/packages/app-registry",
-        "D1 PITR/backup/restore tooling"
+        "D1 PITR/backup/restore tooling",
+        "server/scripts/lib/d1-migration-journal.mjs",
+        "server/scripts/lib/d1-migration-reconciliation.mjs"
       ],
       "evidence": [
         "server/scripts/migrate-tenant.mjs",
@@ -97,7 +30,12 @@
         "docs/ops/CLOUDFLARE_PRODUCTION_GOVERNANCE.md",
         "docs/agents/rc/RC3_A3_SRE_CLOUDFLARE_EVIDENCE.md",
         "Frappe v16.19.0 frappe/modules/patch_handler.py",
-        "Frappe v16.19.0 frappe/migrate.py"
+        "Frappe v16.19.0 frappe/migrate.py",
+        "server/scripts/d1-migrate-remote.mjs",
+        "server/scripts/d1-reconcile-migrations.mjs",
+        "server/tests/d1-migration-journal.test.mjs",
+        "server/tests/d1-migration-reconciliation.test.mjs",
+        "server/docs/ops/D1_MIGRATION_RECONCILIATION.md"
       ],
       "closure_gate": [
         "pinned_frappe16_fixture",
@@ -111,15 +49,27 @@
       "name": "Website and portal",
       "lane": "R7-06",
       "gaps": [
-        "Complete website runtime parity and customer/supplier portal/self-service flows remain open."
+        "Portal delete and authenticated single-entry creation require atomic kernel delete/uniqueness contracts; these operations explicitly return 501 rather than performing racy unversioned writes.",
+        "Nested/dynamic/template website routing, role-filtered Portal Settings/menu behavior and pinned differential runtime evidence remain open."
       ],
       "forge_authority": [
         "server/packages/frappe-api/src/website-router.ts",
-        "Portal User metadata foundation"
+        "Portal User metadata foundation",
+        "server/packages/frappe-api/src/web-form-portal.ts",
+        "server/packages/frappe-api/src/website-response.ts"
       ],
       "evidence": [
         "server/BUILD_REPORT.md",
-        "server/scripts/generate-verification.py"
+        "server/scripts/generate-verification.py",
+        "server/packages/frappe-api/src/website-router.ts",
+        "server/packages/frappe-api/src/website-response.ts",
+        "server/packages/frappe-api/src/web-form-portal.ts",
+        "server/packages/frappe-api/src/web-form-routes.ts",
+        "server/packages/frappe-model/src/web-form.ts",
+        "server/migrations/tenant/0147_r7_web_form_portal.sql",
+        "server/tests/website-response.test.mjs",
+        "server/tests/web-form-portal.test.mjs",
+        "docs/agents/r7/R7_WEBSITE_SOURCE_REVIEW.json"
       ],
       "closure_gate": [
         "pinned_frappe16_fixture",
@@ -133,17 +83,36 @@
       "name": "Integrations",
       "lane": "R7-08",
       "gaps": [
-        "Generic API-key/service-account/OAuth connected-app lifecycle is not fully wired.",
-        "Generic webhook/event subscription and provider-neutral production queue lifecycle remain Foundation in current evidence."
+        "Pinned Frappe Connected App backend/service-account token acquisition, discovery/revocation scope and source/runtime differential evidence are not yet closed by the bounded authorization-code/refresh/disconnect implementation.",
+        "Generic webhook document-event mapping/condition/header contract against pinned Frappe still requires differential review; trusted-config outbound runtime and durable queue tests do not establish all upstream semantics."
       ],
       "forge_authority": [
         "integration hub",
         "social ingress",
-        "outbox"
+        "outbox",
+        "server/packages/integration-hub/src/durable-delivery.ts",
+        "server/packages/integration-hub/src/connected-app.ts",
+        "server/apps/tenant-worker/src/integration-runtime.ts",
+        "server/packages/frappe-api/src/integration-methods.ts"
       ],
       "evidence": [
         "docs/agents/workstreams/WS10-integration-hub.md",
-        "server/apps/social-ingress-worker"
+        "server/apps/social-ingress-worker",
+        "server/packages/integration-hub/src/durable-delivery.ts",
+        "server/packages/integration-hub/src/executor.ts",
+        "server/packages/integration-hub/src/connected-app.ts",
+        "server/packages/integration-hub/src/connected-app-store.ts",
+        "server/apps/tenant-worker/src/integration-runtime.ts",
+        "server/apps/tenant-worker/src/index-core-base.ts",
+        "server/packages/frappe-api/src/integration-methods.ts",
+        "server/migrations/tenant/0148_r7_webhook_delivery.sql",
+        "server/migrations/tenant/0149_r7_connected_apps.sql",
+        "server/tests/r7-webhook-delivery.test.mjs",
+        "server/tests/r7-connected-app.test.mjs",
+        "server/tests/r7-integration-runtime.test.mjs",
+        "server/tests/r7-integration-api.test.mjs",
+        "server/tests/integration-webhook-target-policy.test.mjs",
+        "server/apps/tenant-worker/test/frappe-facade.integration.test.mts"
       ],
       "closure_gate": [
         "pinned_frappe16_fixture",

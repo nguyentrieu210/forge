@@ -34,6 +34,9 @@ import {
 import { AggregateCoordinator } from "./aggregate-do.js";
 import { askAssistant, readReceiptImage } from "./ai-assistant.js";
 import { publishPendingOutbox } from "../../../packages/outbox/src/index.js";
+import { D1IntegrationSubscriptionService } from "../../../packages/integration-hub/src/subscription-store.js";
+import { D1WebhookDeliveryStore, enqueueCommittedWebhookEvent } from "../../../packages/integration-hub/src/durable-delivery.js";
+import { createIntegrationApi, runTenantWebhooks } from "./integration-runtime.js";
 import { AppReportService, D1ReportService } from "../../../packages/query/src/index.js";
 import { FinanceClosureQueryCompiler } from "../../../packages/query/src/finance-closure.js";
 import { D1OrganizationSecurityGuard } from "../../../packages/organization-security/src/index.js";
@@ -190,7 +193,7 @@ async function routeInternalDomainEventRequest(
 ): Promise<Response | undefined> {
   if (request.method === "POST" && url.pathname === "/internal/events") {
     assertInternalService(request, env.INTERNAL_SERVICE_TOKEN);
-    const event = await readJson<JsonObject>(request, 512_000) as unknown as DomainEvent;
+    let event = await readJson<JsonObject>(request, 512_000) as unknown as DomainEvent;
     const tenant = resolveTenant(request, env);
     if (!tenant || event.tenant_id !== tenant) throw new Error("Inbound event tenant mismatch");
     // Dedup and the committed-confirmation key off the trusted idempotency-key
@@ -204,6 +207,17 @@ async function routeInternalDomainEventRequest(
     // The confirmation reflects the actual write result — a fresh insert or an
     // already-present row (both durably committed) — never a bare body echo.
     const inserted = (result.meta?.changes ?? 0) === 1;
+    // A retry must project the original durable source, never a replacement body
+    // carrying an already-seen event id. Snapshot intents BEFORE acknowledging: if
+    // enqueue fails, the caller retries and the immutable fanout receipt deduplicates.
+    const committedEvent = await env.DB.prepare(
+      "SELECT payload_json FROM inbound_events WHERE tenant_id=?1 AND event_id=?2",
+    ).bind(tenant, idempotencyKey).first<{ payload_json: string }>();
+    if (!committedEvent) throw new Error("Committed event receipt is unavailable");
+    event = JSON.parse(committedEvent.payload_json) as DomainEvent;
+    if (event.tenant_id !== tenant || event.event_id !== idempotencyKey) throw new Error("Committed event identity mismatch");
+    const webhooks = await enqueueCommittedWebhookEvent(tenant, event,
+      new D1IntegrationSubscriptionService(env.DB), new D1WebhookDeliveryStore(env.DB));
 
     const realtime: JsonObject[] = [];
     if (inserted) {
@@ -268,7 +282,7 @@ async function routeInternalDomainEventRequest(
       }));
     }
     return jsonResponse(
-      { committed: true, event_id: idempotencyKey, inserted, hooks: hookOutcomes, notifications, workflow_actions: workflowActions, realtime },
+      { committed: true, event_id: idempotencyKey, inserted, hooks: hookOutcomes, notifications, workflow_actions: workflowActions, realtime, webhooks },
       200,
       { "x-cloudforge-event-committed": idempotencyKey },
     );
@@ -761,6 +775,7 @@ export async function runMaintenance(
   scheduler: AppSchedulerResult;
   auto_repeat: AutoRepeatRunResult;
   email: EmailQueueRunResult;
+  webhooks: Awaited<ReturnType<typeof runTenantWebhooks>>;
   reservations: { expired: number; failed: number };
   alumdoor: { reconciliation_reminders: number; daily_reports: number };
 }> {
@@ -843,11 +858,12 @@ export async function runMaintenance(
     ? new HttpEmailTransport(env.EMAIL_TRANSPORT_URL, env.EMAIL_FROM, env.EMAIL_TRANSPORT_TOKEN)
     : null;
   const email = await runEmailQueue(env.DB, tenantId, emailTransport, now);
+  const webhooks = await runTenantWebhooks(env, tenantId, now);
 
   const reservations = await expireStockReservations(env, tenantId, now);
   const alumdoor = await runAlumdoorMaintenance(env.DB, tenantId, now);
   await recordMaintenanceState(env.DB, tenantId, { last_success_at: new Date().toISOString(), last_error: null });
-  return { outbox, hooks, scheduler, auto_repeat, email, reservations, alumdoor };
+  return { outbox, hooks, scheduler, auto_repeat, email, webhooks, reservations, alumdoor };
   } catch (error) {
     await recordMaintenanceState(env.DB, tenantId, {
       last_error: error instanceof Error ? error.message.slice(0, 1000) : String(error).slice(0, 1000),
@@ -1647,6 +1663,7 @@ async function serveFrappeApiInner(
     ...(ctx ? { defer: (work: Promise<unknown>) => ctx.waitUntil(work.then(() => undefined)) } : {}),
     fullName,
     language,
+    integrations: createIntegrationApi({ ...env, DB: requestDb as D1Database }, tenantId, actor.user_id),
     // Present only when this deployment can reach app Workers. Absent, an unknown
     // method stays an honest 404 instead of a binding error.
     //
