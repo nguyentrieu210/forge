@@ -1109,6 +1109,92 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     expect(applied.results[1].error).toBeTruthy();
   });
 
+  it("runs the Data Import document lifecycle with polling, errors and update mode", async () => {
+    const createImport = async (importType: "Insert New Records" | "Update Existing Records") => {
+      const response = await call("/api/resource/Data%20Import", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ reference_doctype: "Field Visit", import_type: importType }),
+      });
+      expect(response.status).toBe(201);
+      return (await response.json() as any).data;
+    };
+    const uploadCsv = async (dataImport: string, name: string, csv: string) => {
+      const form = new FormData();
+      form.set("file", new File([csv], name, { type: "text/csv" }));
+      form.set("doctype", "Data Import");
+      form.set("docname", dataImport);
+      form.set("fieldname", "import_file");
+      form.set("is_private", "1");
+      const response = await call("/api/method/upload_file", { method: "POST", body: form });
+      expect(response.status).toBe(200);
+      return (await response.json() as any).message.file_url as string;
+    };
+
+    const insertControl = await createImport("Insert New Records");
+    const insertFile = await uploadCsv(
+      insertControl.name,
+      "field-visits.csv",
+      csvOf(["subject,customer", "Queued import OK,CUST-1", ",CUST-2"]),
+    );
+    const preview = await unwrap(await method(
+      "frappe.core.doctype.data_import.data_import.get_preview_from_template",
+      { data_import: insertControl.name, import_file: insertFile },
+      "GET",
+    ));
+    expect(preview.columns.map((column: any) => column.header_title)).toEqual(["subject", "customer"]);
+    expect(preview.total_rows).toBe(2);
+
+    await unwrap(await method("frappe.core.doctype.data_import.data_import.form_start_import", {
+      data_import: insertControl.name,
+    }));
+    const insertStatus = await unwrap(await method(
+      "frappe.core.doctype.data_import.data_import.get_import_status",
+      { data_import_name: insertControl.name },
+      "GET",
+    ));
+    expect(insertStatus).toMatchObject({ status: "Partial Success", success: 1, failed: 1, total_records: 2 });
+
+    const errorFile = await method(
+      "frappe.core.doctype.data_import.data_import.download_errored_template",
+      { data_import_name: insertControl.name },
+      "GET",
+    );
+    expect(errorFile.status).toBe(200);
+    expect(errorFile.headers.get("content-type")).toMatch(/text\/csv/);
+    expect(await errorFile.text()).toMatch(/__error/);
+
+    const existingPayload = { subject: "Before update", customer: "CUST-1", workflow_state: "Draft" };
+    await env.DB.prepare(
+      `INSERT INTO documents(
+         tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json,modified_by
+       ) VALUES('demo','Field Visit:DI-UPD-1','Field Visit','DI-UPD-1','sales@example.com',0,'Draft',1,?1,?1,?2,'sales@example.com')`,
+    ).bind(NOW, JSON.stringify(existingPayload)).run();
+
+    const updateControl = await createImport("Update Existing Records");
+    const updateFile = await uploadCsv(
+      updateControl.name,
+      "field-visits-update.csv",
+      csvOf(["name,subject", "DI-UPD-1,Updated by Data Import"]),
+    );
+    await unwrap(await method(
+      "frappe.core.doctype.data_import.data_import.get_preview_from_template",
+      { data_import: updateControl.name, import_file: updateFile },
+      "GET",
+    ));
+    await unwrap(await method("frappe.core.doctype.data_import.data_import.form_start_import", {
+      data_import: updateControl.name,
+    }));
+    const updateStatus = await unwrap(await method(
+      "frappe.core.doctype.data_import.data_import.get_import_status",
+      { data_import_name: updateControl.name },
+      "GET",
+    ));
+    expect(updateStatus).toMatchObject({ status: "Success", success: 1, failed: 0, total_records: 1 });
+    const updated = (await (await call("/api/resource/Field%20Visit/DI-UPD-1")).json() as any).data;
+    expect(updated.subject).toBe("Updated by Data Import");
+  });
+
   it("rejects an import column the doctype does not have, rather than dropping it", async () => {
     // A dropped column means rows import with fields missing and no way to see which.
     const response = await method("frappe.core.doctype.data_import.data_import.get_preview_from_template", {
