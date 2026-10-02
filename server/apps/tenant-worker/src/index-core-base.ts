@@ -40,6 +40,13 @@ import { D1OrganizationSecurityGuard } from "../../../packages/organization-secu
 import type { TenantEnv } from "./env.js";
 import { routeAuthenticatedSocialRequest, routeInternalSocialRequest } from "./social-routes.js";
 import { readableSubmittedSupplierOrders } from "./supplier-price-history-access.js";
+import {
+  REALTIME_CONNECT_PATH,
+  INTERNAL_REALTIME_PUBLISH_PATH,
+  domainRealtimePublications,
+  publishRealtime,
+} from "./realtime-hub.js";
+export { RealtimeHub } from "./realtime-hub.js";
 import type {
   AlumDoorAttendanceStationLiteInput,
   AlumDoorEmployeeLiteInput,
@@ -160,6 +167,21 @@ async function routeInternalMaintenanceRequest(
   return undefined;
 }
 
+async function routeInternalRealtimeRequest(
+  request: Request,
+  url: URL,
+  env: TenantEnv,
+  traceId: string,
+): Promise<Response | undefined> {
+  if (request.method !== "POST" || url.pathname !== INTERNAL_REALTIME_PUBLISH_PATH) return undefined;
+  assertInternalService(request, env.INTERNAL_SERVICE_TOKEN);
+  const tenant = resolveTenant(request, env);
+  if (!tenant) throw new Error("Missing tenant context");
+  const input = await readJson<JsonObject>(request, 256_000);
+  const result = await publishRealtime(env, tenant, input, new Date().toISOString());
+  return jsonResponse({ message: result }, 200, { "x-cloudforge-trace-id": traceId });
+}
+
 async function routeInternalDomainEventRequest(
   request: Request,
   url: URL,
@@ -182,6 +204,23 @@ async function routeInternalDomainEventRequest(
     // The confirmation reflects the actual write result — a fresh insert or an
     // already-present row (both durably committed) — never a bare body echo.
     const inserted = (result.meta?.changes ?? 0) === 1;
+
+    const realtime: JsonObject[] = [];
+    if (inserted) {
+      for (const publication of domainRealtimePublications(event)) {
+        try {
+          realtime.push(await publishRealtime(env, tenant, publication, new Date().toISOString()) as unknown as JsonObject);
+        } catch (error) {
+          // The source event is already durable. A transient live-fanout problem must not
+          // make the queue redeliver that source event; publishRealtime persists its replay
+          // row before touching the Durable Object, so connected clients can recover.
+          console.error(JSON.stringify({
+            level: "error", trace_id: traceId, code: "REALTIME_PUBLISH_FAILED",
+            detail: error instanceof Error ? error.message : String(error),
+          }));
+        }
+      }
+    }
 
     // Fan out to app Workers AFTER the event is durably recorded. Deliveries are
     // tracked per app, so a failing app is retried by the scheduled sweep
@@ -215,7 +254,7 @@ async function routeInternalDomainEventRequest(
       }));
     }
     return jsonResponse(
-      { committed: true, event_id: idempotencyKey, inserted, hooks: hookOutcomes, notifications },
+      { committed: true, event_id: idempotencyKey, inserted, hooks: hookOutcomes, notifications, realtime },
       200,
       { "x-cloudforge-event-committed": idempotencyKey },
     );
@@ -248,6 +287,14 @@ export default {
 
       const tenantId = resolveTenant(request, env);
       if (!tenantId) throw new Error("Missing tenant context");
+
+      if (url.pathname === REALTIME_CONNECT_PATH) {
+        try {
+          return await connectRealtime(request, url, env, tenantId, traceId);
+        } catch (error) {
+          return faultResponse(error, traceId);
+        }
+      }
 
       // ---- Frappe-shaped surface -------------------------------------------
       // Mounted ahead of the native routes and authenticated by cookie session
@@ -1051,6 +1098,72 @@ async function fanOutAppHooks(env: TenantEnv, tenantId: string, event: DomainEve
     ...(env.INTERNAL_AUTH_SECRET ? { INTERNAL_AUTH_SECRET: env.INTERNAL_AUTH_SECRET } : {}),
   });
   return dispatcher.fanOut(tenantId, event, targets, new Date().toISOString());
+}
+
+async function connectRealtime(
+  request: Request,
+  url: URL,
+  env: TenantEnv,
+  tenantId: string,
+  traceId: string,
+): Promise<Response> {
+  if (request.method.toUpperCase() !== "GET") throw errors.validation("Realtime connect requires GET");
+  if ((request.headers.get("upgrade") ?? "").toLowerCase() !== "websocket") {
+    throw errors.validation("Realtime connect requires a WebSocket upgrade");
+  }
+  if (!env.REALTIME) throw errors.misconfigured("Realtime hub is not configured");
+
+  // Frappe's socket middleware refuses cross-origin sockets before it trusts the cookie.
+  const origin = request.headers.get("origin");
+  if (!origin) throw errors.authentication("Realtime origin is required");
+  let originHost = "";
+  try { originHost = new URL(origin).hostname; }
+  catch { throw errors.authentication("Realtime origin is invalid"); }
+  if (originHost !== url.hostname) throw errors.authentication("Realtime origin does not match tenant host");
+
+  const users = new D1UserStore(env.DB);
+  const authContext: AuthRouteContext = {
+    tenantId,
+    users,
+    sessionSecret: env.SESSION_SECRET ?? "",
+    traceId,
+    now: () => new Date().toISOString(),
+  };
+
+  const established = env.SESSION_SECRET ? await establishSession(request, authContext) : null;
+  const apiCredential = !established
+    ? await establishFrappeApiCredential(request, authContext)
+    : null;
+
+  let actor: Actor;
+  let userType: "System User" | "Website User";
+  if (established) {
+    actor = established.actor;
+    userType = established.user.user_type;
+  } else if (apiCredential) {
+    actor = apiCredential.actor;
+    userType = apiCredential.user.user_type;
+  } else if (!env.SESSION_SECRET && env.AUTH_MODE === "development") {
+    actor = staticDevelopmentActor(env.DEV_ACTOR_JSON);
+    userType = "System User";
+  } else {
+    throw errors.permission("Login to access realtime");
+  }
+  if (actor.user_id === "Guest") throw errors.permission("Guest realtime sessions are not supported");
+
+  const resumeRaw = url.searchParams.get("last_sequence") ?? "0";
+  const resume = Number(resumeRaw);
+  if (!Number.isSafeInteger(resume) || resume < 0) throw errors.validation("last_sequence must be a non-negative integer");
+
+  const headers = new Headers({
+    upgrade: "websocket",
+    "x-realtime-tenant": tenantId,
+    "x-realtime-user-type": userType,
+    "x-realtime-actor": encodeURIComponent(JSON.stringify(actor)),
+    "x-realtime-resume-from": String(resume),
+  });
+  const stub = env.REALTIME.getByName(tenantId);
+  return stub.fetch(new Request("https://realtime.internal/connect", { method: "GET", headers }));
 }
 
 /**
