@@ -377,6 +377,18 @@ test("Payment Allocation reuses Credit Note customer credit against a later Sale
   assert.equal(allocation.data.source_voucher_no, "CN-REUSABLE");
   assert.equal(allocation.data.total_allocated_amount_minor, 2_500);
 
+  await assert.rejects(
+    mutate(kernel, {
+      commandId: "CN-REUSABLE-cancel-blocked",
+      doctype: "Credit Note",
+      name: "CN-REUSABLE",
+      action: "cancel",
+      expectedVersion: 2,
+      document: {},
+    }),
+    /customer credit|remaining Credit Note/i,
+  );
+
   await mutate(kernel, {
     commandId: "PA-CREDIT-1-cancel",
     doctype: "Payment Allocation",
