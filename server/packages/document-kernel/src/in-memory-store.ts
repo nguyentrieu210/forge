@@ -358,9 +358,13 @@ export class InMemoryMutationStore implements MutationStore {
     purchaseOrder: string,
     kind?: "Receipt" | "Billing",
     itemCode?: string,
+    purchaseOrderItemRowId?: string,
   ): Promise<number> {
     return this.procurementEntries
-      .filter((line) => line.purchase_order === purchaseOrder && (!kind || line.kind === kind) && (!itemCode || line.item_code === itemCode))
+      .filter((line) => line.purchase_order === purchaseOrder
+        && (!kind || line.kind === kind)
+        && (!itemCode || line.item_code === itemCode)
+        && (!purchaseOrderItemRowId || line.purchase_order_item_row_id === purchaseOrderItemRowId))
       .reduce((total, line) => total + line.qty_micros, 0);
   }
 
