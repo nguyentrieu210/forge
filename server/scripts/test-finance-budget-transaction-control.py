@@ -46,6 +46,31 @@ db.execute(
     )"""
 )
 db.execute(
+    """CREATE TABLE doctype_definitions(
+      tenant_id TEXT NOT NULL,
+      doctype TEXT NOT NULL,
+      module TEXT NOT NULL,
+      is_custom INTEGER NOT NULL,
+      is_submittable INTEGER NOT NULL,
+      is_child INTEGER NOT NULL,
+      revision INTEGER NOT NULL,
+      metadata_json TEXT NOT NULL,
+      disabled INTEGER NOT NULL,
+      modified_by TEXT NOT NULL,
+      modified_at TEXT NOT NULL,
+      PRIMARY KEY(tenant_id,doctype)
+    )"""
+)
+for doctype in ("Finance Budget", "Finance Budget Commitment"):
+    db.execute(
+        "INSERT INTO doctype_definitions VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+        (
+            "demo", doctype, "Accounts", 0, 1, 0, 1,
+            json.dumps({"name": doctype, "fields": []}), 0, "seed", "2026-10-02T00:00:00Z",
+        ),
+    )
+
+db.execute(
     """CREATE VIEW finance_historical_accounts AS
       SELECT tenant_id,name,json_extract(payload_json,'$.company') AS company,
              json_extract(payload_json,'$.root_type') AS root_type,
@@ -54,6 +79,7 @@ db.execute(
 )
 db.executescript((root / "migrations/tenant/0153_finance_budget_transaction_control.sql").read_text(encoding="utf-8"))
 db.executescript((root / "migrations/tenant/0157_finance_budget_commitment_actualization.sql").read_text(encoding="utf-8"))
+db.executescript((root / "migrations/tenant/0158_finance_budget_fiscal_distribution.sql").read_text(encoding="utf-8"))
 
 
 def insert_doc(doctype, name, payload, docstatus=1):
@@ -248,6 +274,122 @@ ensure_voucher("Journal Entry", "JE-EC-AUTO-OVER")
 db.commit()
 expect_rejected("FINANCE_BUDGET_TRANSACTION_EXCEEDED", lambda: insert_gl(
     "Journal Entry", "JE-EC-AUTO-OVER", "L1", "650", 1, 0
+))
+
+
+# 0158 metadata exposes fiscal distribution and child-row evidence.
+budget_meta = json.loads(db.execute(
+    "SELECT metadata_json FROM doctype_definitions WHERE tenant_id='demo' AND doctype='Finance Budget'"
+).fetchone()[0])
+budget_fields = {field["fieldname"]: field for field in budget_meta["fields"]}
+assert budget_fields["fiscal_distribution_enabled"]["fieldtype"] == "Check"
+assert budget_fields["budget_distribution"]["options"] == "Finance Budget Distribution"
+assert db.execute(
+    "SELECT COUNT(*) FROM doctype_definitions WHERE tenant_id='demo' AND doctype='Finance Budget Distribution'"
+).fetchone()[0] == 1
+
+
+def monthly_distribution(amount):
+    rows = []
+    for index in range(12):
+        month = index + 1
+        # Trigger validates continuity, not calendar frequency internals; controller owns
+        # exact period generation. Use real month ends so this is canonical submitted evidence.
+        import calendar
+        end_day = calendar.monthrange(2026, month)[1]
+        rows.append({
+            "row_id": f"DIST-{month}",
+            "start_date": f"2026-{month:02d}-01",
+            "end_date": f"2026-{month:02d}-{end_day:02d}",
+            "percent_bps": 834 if index < 4 else 833,
+            "allocation_weight": 1,
+            "amount_minor": amount // 12,
+        })
+    return rows
+
+
+# Invalid submitted distribution cannot enter canonical documents directly.
+account("651")
+bad_rows = monthly_distribution(1200)
+bad_rows[-1]["allocation_weight"] = 2
+expect_rejected("FINANCE_BUDGET_DISTRIBUTION_INVALID", lambda: budget(
+    "BUD-FISCAL-BAD", "651", 1200,
+    fiscal_distribution_enabled=True,
+    distribution_frequency="Monthly",
+    distribute_equally=True,
+    distribution_weight_total=12,
+    budget_distribution=bad_rows,
+))
+
+# GL Stop uses accumulated distribution, then proportionally scales dated revisions.
+rows = monthly_distribution(1200)
+budget(
+    "BUD-FISCAL-GL", "651", 1200,
+    fiscal_distribution_enabled=True,
+    distribution_frequency="Monthly",
+    distribute_equally=True,
+    distribution_weight_total=12,
+    budget_distribution=rows,
+)
+db.commit()
+ensure_voucher("Journal Entry", "JE-FISCAL-JAN")
+insert_gl(
+    "Journal Entry", "JE-FISCAL-JAN", "L1", "651", 100, 0,
+    posting_at="2026-01-15T12:00:00Z",
+)
+db.commit()
+ensure_voucher("Journal Entry", "JE-FISCAL-JAN-OVER")
+db.commit()
+expect_rejected("FINANCE_BUDGET_TRANSACTION_EXCEEDED", lambda: insert_gl(
+    "Journal Entry", "JE-FISCAL-JAN-OVER", "L1", "651", 1, 0,
+    posting_at="2026-01-16T12:00:00Z",
+))
+
+insert_doc("Finance Budget Revision", "REV-FISCAL", {
+    "budget": "BUD-FISCAL-GL", "posting_date": "2026-07-01", "delta_amount_minor": 1200,
+})
+ensure_voucher("Journal Entry", "JE-FISCAL-AUG")
+insert_gl(
+    "Journal Entry", "JE-FISCAL-AUG", "L1", "651", 1500, 0,
+    posting_at="2026-08-15T12:00:00Z",
+)
+db.commit()
+ensure_voucher("Journal Entry", "JE-FISCAL-AUG-OVER")
+db.commit()
+expect_rejected("FINANCE_BUDGET_TRANSACTION_EXCEEDED", lambda: insert_gl(
+    "Journal Entry", "JE-FISCAL-AUG-OVER", "L1", "651", 1, 0,
+    posting_at="2026-08-16T12:00:00Z",
+))
+
+# Commitment-only mutation is checked against actual + outstanding at the same accumulated cap.
+account("652")
+budget(
+    "BUD-FISCAL-COM", "652", 1200,
+    fiscal_distribution_enabled=True,
+    distribution_frequency="Monthly",
+    distribute_equally=True,
+    distribution_weight_total=12,
+    budget_distribution=rows,
+)
+ensure_voucher("Journal Entry", "JE-FISCAL-COM-ACTUAL")
+insert_gl(
+    "Journal Entry", "JE-FISCAL-COM-ACTUAL", "L1", "652", 700, 0,
+    posting_at="2026-08-01T12:00:00Z",
+)
+insert_doc("Purchase Order", "PO-FISCAL-COM", {"company": "Kairo"})
+db.commit()
+insert_doc("Finance Budget Commitment", "COM-FISCAL-EDGE", {
+    "budget": "BUD-FISCAL-COM", "posting_date": "2026-08-03",
+    "commitment_type": "Reserve", "amount_minor": 100,
+    "source_doctype": "Purchase Order", "source_name": "PO-FISCAL-COM",
+})
+db.commit()
+expect_rejected("FINANCE_BUDGET_TRANSACTION_EXCEEDED", lambda: insert_doc(
+    "Finance Budget Commitment", "COM-FISCAL-OVER", {
+        "budget": "BUD-FISCAL-COM", "posting_date": "2026-08-03",
+        "commitment_type": "Reserve", "amount_minor": 1,
+        "source_doctype": "Purchase Order", "source_name": "PO-FISCAL-COM",
+    }
 ))
 
 assert db.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
