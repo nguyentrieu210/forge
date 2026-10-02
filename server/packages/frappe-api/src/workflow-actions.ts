@@ -13,15 +13,19 @@ import { D1UserStore } from "../../auth/src/index.js";
 import type { DomainEvent, JsonObject } from "../../contracts/src/index.js";
 import { D1MutationStore } from "../../document-kernel/src/index.js";
 import {
+  D1DocumentAccessStore,
   D1MetadataStore,
+  MetadataPermissionService,
   evaluateWorkflowCondition,
   type WorkflowMeta,
 } from "../../frappe-model/src/index.js";
+import { D1EmailQueueStore } from "./email-queue.js";
 
 export interface WorkflowActionSyncResult {
   completed: number;
   created: number;
   open: number;
+  emailQueued: number;
 }
 
 interface WorkflowActionRow {
@@ -92,13 +96,13 @@ export async function syncWorkflowActions(
     ? await metadata.getWorkflow(tenantId, event.aggregate.doctype)
     : null;
   if (!document || !workflow) {
-    if (!openRows.length) return { completed: 0, created: 0, open: 0 };
+    if (!openRows.length) return { completed: 0, created: 0, open: 0, emailQueued: 0 };
     const result = await db.prepare(
       `UPDATE workflow_actions
           SET status='Completed',completed_by=?1,completed_by_role=NULL,modified_at=?2
         WHERE tenant_id=?3 AND reference_doctype=?4 AND reference_name=?5 AND status='Open'`,
     ).bind(event.actor, now, tenantId, event.aggregate.doctype, event.aggregate.name).run();
-    return { completed: result.meta?.changes ?? 0, created: 0, open: 0 };
+    return { completed: result.meta?.changes ?? 0, created: 0, open: 0, emailQueued: 0 };
   }
 
   const state = String(document.data[workflow.state_field] ?? workflow.states[0]?.state ?? "");
@@ -129,12 +133,12 @@ export async function syncWorkflowActions(
   // Same-state writes do not create another Workflow Action. This mirrors Frappe's
   // "already created" guard and prevents edits/comments from multiplying approvals.
   if (sameState.length) {
-    return { completed, created: 0, open: sameState.length };
+    return { completed, created: 0, open: sameState.length, emailQueued: 0 };
   }
 
   const roles = outgoingRoles(workflow, state, document.data);
   if (!roles.length || document.docstatus === 2) {
-    return { completed, created: 0, open: 0 };
+    return { completed, created: 0, open: 0, emailQueued: 0 };
   }
 
   const stateMeta = workflow.states.find((candidate) => candidate.state === state);
@@ -160,9 +164,48 @@ export async function syncWorkflowActions(
     now,
   ).run();
 
+  const created = result.meta?.changes ?? 0;
+  let emailQueued = 0;
+  if (created === 1 && emailRequested) {
+    const users = new D1UserStore(db);
+    const permissions = new MetadataPermissionService(metadata, undefined, new D1DocumentAccessStore(db));
+    const queue = new D1EmailQueueStore(db);
+    const placeholders = roles.map((_role, index) => `?${index + 2}`).join(",");
+    const recipientRows = await db.prepare(
+      `SELECT DISTINCT u.user_id
+         FROM users u
+         JOIN user_roles ur ON ur.tenant_id=u.tenant_id AND ur.user_id=u.user_id
+         JOIN roles r ON r.tenant_id=ur.tenant_id AND r.role=ur.role
+        WHERE u.tenant_id=?1 AND u.enabled=1 AND u.user_type='System User'
+          AND r.disabled=0 AND ur.role IN (${placeholders})
+        ORDER BY u.user_id`,
+    ).bind(tenantId, ...roles).all<{ user_id: string }>();
+
+    for (const recipient of recipientRows.results ?? []) {
+      const user = await users.get(tenantId, recipient.user_id);
+      if (!user?.enabled || !user.email) continue;
+      const actorRoles = await users.listRoles(tenantId, recipient.user_id);
+      const actor = { user_id: recipient.user_id, roles: actorRoles };
+      if (!await permissions.canReadDocument(actor, tenantId, document)) continue;
+      const queued = await queue.enqueue(tenantId, {
+        dedupeKey: `workflow:${actionName}:${recipient.user_id}`,
+        sourceKind: "workflow",
+        sourceName: workflow.name,
+        recipientUser: recipient.user_id,
+        recipientEmail: user.email,
+        subject: `${event.aggregate.doctype} ${event.aggregate.name}: ${state}`,
+        message: `Workflow action required for ${event.aggregate.doctype} ${event.aggregate.name} in state ${state}.`,
+        referenceDoctype: event.aggregate.doctype,
+        referenceName: event.aggregate.name,
+      }, now);
+      if (queued.created) emailQueued += 1;
+    }
+  }
+
   return {
     completed,
-    created: result.meta?.changes ?? 0,
-    open: (result.meta?.changes ?? 0) === 1 ? 1 : 0,
+    created,
+    open: created === 1 ? 1 : 0,
+    emailQueued,
   };
 }
