@@ -93,3 +93,29 @@ test("Period Closing Voucher static RBAC matches accounting authority", () => {
     (error) => error.code === "PERMISSION_DENIED",
   );
 });
+
+
+test("Exchange Rate Revaluation static RBAC matches accounting authority", () => {
+  for (const role of ["Accounts Manager", "Chief Accountant", "Kế toán trưởng"]) {
+    assert.doesNotThrow(() => permission.assert({
+      actor: actor([role]),
+      doctype: "Exchange Rate Revaluation",
+      action: "submit",
+    }));
+  }
+  for (const role of ["Accounts User", "General Accountant", "Kế toán tổng hợp"]) {
+    assert.doesNotThrow(() => permission.assert({
+      actor: actor([role]),
+      doctype: "Exchange Rate Revaluation",
+      action: "read",
+    }));
+    assert.throws(
+      () => permission.assert({
+        actor: actor([role]),
+        doctype: "Exchange Rate Revaluation",
+        action: "submit",
+      }),
+      (error) => error.code === "PERMISSION_DENIED",
+    );
+  }
+});
