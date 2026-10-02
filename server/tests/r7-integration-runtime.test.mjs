@@ -45,6 +45,7 @@ test('malformed credential binding never returns provider material', async () =>
     await assert.rejects(runtimeWebhookCredentials(configured, 'demo').resolve(subscription()));
   }
   await assert.rejects(runtimeWebhookCredentials({ INTEGRATION_CREDENTIALS_JSON: '{"demo":{"ref":{}}}' }, 'demo').resolve(subscription({ auth_kind: 'oauth2' })), /OAuth webhook binding/);
+  await assert.rejects(runtimeWebhookCredentials({ INTEGRATION_CREDENTIALS_JSON: '{"demo":{"ref":{"appId":123}}}' }, 'demo').resolve(subscription({ auth_kind: 'service_account' })), /service-account webhook binding/);
 });
 
 test('runtime transport rechecks operator host before network and forces safe fetch options', async () => {

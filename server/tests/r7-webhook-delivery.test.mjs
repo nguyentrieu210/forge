@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import { D1WebhookDeliveryStore, enqueueCommittedWebhookEvent, runDurableWebhookDeliveries } from "../dist/packages/integration-hub/src/durable-delivery.js";
 import { buildDeliveryTask } from "../dist/packages/integration-hub/src/delivery-planner.js";
 import { signWebhookBody } from "../dist/packages/integration-hub/src/index.js";
+import { subscriptionFromDocument } from "../dist/packages/integration-hub/src/subscription-store.js";
 
 const epoch = new Date("2026-10-02T00:00:00.000Z");
 const later = seconds => new Date(epoch.getTime() + seconds * 1000);
@@ -46,6 +47,19 @@ const inspect = sql => sql.prepare("SELECT * FROM integration_webhook_deliveries
 const runner = (store, fetch, options = {}) => runDurableWebhookDeliveries({
   tenant_id: "demo", store, transport: { fetch },
   credential_resolver: { async resolve() { return {}; } }, now: epoch, ...options,
+});
+
+test("Frappe dynamic webhook scripting knobs fail closed instead of being silently ignored", () => {
+  const document = {
+    tenant_id: "demo", doctype: "Integration Subscription", name: "SUB-DOC", owner: "Administrator",
+    docstatus: 0, status: "active", version: 1,
+    created_at: epoch.toISOString(), modified_at: epoch.toISOString(), children: [],
+    data: { status: "active", event_pattern: "document.*", target_url: "https://hooks.example.test/events", auth_kind: "none", allowed_hosts: ["hooks.example.test"] },
+  };
+  assert.equal(subscriptionFromDocument(document).event_pattern, "document.*");
+  for (const [field, value] of [["condition", "doc.total > 0"], ["webhook_json", "{{ doc }}"], ["request_method", "PUT"], ["is_dynamic_url", true]]) {
+    assert.throws(() => subscriptionFromDocument({ ...document, data: { ...document.data, [field]: value } }), /Unsupported Frappe dynamic webhook fields/);
+  }
 });
 
 test("committed-event registry filters tenant/event and persists one immutable delivery per event", async () => {

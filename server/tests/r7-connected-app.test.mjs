@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
-import { ConnectedAppService, importConnectedAppKey } from '../dist/packages/integration-hub/src/connected-app.js';
+import { ConnectedAppService, CONNECTED_APP_SERVICE_PRINCIPAL, importConnectedAppKey } from '../dist/packages/integration-hub/src/connected-app.js';
 import { D1ConnectedAppStore } from '../dist/packages/integration-hub/src/connected-app-store.js';
 
 const identity = { tenantId: 'tenant-a', userId: 'alice', appId: 'erp' };
@@ -78,6 +78,26 @@ test('refresh has one atomic lease, rotates token, preserves absent refresh toke
   f.setNow(1_150_000); f.setTransport(() => Response.json({ access_token: 'third-access', expires_in: 120, token_type: 'Bearer' }));
   assert.equal(await f.service.getAccessToken(identity, config), 'third-access');
   assert.equal(f.calls[2].init.body.get('refresh_token'), 'refresh-secret');
+});
+
+test('backend service principal uses client_credentials, encrypted cache and the same atomic lease', async () => {
+  const f = await setup();
+  const backend = { ...identity, userId: CONNECTED_APP_SERVICE_PRINCIPAL };
+  assert.equal(await f.service.getBackendAccessToken(backend, config), 'access-secret');
+  assert.equal(f.calls.length, 1);
+  assert.equal(f.calls[0].init.body.get('grant_type'), 'client_credentials');
+  assert.equal(f.calls[0].init.body.get('scope'), 'read');
+  assert.equal(f.calls[0].init.body.get('client_id'), 'runtime-client');
+  assert.equal(f.calls[0].init.body.get('client_secret'), 'runtime-secret');
+  assert.equal(await f.service.getBackendAccessToken(backend, config), 'access-secret');
+  assert.equal(f.calls.length, 1, 'fresh backend token must be cached');
+  const row = await f.store.getConnection(backend);
+  assert.equal(row.tokenCiphertext.includes('access-secret'), false);
+  await assert.rejects(f.service.getBackendAccessToken(identity, config), /reserved service principal/);
+  f.setNow(1_040_000);
+  f.setTransport(() => Response.json({ access_token: 'backend-rotated', expires_in: 120, token_type: 'Bearer' }));
+  assert.equal(await f.service.getBackendAccessToken(backend, config), 'backend-rotated');
+  assert.equal(f.calls[1].init.body.get('grant_type'), 'client_credentials');
 });
 
 test('disconnect tombstone prevents in-flight callback and refresh from resurrecting connection', async () => {

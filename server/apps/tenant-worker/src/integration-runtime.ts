@@ -1,4 +1,4 @@
-import { ConnectedAppService, importConnectedAppKey, type ConnectedAppConfig, type ConnectedAppIdentity } from "../../../packages/integration-hub/src/connected-app.js";
+import { ConnectedAppService, CONNECTED_APP_SERVICE_PRINCIPAL, importConnectedAppKey, type ConnectedAppConfig, type ConnectedAppIdentity } from "../../../packages/integration-hub/src/connected-app.js";
 import { D1ConnectedAppStore } from "../../../packages/integration-hub/src/connected-app-store.js";
 import { D1WebhookDeliveryStore, runDurableWebhookDeliveries } from "../../../packages/integration-hub/src/durable-delivery.js";
 import type { ResolvedWebhookCredential, WebhookCredentialResolver, WebhookTransport } from "../../../packages/integration-hub/src/executor.js";
@@ -80,6 +80,11 @@ export function runtimeWebhookCredentials(env: TenantEnv, tenantId: string): Web
       if (typeof entry.appId !== "string" || typeof entry.userId !== "string") throw new Error("Invalid OAuth webhook binding");
       const runtime = await connectedAppRuntime(env, tenantId, entry.userId, entry.appId);
       return { headers: { authorization: `Bearer ${await runtime.service.getAccessToken(runtime.identity, runtime.config)}` } };
+    }
+    if (subscription.auth_kind === "service_account") {
+      if (typeof entry.appId !== "string" || !entry.appId) throw new Error("Invalid service-account webhook binding");
+      const runtime = await connectedAppRuntime(env, tenantId, CONNECTED_APP_SERVICE_PRINCIPAL, entry.appId);
+      return { headers: { authorization: `Bearer ${await runtime.service.getBackendAccessToken(runtime.identity, runtime.config)}` } };
     }
     if (entry.headers !== undefined && (!entry.headers || typeof entry.headers !== "object" || Array.isArray(entry.headers)
       || Object.values(entry.headers).some(value => typeof value !== "string"))) throw new Error("Invalid webhook authentication headers");

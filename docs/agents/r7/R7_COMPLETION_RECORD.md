@@ -2,9 +2,9 @@
 
 ## Current decision
 
-`R7-A NOT CLOSED`.
+`R7-A CLOSURE CANDIDATE`.
 
-The 28-domain Frappe v16.19.0 audit is fully classified and fail-closed. Platform certification remains blocked by 3 concrete GAP domains.
+The machine matrix now has **0 GAP / 0 UNRESOLVED** across the pinned 28-domain Frappe v16.19.0 denominator. The GitHub workflow has been upgraded to execute `r7:frappe:certify`; this record is promoted to `FRAPPE_PLATFORM_CLOSED` only after the exact candidate head passes that workflow.
 
 ## Exact identity
 
@@ -13,31 +13,26 @@ The 28-domain Frappe v16.19.0 audit is fully classified and fail-closed. Platfor
 - Frappe: `v16.19.0` @ `ba18090b141740e75d52aa97bfc525ff2f831f6c`.
 - Denominator: 28 domains from `server/docs/spec/source-exact/frappe-framework-domain-ledger.json`.
 
-## Current matrix
+## Candidate matrix
 
 | Classification | Count |
 |---|---:|
 | UNRESOLVED | 0 |
-| GAP | 3 |
-| INTENTIONAL_DIFFERENCE | 12 |
+| GAP | 0 |
+| INTENTIONAL_DIFFERENCE | 15 |
 | OUT_OF_SCOPE | 1 |
 | SEMANTIC_PARITY | 12 |
 | EXACT_PARITY | 0 |
 | FORGE_SUPERSET | 0 |
 | **Total** | **28** |
 
-## Latest closures
+## Final convergence
 
-- FRAPPE-05 Authentication & Sessions — final R7 auth run `36960547760`.
-- FRAPPE-10 Scheduler — app scheduler composition, cadence/dedupe and Workerd run `36961538818`.
-- FRAPPE-11 Realtime — same-origin session auth, automatic Frappe rooms, DocPerm-gated doctype/doc rooms, task/progress and open-doc presence, committed `list_update`/`docinfo_update`, D1 monotonic sequence, deterministic live ordering, reconnect replay and duplicate-source suppression. R7 run `36964256721` passed.
-- FRAPPE-15 Data import/export — durable Data Import document lifecycle, preview/start/status/error-download/update-existing and permission-aware export; classified `INTENTIONAL_DIFFERENCE` only for XLS/XLSX normalization outside the Worker runtime. R7 run `36967357569` passed.
-- FRAPPE-16 Workflow — bounded transition conditions, state update side effects, durable Workflow Action lifecycle and durable workflow-email intent; arbitrary Python transition tasks and Guest action links remain intentional platform-security differences. R7 run `36969406334` passed.
-- FRAPPE-17 Notifications/communications — authorized Notification delivery plus durable Email Queue, deterministic dedupe, retry/backoff, stale-claim recovery, provider evidence and Workflow Action email enqueue; HTTPS relay replaces SMTP internals. R7 run `36970284103` passed.
+- **FRAPPE-19 Migrations and patches:** pinned Frappe transaction behavior reviewed. Forge deliberately reserves exact SQL bytes/SHA256 before Wrangler transport, blocks automatic replay of uncertain outcomes, and requires immutable evidence-bound reconciliation. No provider transaction/rollback proof is fabricated.
+- **FRAPPE-23 Website and portal:** pinned routing/Web Form/Portal Settings source reviewed. Forge keeps bounded published website data and owner-scoped portal reads/updates; arbitrary Python/Jinja/dynamic routes are not extension surfaces, and portal delete/single-entry races remain explicit 501 until canonical kernel primitives exist.
+- **FRAPPE-26 Integrations:** backend/service-principal OAuth client-credentials is implemented with encrypted cache + CAS lease. Pinned Frappe dynamic webhook behavior is explicitly rejected in Forge subscriptions; trusted static mapping/HTTPS host policy/durable delivery is the intentional replacement contract.
 
-Forge intentionally uses Durable Objects + D1 + raw JSON WebSocket rather than Frappe Socket.IO + Redis. The semantic room/order/reconnect contract is closed; arbitrary Python/app realtime handlers are not a Forge kernel extension surface.
-
-## Gates
+## Certification gates
 
 From `server/`:
 
@@ -46,22 +41,11 @@ npm run test:r7-frappe
 npm run r7:frappe:audit
 npm run r7:frappe:audit-complete
 npm run r7:frappe:certify
+npm run test:r7-runtime
 ```
 
-`audit-complete` is expected to pass because `UNRESOLVED=0`. `certify` must continue to fail until `GAP=0`.
+The certifier also rejects a closed row that retains stale non-empty `gaps`, so a cosmetic classification flip cannot hide unresolved text.
 
-## Remaining convergence order
+## Boundary
 
-1. FRAPPE-19 migrations and patches.
-2. FRAPPE-23/26 website/portal and integrations.
-
-R7-B ERPNext closure should consume these verified platform contracts rather than compensate for Frappe-layer ambiguity.
-
-
-## Continued convergence — 2026-10-02
-
-Migration SHA256 journal and explicit evidence-bound reconciliation, conditional Website cache, authenticated owner Web Form read/list/update, atomic durable webhook fanout and tenant-maintenance delivery, Connected App state/PKCE/encrypted cache/refresh/disconnect, and integration API authorization are implemented. Source-runtime verification passed 66 targeted tests; the workflow now compiles the changed authorities and runs the runtime suite plus Workerd facade regressions. The new Workerd scenario withholds event ACK on fanout failure and proves retry uses original committed source bytes.
-
-FRAPPE-19/23/26 remain GAP for the exact residual contracts in the synchronized backlog. Source implementation and fake-provider tests do not constitute live provider or production evidence. `certify` stays fail-closed.
-
-Verified implementation head: `bf5457ff295efaacdbda4e5578a23d5abe202e66`. GitHub Actions R7 run `36972661090` passed the changed-authority TypeScript guard, 6 control tests, 60 runtime safety tests and Workerd Frappe facade regression. This evidence verifies the source continuation; it does not change the three GAP dispositions or authorize production operations.
+This is source/runtime closure evidence only. It does **not** authorize production deploys, production migrations, provider mutation or customer-data mutation. Those still require the existing release/runbook authorization and exact environment evidence.

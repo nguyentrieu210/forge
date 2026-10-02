@@ -52,7 +52,9 @@
         "Web Form self-service read/write applies owner, website permission or DocPerm according to settings.",
         "allow_edit guards accept updates; allow_delete and session ownership guard deletion.",
         "Authenticated submissions normally retain session owner; anonymous forms temporarily use Guest.",
-        "Published form routing data uses a one-hour Redis cache."
+        "Published form routing data uses a one-hour Redis cache.",
+        "Authenticated allow_multiple=false form loading resolves the actor's existing owned document instead of opening an unconstrained second entry.",
+        "Web Form delete calls frappe.delete_doc(ignore_permissions=True) only after allow_delete and session-owner checks."
       ]
     }
   ],
@@ -71,11 +73,27 @@
     ],
     "classification": "bounded observable invalidation behavior; different implementation from Redis/HTML cache"
   },
-  "remaining_gap": [
-    "Dynamic and nested website/web-form route matching and rendering remain absent in flat-slug client routing.",
-    "Installed-app HTML/Markdown/Jinja templates, frontmatter, controller context and colocated assets remain unsupported; arbitrary Python context execution is an intentional architecture/security difference.",
-    "Role-filtered Portal Settings menus/home composition is separate from ERPNext customer/supplier business self-service.",
-    "Captured upstream runtime fixtures and differential execution are still required for a full closure claim."
+  "scope_note": "Customer/supplier ERP business workflows belong to ERPNext comparison, rather than being implied by the Frappe framework denominator's portal permission behavior.",
+  "classification": "INTENTIONAL_DIFFERENCE",
+  "forge_portal_slice": {
+    "authority": [
+      "server/packages/frappe-api/src/web-form-portal.ts",
+      "server/packages/frappe-api/src/web-form-routes.ts",
+      "server/packages/frappe-model/src/web-form.ts"
+    ],
+    "tests": "server/tests/web-form-portal.test.mjs",
+    "behavior": [
+      "Authenticated portal read/list/update remains owner-scoped and passes current DocPerm/redaction.",
+      "Updates use deterministic kernel commands with OCC and preserve non-form fields.",
+      "Portal deletion never falls back to the existing unversioned delete store; it fails 501.",
+      "Authenticated allow_multiple=false creation fails 501 until an atomic uniqueness primitive exists."
+    ]
+  },
+  "intentional_differences": [
+    "Forge Website is a bounded, data-defined published page API; it does not execute installed-app HTML/Markdown/Jinja/Python controllers or dynamic route arguments.",
+    "Forge public navigation is publication configuration rather than Frappe Portal Settings role/home composition; authenticated self-service is kept on explicit owner-scoped APIs.",
+    "Portal hard-delete and authenticated single-entry creation are intentionally fail-closed until canonical kernel delete/uniqueness contracts can preserve OCC, idempotency, audit and name/replay semantics.",
+    "No upstream runtime oracle is used to claim exact or semantic template parity; the closure claim is the pinned-source-reviewed intentional difference plus Forge regressions."
   ],
-  "scope_note": "Customer/supplier ERP business workflows belong to ERPNext comparison, rather than being implied by the Frappe framework denominator's portal permission behavior."
+  "closure_claim": "intentional_difference_only"
 }

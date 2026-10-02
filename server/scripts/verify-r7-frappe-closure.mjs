@@ -54,7 +54,9 @@ for (const row of matrix.domains ?? []) {
   if (!String(row.lane ?? "").startsWith("R7-")) failures.push(`${row.domain_id}: missing R7 lane`);
   if (["EXACT_PARITY","SEMANTIC_PARITY","FORGE_SUPERSET","INTENTIONAL_DIFFERENCE"].includes(row.classification)) {
     if (!Array.isArray(row.evidence) || row.evidence.length === 0) failures.push(`${row.domain_id}: closed classification requires evidence`);
+    if (Array.isArray(row.gaps) && row.gaps.length > 0) failures.push(`${row.domain_id}: closed classification cannot retain stale gap text`);
   }
+  if (row.classification === "INTENTIONAL_DIFFERENCE" && !String(row.rationale ?? "").trim()) failures.push(`${row.domain_id}: INTENTIONAL_DIFFERENCE requires rationale`);
   if (row.classification === "OUT_OF_SCOPE" && !String(row.rationale ?? "").trim()) failures.push(`${row.domain_id}: OUT_OF_SCOPE requires rationale`);
   if (row.classification === "GAP" && (!Array.isArray(row.gaps) || row.gaps.length === 0)) failures.push(`${row.domain_id}: GAP requires at least one gap`);
 }

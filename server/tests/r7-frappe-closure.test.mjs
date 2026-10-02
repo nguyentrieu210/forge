@@ -13,6 +13,9 @@ const lock = await readJson(path.join(serverRoot, "source-lock.json"));
 const ledger = await readJson(path.join(serverRoot, "docs/spec/source-exact/frappe-framework-domain-ledger.json"));
 const matrix = await readJson(path.join(repoRoot, "docs/agents/r7/R7_FRAPPE_PARITY_MATRIX.json"));
 const backlog = await readJson(path.join(repoRoot, "docs/agents/r7/R7_GAP_BACKLOG.json"));
+const sourceReviews = await Promise.all([
+  "R7_MIGRATION_SOURCE_REVIEW.json", "R7_WEBSITE_SOURCE_REVIEW.json", "R7_INTEGRATION_SOURCE_REVIEW.json",
+].map((name) => readJson(path.join(repoRoot, "docs/agents/r7", name))));
 
 test("R7 Frappe matrix is bound to canonical Frappe 16 source lock", () => {
   const frappe = lock.sources.find((x) => x.app === "frappe");
@@ -39,7 +42,9 @@ test("R7 closed dispositions carry evidence and out-of-scope rows carry rational
     assert.equal(row.upstream_sha, matrix.upstream.full_sha, row.domain_id);
     if (closed.has(row.classification)) {
       assert.ok(Array.isArray(row.evidence) && row.evidence.length > 0, `${row.domain_id} needs evidence`);
+      assert.equal((row.gaps ?? []).length, 0, `${row.domain_id} closed row retains stale gaps`);
     }
+    if (row.classification === "INTENTIONAL_DIFFERENCE") assert.ok(String(row.rationale ?? "").trim(), `${row.domain_id} needs intentional-difference rationale`);
     if (row.classification === "OUT_OF_SCOPE") {
       assert.ok(String(row.rationale ?? "").trim(), `${row.domain_id} needs OUT_OF_SCOPE rationale`);
     }
@@ -63,7 +68,17 @@ test("R7 gap backlog contains exactly the current matrix gaps", () => {
   }
 });
 
-test("R7 platform certification remains blocked while GAP exists", () => {
-  const gaps = matrix.domains.filter((row) => row.classification === "GAP");
-  assert.ok(gaps.length > 0, "audit completion must not be confused with platform closure");
+test("R7 final source reviews are pinned to the canonical Frappe SHA and close only as intentional differences", () => {
+  for (const review of sourceReviews) {
+    assert.equal(review.upstream.full_sha, matrix.upstream.full_sha, review.domain_id);
+    assert.equal(review.classification, "INTENTIONAL_DIFFERENCE", review.domain_id);
+    assert.ok(Array.isArray(review.intentional_differences) && review.intentional_differences.length > 0, review.domain_id);
+  }
+});
+
+test("R7 platform certification has no GAP or UNRESOLVED disposition", () => {
+  const blocking = matrix.domains.filter((row) => ["GAP", "UNRESOLVED"].includes(row.classification));
+  assert.deepEqual(blocking, []);
+  assert.equal(backlog.gap_count, 0);
+  assert.deepEqual(backlog.gaps, []);
 });

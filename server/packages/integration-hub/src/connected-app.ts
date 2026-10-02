@@ -23,6 +23,8 @@ export interface ConnectedAppStore {
   releaseRefresh(identity: ConnectedAppIdentity, lease: string): Promise<void>;
   disconnect(identity: ConnectedAppIdentity): Promise<void>;
 }
+export const CONNECTED_APP_SERVICE_PRINCIPAL = "__forge_service__";
+
 export interface ConnectedAppRuntime {
   store: ConnectedAppStore;
   /** Credentials and key must come from worker secret bindings / trusted vault. */
@@ -126,6 +128,38 @@ export class ConnectedAppService {
       if (!await this.runtime.store.saveConnection({ ...identity, tokenCiphertext: await seal(this.runtime.encryptionKey, { token: refreshed, configHash: cached.configHash }, identityKey(identity, 'token')),
         expiresAt: refreshed.expiresAt, version: current.version + 1 }, current.version)) throw new Error('OAuth connection changed during refresh');
       return refreshed.accessToken;
+    } finally { await this.runtime.store.releaseRefresh(identity, lease); }
+  }
+  /** Trusted machine-to-machine OAuth2 client-credentials flow. No browser/user consent surface. */
+  async getBackendAccessToken(identity: ConnectedAppIdentity, config: ConnectedAppConfig): Promise<string> {
+    validateConfig(config, identity);
+    if (identity.userId !== CONNECTED_APP_SERVICE_PRINCIPAL) throw new Error('Backend OAuth requires the reserved service principal');
+    let current = await this.runtime.store.getConnection(identity);
+    if (!current) {
+      await this.runtime.store.ensureConnection(identity);
+      current = await this.runtime.store.getConnection(identity);
+    }
+    if (!current) throw new Error('Connected app backend cache could not be initialized');
+    const configHash = await digest(JSON.stringify(config));
+    if (current.tokenCiphertext) {
+      const cached = await open<{ token: OAuthToken; configHash: string }>(this.runtime.encryptionKey, current.tokenCiphertext, identityKey(identity, 'token'));
+      if (cached.configHash === configHash && current.expiresAt > this.now() + 30_000) return cached.token.accessToken;
+    }
+    const lease = random();
+    if (!await this.runtime.store.acquireRefresh(identity, current.version, lease, this.now())) throw new Error('Connected app backend token acquisition in progress');
+    try {
+      const token = await this.exchange(config, {
+        grant_type: 'client_credentials',
+        ...(config.scopes.length ? { scope: config.scopes.join(' ') } : {}),
+      });
+      const saved = await this.runtime.store.saveConnection({
+        ...identity,
+        tokenCiphertext: await seal(this.runtime.encryptionKey, { token, configHash }, identityKey(identity, 'token')),
+        expiresAt: token.expiresAt,
+        version: current.version + 1,
+      }, current.version);
+      if (!saved) throw new Error('OAuth connection changed during backend token acquisition');
+      return token.accessToken;
     } finally { await this.runtime.store.releaseRefresh(identity, lease); }
   }
   async disconnect(identity: ConnectedAppIdentity): Promise<void> { identityKey(identity, 'disconnect'); await this.runtime.store.disconnect(identity); }
