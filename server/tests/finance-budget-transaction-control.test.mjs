@@ -12,35 +12,42 @@ function glPlan(name, account, debitMinor, {
   currencyScale = 0,
   costCenter,
   dimensions = {},
+  doctype = "Journal Entry",
+  lineKey = "L1",
+  documentData = {},
+  action = "create",
+  expectedVersion = null,
+  version = 1,
+  docstatus = 1,
 } = {}) {
-  const data = { company: "Kairo", posting_at: postingAt };
+  const data = { company: "Kairo", posting_at: postingAt, ...documentData };
   return {
     command: {
       schema_version: 1,
       tenant_id: "demo",
       command_id: `cmd-${name}`,
-      aggregate: { doctype: "Journal Entry", name },
-      action: "create",
-      expected_version: null,
+      aggregate: { doctype, name },
+      action,
+      expected_version: expectedVersion,
       payload_hash: HASH,
       document: data,
       actor: { user_id: "qa@example.test", roles: ["Accounts Manager"] },
     },
     document: {
       tenant_id: "demo",
-      doctype: "Journal Entry",
+      doctype,
       name,
       owner: "qa@example.test",
-      docstatus: 1,
-      status: "Submitted",
-      version: 1,
+      docstatus,
+      status: docstatus === 2 ? "Cancelled" : "Submitted",
+      version,
       created_at: NOW,
       modified_at: NOW,
       data,
       children: [],
     },
     gl_entries: [{
-      line_key: "L1",
+      line_key: lineKey,
       account,
       debit_minor: debitMinor,
       credit_minor: creditMinor,
@@ -137,5 +144,63 @@ test("budget guard uses dated revisions, Income sign and fails closed on currenc
   await assert.rejects(
     store.execute(glPlan("JE-USD", "647", 1, { currency: "USD", currencyScale: 2 })),
     /FINANCE_BUDGET_GL_CURRENCY_SCALE_MISMATCH/,
+  );
+});
+
+
+test("linked Purchase Invoice actual automatically consumes PO commitment and cancellation restores it", async () => {
+  const store = new InMemoryMutationStore();
+  seedBudget(store, "BUD-AUTO", "648", 1000);
+  store.seedDocument("Purchase Order", "PO-AUTO", "demo", {
+    company: "Kairo",
+    currency: "VND",
+    items: [{ row_id: "PO-ROW", item_code: "ITEM-1", material_request: "MR-AUTO" }],
+  }, 1);
+  store.seedDocument("Finance Budget Commitment", "COM-AUTO", "demo", {
+    budget: "BUD-AUTO",
+    posting_date: "2026-04-01",
+    commitment_type: "Reserve",
+    amount_minor: 1000,
+    source_doctype: "Purchase Order",
+    source_name: "PO-AUTO",
+  }, 1);
+
+  const invoiceData = {
+    against_purchase_order: "PO-AUTO",
+    items: [{
+      row_id: "PI-ROW",
+      item_code: "ITEM-1",
+      purchase_order: "PO-AUTO",
+      purchase_order_item_row_id: "PO-ROW",
+      material_request: "MR-AUTO",
+    }],
+  };
+  await store.execute(glPlan("PI-AUTO", "648", 600, {
+    doctype: "Purchase Invoice",
+    lineKey: "EXPENSE-PI-ROW",
+    documentData: invoiceData,
+  }));
+
+  // 600 actual + 400 outstanding commitment = exactly the 1000 budget.
+  await assert.rejects(
+    store.execute(glPlan("JE-AFTER-PI", "648", 1)),
+    /FINANCE_BUDGET_TRANSACTION_EXCEEDED/,
+  );
+
+  await store.execute(glPlan("PI-AUTO", "648", 0, {
+    creditMinor: 600,
+    doctype: "Purchase Invoice",
+    lineKey: "REV-EXPENSE-PI-ROW",
+    documentData: invoiceData,
+    action: "cancel",
+    expectedVersion: 1,
+    version: 2,
+    docstatus: 2,
+  }));
+
+  // Reversal removes the linked actual, so the original 1000 commitment becomes outstanding again.
+  await assert.rejects(
+    store.execute(glPlan("JE-AFTER-CANCEL", "648", 1)),
+    /FINANCE_BUDGET_TRANSACTION_EXCEEDED/,
   );
 });
