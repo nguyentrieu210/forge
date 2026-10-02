@@ -84,7 +84,14 @@ export class D1ApiCredentialStore {
     if (!user) throw errors.notFound("Enabled user not found");
 
     const credentialId = randomId("api-credential");
-    const apiKey = randomToken(15);
+    const previous = await this.db.prepare(
+      `SELECT api_key
+         FROM user_api_credentials
+        WHERE tenant_id=?1 AND user_id=?2 AND revoked_at IS NULL
+        LIMIT 1`,
+    ).bind(tenantId, userId).first<{ api_key: string }>();
+    // Frappe generate_keys keeps User.api_key stable and rotates only api_secret.
+    const apiKey = previous?.api_key ?? randomToken(15);
     const apiSecret = randomToken(32);
     const salt = randomToken(18);
     const hash = await secretDigest(salt, apiSecret);
