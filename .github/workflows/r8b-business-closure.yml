@@ -33,7 +33,9 @@ on:
       - "server/migrations/tenant/0153_finance_budget_transaction_control.sql"
       - "server/migrations/tenant/0154_exchange_rate_revaluation.sql"
       - "server/migrations/tenant/0155_customer_credit_refund.sql"
+      - "server/migrations/tenant/0156_customer_credit_allocation.sql"
       - "server/scripts/test-customer-credit-authority-migration.py"
+      - "server/scripts/test-customer-credit-allocation-migration.py"
       - "server/scripts/test-period-closing-authority-migration.py"
       - "server/scripts/test-finance-budget-transaction-control.py"
       - "server/scripts/test-exchange-rate-revaluation-migration.py"
@@ -73,6 +75,8 @@ jobs:
         run: node --test server/tests/customer-credit-authority.test.mjs
       - name: Customer credit atomic migration regression
         run: python3 server/scripts/test-customer-credit-authority-migration.py
+      - name: Customer credit allocation migration regression
+        run: python3 server/scripts/test-customer-credit-allocation-migration.py
       - name: Period Closing Voucher regression
         run: node --test server/tests/period-closing-authority.test.mjs
       - name: Period Closing UTC timestamp regression
