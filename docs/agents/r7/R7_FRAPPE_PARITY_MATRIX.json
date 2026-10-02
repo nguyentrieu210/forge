@@ -122,7 +122,8 @@
         "server/apps/tenant-worker/test/frappe-facade.integration.test.mts",
         "Frappe v16.19.0 frappe/auth.py",
         "Frappe v16.19.0 frappe/core/doctype/user/user.py",
-        "GitHub Actions R7 Frappe 16 Closure run 36960220755"
+        "GitHub Actions R7 Frappe 16 Closure run 36960220755",
+        "GitHub Actions R7 Frappe 16 Closure run 36960547760"
       ],
       "oracle_cases": [],
       "gaps": [],
@@ -218,20 +219,35 @@
       "domain_id": "FRAPPE-10-SCHEDULER",
       "name": "Scheduler",
       "lane": "R7-08",
-      "classification": "GAP",
+      "classification": "INTENTIONAL_DIFFERENCE",
       "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
       "forge_authority": [
-        "server/apps/tenant-worker/src/index-core-base.ts"
+        "server/apps/jobs-worker/src/index.ts",
+        "server/apps/jobs-worker/wrangler.jsonc",
+        "server/apps/tenant-worker/src/index-core-base.ts",
+        "server/packages/app-registry/src/manifest.ts",
+        "server/packages/app-registry/src/scheduler.ts",
+        "server/packages/app-registry/src/cron.ts",
+        "server/migrations/tenant/0142_r7_app_scheduler.sql"
       ],
       "evidence": [
         "server/apps/tenant-worker/src/index-core-base.ts",
-        "docs/VERIFICATION.md"
+        "docs/VERIFICATION.md",
+        "server/apps/jobs-worker/src/index.ts",
+        "server/apps/jobs-worker/wrangler.jsonc",
+        "server/packages/app-registry/src/manifest.ts",
+        "server/packages/app-registry/src/scheduler.ts",
+        "server/packages/app-registry/src/cron.ts",
+        "server/migrations/tenant/0142_r7_app_scheduler.sql",
+        "server/apps/tenant-worker/test/frappe-facade.integration.test.mts",
+        "Frappe v16.19.0 frappe/utils/scheduler.py",
+        "Frappe v16.19.0 frappe/core/doctype/scheduled_job_type/scheduled_job_type.py",
+        "Frappe v16.19.0 frappe/hooks.py",
+        "GitHub Actions R7 Frappe 16 Closure run 36961538818"
       ],
       "oracle_cases": [],
-      "gaps": [
-        "Generic merged Frappe cron/all/daily/hourly app scheduler event semantics are not implemented; current scheduled handler primarily runs Forge maintenance."
-      ],
-      "rationale": "A scheduler exists operationally, but it is not equivalent to Frappe's installed-app scheduler-event composition."
+      "gaps": [],
+      "rationale": "Forge now merges installed-app scheduler_events and executes all/hourly/daily/weekly/monthly/yearly/annual plus portable five-field cron schedules in the tenant System Settings timezone. The ordinary jobs Worker drives dispatch-namespace tenants every minute; D1 last_due_key claiming prevents overlap/duplicate execution, failed slots are not retried inside the same cadence, and stale state is pruned when a method disappears. This is intentionally not Frappe's Python/Redis scheduler: long/default/maintenance labels share the bounded app-Worker execution fabric, arbitrary croniter extensions are rejected fail-closed, and custom cron does not emulate Python function discovery. The declared app-level cadence contract is closed on Forge's Worker architecture."
     },
     {
       "domain_id": "FRAPPE-11-REALTIME",
