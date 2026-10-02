@@ -1872,15 +1872,19 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
        VALUES('demo','Conditional Approval Flow','Conditional Approval',1,1,?1,'Administrator',?2)`,
     ).bind(JSON.stringify(workflow), NOW).run();
 
-    const create = async (subject: string, amount: number, blocked = false) =>
-      (await (await call("/api/resource/Conditional Approval", {
-        method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ subject, amount, blocked }),
-      })).json() as any).data;
+    const insert = async (name: string, subject: string, amount: number, blocked = false) => {
+      const payload = { subject, amount, blocked, workflow_state: "Draft" };
+      await env.DB.prepare(
+        `INSERT INTO documents(
+           tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json,modified_by
+         ) VALUES('demo',?1,'Conditional Approval',?2,'owner@example.com',0,'Draft',1,?3,?3,?4,'owner@example.com')`,
+      ).bind(`Conditional Approval:${name}`, name, NOW, JSON.stringify(payload)).run();
+      return { name };
+    };
 
-    const low = await create("Below threshold", 50);
-    const eligible = await create("Eligible", 150);
-    const blocked = await create("Explicitly blocked", 150, true);
+    const low = await insert("COND-LOW", "Below threshold", 50);
+    const eligible = await insert("COND-OK", "Eligible", 150);
+    const blocked = await insert("COND-BLOCK", "Explicitly blocked", 150, true);
 
     const lowTransitions = await unwrap(await method("metaforge.api.get_workflow_transitions", {
       doctype: "Conditional Approval", name: low.name,
