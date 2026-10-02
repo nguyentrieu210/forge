@@ -39,24 +39,51 @@ export class ProcurementP2PRolloutPurchaseInvoiceController extends ProcurementP
     const plan = await super.buildPlan(context);
     if (context.command.action !== "submit" || !plan.procurement_entries?.length) return plan;
 
-    const current = new Map<string, number>();
+    const current = new Map<string, { purchase_order: string; item_code: string; row_id?: string; qty_micros: number }>();
     for (const line of plan.procurement_entries) {
       if (line.kind !== "Billing" || line.qty_micros <= 0) continue;
-      const key = `${line.purchase_order}\u0000${line.item_code}`;
-      current.set(key, safeAdd(current.get(key) ?? 0, line.qty_micros, "current billing quantity"));
+      const rowId = line.purchase_order_item_row_id;
+      const key = JSON.stringify([line.purchase_order, line.item_code, rowId ?? ""]);
+      const prior = current.get(key);
+      current.set(key, {
+        purchase_order: line.purchase_order,
+        item_code: line.item_code,
+        ...(rowId ? { row_id: rowId } : {}),
+        qty_micros: safeAdd(prior?.qty_micros ?? 0, line.qty_micros, "current billing quantity"),
+      });
     }
-    for (const [key, qty] of current) {
-      const split = key.indexOf("\u0000");
-      const purchaseOrder = key.slice(0, split);
-      const itemCode = key.slice(split + 1);
-      const source = await context.reader.getDocument<PurchaseOrderData>(context.command.tenant_id, "Purchase Order", purchaseOrder);
-      if (!source || source.docstatus !== 1) throw errors.reference(`Submitted Purchase Order ${purchaseOrder} is required`);
+    for (const entry of current.values()) {
+      const source = await context.reader.getDocument<PurchaseOrderData>(
+        context.command.tenant_id,
+        "Purchase Order",
+        entry.purchase_order,
+      );
+      if (!source || source.docstatus !== 1) {
+        throw errors.reference(`Submitted Purchase Order ${entry.purchase_order} is required`);
+      }
       const ordered = source.data.items
-        .filter((item) => item.item_code === itemCode)
-        .reduce((sum, item) => safeAdd(sum, stockQtyMicros(item), `Purchase Order ${purchaseOrder} quantity`), 0);
-      const billed = await context.reader.getProcuredQuantityMicros(context.command.tenant_id, purchaseOrder, "Billing", itemCode);
-      if (safeAdd(billed, qty, `Purchase Order ${purchaseOrder} billed quantity`) > ordered) {
-        throw errors.reference(`Billing quantity for ${itemCode} exceeds approved Purchase Order ${purchaseOrder}`);
+        .filter((item) => entry.row_id ? item.row_id === entry.row_id : item.item_code === entry.item_code)
+        .reduce((sum, item) => safeAdd(sum, stockQtyMicros(item), `Purchase Order ${entry.purchase_order} quantity`), 0);
+      if (ordered <= 0) {
+        throw errors.reference(
+          entry.row_id
+            ? `Purchase Order ${entry.purchase_order} row ${entry.row_id} does not exist`
+            : `Item ${entry.item_code} is not in Purchase Order ${entry.purchase_order}`,
+        );
+      }
+      const billed = await context.reader.getProcuredQuantityMicros(
+        context.command.tenant_id,
+        entry.purchase_order,
+        "Billing",
+        entry.item_code,
+        entry.row_id,
+      );
+      if (safeAdd(billed, entry.qty_micros, `Purchase Order ${entry.purchase_order} billed quantity`) > ordered) {
+        throw errors.reference(
+          entry.row_id
+            ? `Billing quantity for ${entry.item_code} row ${entry.row_id} exceeds approved Purchase Order ${entry.purchase_order}`
+            : `Billing quantity for ${entry.item_code} exceeds approved Purchase Order ${entry.purchase_order}`,
+        );
       }
     }
     return plan;
