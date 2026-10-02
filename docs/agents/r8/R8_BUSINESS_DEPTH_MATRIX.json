@@ -150,18 +150,19 @@
         "server/packages/clouderp-erpnext/src/landed-cost-voucher.ts",
         "server/tests/landed-cost-authority.test.mjs",
         "server/migrations/tenant/0143_purchase_invoice_row_authority.sql",
-        "server/tests/procurement-p2p-closure.test.mjs"
+        "server/tests/procurement-p2p-closure.test.mjs",
+        "server/scripts/test-landed-cost-repost-migration.py"
       ],
       "upstream_evidence": [
         "ERPNext v16.20.0 buying/stock subcontracting and landed-cost controllers at pinned SHA"
       ],
       "oracle_cases": [],
       "gaps": [
-        "Historical downstream COGS/SLE-GLE repost for landed-cost changes remains incomplete; safe authoritative apply/reverse is now implemented.",
+        "Landed Cost late-arriving repost is closed for already-consumed FIFO layers that terminate in direct Material Issue; chronological replay across backdated future consumption, transfers, manufacturing/WIP, deliveries and non-FIFO valuation remains incomplete.",
         "Supplier-management breadth and runtime oracle remain open.",
         "Subcontracting is now first-class but remains partial around reservation, returns, secondary/process-loss and repost depth."
       ],
-      "rationale": "Normal P2P, exact PO-row Purchase Invoice authority and safe authoritative landed-cost apply/reverse are strong, but historical downstream repost, supplier-management breadth/runtime oracle and remaining subcontracting depth prevent closure."
+      "rationale": "Normal P2P, exact PO-row Purchase Invoice authority and authoritative landed-cost apply/reverse now include race-protected direct FIFO Material Issue expense repost. Full chronological downstream valuation propagation, supplier-management breadth/runtime oracle and remaining subcontracting depth still prevent closure."
     },
     {
       "depth_id": "R8-M04-STOCK",
@@ -193,7 +194,9 @@
         "server/packages/clouderp-stock",
         "docs/agents/r8/R8B_LANDED_COST_CLOSURE.md",
         "server/packages/clouderp-erpnext/src/landed-cost-voucher.ts",
-        "server/migrations/tenant/0142_landed_cost_valuation_identity.sql"
+        "server/migrations/tenant/0142_landed_cost_valuation_identity.sql",
+        "server/tests/landed-cost-authority.test.mjs",
+        "server/scripts/test-landed-cost-repost-migration.py"
       ],
       "upstream_evidence": [
         "server/docs/spec/source-exact/oracle/EVIDENCE_BUNDLE.md",
@@ -201,13 +204,12 @@
       ],
       "oracle_cases": [],
       "gaps": [
-        "Landed Cost Voucher authoritative valuation application/reversal is implemented for the no-downstream-consumption boundary; historical repost beyond that boundary remains incomplete.",
-        "Historical downstream COGS restatement is incomplete.",
+        "Landed Cost can now split a late FIFO adjustment between remaining inventory and already-consumed direct Material Issue expense with commit-time history fingerprinting; chronological propagation through backdated later issues, transfers, manufacturing/WIP, deliveries and Moving Average remains incomplete.",
         "Persisted WMS task execution and full ATP are incomplete.",
         "Expired-batch policy differs from pinned ERPNext behavior.",
         "LIFO is not supported."
       ],
-      "rationale": "Stock ledger/tracking/valuation/reconciliation now include targeted landed-cost capitalization and exact reversal, but historical downstream repost plus WMS/ATP and remaining ERPNext depth remain open."
+      "rationale": "Stock ledger/tracking/valuation/reconciliation now include targeted landed-cost capitalization, direct FIFO Material Issue repost, race guards and exact reversal. Full chronological value propagation plus WMS/ATP and remaining ERPNext depth remain open."
     },
     {
       "depth_id": "R8-M05-MANUFACTURING",
@@ -492,7 +494,8 @@
         "server/packages/clouderp-erpnext/src/landed-cost-voucher.ts",
         "server/tests/landed-cost-authority.test.mjs",
         "server/migrations/tenant/0142_landed_cost_valuation_identity.sql",
-        "server/migrations/tenant/0143_purchase_invoice_row_authority.sql"
+        "server/migrations/tenant/0143_purchase_invoice_row_authority.sql",
+        "server/scripts/test-landed-cost-repost-migration.py"
       ],
       "known_depth_questions": [
         "Partial receipt/billing/payment and over-receipt/over-billing",
@@ -502,16 +505,16 @@
         "RFQ/Supplier Quotation depth",
         "cancel/amend/backdate/race semantics"
       ],
-      "rationale": "Core source-to-pay behavior is substantial. R8-B adds exact PO-row invoice authority plus authoritative targeted landed-cost capitalization with exact reversal; historical downstream COGS/SLE-GLE repost and a pinned P2P runtime differential remain open.",
+      "rationale": "Core source-to-pay behavior is substantial. R8-B adds exact PO-row invoice authority plus targeted Landed Cost with exact reversal and race-protected repost of already-consumed FIFO share into direct Material Issue expense. Broader chronological downstream valuation propagation and a pinned P2P runtime differential remain open.",
       "confirmed_findings": [
         "Forge has a real P2P authority chain: RFQ/Supplier Quotation selection, Purchase Order, partial Purchase Receipt, Purchase Invoice three-way match, multi-PO invoice support, Supplier Payment/Advance via Finance, Stock Return and Debit Note correction boundaries.",
         "Purchase Invoice match policy is frozen on PO and a failed receipt/quantity/price match holds before GL, Payment Ledger or procurement-progress commit.",
-        "R8-B now has a first-class Landed Cost Voucher: deterministic receipt-row allocation posts zero-quantity targeted Stock Ledger value plus balanced GL, exact cancellation reverses committed rows, active vouchers protect source Purchase Receipts, and unsafe historical-consumption cases fail closed pending downstream repost.",
+        "R8-B has a first-class Landed Cost Voucher: exact receipt-row allocation targets canonical Stock Ledger layers; late FIFO cost can split between open inventory and already-consumed direct Material Issue expense; fully consumed sources use GL-only correction; D1 freezes the stock-history fingerprint and exact cancellation reverses committed evidence.",
         "A dedicated pinned ERPNext P2P runtime oracle has not yet been captured, so the normal P2P path cannot be promoted beyond PARTIAL.",
         "R8-B now binds Purchase Invoice receipt/billing progress and three-way matching to exact Purchase Order child-row identity; duplicate same-item split-price rows fail closed unless an exact row is supplied, and Subcontracting Receipt uses the same row authority for submit/cancel dependencies."
       ],
       "gaps": [
-        "Historical downstream COGS/SLE-GLE repost for backdated or already-consumed landed-cost targets remains incomplete; the safe no-downstream apply/reverse path is implemented.",
+        "Historical Landed Cost repost remains incomplete for backdated future issues, transfers, manufacturing/WIP, deliveries and non-FIFO valuation; direct already-consumed FIFO Material Issue correction is implemented.",
         "Pinned ERPNext P2P runtime differential remains to be captured."
       ]
     },
