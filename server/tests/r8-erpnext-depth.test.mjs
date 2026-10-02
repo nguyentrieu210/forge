@@ -117,3 +117,22 @@ test("R8 manufacturing remap exposes MRP and posted-cost depth boundaries", asyn
   assert.equal(matrix.flow_depth.find((x) => x.flow_id === "R8-F10-MFG-BOM-MRP")?.classification, "PARTIAL");
   assert.equal(matrix.flow_depth.find((x) => x.flow_id === "R8-F11-MFG-EXEC-COST")?.classification, "PARTIAL");
 });
+
+
+test("R8 P1 breadth resolves every business flow without fabricating parity", async () => {
+  const matrix = await readJson(path.join(repoRoot, "docs/agents/r8/R8_BUSINESS_DEPTH_MATRIX.json"));
+  assert.equal(matrix.flow_depth.filter((x) => x.classification === "UNRESOLVED").length, 0);
+  assert.equal(matrix.flow_depth.filter((x) => ["DEEP_PARITY","SEMANTIC_PARITY","FORGE_SUPERSET"].includes(x.classification)).length, 0);
+  for (const id of ["R8-F09-WMS","R8-F13-ASSETS","R8-F14-PROJECTS","R8-F15-QUALITY","R8-F16-SUPPORT","R8-F17-COMMERCE-POS","R8-F18-REGIONAL"]) {
+    assert.equal(matrix.flow_depth.find((x) => x.flow_id === id)?.classification, "PARTIAL");
+  }
+});
+
+test("R8 module denominator is benchmark-complete but business closure stays blocked", async () => {
+  const matrix = await readJson(path.join(repoRoot, "docs/agents/r8/R8_BUSINESS_DEPTH_MATRIX.json"));
+  assert.equal(matrix.module_depth.length, 11);
+  assert.ok(matrix.module_depth.every((x) => x.classification === "PARTIAL"));
+  assert.ok(matrix.module_depth.every((x) => Array.isArray(x.forge_evidence_roots) && x.forge_evidence_roots.length > 0));
+  assert.ok(matrix.module_depth.every((x) => Array.isArray(x.gaps) && x.gaps.length > 0));
+  assert.equal(matrix.flow_depth.find((x) => x.flow_id === "R8-F12-SUBCONTRACTING")?.classification, "GAP");
+});
