@@ -12,12 +12,16 @@ function canonical(doctype, name, data, docstatus = 1, owner = "maker@example.te
   return { tenant_id: "demo", doctype, name, owner, docstatus, status: docstatus === 1 ? "Submitted" : "Draft", version, created_at: now, modified_at: now, data, children: [] };
 }
 
-function reader({ documents = [], masters = {} } = {}) {
+function reader({ documents = [], masters = {}, glEntries = [] } = {}) {
   return {
     async getDocument(_tenant, doctype, name) { return documents.find((doc) => doc.doctype === doctype && doc.name === name) ?? null; },
     async listDocumentsByDoctype(_tenant, doctype) { return documents.filter((doc) => doc.doctype === doctype); },
     async hasMasterRecord(_tenant, type, name) { return Boolean(masters[`${type}:${name}`]); },
     async getMasterRecordData(_tenant, type, name) { return masters[`${type}:${name}`] ?? null; },
+    async getVoucherGlEntries(_tenant, doctype, name, revision) {
+      return glEntries.filter((entry) =>
+        entry.voucher_type === doctype && entry.voucher_no === name && entry.voucher_revision === revision);
+    },
   };
 }
 
@@ -44,7 +48,7 @@ function context(doctype, name, action, document, options = {}) {
     existing: options.existing ?? null,
     nextVersion: (options.existing?.version ?? 0) + 1,
     now,
-    reader: reader({ documents: options.documents ?? [], masters: options.masters ?? baseMasters() }),
+    reader: reader({ documents: options.documents ?? [], masters: options.masters ?? baseMasters(), glEntries: options.glEntries ?? [] }),
   };
 }
 
@@ -290,4 +294,62 @@ test("Budget commitment Stop uses accumulated fiscal distribution through postin
     })),
     /exceeds the effective budget/,
   );
+});
+
+
+test("Budget commitment controller subtracts exact linked actual from source reserve", async () => {
+  const controller = new FinanceBudgetCommitmentController();
+  const budget = approvedBudget();
+  const po = canonical("Purchase Order", "PO-LINKED", {
+    company: "Kairo",
+    items: [{ row_id: "PO-ROW", item_code: "ITEM-1" }],
+  });
+  const reserve = canonical("Finance Budget Commitment", "COM-LINKED", {
+    budget: "BUD-001",
+    posting_date: "2026-04-01",
+    commitment_type: "Reserve",
+    amount_minor: 800_000,
+    source_doctype: "Purchase Order",
+    source_name: "PO-LINKED",
+  });
+  const invoice = canonical("Purchase Invoice", "PI-LINKED", {
+    company: "Kairo",
+    items: [{
+      row_id: "PI-ROW",
+      item_code: "ITEM-1",
+      purchase_order: "PO-LINKED",
+      purchase_order_item_row_id: "PO-ROW",
+    }],
+  });
+  const glEntries = [{
+    voucher_type: "Purchase Invoice",
+    voucher_no: "PI-LINKED",
+    voucher_revision: 1,
+    line_key: "EXPENSE-PI-ROW",
+    account: "642-KAIRO",
+    debit_minor: 500_000,
+    credit_minor: 0,
+    currency: "VND",
+    currency_scale: 0,
+    cost_center: "OPS",
+    posting_at: "2026-07-01T00:00:00.000Z",
+  }];
+
+  // Raw commitments would be 1.4m and the old controller would reject. Canonical
+  // actualization leaves 300k from the first reserve, so +600k = 900k outstanding.
+  const plan = await controller.buildPlan(context("Finance Budget Commitment", "COM-LINKED-2", "submit", {
+    budget: "BUD-001",
+    posting_date: "2026-08-03",
+    commitment_type: "Reserve",
+    amount: "600000",
+    source_doctype: "Purchase Order",
+    source_name: "PO-LINKED",
+  }, {
+    documents: [budget, po, reserve, invoice],
+    glEntries,
+    existing: canonical("Finance Budget Commitment", "COM-LINKED-2", {}, 0),
+  }));
+
+  assert.equal(plan.document.data.committed_after_minor, 900_000);
+  assert.equal(plan.document.data.available_after_minor, 100_000);
 });
