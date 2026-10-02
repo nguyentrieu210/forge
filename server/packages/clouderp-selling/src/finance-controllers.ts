@@ -564,7 +564,7 @@ export class PaymentAllocationController implements DocumentController<PaymentAl
       source_voucher_no: sourceVoucherNo,
       references,
       currency_scale: transactionScale,
-      company_currency: source.data.company_currency ?? input.currency,
+      company_currency: typeof source.data.company_currency === "string" ? source.data.company_currency : input.currency,
       company_currency_scale: companyScale,
       total_allocated_amount_minor: total,
       total_allocated_amount: fromScaledInt(total, transactionScale),
