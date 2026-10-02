@@ -232,5 +232,23 @@ expect_rejected("FINANCE_BUDGET_TRANSACTION_EXCEEDED", lambda: insert_gl(
     "Journal Entry", "JE-AUTO-AFTER-CANCEL", "L1", "649", 1, 0
 ))
 
+
+# Expense Claim commitment is consumed by the claim's own budget-account GL.
+account("650")
+budget("BUD-EC-AUTO", "650", 300)
+insert_doc("Finance Budget Commitment", "COM-EC-AUTO", {
+    "budget": "BUD-EC-AUTO", "posting_date": "2026-04-01",
+    "commitment_type": "Reserve", "amount_minor": 300,
+    "source_doctype": "Expense Claim", "source_name": "EC-AUTO",
+})
+ensure_voucher("Expense Claim", "EC-AUTO")
+insert_gl("Expense Claim", "EC-AUTO", "EXPENSE-1", "650", 200, 0)
+db.commit()
+ensure_voucher("Journal Entry", "JE-EC-AUTO-OVER")
+db.commit()
+expect_rejected("FINANCE_BUDGET_TRANSACTION_EXCEEDED", lambda: insert_gl(
+    "Journal Entry", "JE-EC-AUTO-OVER", "L1", "650", 1, 0
+))
+
 assert db.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
 print("FINANCE_BUDGET_TRANSACTION_CONTROL_PASS")
