@@ -18,3 +18,4 @@ export * from "./purchase-allocation-action-controllers.js";
 export * from "./purchase-allocation-preview.js";
 export * from "./purchase-allocation-rollout-controllers.js";
 export * from "./registry.js";
+export * from "./period-closing-controller.js";
