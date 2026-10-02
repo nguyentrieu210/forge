@@ -1,4 +1,4 @@
-import type { CanonicalDocument, JsonObject, MutationPlan } from "../../contracts/src/index.js";
+import type { CanonicalDocument, GeneralLedgerEntry, JsonObject, MutationPlan } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
 import type { ControllerContext, DocumentController } from "../../document-kernel/src/index.js";
 import { nextDocStatus } from "../../document-kernel/src/index.js";
@@ -151,11 +151,9 @@ export class FinanceBudgetCommitmentController implements DocumentController<Fin
       const existing = requireExisting(context);
       assertApprover(context, false);
       const budget = await requireSubmittedBudget(context, requiredText(existing.data.budget, "budget"));
-      const current = await committedAmount(context, budget.name);
-      const effect = signedCommitment(existing.data);
-      const next = addMinor([current, -effect], "budget commitment cancel");
-      if (next < 0) throw errors.lifecycle("Cancelling this commitment would make committed budget negative");
       const postingDate = dateText(existing.data.posting_date, "posting_date");
+      const next = await outstandingCommittedAmount(context, budget, postingDate, existing.name);
+      if (next < 0) throw errors.lifecycle("Cancelling this commitment would make committed budget negative");
       const annualEffective = await effectiveBudgetAmount(context, budget, undefined, postingDate);
       const effective = budgetLimitThroughDate(budget.data, annualEffective, postingDate);
       if ((budget.data.control_action ?? "Stop") === "Stop" && next > effective) {
@@ -235,7 +233,7 @@ async function normalizeRevision(context: ControllerContext<FinanceBudgetRevisio
   const resulting = addMinor([current, deltaMinor], "budget revision resulting amount");
   if (resulting < 0) throw errors.validation("Budget revision cannot make the effective budget negative");
   if (context.command.action === "submit") {
-    const committed = await committedAmount(context, budget.name);
+    const committed = await outstandingCommittedAmount(context, budget, budget.data.end_date);
     if (committed > resulting) {
       throw errors.lifecycle("Budget revision cannot reduce the budget below existing commitments", {
         committed_minor: committed,
@@ -278,8 +276,15 @@ async function normalizeCommitment(context: ControllerContext<FinanceBudgetCommi
   const amountMinor = positiveMoney(input.amount, scale, "amount");
   const annualEffective = await effectiveBudgetAmount(context, budget, undefined, postingDate);
   const effective = budgetLimitThroughDate(budget.data, annualEffective, postingDate);
-  const current = await committedAmount(context, budget.name, context.existing?.name);
-  const sourceOutstanding = await sourceCommittedAmount(context, budget.name, sourceDoctype, sourceName, context.existing?.name);
+  const current = await outstandingCommittedAmount(context, budget, postingDate, context.existing?.name);
+  const sourceOutstanding = await outstandingSourceCommittedAmount(
+    context,
+    budget,
+    postingDate,
+    sourceDoctype,
+    sourceName,
+    context.existing?.name,
+  );
   if (type === "Release" && amountMinor > sourceOutstanding) {
     throw errors.lifecycle("Budget release exceeds the amount reserved for the source document", {
       source_outstanding_minor: sourceOutstanding,
@@ -568,33 +573,147 @@ function formatIsoDate(value: Date): string {
   return value.toISOString().slice(0, 10);
 }
 
-async function committedAmount<T extends JsonObject>(
+async function outstandingCommittedAmount<T extends JsonObject>(
   context: ControllerContext<T>,
-  budgetName: string,
+  budget: CanonicalDocument<FinanceBudgetData>,
+  throughDate: string,
   excludeCommitment?: string,
 ): Promise<number> {
-  const commitments = await listSubmitted<FinanceBudgetCommitmentData>(context, "Finance Budget Commitment");
-  return addMinor(commitments
-    .filter((doc) => doc.name !== excludeCommitment && doc.data.budget === budgetName)
-    .map((doc) => signedCommitment(doc.data)), "budget committed amount");
+  const groups = await commitmentGroups(context, budget.name, throughDate, excludeCommitment);
+  let total = 0;
+  for (const group of groups.values()) {
+    if (group.raw_minor <= 0) continue;
+    const actual = group.source_doctype && group.source_name
+      ? await linkedSourceActualMinor(context, budget, throughDate, group.source_doctype, group.source_name)
+      : 0;
+    total = addMinor([total, group.raw_minor - Math.min(group.raw_minor, Math.max(0, actual))], "outstanding budget commitment");
+  }
+  return total;
 }
 
-async function sourceCommittedAmount<T extends JsonObject>(
+async function outstandingSourceCommittedAmount<T extends JsonObject>(
   context: ControllerContext<T>,
-  budgetName: string,
+  budget: CanonicalDocument<FinanceBudgetData>,
+  throughDate: string,
   sourceDoctype: string,
   sourceName: string,
   excludeCommitment?: string,
 ): Promise<number> {
+  const groups = await commitmentGroups(context, budget.name, throughDate, excludeCommitment);
+  const group = groups.get(`${sourceDoctype}\u0000${sourceName}`);
+  if (!group || group.raw_minor <= 0) return 0;
+  const actual = await linkedSourceActualMinor(context, budget, throughDate, sourceDoctype, sourceName);
+  return group.raw_minor - Math.min(group.raw_minor, Math.max(0, actual));
+}
+
+async function commitmentGroups<T extends JsonObject>(
+  context: ControllerContext<T>,
+  budgetName: string,
+  throughDate: string,
+  excludeCommitment?: string,
+): Promise<Map<string, { source_doctype: string; source_name: string; raw_minor: number }>> {
   const commitments = await listSubmitted<FinanceBudgetCommitmentData>(context, "Finance Budget Commitment");
-  return addMinor(commitments
-    .filter((doc) =>
-      doc.name !== excludeCommitment
-      && doc.data.budget === budgetName
-      && doc.data.source_doctype === sourceDoctype
-      && doc.data.source_name === sourceName
+  const groups = new Map<string, { source_doctype: string; source_name: string; raw_minor: number }>();
+  for (const doc of commitments) {
+    if (doc.name === excludeCommitment || doc.data.budget !== budgetName) continue;
+    const postingDate = typeof doc.data.posting_date === "string" ? doc.data.posting_date : "";
+    if (postingDate && postingDate > throughDate) continue;
+    const sourceDoctype = typeof doc.data.source_doctype === "string" ? doc.data.source_doctype : "";
+    const sourceName = typeof doc.data.source_name === "string" ? doc.data.source_name : "";
+    const key = sourceDoctype && sourceName ? `${sourceDoctype}\u0000${sourceName}` : `__legacy__\u0000${doc.name}`;
+    const group = groups.get(key) ?? { source_doctype: sourceDoctype, source_name: sourceName, raw_minor: 0 };
+    group.raw_minor = addMinor([group.raw_minor, signedCommitment(doc.data)], "source budget commitment");
+    groups.set(key, group);
+  }
+  return groups;
+}
+
+async function linkedSourceActualMinor<T extends JsonObject>(
+  context: ControllerContext<T>,
+  budget: CanonicalDocument<FinanceBudgetData>,
+  throughDate: string,
+  sourceDoctype: string,
+  sourceName: string,
+): Promise<number> {
+  const account = requiredText(budget.data.account, "Finance Budget account");
+  const accountData = await context.reader.getMasterRecordData(context.command.tenant_id, "Account", account);
+  const rootType = typeof accountData?.root_type === "string" ? accountData.root_type : "";
+  const movement = (line: GeneralLedgerEntry): number =>
+    rootType === "Income" ? line.credit_minor - line.debit_minor : line.debit_minor - line.credit_minor;
+
+  const candidates = sourceDoctype === "Expense Claim"
+    ? [await context.reader.getDocument<JsonObject>(context.command.tenant_id, "Expense Claim", sourceName)].filter(
+      (doc): doc is CanonicalDocument<JsonObject> => Boolean(doc),
     )
-    .map((doc) => signedCommitment(doc.data)), "source committed amount");
+    : await context.reader.listDocumentsByDoctype<JsonObject>(context.command.tenant_id, "Purchase Invoice");
+
+  let actual = 0;
+  for (const voucher of candidates) {
+    if (voucher.data.company !== budget.data.company) continue;
+    const maxRevision = Math.max(1, voucher.version);
+    for (let revision = 1; revision <= maxRevision; revision += 1) {
+      const lines = await context.reader.getVoucherGlEntries(
+        context.command.tenant_id,
+        voucher.doctype,
+        voucher.name,
+        revision,
+      );
+      for (const line of lines) {
+        if (line.account !== account || line.posting_at.slice(0, 10) > throughDate) continue;
+        if (!budgetScopeMatches(budget.data, voucher.data, line)) continue;
+        if (!commitmentSourceMatches(sourceDoctype, sourceName, voucher, line.line_key)) continue;
+        actual = addMinor([actual, movement(line)], "linked source actual amount");
+      }
+    }
+  }
+  return actual;
+}
+
+function commitmentSourceMatches(
+  sourceDoctype: string,
+  sourceName: string,
+  voucher: CanonicalDocument<JsonObject>,
+  lineKey: string,
+): boolean {
+  if (sourceDoctype === "Expense Claim") {
+    return voucher.doctype === "Expense Claim" && voucher.name === sourceName;
+  }
+  if (voucher.doctype !== "Purchase Invoice") return false;
+  let canonicalLineKey = lineKey;
+  while (canonicalLineKey.startsWith("REV-")) canonicalLineKey = canonicalLineKey.slice(4);
+  if (!canonicalLineKey.startsWith("EXPENSE-")) return false;
+  const rowId = canonicalLineKey.slice("EXPENSE-".length);
+  const items = Array.isArray(voucher.data.items) ? voucher.data.items : [];
+  const item = items.find((raw): raw is JsonObject =>
+    Boolean(raw && typeof raw === "object" && !Array.isArray(raw) && String((raw as JsonObject).row_id ?? "") === rowId));
+  if (!item) return false;
+  if (sourceDoctype === "Purchase Order") {
+    const purchaseOrder = optionalText(item.purchase_order) || optionalText(voucher.data.against_purchase_order);
+    return purchaseOrder === sourceName;
+  }
+  if (sourceDoctype === "Material Request") {
+    return optionalText(item.material_request) === sourceName;
+  }
+  return false;
+}
+
+function budgetScopeMatches(budget: FinanceBudgetData, documentData: JsonObject, line: GeneralLedgerEntry): boolean {
+  const scope = budget.budget_against;
+  if (scope === "Company") return true;
+  const dimensions = line.accounting_dimensions ?? {};
+  if (scope === "Branch") {
+    const branch = optionalText(documentData.branch) || optionalText(dimensions.branch);
+    return branch === budget.branch;
+  }
+  if (scope === "Cost Center") {
+    const costCenter = line.cost_center || optionalText(dimensions.cost_center);
+    return costCenter === budget.cost_center;
+  }
+  if (scope === "Project") {
+    const project = optionalText(documentData.project) || optionalText(dimensions.project);
+    return project === budget.project;
+  }
+  return false;
 }
 
 function signedCommitment(data: FinanceBudgetCommitmentData): number {
