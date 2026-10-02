@@ -2404,6 +2404,39 @@ describe("R7 Frappe realtime compatibility", () => {
     expect(duplicate.inserted).toBe(false);
     expect(duplicate.realtime).toEqual([]);
 
+    // Pin live ordering independently from notify-request ordering. Persist A then B,
+    // intentionally notify the hub about B first, and require the socket to receive
+    // the D1 sequence order A -> B.
+    const orderedRows: Array<{ sequence: number; name: string }> = [];
+    for (const name of ["FV-ORDER-A", "FV-ORDER-B"]) {
+      const row = await env.DB.prepare(
+        "INSERT INTO realtime_events(tenant_id,event,room,message_json,created_at) " +
+        "VALUES('demo','list_update','doctype:Field Visit',?1,?2) RETURNING sequence",
+      ).bind(JSON.stringify({ doctype: "Field Visit", name }), new Date().toISOString())
+        .first<{ sequence: number }>();
+      orderedRows.push({ sequence: Number(row!.sequence), name });
+    }
+    const orderedA = nextSocketJson(
+      socket,
+      (value) => value.type === "event" && value.message?.name === "FV-ORDER-A",
+    );
+    const orderedB = nextSocketJson(
+      socket,
+      (value) => value.type === "event" && value.message?.name === "FV-ORDER-B",
+    );
+    const hub = env.REALTIME.getByName("demo");
+    const notify = (sequence: number) => hub.fetch(new Request("https://realtime.internal/publish", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ tenant_id: "demo", sequence }),
+    }));
+    expect((await notify(orderedRows[1]!.sequence)).status).toBe(200);
+    expect((await notify(orderedRows[0]!.sequence)).status).toBe(200);
+    const [deliveredA, deliveredB] = await Promise.all([orderedA, orderedB]);
+    expect(deliveredA.sequence).toBe(orderedRows[0]!.sequence);
+    expect(deliveredB.sequence).toBe(orderedRows[1]!.sequence);
+    expect(deliveredA.sequence).toBeLessThan(deliveredB.sequence);
+
     await closeSocket(socket);
 
     const offline = await committedEvent("evt-realtime-3", "FV-RT-3", 3);
