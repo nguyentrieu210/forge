@@ -31,7 +31,7 @@ export class GenericMetadataController implements DocumentController<JsonObject>
     if (workflowResult?.update) {
       const field = meta.fields.find((candidate) => candidate.fieldname === workflowResult.update!.field);
       if (!field || isLayoutField(field)) {
-        throw errors.validation(`Workflow ${workflow.name} update field is not writable metadata: ${workflowResult.update.field}`);
+        throw errors.validation(`Workflow ${workflow?.name ?? "active workflow"} update field is not writable metadata: ${workflowResult.update.field}`);
       }
       // The value is produced by server-held workflow metadata AFTER ordinary user
       // input has passed field permissions/read-only checks. Workflow authority can
