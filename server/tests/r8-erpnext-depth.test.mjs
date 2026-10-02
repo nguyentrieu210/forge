@@ -29,12 +29,17 @@ test("R8 ERPNext baseline and denominator are fail-closed", async () => {
   assert.equal(new Set(matrix.flow_depth.map((x) => x.flow_id)).size, 18);
 });
 
-test("R8 starts conservatively instead of fabricating ERPNext parity", async () => {
+test("R8 benchmark stays conservative after resolving the denominator", async () => {
   const matrix = await readJson(path.join(repoRoot, "docs/agents/r8/R8_BUSINESS_DEPTH_MATRIX.json"));
-  const o2c = matrix.flow_depth.find((x) => x.flow_id === "R8-F01-O2C");
-  assert.equal(o2c.classification, "PARTIAL");
-  assert.ok(matrix.module_depth.every((x) => x.classification === "UNRESOLVED"));
-  assert.ok(matrix.flow_depth.filter((x) => x.flow_id !== "R8-F01-O2C").every((x) => x.classification === "UNRESOLVED"));
+  assert.equal(matrix.module_depth.filter((x) => x.classification === "UNRESOLVED").length, 0);
+  assert.equal(matrix.flow_depth.filter((x) => x.classification === "UNRESOLVED").length, 0);
+  assert.equal(
+    [...matrix.module_depth, ...matrix.flow_depth].filter((x) =>
+      ["DEEP_PARITY", "SEMANTIC_PARITY", "FORGE_SUPERSET"].includes(x.classification)
+    ).length,
+    0,
+  );
+  assert.equal(matrix.flow_depth.find((x) => x.flow_id === "R8-F12-SUBCONTRACTING")?.classification, "GAP");
 });
 
 
