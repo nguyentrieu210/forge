@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS workflow_actions (
   source_version INTEGER NOT NULL CHECK (source_version >= 1),
   source_event_id TEXT NOT NULL,
   permitted_roles_json TEXT NOT NULL DEFAULT '[]',
+  email_requested INTEGER NOT NULL DEFAULT 0 CHECK (email_requested IN (0,1)),
   status TEXT NOT NULL DEFAULT 'Open' CHECK (status IN ('Open','Completed')),
   completed_by TEXT,
   completed_by_role TEXT,
