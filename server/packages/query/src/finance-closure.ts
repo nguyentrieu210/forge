@@ -21,6 +21,9 @@ export class FinanceClosureQueryCompiler extends AccountsPayableQueryCompiler {
     if (request.report === "Finance Reconciliation Diagnostics") {
       return compileFinanceReconciliationDiagnostics(request, forceSynchronous);
     }
+    if (request.report === "Finance Budget vs Actual") {
+      return compileFinanceBudgetVsActual(request, forceSynchronous);
+    }
     return super.compile(request, forceSynchronous);
   }
 }
@@ -340,6 +343,168 @@ function compileFinanceReconciliationDiagnostics(
   return { sql, params, columns, prepared: prepared(request, forceSynchronous) };
 }
 
+
+function compileFinanceBudgetVsActual(
+  request: QueryRequest,
+  forceSynchronous: boolean,
+): CompiledQuery {
+  const asOf = extractControl(request.filters ?? [], "as_of_date", true);
+  assertIsoDate(asOf.value, "as_of_date");
+  const company = extractControl(asOf.remaining, "company", true);
+  assertNonEmpty(company.value, "company");
+
+  const params: unknown[] = [request.tenant_id, asOf.value, company.value];
+  const where: string[] = [];
+  const allowed = new Set([
+    "budget",
+    "account",
+    "budget_against",
+    "scope_key",
+    "control_action",
+    "status",
+    "currency",
+  ]);
+  for (const filter of company.remaining) {
+    if (!allowed.has(filter.field)) throw errors.validation(`Filter is not allowed: ${filter.field}`);
+    appendOutputFilter(where, params, filter);
+  }
+
+  const columns = budgetActualColumns();
+  const order = request.order_by ?? [
+    { field: "status", direction: "asc" },
+    { field: "account", direction: "asc" },
+    { field: "scope_key", direction: "asc" },
+    { field: "budget", direction: "asc" },
+  ];
+  assertOrder(columns, order);
+  const { limit, offset } = appendPagination(params, request);
+  const whereSql = where.length ? ` WHERE ${where.join(" AND ")}` : "";
+  const branchExpr = "COALESCE(NULLIF(json_extract(d.payload_json,'$.branch'),''),NULLIF(json_extract(g.dimensions_json,'$.branch'),''),'')";
+  const projectExpr = "COALESCE(NULLIF(json_extract(d.payload_json,'$.project'),''),NULLIF(json_extract(g.dimensions_json,'$.project'),''),'')";
+  const costCenterExpr = "COALESCE(NULLIF(g.cost_center,''),NULLIF(json_extract(g.dimensions_json,'$.cost_center'),''),'')";
+
+  const sql = `
+    WITH budget_base AS (
+      SELECT
+        b.name AS budget,
+        json_extract(b.payload_json,'$.company') AS company,
+        json_extract(b.payload_json,'$.account') AS account,
+        COALESCE(a.root_type,'') AS root_type,
+        json_extract(b.payload_json,'$.budget_against') AS budget_against,
+        COALESCE(json_extract(b.payload_json,'$.scope_key'),'') AS scope_key,
+        COALESCE(json_extract(b.payload_json,'$.cost_center'),'') AS cost_center,
+        COALESCE(json_extract(b.payload_json,'$.project'),'') AS project,
+        COALESCE(json_extract(b.payload_json,'$.branch'),'') AS branch,
+        json_extract(b.payload_json,'$.start_date') AS start_date,
+        json_extract(b.payload_json,'$.end_date') AS end_date,
+        CASE
+          WHEN date(json_extract(b.payload_json,'$.end_date')) < date(?2)
+            THEN json_extract(b.payload_json,'$.end_date')
+          ELSE ?2
+        END AS through_date,
+        json_extract(b.payload_json,'$.currency') AS currency,
+        CAST(COALESCE(json_extract(b.payload_json,'$.currency_scale'),2) AS INTEGER) AS currency_scale,
+        CAST(COALESCE(json_extract(b.payload_json,'$.budget_amount_minor'),0) AS INTEGER) AS budget_amount_minor,
+        COALESCE(json_extract(b.payload_json,'$.control_action'),'Stop') AS control_action
+      FROM documents b
+      LEFT JOIN finance_active_accounts a
+        ON a.tenant_id=b.tenant_id
+       AND a.name=json_extract(b.payload_json,'$.account')
+       AND (a.company=json_extract(b.payload_json,'$.company') OR a.company IS NULL OR a.company='')
+      WHERE b.tenant_id=?1
+        AND b.doctype='Finance Budget'
+        AND b.docstatus=1
+        AND json_extract(b.payload_json,'$.company')=?3
+        AND date(json_extract(b.payload_json,'$.start_date'))<=date(?2)
+    ), metrics AS (
+      SELECT
+        b.*,
+        COALESCE((
+          SELECT SUM(CAST(COALESCE(json_extract(r.payload_json,'$.delta_amount_minor'),0) AS INTEGER))
+          FROM documents r
+          WHERE r.tenant_id=?1
+            AND r.doctype='Finance Budget Revision'
+            AND r.docstatus=1
+            AND json_extract(r.payload_json,'$.budget')=b.budget
+            AND date(json_extract(r.payload_json,'$.posting_date'))>=date(b.start_date)
+            AND date(json_extract(r.payload_json,'$.posting_date'))<=date(b.through_date)
+        ),0) AS revision_minor,
+        COALESCE((
+          SELECT SUM(
+            CASE json_extract(cm.payload_json,'$.commitment_type')
+              WHEN 'Reserve' THEN CAST(COALESCE(json_extract(cm.payload_json,'$.amount_minor'),0) AS INTEGER)
+              WHEN 'Release' THEN -CAST(COALESCE(json_extract(cm.payload_json,'$.amount_minor'),0) AS INTEGER)
+              ELSE 0
+            END
+          )
+          FROM documents cm
+          WHERE cm.tenant_id=?1
+            AND cm.doctype='Finance Budget Commitment'
+            AND cm.docstatus=1
+            AND json_extract(cm.payload_json,'$.budget')=b.budget
+            AND date(json_extract(cm.payload_json,'$.posting_date'))>=date(b.start_date)
+            AND date(json_extract(cm.payload_json,'$.posting_date'))<=date(b.through_date)
+        ),0) AS committed_minor,
+        COALESCE((
+          SELECT SUM(
+            CASE b.root_type
+              WHEN 'Income' THEN g.credit_minor-g.debit_minor
+              ELSE g.debit_minor-g.credit_minor
+            END
+          )
+          FROM gl_entries g
+          INNER JOIN documents d
+            ON d.tenant_id=g.tenant_id
+           AND d.doctype=g.voucher_type
+           AND d.name=g.voucher_no
+          WHERE g.tenant_id=?1
+            AND g.account=b.account
+            AND json_extract(d.payload_json,'$.company')=b.company
+            AND date(g.posting_at)>=date(b.start_date)
+            AND date(g.posting_at)<=date(b.through_date)
+            AND g.voucher_type<>'Period Closing Voucher'
+            AND (
+              b.budget_against='Company'
+              OR (b.budget_against='Branch' AND ${branchExpr}=b.branch)
+              OR (b.budget_against='Cost Center' AND ${costCenterExpr}=b.cost_center)
+              OR (b.budget_against='Project' AND ${projectExpr}=b.project)
+            )
+        ),0) AS actual_minor
+      FROM budget_base b
+    ), calculated AS (
+      SELECT
+        metrics.*,
+        budget_amount_minor+revision_minor AS effective_budget_minor,
+        budget_amount_minor+revision_minor-actual_minor-committed_minor AS available_minor
+      FROM metrics
+    ), report AS (
+      SELECT
+        budget,company,account,budget_against,scope_key,start_date,end_date,through_date,
+        currency,currency_scale,control_action,
+        budget_amount_minor,revision_minor,effective_budget_minor,actual_minor,committed_minor,available_minor,
+        CAST(budget_amount_minor AS REAL)/${moneyDivisor("currency_scale")} AS budget_amount,
+        CAST(effective_budget_minor AS REAL)/${moneyDivisor("currency_scale")} AS effective_budget_amount,
+        CAST(actual_minor AS REAL)/${moneyDivisor("currency_scale")} AS actual_amount,
+        CAST(committed_minor AS REAL)/${moneyDivisor("currency_scale")} AS committed_amount,
+        CAST(available_minor AS REAL)/${moneyDivisor("currency_scale")} AS available_amount,
+        CASE
+          WHEN effective_budget_minor=0 THEN 0.0
+          ELSE CAST(actual_minor+committed_minor AS REAL)*100.0/CAST(effective_budget_minor AS REAL)
+        END AS utilization_pct,
+        CASE
+          WHEN available_minor>=0 THEN 'Within Budget'
+          WHEN control_action='Warn' THEN 'Exceeded / Warn'
+          WHEN control_action='Ignore' THEN 'Exceeded / Ignore'
+          ELSE 'Exceeded / Stop'
+        END AS status
+      FROM calculated
+    )
+    SELECT ${selectColumns(columns)}
+    FROM report${whereSql}${renderOrder(order)} LIMIT ?${limit} OFFSET ?${offset}`;
+
+  return { sql, params, columns, prepared: prepared(request, forceSynchronous) };
+}
+
 function extractControl(filters: QueryFilter[], field: string, required: boolean): { value: unknown; remaining: QueryFilter[] } {
   const matches = filters.filter((filter) => filter.field === field);
   if ((required && matches.length !== 1) || (!required && matches.length > 1)) {
@@ -455,6 +620,35 @@ function dailyLedgerColumns(): ReportColumn[] {
     { field: "movement_amount", label: "Movement", type: "Currency" },
     { field: "running_balance", label: "Running Balance", type: "Currency" },
     { field: "cost_center", label: "Cost Center", type: "Link", options: "Cost Center" },
+  ];
+}
+
+function budgetActualColumns(): ReportColumn[] {
+  return [
+    { field: "budget", label: "Finance Budget", type: "Link", options: "Finance Budget" },
+    { field: "company", label: "Company", type: "Link", options: "Company" },
+    { field: "account", label: "Account", type: "Link", options: "Account" },
+    { field: "budget_against", label: "Budget Against", type: "Data" },
+    { field: "scope_key", label: "Scope", type: "Data" },
+    { field: "start_date", label: "Start Date", type: "Date" },
+    { field: "end_date", label: "End Date", type: "Date" },
+    { field: "through_date", label: "Actual Through", type: "Date" },
+    { field: "currency", label: "Currency", type: "Data" },
+    { field: "currency_scale", label: "Currency Scale", type: "Int" },
+    { field: "budget_amount_minor", label: "Budget Minor", type: "Int" },
+    { field: "revision_minor", label: "Revision Minor", type: "Int" },
+    { field: "effective_budget_minor", label: "Effective Budget Minor", type: "Int" },
+    { field: "actual_minor", label: "Actual Minor", type: "Int" },
+    { field: "committed_minor", label: "Committed Minor", type: "Int" },
+    { field: "available_minor", label: "Available Minor", type: "Int" },
+    { field: "budget_amount", label: "Budget", type: "Currency" },
+    { field: "effective_budget_amount", label: "Effective Budget", type: "Currency" },
+    { field: "actual_amount", label: "Actual", type: "Currency" },
+    { field: "committed_amount", label: "Committed", type: "Currency" },
+    { field: "available_amount", label: "Available", type: "Currency" },
+    { field: "utilization_pct", label: "Utilization %", type: "Float" },
+    { field: "control_action", label: "Control Action", type: "Data" },
+    { field: "status", label: "Status", type: "Data" },
   ];
 }
 
