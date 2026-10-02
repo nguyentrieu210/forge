@@ -367,3 +367,4 @@ function base64UrlDecodeBytes(value: string): Uint8Array {
 }
 
 export * from "./user-store.js";
+export * from "./api-credentials.js";
