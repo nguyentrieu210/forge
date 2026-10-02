@@ -9,7 +9,7 @@
  */
 import { env, exports } from "cloudflare:workers";
 import { beforeAll, describe, expect, it } from "vitest";
-import { hashPassword, mintSession, toFrappeModified, verifySession } from "../../../packages/frappe-api/src/index.js";
+import { hashPassword, mintSession, syncWorkflowActions, toFrappeModified, verifySession } from "../../../packages/frappe-api/src/index.js";
 import { D1DocumentAccessStore } from "../../../packages/frappe-model/src/index.js";
 import { parseAppManifest, runAppScheduler } from "../../../packages/app-registry/src/index.js";
 
@@ -2039,11 +2039,56 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
        ) VALUES('demo','Workflow Update Probe:WUP-1','Workflow Update Probe','WUP-1','owner@example.com',0,'Draft',1,?1,?1,?2,'owner@example.com')`,
     ).bind(NOW, JSON.stringify({ subject: "COPIED-BY-WORKFLOW", workflow_state: "Draft" })).run();
 
+    const initialActions = await syncWorkflowActions(env.DB, "demo", {
+      event_id: "evt-wfa-initial",
+      event_type: "workflow_update_probe.created",
+      tenant_id: "demo",
+      aggregate: { doctype: "Workflow Update Probe", name: "WUP-1" },
+      aggregate_version: 1,
+      actor: "owner@example.com",
+      command_id: "cmd-wfa-initial",
+      occurred_at: NOW,
+      schema_version: 1,
+      payload: {},
+    }, NOW);
+    expect(initialActions).toMatchObject({ created: 1, open: 1 });
+    const openAction = await env.DB.prepare(
+      `SELECT workflow_state,status,permitted_roles_json
+         FROM workflow_actions
+        WHERE tenant_id='demo' AND reference_doctype='Workflow Update Probe'
+          AND reference_name='WUP-1' AND status='Open'`,
+    ).first<any>();
+    expect(openAction?.workflow_state).toBe("Draft");
+    expect(JSON.parse(openAction?.permitted_roles_json ?? "[]")).toEqual(["System Manager"]);
+
     const approved = await unwrap(await method("frappe.model.workflow.apply_workflow", {
       doctype: "Workflow Update Probe", name: "WUP-1", action: "Approve",
     }));
     expect(approved.workflow_state).toBe("Approved");
     expect(approved.resolution_code).toBe("COPIED-BY-WORKFLOW");
+
+    const completedActions = await syncWorkflowActions(env.DB, "demo", {
+      event_id: "evt-wfa-approved",
+      event_type: "workflow_update_probe.updated",
+      tenant_id: "demo",
+      aggregate: { doctype: "Workflow Update Probe", name: "WUP-1" },
+      aggregate_version: 2,
+      actor: "sales@example.com",
+      command_id: "cmd-wfa-approved",
+      occurred_at: NOW,
+      schema_version: 1,
+      payload: {},
+    }, NOW);
+    expect(completedActions).toMatchObject({ completed: 1, created: 0, open: 0 });
+    const completedAction = await env.DB.prepare(
+      `SELECT status,completed_by,completed_by_role
+         FROM workflow_actions
+        WHERE tenant_id='demo' AND reference_doctype='Workflow Update Probe'
+          AND reference_name='WUP-1'`,
+    ).first<any>();
+    expect(completedAction?.status).toBe("Completed");
+    expect(completedAction?.completed_by).toBe("sales@example.com");
+    expect(completedAction?.completed_by_role).toBe("System Manager");
   });
 
   it("logs out and the session stops working", async () => {
