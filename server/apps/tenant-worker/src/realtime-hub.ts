@@ -76,6 +76,10 @@ interface HibernationWebSocket extends WebSocket {
 type HibernationContext = {
   acceptWebSocket(socket: WebSocket): void;
   getWebSockets(tag?: string): WebSocket[];
+  storage: {
+    get<T>(key: string): Promise<T | undefined>;
+    put(key: string, value: unknown): Promise<void>;
+  };
 };
 
 type WebSocketPairShape = { 0: WebSocket; 1: WebSocket };
@@ -91,6 +95,8 @@ type ResponseInitWithWebSocket = ResponseInit & { webSocket: WebSocket };
  * erase subscriptions.
  */
 export class RealtimeHub extends DurableObject<TenantEnv> {
+  private publishChain: Promise<void> = Promise.resolve();
+
   constructor(ctx: DurableObjectState, env: TenantEnv) {
     super(ctx, env);
   }
@@ -241,25 +247,73 @@ export class RealtimeHub extends DurableObject<TenantEnv> {
   }
 
   private async receivePublish(request: Request): Promise<Response> {
-    const event = await request.json() as PersistedRealtimeEvent & { tenant_id?: string };
+    const event = await request.json() as { tenant_id?: unknown; sequence?: unknown };
     const tenantId = text(event.tenant_id, "tenant_id", 160);
-    const normalized: PersistedRealtimeEvent = {
-      sequence: positiveInteger(event.sequence, "sequence"),
-      event: text(event.event, "event", 160),
-      room: text(event.room, "room", 320),
-      message: jsonValue(event.message),
-      created_at: iso(event.created_at),
-    };
+    const targetSequence = positiveInteger(event.sequence, "sequence");
+
     let delivered = 0;
-    const encoded = encodeWireEvent(normalized, false);
-    for (const ws of this.hibernationContext().getWebSockets()) {
-      const state = this.stateFor(ws);
-      if (state.tenantId !== tenantId || !state.rooms.includes(normalized.room)) continue;
-      if (ws.readyState !== WebSocket.OPEN) continue;
-      ws.send(encoded);
-      delivered += 1;
-    }
+    let failure: unknown;
+    const run = this.publishChain.then(async () => {
+      delivered = await this.flushPersistedEvents(tenantId, targetSequence);
+    });
+    this.publishChain = run.then(() => undefined, (error) => {
+      failure = error;
+    });
+    await this.publishChain;
+    if (failure) throw failure;
     return Response.json({ delivered });
+  }
+
+  /**
+   * Broadcast from the durable D1 authority, never from request arrival order.
+   *
+   * Two publishers can persist sequence N and N+1 then race their DO subrequests. If
+   * N+1 arrives first, this query still emits N then N+1 and advances the durable
+   * watermark to N+1. The late N request becomes a no-op. Reconnect uses the same
+   * sequence authority, so live delivery and replay cannot disagree about ordering.
+   */
+  private async flushPersistedEvents(tenantId: string, targetSequence: number): Promise<number> {
+    const storage = this.hibernationContext().storage;
+    let watermark = Number(await storage.get<number>("broadcast_sequence") ?? 0);
+    if (!Number.isSafeInteger(watermark) || watermark < 0) watermark = 0;
+    if (targetSequence <= watermark) return 0;
+
+    let delivered = 0;
+    while (watermark < targetSequence) {
+      const result = await this.env.DB.prepare(
+        "SELECT sequence,event,room,message_json,created_at FROM realtime_events " +
+        "WHERE tenant_id=?1 AND sequence>?2 AND sequence<=?3 ORDER BY sequence ASC LIMIT 500",
+      ).bind(tenantId, watermark, targetSequence).all<RealtimeEventRow>();
+      const rows = result.results ?? [];
+      if (!rows.length) break;
+
+      for (const row of rows) {
+        const persisted: PersistedRealtimeEvent = {
+          sequence: row.sequence,
+          event: row.event,
+          room: row.room,
+          message: JSON.parse(row.message_json) as JsonValue,
+          created_at: row.created_at,
+        };
+        const encoded = encodeWireEvent(persisted, false);
+        for (const ws of this.hibernationContext().getWebSockets()) {
+          if (ws.readyState !== WebSocket.OPEN) continue;
+          const state = this.stateFor(ws);
+          if (state.tenantId !== tenantId || !state.rooms.includes(row.room)) continue;
+          try {
+            ws.send(encoded);
+            delivered += 1;
+          } catch {
+            // A socket can close between readyState and send. Its reconnect watermark
+            // recovers the event from D1; one dead peer must not block every other peer.
+          }
+        }
+        watermark = row.sequence;
+      }
+      await storage.put("broadcast_sequence", watermark);
+      if (rows.length < 500) break;
+    }
+    return delivered;
   }
 
   private async joinRoom(ws: WebSocket, state: ConnectionState, room: string, replay = true): Promise<void> {
