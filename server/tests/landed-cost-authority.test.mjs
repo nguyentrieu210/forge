@@ -19,7 +19,7 @@ function setup() {
     currency: "USD",
     items: ["ITEM-1"],
     warehouses: ["Stores"],
-    accounts: ["Stock", "SRBNB", "Freight Clearing"],
+    accounts: ["Stock", "SRBNB", "Freight Clearing", "COGS Repost"],
   });
   store.seedMaster("Supplier", "SUP-1");
   store.seedMaster("Warehouse", "Stores", "demo", { company: "Demo", is_group: 0, disabled: 0 });
@@ -62,7 +62,7 @@ async function submitReceipt(kernel, name, po, rowId, rate, postingAt) {
   });
 }
 
-async function submitLcv(kernel, name, receipt, postingAt = "2026-10-02T08:15:00.000Z") {
+async function submitLcv(kernel, name, receipt, postingAt = "2026-10-02T08:15:00.000Z", repostDifferenceAccount) {
   return createAndSubmit(kernel, {
     doctype: "Landed Cost Voucher",
     name,
@@ -71,6 +71,7 @@ async function submitLcv(kernel, name, receipt, postingAt = "2026-10-02T08:15:00
       basis: "quantity",
       total_cost: "5",
       landed_cost_account: "Freight Clearing",
+      ...(repostDifferenceAccount ? { repost_difference_account: repostDifferenceAccount } : {}),
       purchase_receipts: [{ row_id: "SRC-1", purchase_receipt: receipt }],
     },
   });
@@ -148,23 +149,64 @@ test("Landed Cost targets the exact Purchase Receipt row instead of smearing FIF
   assert.equal(reversal[0].stock_value_difference_minor, -500);
 });
 
-test("Landed Cost fails closed when historical downstream COGS propagation would be required", async () => {
+test("Landed Cost late-arriving FIFO repost splits inventory and consumed expense deterministically", async () => {
   const { store, kernel } = setup();
   await submitPo(kernel, "PO-2", "1");
   await submitReceipt(kernel, "PR-3", "PO-2", "PR3-ROW", "10", "2026-10-02T08:00:00.000Z");
   await issueStock(kernel, "ISSUE-BEFORE-LCV");
 
   await assert.rejects(
-    submitLcv(kernel, "LCV-BLOCKED", "PR-3", "2026-10-02T08:45:00.000Z"),
-    /historical COGS repost is required/i,
+    submitLcv(kernel, "LCV-MISSING-ACCOUNT", "PR-3", "2026-10-02T08:45:00.000Z"),
+    /repost_difference_account is required/i,
   );
-  const blocked = await store.getDocument("demo", "Landed Cost Voucher", "LCV-BLOCKED");
-  assert.equal(blocked.docstatus, 0, "failed submit keeps the editable draft");
-  assert.equal(
-    (await store.getVoucherStockEntries("demo", "Landed Cost Voucher", "LCV-BLOCKED", blocked.version)).length,
-    0,
-    "failed submit must not commit Stock Ledger",
+
+  await submitLcv(kernel, "LCV-REPOST", "PR-3", "2026-10-02T08:45:00.000Z", "COGS Repost");
+
+  const lcv = await store.getDocument("demo", "Landed Cost Voucher", "LCV-REPOST");
+  assert.equal(lcv.docstatus, 1);
+  assert.equal(lcv.data.allocations[0].source_qty_micros, 1_000_000);
+  assert.equal(lcv.data.allocations[0].remaining_qty_micros, 500_000);
+  assert.equal(lcv.data.allocations[0].inventory_cost_minor, 250);
+  assert.equal(lcv.data.allocations[0].consumed_cost_minor, 250);
+
+  const lcvStock = await store.getVoucherStockEntries("demo", "Landed Cost Voucher", "LCV-REPOST", 2);
+  assert.equal(lcvStock.length, 1);
+  assert.equal(lcvStock[0].stock_value_difference_minor, 250);
+  assert.equal((await store.getTrackedStockState("demo", "ITEM-1", "Stores")).stock_value_minor, 750);
+
+  const snapshot = store.snapshot();
+  const repostGl = snapshot.gl_entries.filter((line) =>
+    line.line_key.startsWith("STOCK-ALLOC-")
+    || line.line_key.startsWith("REPOST-ALLOC-")
+    || line.line_key.startsWith("LANDED-ALLOC-"));
+  assert.equal(repostGl.reduce((sum, line) => sum + line.debit_minor, 0), 500);
+  assert.equal(repostGl.reduce((sum, line) => sum + line.credit_minor, 0), 500);
+  assert.equal(repostGl.find((line) => line.line_key.startsWith("REPOST-"))?.account, "COGS Repost");
+  assert.equal(repostGl.find((line) => line.line_key.startsWith("REPOST-"))?.debit_minor, 250);
+
+  await mutate(kernel, {
+    commandId: "LCV-REPOST-cancel",
+    doctype: "Landed Cost Voucher",
+    name: "LCV-REPOST",
+    action: "cancel",
+    expectedVersion: 2,
+    document: {},
+  });
+  assert.equal((await store.getTrackedStockState("demo", "ITEM-1", "Stores")).stock_value_minor, 500);
+});
+
+test("Landed Cost still fails closed for a backdated voucher before existing downstream consumption", async () => {
+  const { store, kernel } = setup();
+  await submitPo(kernel, "PO-2B", "1");
+  await submitReceipt(kernel, "PR-3B", "PO-2B", "PR3B-ROW", "10", "2026-10-02T08:00:00.000Z");
+  await issueStock(kernel, "ISSUE-AFTER-BACKDATED-LCV", "2026-10-02T08:30:00.000Z");
+
+  await assert.rejects(
+    submitLcv(kernel, "LCV-BACKDATED-BLOCKED", "PR-3B", "2026-10-02T08:15:00.000Z", "COGS Repost"),
+    /backdated before existing downstream stock consumption/i,
   );
+  const blocked = await store.getDocument("demo", "Landed Cost Voucher", "LCV-BACKDATED-BLOCKED");
+  assert.equal(blocked.docstatus, 0);
 });
 
 test("Landed Cost exact cancellation is blocked after downstream stock consumption", async () => {
