@@ -18,6 +18,7 @@ export * from "./manufacturing-stock-guard.js";
 export * from "./manufacturing-work-order-guard.js";
 export * from "./manufacturing-sales-lineage.js";
 export * from "./manufacturing-rollout.js";
+export * from "./subcontracting.js";
 export * from "./qms-controllers.js";
 export * from "./qms-calibration.js";
 export * from "./registry.js";

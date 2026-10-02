@@ -1,0 +1,37 @@
+name: R8-B Business Closure
+
+on:
+  pull_request:
+    paths:
+      - "server/packages/clouderp-core/src/types.ts"
+      - "server/packages/clouderp-erpnext/**"
+      - "server/tests/subcontracting-closure.test.mjs"
+      - "server/migrations/tenant/0141_subcontracting_authority.sql"
+      - "docs/agents/r8/**"
+      - ".github/workflows/r8b-business-closure.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  subcontracting:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Build server
+        run: pnpm --dir server run build
+      - name: Subcontracting regression
+        run: node --test server/tests/subcontracting-closure.test.mjs
+      - name: R8 benchmark invariant
+        run: node server/scripts/verify-r8-erpnext-depth.mjs --audit-complete
