@@ -65,6 +65,54 @@ function glPlan(name, account, debitMinor, {
   };
 }
 
+function revisionPlan(name, budget, deltaMinor, {
+  postingDate = "2026-01-15",
+  action = "create",
+  expectedVersion = null,
+  version = 1,
+  docstatus = 1,
+} = {}) {
+  const data = {
+    budget,
+    posting_date: postingDate,
+    delta_amount_minor: deltaMinor,
+    delta_amount: String(deltaMinor),
+    reason: "budget adjustment",
+  };
+  return {
+    command: {
+      schema_version: 1,
+      tenant_id: "demo",
+      command_id: `cmd-${name}-${action}`,
+      aggregate: { doctype: "Finance Budget Revision", name },
+      action,
+      expected_version: expectedVersion,
+      payload_hash: HASH,
+      document: data,
+      actor: { user_id: "qa@example.test", roles: ["Accounts Manager"] },
+    },
+    document: {
+      tenant_id: "demo",
+      doctype: "Finance Budget Revision",
+      name,
+      owner: "qa@example.test",
+      docstatus,
+      status: docstatus === 2 ? "Cancelled" : "Approved",
+      version,
+      created_at: NOW,
+      modified_at: NOW,
+      data,
+      children: [],
+    },
+    gl_entries: [],
+    stock_entries: [],
+    payment_entries: [],
+    fulfillment_entries: [],
+    events: [],
+    result: { ok: true },
+  };
+}
+
 function commitmentPlan(name, budget, amountMinor, {
   postingDate = "2026-08-03",
   sourceDoctype = "Purchase Order",
@@ -308,5 +356,101 @@ test("in-memory fiscal distribution blocks commitment-only mutation against actu
   await assert.rejects(
     store.execute(commitmentPlan("COM-DIST-OVER", "BUD-DIST-STOP", 1, { sourceName: "PO-DIST" })),
     /FINANCE_BUDGET_TRANSACTION_EXCEEDED/,
+  );
+});
+
+
+test("negative distributed budget revision revalidates historical period utilization", async () => {
+  const store = new InMemoryMutationStore();
+  const distribution = Array.from({ length: 12 }, (_, index) => ({
+    row_id: `DIST-${index + 1}`,
+    start_date: `2026-${String(index + 1).padStart(2, "0")}-01`,
+    end_date: new Date(Date.UTC(2026, index + 1, 0)).toISOString().slice(0, 10),
+    percent_bps: index < 4 ? 834 : 833,
+    allocation_weight: 1,
+    amount_minor: 100,
+  }));
+  seedBudget(store, "BUD-REV-DIST", "653", 1200, {
+    scope: {
+      fiscal_distribution_enabled: true,
+      distribution_frequency: "Monthly",
+      distribute_equally: true,
+      distribution_weight_total: 12,
+      budget_distribution: distribution,
+    },
+  });
+
+  await store.execute(glPlan("JE-REV-DIST-JAN", "653", 100, {
+    postingAt: "2026-01-10T12:00:00.000Z",
+  }));
+
+  await assert.rejects(
+    store.execute(revisionPlan("REV-DIST-BLOCK", "BUD-REV-DIST", -120)),
+    /FINANCE_BUDGET_REVISION_DISTRIBUTION_EXCEEDED/,
+  );
+});
+
+test("negative distributed budget revision is allowed when every affected historical checkpoint still fits", async () => {
+  const store = new InMemoryMutationStore();
+  const distribution = Array.from({ length: 12 }, (_, index) => ({
+    row_id: `DIST-${index + 1}`,
+    start_date: `2026-${String(index + 1).padStart(2, "0")}-01`,
+    end_date: new Date(Date.UTC(2026, index + 1, 0)).toISOString().slice(0, 10),
+    percent_bps: index < 4 ? 834 : 833,
+    allocation_weight: 1,
+    amount_minor: 100,
+  }));
+  seedBudget(store, "BUD-REV-OK", "654", 1200, {
+    scope: {
+      fiscal_distribution_enabled: true,
+      distribution_frequency: "Monthly",
+      distribute_equally: true,
+      distribution_weight_total: 12,
+      budget_distribution: distribution,
+    },
+  });
+  await store.execute(glPlan("JE-REV-OK-JAN", "654", 80, {
+    postingAt: "2026-01-10T12:00:00.000Z",
+  }));
+  await store.execute(revisionPlan("REV-DIST-OK", "BUD-REV-OK", -120));
+});
+
+test("cancelling positive distributed budget revision revalidates historical checkpoints", async () => {
+  const store = new InMemoryMutationStore();
+  const distribution = Array.from({ length: 12 }, (_, index) => ({
+    row_id: `DIST-${index + 1}`,
+    start_date: `2026-${String(index + 1).padStart(2, "0")}-01`,
+    end_date: new Date(Date.UTC(2026, index + 1, 0)).toISOString().slice(0, 10),
+    percent_bps: index < 4 ? 834 : 833,
+    allocation_weight: 1,
+    amount_minor: 100,
+  }));
+  seedBudget(store, "BUD-REV-CANCEL", "655", 1200, {
+    scope: {
+      fiscal_distribution_enabled: true,
+      distribution_frequency: "Monthly",
+      distribute_equally: true,
+      distribution_weight_total: 12,
+      budget_distribution: distribution,
+    },
+  });
+  store.seedDocument("Finance Budget Revision", "REV-POSITIVE", "demo", {
+    budget: "BUD-REV-CANCEL",
+    posting_date: "2026-01-01",
+    delta_amount_minor: 1200,
+  }, 1);
+  await store.execute(glPlan("JE-REV-CANCEL-JAN", "655", 150, {
+    postingAt: "2026-01-10T12:00:00.000Z",
+  }));
+
+  await assert.rejects(
+    store.execute(revisionPlan("REV-POSITIVE", "BUD-REV-CANCEL", 1200, {
+      postingDate: "2026-01-01",
+      action: "cancel",
+      expectedVersion: 1,
+      version: 2,
+      docstatus: 2,
+    })),
+    /FINANCE_BUDGET_REVISION_DISTRIBUTION_EXCEEDED/,
   );
 });
