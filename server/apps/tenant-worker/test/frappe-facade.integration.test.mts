@@ -9,7 +9,7 @@
  */
 import { env, exports } from "cloudflare:workers";
 import { beforeAll, describe, expect, it } from "vitest";
-import { hashPassword, mintSession, toFrappeModified, verifySession } from "../../../packages/frappe-api/src/index.js";
+import { hashPassword, mintSession, runEmailQueue, toFrappeModified, verifySession } from "../../../packages/frappe-api/src/index.js";
 import { D1DocumentAccessStore } from "../../../packages/frappe-model/src/index.js";
 import { parseAppManifest, runAppScheduler } from "../../../packages/app-registry/src/index.js";
 
@@ -2320,6 +2320,75 @@ describe("mechanisms that must actually run, not merely exist", () => {
     const alert = inbox.notification_logs.find((entry: any) => /Kiểm tra kho/.test(entry.subject));
     expect(alert).toBeTruthy();
     expect(alert.document_name).toBe("FV-NOTIFY");
+  });
+
+  it("queues Email notifications durably and records physical delivery evidence", async () => {
+    await env.DB.prepare(
+      `INSERT INTO notification_rules(tenant_id,name,document_type,event,enabled,rule_json,modified_by,modified_at)
+       VALUES('demo','Email visit','Field Visit','submitted',1,?2,'Administrator',?1)`,
+    ).bind(NOW, JSON.stringify({
+      subject: "Email {{ subject }}",
+      message: "Please review {{ subject }}",
+      channel: "Email",
+      recipients: [{ kind: "user", value: "sales@example.com" }],
+    })).run();
+
+    await env.DB.prepare(
+      `INSERT INTO documents(
+         tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,payload_json
+       ) VALUES('demo','Field Visit:FV-EMAIL','Field Visit','FV-EMAIL','sales@example.com',1,'Submitted',2,?1,?1,?2)`,
+    ).bind(NOW, JSON.stringify({ subject: "Email proof", is_billable: 1 })).run();
+
+    const event = {
+      event_id: "evt-notify-email-1", event_type: "field_visit.submitted", tenant_id: "demo",
+      aggregate: { doctype: "Field Visit", name: "FV-EMAIL" }, aggregate_version: 2,
+      actor: "sales@example.com", command_id: "cmd-notify-email-1", occurred_at: NOW,
+      schema_version: 1, payload: { subject: "Email proof", is_billable: 1 },
+    };
+    const response = await call("/internal/events", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer test-internal-service-token",
+        "x-cloudforge-idempotency-key": event.event_id,
+      },
+      body: JSON.stringify(event),
+    }, { auth: false });
+    expect(response.status).toBe(200);
+    const body = await response.json() as any;
+    expect(body.notifications.queued).toBe(1);
+
+    const pending = await env.DB.prepare(
+      `SELECT name,status,recipient_email,subject,message
+         FROM email_queue
+        WHERE tenant_id='demo' AND source_kind='notification' AND source_name='Email visit'`,
+    ).first<any>();
+    expect(pending?.status).toBe("Pending");
+    expect(pending?.recipient_email).toBe("sales@example.com");
+    expect(pending?.subject).toBe("Email Email proof");
+    expect(pending?.message).toBe("Please review Email proof");
+
+    const sentMessages: any[] = [];
+    const delivery = await runEmailQueue(env.DB, "demo", {
+      async send(message) {
+        sentMessages.push(message);
+        return { providerMessageId: `provider-${message.queueName}` };
+      },
+    }, new Date().toISOString());
+    expect(delivery.configured).toBe(true);
+    expect(delivery.sent).toBeGreaterThanOrEqual(1);
+
+    const sent = await env.DB.prepare(
+      `SELECT status,attempt_count,provider_message_id,last_error,sent_at
+         FROM email_queue
+        WHERE tenant_id='demo' AND source_kind='notification' AND source_name='Email visit'`,
+    ).first<any>();
+    expect(sent?.status).toBe("Sent");
+    expect(sent?.attempt_count).toBe(1);
+    expect(sent?.provider_message_id).toMatch(/^provider-EMAIL-/);
+    expect(sent?.last_error).toBeNull();
+    expect(sent?.sent_at).toBeTruthy();
+    expect(sentMessages.some((message) => message.to === "sales@example.com")).toBe(true);
   });
 
   it("a rule whose condition does not hold produces nothing", async () => {
