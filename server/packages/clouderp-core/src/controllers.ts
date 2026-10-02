@@ -390,7 +390,7 @@ async function assertPurchaseRemaining(
     });
   }
 
-  if (requestedByRow.size === items.length) {
+  if (items.every((item) => Boolean(item.purchase_order_item_row_id))) {
     for (const [rowId, wanted] of requestedByRow) {
       const row = po.data.items.find((candidate) => candidate.row_id === rowId);
       if (!row || row.item_code !== wanted.item_code) {
