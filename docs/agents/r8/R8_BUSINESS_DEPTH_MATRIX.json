@@ -69,7 +69,9 @@
         "server/packages/clouderp-erpnext/src/exchange-rate-revaluation.ts",
         "server/migrations/tenant/0154_exchange_rate_revaluation.sql",
         "server/tests/exchange-rate-revaluation.test.mjs",
-        "server/scripts/test-exchange-rate-revaluation-migration.py"
+        "server/scripts/test-exchange-rate-revaluation-migration.py",
+        "server/migrations/tenant/0157_finance_budget_commitment_actualization.sql",
+        "server/tests/finance-budget-actual-sql.test.mjs"
       ],
       "upstream_evidence": [
         "ERPNext v16.20.0 accounts doctypes/controllers at ff46d20b259a2d65a7ded959df9f9a42991a3562"
@@ -77,10 +79,10 @@
       "oracle_cases": [],
       "gaps": [
         "Foreign AR/AP period-end Exchange Rate Revaluation is closed; foreign bank/cash and other non-party monetary-account revaluation remain incomplete.",
-        "Automatic budget commitment consumption/fiscal distribution and consolidation remain incomplete.",
-        "Bank reconciliation exact runtime parity remains unproven."
+        "Automatic commitment consumption is closed for declared Material Request / Purchase Order / Expense Claim sources; fiscal distribution remains incomplete.",
+        "Multi-company consolidation/elimination and exact bank-reconciliation runtime parity remain unproven."
       ],
-      "rationale": "Forge now has canonical GL/Payment Ledger close authorities, first-class Period Closing Voucher, executable Budget-vs-Actual with commit-time Stop enforcement, and race-protected foreign AR/AP period-end Exchange Rate Revaluation with next-day reversal. Foreign bank/cash revaluation, automatic budget commitment consumption/fiscal distribution, multi-company consolidation/elimination and exact bank-reconciliation runtime parity remain open."
+      "rationale": "Forge now has canonical GL/Payment Ledger close authorities, first-class Period Closing Voucher, executable Budget-vs-Actual with commit-time Stop enforcement and source-linked automatic commitment actualization, plus race-protected foreign AR/AP period-end Exchange Rate Revaluation with next-day reversal. Fiscal distribution, foreign bank/cash revaluation, multi-company consolidation/elimination and exact bank-reconciliation runtime parity remain open."
     },
     {
       "depth_id": "R8-M02-SELLING",
@@ -586,7 +588,9 @@
         "server/packages/clouderp-erpnext/src/exchange-rate-revaluation.ts",
         "server/migrations/tenant/0154_exchange_rate_revaluation.sql",
         "server/tests/exchange-rate-revaluation.test.mjs",
-        "server/scripts/test-exchange-rate-revaluation-migration.py"
+        "server/scripts/test-exchange-rate-revaluation-migration.py",
+        "server/migrations/tenant/0157_finance_budget_commitment_actualization.sql",
+        "server/tests/finance-budget-actual-sql.test.mjs"
       ],
       "known_depth_questions": [
         "account types/root semantics",
@@ -597,19 +601,19 @@
         "exchange-rate revaluation",
         "budget enforcement"
       ],
-      "rationale": "General-ledger/period authority now includes race-protected P&L close, actual-aware Budget Stop, and as-of-date foreign AR/AP revaluation with automatic next-day reversal. Foreign bank/cash monetary revaluation, automatic budget commitment consumption/fiscal distribution and multi-company consolidation/elimination remain open, so the flow stays PARTIAL.",
+      "rationale": "General-ledger/period authority now includes race-protected P&L close, actual-aware Budget Stop with automatic source-linked commitment consumption, and as-of-date foreign AR/AP revaluation with automatic next-day reversal. Fiscal distribution, foreign bank/cash monetary revaluation and multi-company consolidation/elimination remain open, so the flow stays PARTIAL.",
       "confirmed_findings": [
         "Forge has canonical append-only GL, exact reversal, hard/soft accounting-period guards, company/branch scoped General Ledger and Trial Balance, and Finance Daily Detailed Ledger derived from the same GL authority.",
         "Pinned ERPNext Period Closing Voucher validates fiscal continuity and closing account, generates/reverses closing GL and supports background processing for large ledgers.",
         "Pinned ERPNext Exchange Rate Revaluation calculates period-end account gain/loss and ties booked gain/loss to Journal Entry/GL behavior.",
         "R8-B adds a reusable canonical GL aggregate read port scoped by tenant/company/date/branch/account, implemented over immutable GL rows in D1 and mirrored in the in-memory adapter.",
         "R8-B adds a first-class Period Closing Voucher: fiscal-year P&L balances are closed into a leaf Equity/Liability account, the accounting period must be locked through the close date, exact submitted GL is reversed on cancel, and a D1 commit-time row-count/debit/credit fingerprint rejects concurrent source drift.",
-        "R8-B enforces Finance Budget Stop atomically at GL commit over scoped actuals plus submitted commitments and dated revisions; Warn/Ignore remain non-blocking, mixed currency/scale fails closed, and the in-memory adapter mirrors D1.",
-        "R8-B adds first-class Exchange Rate Revaluation for open foreign Sales/Purchase Invoice balances from the as-of-date Payment Ledger; Company/rate/source snapshots are rechecked at D1 commit, unrealized gain/loss is posted in company currency and auto-reversed the next day, with exact cancellation."
+        "R8-B adds first-class Exchange Rate Revaluation for open foreign Sales/Purchase Invoice balances from the as-of-date Payment Ledger; Company/rate/source snapshots are rechecked at D1 commit, unrealized gain/loss is posted in company currency and auto-reversed the next day, with exact cancellation.",
+        "R8-B enforces Finance Budget Stop atomically at GL commit over scoped actuals, dated revisions and outstanding source commitments. Material Request, Purchase Order and Expense Claim reservations are automatically consumed by their canonical linked actual GL, capped at the source reserve; exact GL reversal restores commitment without synthetic Release documents."
       ],
       "gaps": [
         "Foreign AR/AP period-end revaluation is closed; foreign bank/cash and other non-party monetary-account revaluation remain open.",
-        "Automatic commitment consumption and fiscal distribution remain open after actual-aware transaction enforcement.",
+        "Automatic commitment consumption is closed for declared Material Request / Purchase Order / Expense Claim sources; fiscal distribution remains open.",
         "Multi-company consolidation/elimination remains unproven."
       ]
     },
