@@ -24,5 +24,7 @@ jobs:
           node-version: "22"
       - name: Structural audit
         run: node server/scripts/verify-r8-erpnext-depth.mjs
+      - name: Benchmark completion gate
+        run: node server/scripts/verify-r8-erpnext-depth.mjs --audit-complete
       - name: R8 regression
         run: node --test server/tests/r8-erpnext-depth.test.mjs
