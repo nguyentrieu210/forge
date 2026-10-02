@@ -125,8 +125,8 @@ export class FinanceBudgetRevisionController implements DocumentController<Finan
       const existing = requireExisting(context);
       assertApprover(context, false);
       const budget = await requireSubmittedBudget(context, requiredText(existing.data.budget, "budget"));
-      const effectiveAfterCancel = await effectiveBudgetAmount(context, budget, existing.name);
-      const committed = await committedAmount(context, budget.name);
+      const effectiveAfterCancel = await effectiveBudgetAmount(context, budget, existing.name, budget.data.end_date);
+      const committed = await outstandingCommittedAmount(context, budget, budget.data.end_date);
       if (committed > effectiveAfterCancel) {
         throw errors.lifecycle("Cancelling this budget revision would leave commitments above the effective budget", {
           committed_minor: committed,
