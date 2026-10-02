@@ -579,6 +579,7 @@ export class InMemoryMutationStore implements MutationStore {
     this.assertAssetDepreciationInvariants(plan);
     this.assertSuiteBreadthInvariants(plan);
     this.assertBankReconciliationInvariants(plan);
+    this.assertFinanceBudgetInvariants(plan);
     this.assertAmendChain(command);
   }
 
@@ -1049,6 +1050,140 @@ export class InMemoryMutationStore implements MutationStore {
           && closing.doctype === "POS Closing Entry" && closing.docstatus === 1 && closing.data.opening_entry === opening.name));
       if (anotherOpen) throw errors.reference(`POS Profile ${profile} already has an open session`);
     }
+  }
+
+  private assertFinanceBudgetInvariants<T extends JsonObject>(plan: MutationPlan<T>): void {
+    if (plan.gl_entries.length === 0 || plan.command.aggregate.doctype === "Period Closing Voucher") return;
+    const tenantId = plan.command.tenant_id;
+    const company = typeof plan.document.data.company === "string" ? plan.document.data.company : "";
+    if (!company) return;
+
+    const budgets = [...this.documents.values()].filter((document) =>
+      document.tenant_id === tenantId
+      && document.doctype === "Finance Budget"
+      && document.docstatus === 1
+      && document.data.company === company
+    );
+
+    for (const budget of budgets) {
+      const account = typeof budget.data.account === "string" ? budget.data.account : "";
+      const startDate = typeof budget.data.start_date === "string" ? budget.data.start_date : "";
+      const endDate = typeof budget.data.end_date === "string" ? budget.data.end_date : "";
+      const budgetCurrency = typeof budget.data.currency === "string" ? budget.data.currency : "";
+      const budgetScale = Number(budget.data.currency_scale ?? 2);
+      if (!account || !startDate || !endDate || !budgetCurrency || !Number.isSafeInteger(budgetScale)) continue;
+
+      const matchingIncoming = plan.gl_entries.filter((line) =>
+        line.account === account
+        && line.posting_at.slice(0, 10) >= startDate
+        && line.posting_at.slice(0, 10) <= endDate
+        && this.financeBudgetScopeMatches(budget.data, plan.document.data, line)
+      );
+      if (matchingIncoming.length === 0) continue;
+
+      for (const line of matchingIncoming) {
+        if (line.currency !== budgetCurrency || line.currency_scale !== budgetScale) {
+          throw errors.lifecycle("FINANCE_BUDGET_GL_CURRENCY_SCALE_MISMATCH", {
+            budget: budget.name,
+            expected_currency: budgetCurrency,
+            expected_currency_scale: budgetScale,
+            actual_currency: line.currency,
+            actual_currency_scale: line.currency_scale,
+          });
+        }
+      }
+
+      const accountDocument = this.documents.get(this.docKey(tenantId, "Account", account));
+      const accountMaster = this.masterRecords.get(`${tenantId}:Account:${account}`);
+      const rootType = String(accountDocument?.data.root_type ?? accountMaster?.root_type ?? "");
+      const movement = (line: GeneralLedgerEntry): number =>
+        rootType === "Income" ? line.credit_minor - line.debit_minor : line.debit_minor - line.credit_minor;
+
+      const postingDates = [...new Set(matchingIncoming.map((line) => line.posting_at.slice(0, 10)))].sort();
+      for (const throughDate of postingDates) {
+        const effectiveBudget = Number(budget.data.budget_amount_minor ?? 0)
+          + [...this.documents.values()]
+            .filter((document) =>
+              document.tenant_id === tenantId
+              && document.doctype === "Finance Budget Revision"
+              && document.docstatus === 1
+              && document.data.budget === budget.name
+              && typeof document.data.posting_date === "string"
+              && document.data.posting_date >= startDate
+              && document.data.posting_date <= throughDate
+            )
+            .reduce((sum, document) => sum + Number(document.data.delta_amount_minor ?? 0), 0);
+
+        const committed = [...this.documents.values()]
+          .filter((document) =>
+            document.tenant_id === tenantId
+            && document.doctype === "Finance Budget Commitment"
+            && document.docstatus === 1
+            && document.data.budget === budget.name
+            && typeof document.data.posting_date === "string"
+            && document.data.posting_date >= startDate
+            && document.data.posting_date <= throughDate
+          )
+          .reduce((sum, document) => {
+            const amount = Number(document.data.amount_minor ?? 0);
+            return sum + (document.data.commitment_type === "Release" ? -amount : amount);
+          }, 0);
+
+        const existingActual = this.voucherGlEntries
+          .filter((entry) => {
+            if (entry.tenant_id !== tenantId || entry.voucher_type === "Period Closing Voucher") return false;
+            if (entry.line.account !== account) return false;
+            const postingDate = entry.line.posting_at.slice(0, 10);
+            if (postingDate < startDate || postingDate > throughDate) return false;
+            const source = this.documents.get(this.docKey(tenantId, entry.voucher_type, entry.voucher_no));
+            return Boolean(source && source.data.company === company
+              && this.financeBudgetScopeMatches(budget.data, source.data, entry.line));
+          })
+          .reduce((sum, entry) => sum + movement(entry.line), 0);
+
+        const incomingActual = matchingIncoming
+          .filter((entry) => entry.posting_at.slice(0, 10) <= throughDate)
+          .reduce((sum, entry) => sum + movement(entry), 0);
+        const projected = existingActual + incomingActual + committed;
+        const controlAction = typeof budget.data.control_action === "string" ? budget.data.control_action : "Stop";
+        if (controlAction === "Stop" && projected > effectiveBudget) {
+          throw errors.lifecycle("FINANCE_BUDGET_TRANSACTION_EXCEEDED", {
+            budget: budget.name,
+            posting_date: throughDate,
+            effective_budget_minor: effectiveBudget,
+            actual_after_minor: existingActual + incomingActual,
+            committed_minor: committed,
+            exceeded_by_minor: projected - effectiveBudget,
+          });
+        }
+      }
+    }
+  }
+
+  private financeBudgetScopeMatches(
+    budget: JsonObject,
+    document: JsonObject,
+    line: GeneralLedgerEntry,
+  ): boolean {
+    const scope = typeof budget.budget_against === "string" ? budget.budget_against : "Company";
+    if (scope === "Company") return true;
+    const dimensions = line.accounting_dimensions ?? {};
+    if (scope === "Branch") {
+      const branch = typeof document.branch === "string" && document.branch
+        ? document.branch : typeof dimensions.branch === "string" ? dimensions.branch : "";
+      return branch === budget.branch;
+    }
+    if (scope === "Cost Center") {
+      const costCenter = line.cost_center
+        ?? (typeof dimensions.cost_center === "string" ? dimensions.cost_center : "");
+      return costCenter === budget.cost_center;
+    }
+    if (scope === "Project") {
+      const project = typeof document.project === "string" && document.project
+        ? document.project : typeof dimensions.project === "string" ? dimensions.project : "";
+      return project === budget.project;
+    }
+    return false;
   }
 
   /**
