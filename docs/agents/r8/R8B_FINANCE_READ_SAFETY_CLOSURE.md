@@ -65,6 +65,33 @@ transaction and includes the NEW GL row, so two concurrent submits cannot exploi
 controller/read-model race. The in-memory store mirrors the same calculation under its mutex,
 and Budget-vs-Actual uses the same source lineage in its executable SQL projection.
 
+## Fiscal distribution core
+
+R8-B now implements an opt-in fiscal-distribution authority aligned to the pinned ERPNext
+v16.20.0 Budget distribution semantics without changing legacy annual-only budgets.
+
+A submitted Finance Budget can freeze `Monthly`, `Quarterly`, `Half-Yearly` or `Yearly`
+distribution. Equal distribution uses integer allocation weights rather than floating-point
+percentages, so twelve equal periods close exactly to the annual minor-unit amount. Manual
+distribution freezes basis-point percentages totaling exactly 100%. Each normalized row is
+persisted both in the canonical payload and as a `Finance Budget Distribution` child row.
+
+Budget enforcement uses two caps:
+- annual effective budget = base budget + dated submitted revisions;
+- accumulated budget through the posting date = the same annual effective amount multiplied
+  by the frozen cumulative distribution weight using integer quotient/remainder arithmetic.
+
+Budget-vs-Actual reports annual effective and accumulated budget separately. Available amount
+and utilization are based on the accumulated cap, scoped actual GL and source-net outstanding
+commitments. D1 migration 0158 validates submitted distribution evidence and applies the same
+accumulated cap atomically to both GL inserts and commitment-only submits; the in-memory store
+mirrors those guards.
+
+This closes the **core equal/manual accumulated fiscal-distribution path**. It does not yet
+close retroactive lifecycle safety for a negative Budget Revision backdated into an already
+consumed distributed period. That revision needs period-by-period historical revalidation
+before the broader fiscal-distribution boundary can be called complete.
+
 ## Period-close safety
 
 The controller validates complete UTC posting timestamps, including valid calendar dates.
@@ -87,6 +114,10 @@ planner that consumes historical account metadata remains future work.
 - `server/tests/period-close-timestamp.test.mjs`: malformed/overflow UTC dates and valid UTC preservation.
 - `server/scripts/test-period-closing-authority-migration.py`: original source/lock guards
   plus timestamp, inactive historical account, overlapping scope and replacement regressions.
+- `server/migrations/tenant/0158_finance_budget_fiscal_distribution.sql`: submitted
+  distribution backstops plus atomic accumulated Stop guards for GL and commitment-only writes.
+- `server/tests/finance-budget.test.mjs`: exact equal/manual distribution normalization,
+  canonical child-row persistence, accumulated commitment Stop and source-linked controller semantics.
 - `server/migrations/tenant/0157_finance_budget_commitment_actualization.sql`: commit-time
   source-linked automatic commitment consumption for Purchase Order, Material Request and
   Expense Claim.
@@ -103,7 +134,7 @@ planner that consumes historical account metadata remains future work.
 
 ## Still open
 
-Fiscal distribution and pinned ERPNext differential fixtures remain open. Automatic
+Core equal/manual accumulated fiscal distribution is implemented; retroactive negative-revision period revalidation and pinned ERPNext differential fixtures remain open. Automatic
 commitment consumption for the declared Material Request / Purchase Order / Expense Claim
 sources is now source-linked and commit-time guarded together with actual-aware Stop/Warn/Ignore.
 Period close still needs previous-year/future-close lifecycle depth, historical-account
@@ -112,3 +143,10 @@ FX revaluation, consolidation, downstream Landed Cost repost, broader subcontrac
 and the remaining R8 module/flow depth remain PARTIAL. BUSINESS_CLOSED is still false.
 
 No production migration, merge or deployment is performed by this closure.
+
+### Latest fiscal-distribution evidence
+
+- R8-B workflow run **36999390426** on implementation commit
+  `7c7bfe1fe340302dcaf499b328842a043658552e` passed all 26 gates, including
+  fiscal-distribution controller normalization, executable Budget-vs-Actual SQL, in-memory
+  projected Stop, D1 migration regression, benchmark invariant and matrix verifier.
