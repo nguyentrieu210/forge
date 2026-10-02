@@ -138,15 +138,18 @@ test("subcontracting closes material-send -> consume -> finished-good receipt wi
       company: "Demo",
       posting_at: "2026-10-02T08:00:00.000Z",
       purpose: "Material Receipt",
-      items: [{ row_id: "OPEN", item_code: "RAW", qty: "4", valuation_rate: "10", target_warehouse: "Raw" }],
+      items: [{ row_id: "OPEN", item_code: "RAW", qty: "5", valuation_rate: "10", target_warehouse: "Raw" }],
     },
   });
 
   await assert.rejects(receipt(kernel, "SCR-BEFORE-XFER", 1), /Insufficient material transferred/i);
 
   await transfer(kernel, "SUB-XFER", 4);
-  assert.equal(await store.getStockBalanceMicros("demo", "RAW", "Raw"), 0);
+  assert.equal(await store.getStockBalanceMicros("demo", "RAW", "Raw"), 1 * Q);
   assert.equal(await store.getStockBalanceMicros("demo", "RAW", "Supplier"), 4 * Q);
+  const sent = await store.getDocument("demo", "Stock Entry", "SUB-XFER");
+  assert.equal(sent.data.subcontracting_order, "SCO-1");
+  assert.equal(sent.data.items[0].bom_row_id, "RAW-1");
 
   await assert.rejects(transfer(kernel, "SUB-XFER-OVER", "0.000001"), /exceeds Subcontracting Order requirement/i);
 
@@ -212,7 +215,7 @@ test("subcontracting closes material-send -> consume -> finished-good receipt wi
     expectedVersion: 2,
     document: {},
   });
-  assert.equal(await store.getStockBalanceMicros("demo", "RAW", "Raw"), 4 * Q);
+  assert.equal(await store.getStockBalanceMicros("demo", "RAW", "Raw"), 5 * Q);
   assert.equal(await store.getStockBalanceMicros("demo", "RAW", "Supplier"), 0);
   assert.equal(await store.getStockBalanceMicros("demo", "FG", "Finished"), 0);
 
