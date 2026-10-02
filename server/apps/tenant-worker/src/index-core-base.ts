@@ -6,7 +6,7 @@ import {
   verifyTrustedIdentity,
 } from "../../../packages/auth/src/index.js";
 import {
-  assertSessionCsrf, D1DeskViewStore, D1TranslationStore, establishSession, faultResponse, isFrappePath, isPublicFrappePath,
+  assertSessionCsrf, D1DeskViewStore, D1TranslationStore, establishFrappeApiCredential, establishSession, faultResponse, isFrappePath, isPublicFrappePath,
   buildCommand, isPublicFilePath, isStorefrontPath, isWebFormPath, routeFileDownload, routeFrappeApi, routeFrappeAuth, runAutoRepeat, runNotificationRules, slideSession,
   type AuthRouteContext, type AutoRepeatRunResult, type EstablishedSession,
 } from "../../../packages/frappe-api/src/index.js";
@@ -1091,6 +1091,9 @@ async function serveFrappeApiInner(
   // Not even attempted on an app callback: the gateway deletes the cookie on that path,
   // and trying both would mean one request with two answers to "who is this".
   if (sessionSecret && !appCallback) established = await establishSession(request, authContext);
+  const apiCredential = !established && !appCallback
+    ? await establishFrappeApiCredential(request, authContext)
+    : null;
 
   let actor;
   let fullName = "";
@@ -1102,6 +1105,12 @@ async function serveFrappeApiInner(
     fullName = established.user.full_name;
     language = established.user.language;
     csrfToken = established.session.csrfToken;
+  } else if (apiCredential) {
+    // Frappe token/Basic credentials are header-authenticated, so CSRF does not apply.
+    // Roles and enabled state were rehydrated from first-primary D1 during authentication.
+    actor = apiCredential.actor;
+    fullName = apiCredential.user.full_name;
+    language = apiCredential.user.language;
   } else if (appCallback) {
     const keys = trustedIdentityKeys(env);
     const identity = await verifyTrustedIdentity(request, {
@@ -1359,6 +1368,7 @@ async function serveFrappeApiInner(
     translations: new D1TranslationStore(requestDb),
     apps: installedApps,
     users,
+    ...(established ? { authContext, establishedSession: established } : {}),
     search: new D1SearchStore(requestDb),
     // Trình biên dịch mặc định không biết các báo cáo tài chính, nên tuổi nợ chết bằng
     // `Unknown report: Accounts Receivable Aging` dù SQL và view đã có đủ.
