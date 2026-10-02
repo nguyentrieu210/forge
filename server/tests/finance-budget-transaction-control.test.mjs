@@ -204,3 +204,28 @@ test("linked Purchase Invoice actual automatically consumes PO commitment and ca
     /FINANCE_BUDGET_TRANSACTION_EXCEEDED/,
   );
 });
+
+
+test("Expense Claim actual automatically consumes its source commitment", async () => {
+  const store = new InMemoryMutationStore();
+  seedBudget(store, "BUD-EC", "650", 300);
+  store.seedDocument("Finance Budget Commitment", "COM-EC", "demo", {
+    budget: "BUD-EC",
+    posting_date: "2026-04-01",
+    commitment_type: "Reserve",
+    amount_minor: 300,
+    source_doctype: "Expense Claim",
+    source_name: "EC-1",
+  }, 1);
+
+  await store.execute(glPlan("EC-1", "650", 200, {
+    doctype: "Expense Claim",
+    lineKey: "EXPENSE-1",
+  }));
+
+  // 200 actual + 100 outstanding reserve reaches the budget exactly.
+  await assert.rejects(
+    store.execute(glPlan("JE-EC-OVER", "650", 1)),
+    /FINANCE_BUDGET_TRANSACTION_EXCEEDED/,
+  );
+});
