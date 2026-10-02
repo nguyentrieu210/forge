@@ -53,6 +53,7 @@ db.execute(
       FROM documents WHERE doctype='Account'"""
 )
 db.executescript((root / "migrations/tenant/0153_finance_budget_transaction_control.sql").read_text(encoding="utf-8"))
+db.executescript((root / "migrations/tenant/0157_finance_budget_commitment_actualization.sql").read_text(encoding="utf-8"))
 
 
 def insert_doc(doctype, name, payload, docstatus=1):
@@ -187,6 +188,49 @@ budget("BUD-CLOSE", "648", 10)
 ensure_voucher("Period Closing Voucher", "PCV-001")
 insert_gl("Period Closing Voucher", "PCV-001", "L1", "648", 9999, 0)
 db.commit()
+
+
+
+# Canonical Purchase Order commitment is consumed automatically by linked PI expense actual.
+account("648")
+budget("BUD-AUTO", "648", 1000)
+insert_doc("Purchase Order", "PO-AUTO", {
+    "company": "Kairo", "currency": "VND",
+    "items": [{"row_id": "PO-ROW", "item_code": "ITEM-1", "material_request": "MR-AUTO"}],
+})
+insert_doc("Finance Budget Commitment", "COM-AUTO", {
+    "budget": "BUD-AUTO", "posting_date": "2026-04-01",
+    "commitment_type": "Reserve", "amount_minor": 1000,
+    "source_doctype": "Purchase Order", "source_name": "PO-AUTO",
+})
+ensure_voucher(
+    "Purchase Invoice", "PI-AUTO",
+    against_purchase_order="PO-AUTO",
+    items=[{
+        "row_id": "PI-ROW", "item_code": "ITEM-1",
+        "purchase_order": "PO-AUTO", "purchase_order_item_row_id": "PO-ROW",
+        "material_request": "MR-AUTO",
+    }],
+)
+# This would be 1600 if the raw commitment were double-counted. 0157 reduces the
+# outstanding commitment to 400 inside the same INSERT that posts the 600 actual.
+insert_gl("Purchase Invoice", "PI-AUTO", "EXPENSE-PI-ROW", "648", 600, 0)
+db.commit()
+
+ensure_voucher("Journal Entry", "JE-AUTO-OVER")
+db.commit()
+expect_rejected("FINANCE_BUDGET_TRANSACTION_EXCEEDED", lambda: insert_gl(
+    "Journal Entry", "JE-AUTO-OVER", "L1", "648", 1, 0
+))
+
+# Exact cancellation reversal removes the actual and restores the original reservation.
+insert_gl("Purchase Invoice", "PI-AUTO", "REV-EXPENSE-PI-ROW", "648", 0, 600)
+db.commit()
+ensure_voucher("Journal Entry", "JE-AUTO-AFTER-CANCEL")
+db.commit()
+expect_rejected("FINANCE_BUDGET_TRANSACTION_EXCEEDED", lambda: insert_gl(
+    "Journal Entry", "JE-AUTO-AFTER-CANCEL", "L1", "648", 1, 0
+))
 
 assert db.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
 print("FINANCE_BUDGET_TRANSACTION_CONTROL_PASS")
