@@ -85,7 +85,8 @@ def draft_order(
     child = (
         '{"item_code":"ITEM-1",'
         f'"qty_micros":{qty_micros},'
-        f'"net_amount_minor":{grand_minor}}'
+        f'"net_amount_minor":{grand_minor}'
+        '}'
     )
     connection.execute(
         "INSERT INTO document_children VALUES(?,?,?,?,?)",
