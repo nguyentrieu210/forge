@@ -11,8 +11,8 @@ import {
   type AuthRouteContext, type AutoRepeatRunResult, type EstablishedSession,
 } from "../../../packages/frappe-api/src/index.js";
 import {
-  AppHookDispatcher, AppInstaller, runAppValidators, subscribersFor, validatorsFor,
-  type AppManifest, type HookDeliveryOutcome,
+  AppHookDispatcher, AppInstaller, dispatchAppMethod, runAppScheduler, runAppValidators, subscribersFor, validatorsFor,
+  type AppManifest, type AppSchedulerResult, type HookDeliveryOutcome,
 } from "../../../packages/app-registry/src/index.js";
 import type { TrustedIdentityKey } from "../../../packages/auth/src/index.js";
 import type { Actor, CanonicalDocument, DomainEvent, JsonObject, MutationCommand, MutationReceipt } from "../../../packages/contracts/src/index.js";
@@ -697,6 +697,7 @@ export async function runMaintenance(
 ): Promise<{
   outbox: { published: number; failed: number; skipped: number } | null;
   hooks: number;
+  scheduler: AppSchedulerResult;
   auto_repeat: AutoRepeatRunResult;
   reservations: { expired: number; failed: number };
   alumdoor: { reconciliation_reminders: number; daily_reports: number };
@@ -720,6 +721,28 @@ export async function runMaintenance(
   // dispatch namespace — so it lives here, driven by the jobs Worker, exactly like the
   // outbox drain above.
   const now = new Date().toISOString();
+  const scheduler = await runAppScheduler({
+    db: env.DB,
+    tenantId,
+    now,
+    timeZone: await tenantSystemTimeZone(env.DB, tenantId),
+    invoke: async (job) => {
+      await dispatchAppMethod({
+        env: {
+          ...(env.DISPATCHER ? { DISPATCHER: env.DISPATCHER } : {}),
+          ...(env.INTERNAL_AUTH_SECRET ? { INTERNAL_AUTH_SECRET: env.INTERNAL_AUTH_SECRET } : {}),
+          ...(env.INTERNAL_AUTH_KEY_ID ? { INTERNAL_AUTH_KEY_ID: env.INTERNAL_AUTH_KEY_ID } : {}),
+          ...(env.PUBLIC_ORIGIN ? { PUBLIC_ORIGIN: env.PUBLIC_ORIGIN } : {}),
+        },
+        tenantId,
+        target: { appId: job.appId, worker: job.worker },
+        methodName: job.method,
+        args: {},
+        actor: job.actor,
+        traceId: randomId("scheduler"),
+      });
+    },
+  });
   const documents = new D1MutationStore(env.DB);
   const directory = new D1UserStore(env.DB);
   const auto_repeat = await runAutoRepeat({
@@ -757,12 +780,25 @@ export async function runMaintenance(
   const reservations = await expireStockReservations(env, tenantId, now);
   const alumdoor = await runAlumdoorMaintenance(env.DB, tenantId, now);
   await recordMaintenanceState(env.DB, tenantId, { last_success_at: new Date().toISOString(), last_error: null });
-  return { outbox, hooks, auto_repeat, reservations, alumdoor };
+  return { outbox, hooks, scheduler, auto_repeat, reservations, alumdoor };
   } catch (error) {
     await recordMaintenanceState(env.DB, tenantId, {
       last_error: error instanceof Error ? error.message.slice(0, 1000) : String(error).slice(0, 1000),
     });
     throw error;
+  }
+}
+
+async function tenantSystemTimeZone(db: D1Database, tenantId: string): Promise<string> {
+  const row = await db.prepare(
+    "SELECT data_json FROM master_records WHERE tenant_id=?1 AND record_type='System Settings' AND name='System Settings' AND disabled=0",
+  ).bind(tenantId).first<{ data_json: string }>();
+  if (!row?.data_json) return "UTC";
+  try {
+    const data = JSON.parse(row.data_json) as { time_zone?: unknown };
+    return typeof data.time_zone === "string" && data.time_zone.trim() ? data.time_zone.trim() : "UTC";
+  } catch {
+    return "UTC";
   }
 }
 
