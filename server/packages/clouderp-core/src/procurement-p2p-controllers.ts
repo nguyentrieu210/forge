@@ -344,12 +344,20 @@ function linkedInvoiceLines(data: PurchaseInvoiceData): LinkedInvoiceLine[] {
     const purchaseOrder = optionalText(item.purchase_order) ?? header;
     if (!purchaseOrder) continue;
     const purchaseOrderItemRowId = optionalText(item.purchase_order_item_row_id);
-    result.push({
-      index,
-      item,
-      purchase_order: purchaseOrder,
-      ...(purchaseOrderItemRowId ? { purchase_order_item_row_id: purchaseOrderItemRowId } : {}),
-    });
+    if (purchaseOrderItemRowId) {
+      result.push({
+        index,
+        item,
+        purchase_order: purchaseOrder,
+        purchase_order_item_row_id: purchaseOrderItemRowId,
+      });
+    } else {
+      result.push({
+        index,
+        item,
+        purchase_order: purchaseOrder,
+      });
+    }
   }
   return result;
 }
