@@ -2930,46 +2930,433 @@ async function permissionRules(args: FrappeArgs, context: FrappeRouterContext): 
 
 // ---- data import ------------------------------------------------------------
 
-/**
- * Previews an import without writing anything.
- *
- * Unknown columns are refused here rather than silently ignored during apply: a
- * dropped column means rows import with fields missing, and the user has no way to
- * see which.
- */
-async function importPreview(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+const DATA_IMPORT_MAX_ROWS = 100_000;
+
+interface DataImportJobRow {
+  data_import_name: string;
+  reference_doctype: string;
+  import_type: "Insert New Records" | "Update Existing Records";
+  source_file_url: string;
+  status: "Pending" | "Success" | "Partial Success" | "Error" | "Timed Out";
+  payload_count: number;
+  success_count: number;
+  failed_count: number;
+  results_json: string;
+  started_at: string | null;
+}
+
+function requireImportFiles(context: FrappeRouterContext): FileStore {
+  if (!context.files) throw errors.validation("File storage is required for Data Import");
+  return {
+    db: context.files.db,
+    bucket: context.files.bucket,
+    tenantId: context.tenantId,
+    now: context.now(),
+  };
+}
+
+function decodeBase64Utf8(value: unknown): string {
+  if (typeof value !== "string") throw errors.validation("Import file content is unavailable");
+  const binary = atob(value);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return new TextDecoder().decode(bytes).replace(/^\uFEFF/, "");
+}
+
+async function readImportCsv(fileUrl: string, context: FrappeRouterContext): Promise<string> {
+  const file = await readFileContent(
+    fileUrl,
+    context.actor,
+    requireImportFiles(context),
+    async (doctype, name) => { await loadReadable(doctype, name, context); },
+  );
+  const fileName = String(file.file_name ?? "").toLowerCase();
+  const contentType = String(file.content_type ?? "").toLowerCase();
+  if (!fileName.endsWith(".csv") && !contentType.includes("csv") && contentType !== "text/plain") {
+    throw errors.validation(
+      "Server Data Import accepts CSV files. XLS/XLSX decoding stays in the browser/CLI boundary and must be converted to CSV before upload.",
+    );
+  }
+  return decodeBase64Utf8(file.base64);
+}
+
+async function loadDataImportControl(
+  name: string,
+  context: FrappeRouterContext,
+  writable = false,
+): Promise<CanonicalDocument<JsonObject>> {
+  return writable
+    ? loadWritable("Data Import", name, context)
+    : loadReadable("Data Import", name, context);
+}
+
+function dataImportIdentity(control: CanonicalDocument<JsonObject>): {
+  doctype: string;
+  importType: "Insert New Records" | "Update Existing Records";
+} {
+  const doctype = typeof control.data.reference_doctype === "string" ? control.data.reference_doctype.trim() : "";
+  if (!doctype) throw errors.validation("Data Import reference_doctype is required");
+  const raw = control.data.import_type;
+  const importType = raw === "Update Existing Records" ? raw : raw === "Insert New Records" ? raw : null;
+  if (!importType) throw errors.validation("Data Import import_type is invalid");
+  return { doctype, importType };
+}
+
+async function assertImportColumns(headers: string[], meta: DocTypeMeta): Promise<void> {
+  const known = new Set(meta.fields.map((field) => field.fieldname));
+  const unknown = headers.filter((header) => header !== "name" && !known.has(header));
+  if (unknown.length) throw errors.validation(`Unknown import columns: ${unknown.join(", ")}`);
+}
+
+function frappeImportPreview(
+  headers: string[],
+  rows: JsonObject[],
+  meta: DocTypeMeta,
+  warnings: Array<{ row: number; message: string }>,
+): JsonObject {
+  const byName = new Map(meta.fields.map((field) => [field.fieldname, field]));
+  const columns = headers.map((header, index) => {
+    const field = byName.get(header);
+    return {
+      header_title: header,
+      column_number: index,
+      skip_import: field || header === "name" ? 0 : 1,
+      df: header === "name"
+        ? { fieldname: "name", label: "ID", fieldtype: "Data", reqd: 0 }
+        : field
+          ? { fieldname: field.fieldname, label: field.label, fieldtype: field.fieldtype, reqd: field.required ? 1 : 0 }
+          : null,
+    } as JsonObject;
+  });
+  return {
+    columns,
+    data: [
+      headers,
+      ...rows.slice(0, 20).map((row) => headers.map((header) => row[header] ?? "")),
+    ] as unknown as JsonValue,
+    warnings: warnings as unknown as JsonValue,
+    total_rows: rows.length + warnings.length,
+    max_rows_exceeded: warnings.some((warning) => warning.message.includes("limited to")) ? 1 : 0,
+  };
+}
+
+/** Frappe-compatible CSV template generated from the exact effective DocType metadata. */
+async function importTemplate(args: FrappeArgs, context: FrappeRouterContext): Promise<Response> {
   const doctype = args.requireText("doctype", 160);
-  const csv = args.text("csv") ?? args.text("content") ?? "";
-  if (!csv) throw errors.validation("csv content is required");
   await context.permissions.assert({ actor: context.actor, tenantId: context.tenantId, doctype, action: "import" });
   const meta = await requireMeta(doctype, context);
   if (meta.is_child) throw errors.validation("A child doctype cannot be imported directly");
 
-  const preview = parseCsvImport(csv);
-  const known = new Set(meta.fields.map((field) => field.fieldname));
-  const unknown = preview.headers.filter((header) => header !== "name" && !known.has(header));
-  if (unknown.length) throw errors.validation(`Unknown import columns: ${unknown.join(", ")}`);
-  return preview as unknown as JsonObject;
+  const unsupported = new Set([
+    "Section Break", "Column Break", "Tab Break", "Heading", "HTML", "Button",
+    "Table", "Table MultiSelect", "Password",
+  ]);
+  const columns = [
+    "name",
+    ...meta.fields
+      .filter((field) => !unsupported.has(field.fieldtype) && !field.read_only)
+      .map((field) => field.fieldname),
+  ];
+  const csv = encodeCsv(columns, []);
+  return new Response(`﻿${csv}`, {
+    status: 200,
+    headers: {
+      "content-type": "text/csv; charset=utf-8",
+      "content-disposition": `attachment; filename="${doctype.replace(/[^A-Za-z0-9 _-]/g, "_")}-template.csv"`,
+      "cache-control": "private, no-store",
+      "x-content-type-options": "nosniff",
+    },
+  });
 }
 
 /**
- * Applies an import row by row.
+ * Preview either the native Data Import document contract or the older direct CSV
+ * compatibility shape used by low-level callers.
+ */
+async function importPreview(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const dataImportName = args.text("data_import");
+  if (!dataImportName) {
+    const doctype = args.requireText("doctype", 160);
+    const csv = args.text("csv") ?? args.text("content") ?? "";
+    if (!csv) throw errors.validation("csv content is required");
+    await context.permissions.assert({ actor: context.actor, tenantId: context.tenantId, doctype, action: "import" });
+    const meta = await requireMeta(doctype, context);
+    if (meta.is_child) throw errors.validation("A child doctype cannot be imported directly");
+    const preview = parseCsvImport(csv);
+    await assertImportColumns(preview.headers, meta);
+    return preview as unknown as JsonObject;
+  }
+
+  const control = await loadDataImportControl(dataImportName, context);
+  const { doctype, importType } = dataImportIdentity(control);
+  const fileUrl = args.text("import_file")
+    ?? (typeof control.data.import_file === "string" ? control.data.import_file : "");
+  if (!fileUrl) throw errors.validation("import_file is required");
+
+  await context.permissions.assert({ actor: context.actor, tenantId: context.tenantId, doctype, action: "import" });
+  const meta = await requireMeta(doctype, context);
+  if (meta.is_child) throw errors.validation("A child doctype cannot be imported directly");
+
+  const csv = await readImportCsv(fileUrl, context);
+  const preview = parseCsvImport(csv, DATA_IMPORT_MAX_ROWS);
+  await assertImportColumns(preview.headers, meta);
+
+  const now = context.now();
+  const db = requireImportFiles(context).db;
+  await db.prepare(
+    `INSERT INTO data_import_jobs(
+       tenant_id,data_import_name,reference_doctype,import_type,source_file_url,status,
+       payload_count,success_count,failed_count,results_json,created_by,started_at,created_at,modified_at
+     ) VALUES(?1,?2,?3,?4,?5,'Pending',?6,0,0,'[]',?7,NULL,?8,?8)
+     ON CONFLICT(tenant_id,data_import_name) DO UPDATE SET
+       reference_doctype=excluded.reference_doctype,
+       import_type=excluded.import_type,
+       source_file_url=excluded.source_file_url,
+       status='Pending',
+       payload_count=excluded.payload_count,
+       success_count=0,
+       failed_count=0,
+       results_json='[]',
+       created_by=excluded.created_by,
+       started_at=NULL,
+       modified_at=excluded.modified_at`,
+  ).bind(
+    context.tenantId, dataImportName, doctype, importType, fileUrl,
+    preview.rows.length + preview.errors.length, context.actor.user_id, now,
+  ).run();
+
+  return frappeImportPreview(preview.headers, preview.rows, meta, preview.errors);
+}
+
+async function loadImportJob(name: string, context: FrappeRouterContext): Promise<DataImportJobRow> {
+  const row = await requireImportFiles(context).db.prepare(
+    `SELECT data_import_name,reference_doctype,import_type,source_file_url,status,
+            payload_count,success_count,failed_count,results_json,started_at
+       FROM data_import_jobs WHERE tenant_id=?1 AND data_import_name=?2`,
+  ).bind(context.tenantId, name).first<DataImportJobRow>();
+  if (!row) throw errors.validation("Preview the Data Import before starting it");
+  return row;
+}
+
+async function persistImportProgress(
+  name: string,
+  context: FrappeRouterContext,
+  status: DataImportJobRow["status"],
+  success: number,
+  failed: number,
+  results: JsonObject[],
+  payloadCount?: number,
+): Promise<void> {
+  const db = requireImportFiles(context).db;
+  await db.prepare(
+    `UPDATE data_import_jobs
+       SET status=?3,success_count=?4,failed_count=?5,results_json=?6,
+           payload_count=COALESCE(?7,payload_count),modified_at=?8
+       WHERE tenant_id=?1 AND data_import_name=?2`,
+  ).bind(
+    context.tenantId, name, status, success, failed, JSON.stringify(results),
+    payloadCount ?? null, context.now(),
+  ).run();
+}
+
+async function executeImportJob(job: DataImportJobRow, context: FrappeRouterContext): Promise<void> {
+  const doctype = job.reference_doctype;
+  const meta = await requireMeta(doctype, context);
+  const csv = await readImportCsv(job.source_file_url, context);
+  const parsed = parseCsvImport(csv, DATA_IMPORT_MAX_ROWS);
+  await assertImportColumns(parsed.headers, meta);
+
+  const hardLimit = parsed.errors.find((entry) => entry.message.includes(`limited to ${DATA_IMPORT_MAX_ROWS} rows`));
+  if (hardLimit) throw errors.validation(`Data Import is bounded to ${DATA_IMPORT_MAX_ROWS} CSV rows per job`);
+
+  const results: JsonObject[] = parsed.errors.map((entry) => ({
+    row: entry.row,
+    status: "failed",
+    error: entry.message,
+  }));
+  let success = 0;
+  let failed = results.length;
+  const payloadCount = parsed.rows.length + parsed.errors.length;
+  await persistImportProgress(job.data_import_name, context, "Pending", success, failed, results, payloadCount);
+
+  for (let index = 0; index < parsed.rows.length; index += 1) {
+    const row = parsed.rows[index] as JsonObject;
+    const rowNumber = index + 2;
+    try {
+      if (job.import_type === "Update Existing Records") {
+        const name = typeof row.name === "string" ? row.name.trim() : "";
+        if (!name) throw errors.validation("Update Existing Records requires the name/ID column");
+        const current = await loadWritable(doctype, name, context);
+        const payload = toKernelPayload({ ...current.data, ...row }, meta);
+        await context.runCommand(await buildCommand({
+          tenantId: context.tenantId,
+          actor: context.actor,
+          doctype,
+          name,
+          action: "save",
+          expectedVersion: current.version,
+          document: payload,
+        }));
+        results.push({ row: rowNumber, name, status: "imported", input: row });
+      } else {
+        const payload = toKernelPayload(row, meta);
+        const name = typeof row.name === "string" && row.name.trim()
+          ? row.name.trim()
+          : await resolveNewName(doctype, meta, namingSource(row, payload), context);
+        await context.runCommand(await buildCommand({
+          tenantId: context.tenantId,
+          actor: context.actor,
+          doctype,
+          name,
+          action: "create",
+          expectedVersion: null,
+          document: payload,
+        }));
+        results.push({ row: rowNumber, name, status: "imported", input: row });
+      }
+      success += 1;
+    } catch (error) {
+      failed += 1;
+      results.push({
+        row: rowNumber,
+        status: "failed",
+        error: error instanceof Error ? error.message : "Row failed",
+        input: row,
+      });
+    }
+
+    if ((index + 1) % 25 === 0) {
+      await persistImportProgress(job.data_import_name, context, "Pending", success, failed, results, payloadCount);
+    }
+  }
+
+  const status: DataImportJobRow["status"] =
+    failed === 0 ? "Success" : success === 0 ? "Error" : "Partial Success";
+  await persistImportProgress(job.data_import_name, context, status, success, failed, results, payloadCount);
+}
+
+async function startImportJob(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const name = args.requireText("data_import", 320);
+  await loadDataImportControl(name, context, true);
+  const job = await loadImportJob(name, context);
+
+  await context.permissions.assert({
+    actor: context.actor,
+    tenantId: context.tenantId,
+    doctype: job.reference_doctype,
+    action: "import",
+  });
+  if (job.import_type === "Insert New Records") {
+    await context.permissions.assert({
+      actor: context.actor,
+      tenantId: context.tenantId,
+      doctype: job.reference_doctype,
+      action: "create",
+    });
+  }
+
+  const now = context.now();
+  const lease = await requireImportFiles(context).db.prepare(
+    `UPDATE data_import_jobs
+       SET started_at=?3,modified_at=?3
+       WHERE tenant_id=?1 AND data_import_name=?2 AND status='Pending' AND started_at IS NULL`,
+  ).bind(context.tenantId, name, now).run();
+  if ((lease.meta?.changes ?? 0) === 0) {
+    const current = await loadImportJob(name, context);
+    return { status: current.status, queued: current.status === "Pending" ? 1 : 0 };
+  }
+
+  const work = executeImportJob({ ...job, started_at: now }, context).catch(async (error) => {
+    const message = error instanceof Error ? error.message : "Data Import failed";
+    await persistImportProgress(
+      name,
+      context,
+      "Error",
+      0,
+      Math.max(job.failed_count, 1),
+      [{ row: 0, status: "failed", error: message }],
+    );
+  });
+  if (context.defer) context.defer(work);
+  else await work;
+
+  return { status: "Pending", queued: 1 };
+}
+
+async function importStatus(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const name = args.requireText("data_import_name", 320);
+  await loadDataImportControl(name, context);
+  const job = await loadImportJob(name, context);
+  return {
+    status: job.status,
+    success: job.success_count,
+    failed: job.failed_count,
+    total_records: job.payload_count,
+  };
+}
+
+async function importErroredTemplate(args: FrappeArgs, context: FrappeRouterContext): Promise<Response> {
+  const name = args.requireText("data_import_name", 320);
+  await loadDataImportControl(name, context);
+  const job = await loadImportJob(name, context);
+  let results: JsonObject[] = [];
+  try {
+    const value = JSON.parse(job.results_json);
+    if (Array.isArray(value)) results = value.filter((entry): entry is JsonObject => Boolean(entry && typeof entry === "object" && !Array.isArray(entry)));
+  } catch {
+    throw errors.validation("Stored Data Import result is invalid");
+  }
+
+  const failed = results.filter((entry) => entry.status === "failed");
+  const sourceColumns = [...new Set(failed.flatMap((entry) => {
+    const input = entry.input;
+    return input && typeof input === "object" && !Array.isArray(input) ? Object.keys(input as JsonObject) : [];
+  }))];
+  const rows = failed.map((entry) => {
+    const input = entry.input && typeof entry.input === "object" && !Array.isArray(entry.input)
+      ? entry.input as JsonObject
+      : {};
+    return {
+      __row: entry.row ?? "",
+      __error: entry.error ?? "Row failed",
+      ...input,
+    } as JsonObject;
+  });
+  const csv = encodeCsv(["__row", "__error", ...sourceColumns], rows);
+  return new Response(`﻿${csv}`, {
+    status: 200,
+    headers: {
+      "content-type": "text/csv; charset=utf-8",
+      "content-disposition": `attachment; filename="${job.reference_doctype.replace(/[^A-Za-z0-9 _-]/g, "_")}-errors.csv"`,
+      "cache-control": "private, no-store",
+      "x-content-type-options": "nosniff",
+    },
+  });
+}
+
+/**
+ * Applies a direct CSV import row by row for native/legacy callers.
  *
- * Each row is its own command, so a bad row fails alone and the outcome is
- * reported per row. Importing as one transaction would mean one typo on row 400
- * discards the 399 valid rows before it.
+ * The Data Import document route above is the Frappe UI contract. This compatibility
+ * path stays because server-side migration callers already use direct doctype+csv.
  */
 async function importApply(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
   const doctype = args.requireText("doctype", 160);
   const csv = args.text("csv") ?? args.text("content") ?? "";
   if (!csv) throw errors.validation("csv content is required");
+  const importType = args.text("import_type") === "Update Existing Records"
+    ? "Update Existing Records"
+    : "Insert New Records";
   await context.permissions.assert({ actor: context.actor, tenantId: context.tenantId, doctype, action: "import" });
-  await context.permissions.assert({ actor: context.actor, tenantId: context.tenantId, doctype, action: "create" });
+  if (importType === "Insert New Records") {
+    await context.permissions.assert({ actor: context.actor, tenantId: context.tenantId, doctype, action: "create" });
+  }
   const meta = await requireMeta(doctype, context);
   if (meta.is_child) throw errors.validation("A child doctype cannot be imported directly");
 
   const preview = parseCsvImport(csv, 100);
   if (preview.errors.length) throw errors.validation("The CSV contains malformed rows", { error_count: preview.errors.length });
+  await assertImportColumns(preview.headers, meta);
 
   const results: JsonObject[] = [];
   let imported = 0;
@@ -2978,22 +3365,34 @@ async function importApply(args: FrappeArgs, context: FrappeRouterContext): Prom
     const row = preview.rows[index] as JsonObject;
     const rowNumber = index + 2;
     try {
-      const payload = toKernelPayload(row, meta);
-      const name = typeof row.name === "string" && row.name.trim()
-        ? row.name.trim()
-        : await resolveNewName(doctype, meta, payload, context);
-      await context.runCommand(await buildCommand({
-        tenantId: context.tenantId, actor: context.actor, doctype, name,
-        action: "create", expectedVersion: null, document: payload,
-      }));
-      results.push({ row: rowNumber, name, status: "imported" });
+      if (importType === "Update Existing Records") {
+        const name = typeof row.name === "string" ? row.name.trim() : "";
+        if (!name) throw errors.validation("Update Existing Records requires the name/ID column");
+        const current = await loadWritable(doctype, name, context);
+        const payload = toKernelPayload({ ...current.data, ...row }, meta);
+        await context.runCommand(await buildCommand({
+          tenantId: context.tenantId, actor: context.actor, doctype, name,
+          action: "save", expectedVersion: current.version, document: payload,
+        }));
+        results.push({ row: rowNumber, name, status: "imported" });
+      } else {
+        const payload = toKernelPayload(row, meta);
+        const name = typeof row.name === "string" && row.name.trim()
+          ? row.name.trim()
+          : await resolveNewName(doctype, meta, namingSource(row, payload), context);
+        await context.runCommand(await buildCommand({
+          tenantId: context.tenantId, actor: context.actor, doctype, name,
+          action: "create", expectedVersion: null, document: payload,
+        }));
+        results.push({ row: rowNumber, name, status: "imported" });
+      }
       imported += 1;
     } catch (error) {
       failed += 1;
       results.push({ row: rowNumber, status: "failed", error: error instanceof Error ? error.message : "Row failed" });
     }
   }
-  return { imported, failed, results, status: failed ? "Partial Success" : "Success" };
+  return { imported, failed, results, status: failed ? (imported ? "Partial Success" : "Error") : "Success" };
 }
 
 /**
