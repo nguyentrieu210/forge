@@ -592,6 +592,7 @@ test("supplier advance allocation posts the opposite realized FX party sign", as
       paid_amount: "40",
       received_amount: "48",
       currency: "EUR",
+      allow_unallocated: true,
       references: [],
     },
   });
