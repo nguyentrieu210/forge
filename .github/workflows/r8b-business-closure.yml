@@ -9,10 +9,14 @@ on:
       - "server/packages/clouderp-selling/**"
       - "server/packages/clouderp-stock/**"
       - "server/packages/clouderp-erpnext/**"
+      - "server/packages/query/**"
+      - "server/packages/policy/**"
       - "server/tests/subcontracting-closure.test.mjs"
       - "server/tests/landed-cost-authority.test.mjs"
       - "server/tests/customer-credit-authority.test.mjs"
       - "server/tests/period-closing-authority.test.mjs"
+      - "server/tests/finance-closure-query.test.mjs"
+      - "server/tests/finance-closure-policy.test.mjs"
       - "server/tests/r8-erpnext-depth.test.mjs"
       - "server/migrations/tenant/0141_subcontracting_authority.sql"
       - "server/migrations/tenant/0142_landed_cost_valuation_identity.sql"
@@ -58,6 +62,10 @@ jobs:
         run: node --test server/tests/period-closing-authority.test.mjs
       - name: Period close atomic migration regression
         run: python3 server/scripts/test-period-closing-authority-migration.py
+      - name: Finance Budget vs Actual query regression
+        run: node --test server/tests/finance-closure-query.test.mjs
+      - name: Finance close/budget RBAC regression
+        run: node --test server/tests/finance-closure-policy.test.mjs
       - name: R8 benchmark invariant
         run: node server/scripts/verify-r8-erpnext-depth.mjs --audit-complete
       - name: R8 matrix regression
