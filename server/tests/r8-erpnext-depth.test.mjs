@@ -81,3 +81,21 @@ test("R8 P2P distinguishes transaction depth from landed-cost/subcontracting gap
   assert.equal(subcontracting?.classification, "GAP");
   assert.ok(Array.isArray(subcontracting?.gaps) && subcontracting.gaps.length >= 3);
 });
+
+
+test("R8 finance remap keeps strong ledger core separate from unclosed close semantics", async () => {
+  const matrix = await readJson(path.join(repoRoot, "docs/agents/r8/R8_BUSINESS_DEPTH_MATRIX.json"));
+  const budget = await readFile(path.join(serverRoot, "packages/clouderp-erpnext/src/finance-budget.ts"), "utf8");
+  const enterprise = await readFile(path.join(serverRoot, "packages/clouderp-erpnext/src/enterprise-controllers.ts"), "utf8");
+  const bankMatch = await readFile(path.join(serverRoot, "apps-src/vn-accounting-worker/src/bank-match.ts"), "utf8");
+
+  assert.match(budget, /FinanceBudgetController/);
+  assert.match(budget, /FinanceBudgetRevisionController/);
+  assert.match(budget, /FinanceBudgetCommitmentController/);
+  assert.match(enterprise, /BankTransactionController/);
+  assert.match(enterprise, /BankReconciliationController/);
+  assert.match(bankMatch, /EXACT_AMOUNT/);
+
+  assert.equal(matrix.flow_depth.find((x) => x.flow_id === "R8-F04-GL-PERIOD-CLOSE")?.classification, "PARTIAL");
+  assert.equal(matrix.flow_depth.find((x) => x.flow_id === "R8-F05-CASH-BANK-RECON")?.classification, "PARTIAL");
+});

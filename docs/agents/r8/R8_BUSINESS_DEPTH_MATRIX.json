@@ -387,11 +387,18 @@
       "name": "General ledger, periods and financial close",
       "path": "Voucher posting -> GL -> trial balance -> financial statements -> period close -> reopen/correction",
       "priority": "P0",
-      "classification": "UNRESOLVED",
+      "classification": "PARTIAL",
       "evidence": [
+        "docs/agents/r8/R8_FINANCE_REMAP.md",
+        "docs/agents/rc/RC-020-finance-period-posting.md",
+        "docs/agents/workstreams/WS01-finance-vn.md",
         "docs/agents/transaction-closure/04-FINANCE-DAILY-LEDGER.md",
-        "server/packages/ledger",
-        "server/packages/query"
+        "server/packages/query/src/finance-closure.ts",
+        "server/packages/clouderp-erpnext/src/finance-budget.ts",
+        "server/migrations/tenant/0110_rc020_finance_posting_period_integrity.sql",
+        "ERPNext v16.20.0 erpnext/accounts/doctype/period_closing_voucher/period_closing_voucher.py",
+        "ERPNext v16.20.0 erpnext/accounts/doctype/exchange_rate_revaluation/exchange_rate_revaluation.py",
+        "ERPNext v16.20.0 erpnext/accounts/doctype/budget/budget.py"
       ],
       "known_depth_questions": [
         "account types/root semantics",
@@ -402,17 +409,36 @@
         "exchange-rate revaluation",
         "budget enforcement"
       ],
-      "rationale": "R8 must compare accounting invariants and report reconciliation, not just presence of GL rows."
+      "rationale": "Forge's posting ledger and period integrity are strong, but ERPNext financial-close depth includes closing-entry orchestration, period-end revaluation and budget actuals that remain explicit Forge blockers.",
+      "confirmed_findings": [
+        "Forge has canonical append-only GL, exact reversal, hard/soft accounting-period guards, company/branch scoped General Ledger and Trial Balance, and Finance Daily Detailed Ledger derived from the same GL authority.",
+        "Forge Finance Budget has fixed-point approval/revision/commitment controls, but exact budget-vs-actual remains blocked on a canonical company/branch/account/date GL aggregate.",
+        "Forge workstream evidence explicitly keeps automated year-end close/retained earnings and full period-end FX revaluation blocked.",
+        "Pinned ERPNext Period Closing Voucher validates fiscal continuity and closing account, generates/reverses closing GL and supports background processing for large ledgers.",
+        "Pinned ERPNext Exchange Rate Revaluation calculates period-end account gain/loss and ties booked gain/loss to Journal Entry/GL behavior."
+      ],
+      "gaps": [
+        "No fully authoritative automated year-end closing/retained-earnings flow equivalent to ERPNext Period Closing Voucher is proven.",
+        "Full period-end Exchange Rate Revaluation is not closed.",
+        "Exact Budget-vs-Actual over the authoritative ledger aggregate is not closed.",
+        "Multi-company consolidation/elimination remains unproven."
+      ]
     },
     {
       "flow_id": "R8-F05-CASH-BANK-RECON",
       "name": "Cash, bank transactions and reconciliation",
       "path": "Bank statement evidence -> match/allocation -> reconciliation -> reversal -> cash/bank reporting",
       "priority": "P0",
-      "classification": "UNRESOLVED",
+      "classification": "PARTIAL",
       "evidence": [
-        "docs/agents/transaction-closure/04-FINANCE-DAILY-LEDGER.md",
-        "server/FEATURE_MATRIX_v0.9.0.md"
+        "docs/agents/r8/R8_FINANCE_REMAP.md",
+        "docs/agents/rc/RC-023-finance-cash-bank.md",
+        "docs/agents/workstreams/WS01-finance-vn.md",
+        "server/packages/clouderp-erpnext/src/enterprise-controllers.ts",
+        "server/apps-src/vn-accounting-worker/src/bank-match.ts",
+        "server/packages/query/src/finance-closure.ts",
+        "server/migrations/tenant/0110_rc023_cash_bank_reconciliation.sql",
+        "ERPNext v16.20.0 erpnext/accounts/doctype/bank_transaction/bank_transaction.py"
       ],
       "known_depth_questions": [
         "matching engine",
@@ -422,7 +448,19 @@
         "statement import",
         "cash controls"
       ],
-      "rationale": "The existing feature matrix explicitly describes bank reconciliation as foundation-level at v0.9; exact current main must be re-audited."
+      "rationale": "Cash/bank authority is substantial and safer than a shallow facade, but exact ERPNext reconciliation behavior has not been closed across the edge-case matrix.",
+      "confirmed_findings": [
+        "Forge treats Bank Transaction as statement evidence and keeps GL as balance authority; Bank Reconciliation supports partial/reversible matching against submitted vouchers with bank-side GL validation.",
+        "Forge prevents over-reconciliation and dangling cancellation, uses append-only reconciliation evidence, and derives cash/bank position from GL rather than a mutable balance.",
+        "Forge has deterministic read-only candidate matching with exact company/currency/bank-account/amount gates and explainable scoring.",
+        "Pinned ERPNext Bank Transaction embeds payment-entry allocations and derives Unreconciled/Reconciled status from remaining allocation; both systems therefore have materially similar objectives but different authority shapes.",
+        "A pinned ERPNext bank-reconciliation differential has not yet proven edge-case equivalence."
+      ],
+      "gaps": [
+        "Exact ERPNext differential for multi-voucher partial allocation, fees, duplicate references, unreconcile/relink and statement import identity remains uncaptured.",
+        "Forge candidate matching is deliberately read-only and exact-amount gated; broader ERPNext reconciliation-tool behavior is not yet behaviorally compared.",
+        "Provider statement-feed execution remains outside the current proven core."
+      ]
     },
     {
       "flow_id": "R8-F06-PRICING-TAX-CURRENCY",
