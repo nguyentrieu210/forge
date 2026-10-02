@@ -13,6 +13,7 @@ on:
       - "server/tests/r8-erpnext-depth.test.mjs"
       - "server/migrations/tenant/0141_subcontracting_authority.sql"
       - "server/migrations/tenant/0142_landed_cost_valuation_identity.sql"
+      - "server/migrations/tenant/0143_purchase_invoice_row_authority.sql"
       - "docs/agents/r8/**"
       - ".github/workflows/r8b-business-closure.yml"
   workflow_dispatch:
@@ -40,6 +41,8 @@ jobs:
         run: node --test server/tests/subcontracting-closure.test.mjs
       - name: Landed Cost authority regression
         run: node --test server/tests/landed-cost-authority.test.mjs
+      - name: P2P row authority regression
+        run: node --test server/tests/procurement-p2p-closure.test.mjs
       - name: R8 benchmark invariant
         run: node server/scripts/verify-r8-erpnext-depth.mjs --audit-complete
       - name: R8 matrix regression
