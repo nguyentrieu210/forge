@@ -486,13 +486,52 @@ export class PaymentAllocationController implements DocumentController<PaymentAl
       const outstanding = await context.reader.getOutstandingMinor(context.command.tenant_id, targetDoctype, reference.reference_name);
       const baseOutstanding = await context.reader.getBaseOutstandingMinor(context.command.tenant_id, targetDoctype, reference.reference_name);
       if (allocated > outstanding) throw errors.reference(`Allocated amount exceeds outstanding for ${reference.reference_name}`);
+
       const sourceRate = typeof source.data.source_exchange_rate_micros === "number"
         ? source.data.source_exchange_rate_micros
         : typeof source.data.conversion_rate_micros === "number"
           ? source.data.conversion_rate_micros
           : 1_000_000;
-      const currentBase = convertMinor(allocated, transactionScale, sourceRate, companyScale, `references[${index}].base_allocated_amount`);
-      const baseAllocated = allocated === outstanding ? baseOutstanding : Math.min(currentBase, baseOutstanding);
+      const sourceHistoricalBase = convertMinor(
+        allocated,
+        transactionScale,
+        sourceRate,
+        companyScale,
+        `references[${index}].source_base_allocated_amount`,
+      );
+      const sourceBaseAllocated = allocated === sourceRemaining
+        ? sourceBaseRemaining
+        : Math.min(sourceHistoricalBase, sourceBaseRemaining);
+
+      const invoiceScale = typeof invoice.data.currency_scale === "number" ? invoice.data.currency_scale : transactionScale;
+      const invoiceRate = typeof invoice.data.conversion_rate_micros === "number"
+        ? invoice.data.conversion_rate_micros
+        : 1_000_000;
+      const targetHistoricalBase = convertMinor(
+        allocated,
+        invoiceScale,
+        invoiceRate,
+        companyScale,
+        `references[${index}].target_base_allocated_amount`,
+      );
+      const baseAllocated = allocated === outstanding
+        ? baseOutstanding
+        : Math.min(targetHistoricalBase, baseOutstanding);
+
+      // Payment Allocation has no bank leg. Until realized-FX GL is first-class here,
+      // the source and target historical base values must net exactly. Failing closed
+      // is preferable to silently drifting Receivable/Payable base balances.
+      if (sourceBaseAllocated !== baseAllocated) {
+        throw errors.validation("Payment Allocation across historical exchange rates requires realized FX posting", {
+          source_voucher_type: sourceVoucherType,
+          source_voucher_no: sourceVoucherNo,
+          source_base_allocated_minor: sourceBaseAllocated,
+          target_voucher_type: targetDoctype,
+          target_voucher_no: reference.reference_name,
+          target_base_allocated_minor: baseAllocated,
+        });
+      }
+
       total = addMinor([total, allocated], "total allocated amount");
       totalBase = addMinor([totalBase, baseAllocated], "total base allocated amount");
       references.push({
