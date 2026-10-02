@@ -1380,8 +1380,12 @@ export class InMemoryMutationStore implements MutationStore {
       const sourceDoctype = typeof document.data.source_doctype === "string" ? document.data.source_doctype : "";
       const sourceName = typeof document.data.source_name === "string" ? document.data.source_name : "";
       const amount = Number(document.data.amount_minor ?? 0);
-      if (!sourceDoctype || !sourceName || !Number.isSafeInteger(amount)) continue;
-      const key = `${sourceDoctype}\u0000${sourceName}`;
+      if (!Number.isSafeInteger(amount)) continue;
+      // Legacy seeded/evidence commitments without source identity remain fully outstanding.
+      // They must never disappear merely because automatic actualization was introduced.
+      const key = sourceDoctype && sourceName
+        ? `${sourceDoctype}\u0000${sourceName}`
+        : `__legacy__\u0000${document.name}`;
       const group = groups.get(key) ?? { sourceDoctype, sourceName, rawMinor: 0 };
       group.rawMinor += document.data.commitment_type === "Release" ? -amount : amount;
       groups.set(key, group);
