@@ -7,8 +7,8 @@ import {
 } from "../../../packages/auth/src/index.js";
 import {
   assertSessionCsrf, D1DeskViewStore, D1TranslationStore, establishFrappeApiCredential, establishSession, faultResponse, isFrappePath, isPublicFrappePath,
-  buildCommand, isPublicFilePath, isStorefrontPath, isWebFormPath, routeFileDownload, routeFrappeApi, routeFrappeAuth, runAutoRepeat, runNotificationRules, slideSession, syncWorkflowActions,
-  type AuthRouteContext, type AutoRepeatRunResult, type EstablishedSession,
+  buildCommand, HttpEmailTransport, isPublicFilePath, isStorefrontPath, isWebFormPath, routeFileDownload, routeFrappeApi, routeFrappeAuth, runAutoRepeat, runEmailQueue, runNotificationRules, slideSession, syncWorkflowActions,
+  type AuthRouteContext, type AutoRepeatRunResult, type EmailQueueRunResult, type EstablishedSession,
 } from "../../../packages/frappe-api/src/index.js";
 import {
   AppHookDispatcher, AppInstaller, dispatchAppMethod, runAppScheduler, runAppValidators, subscribersFor, validatorsFor,
@@ -238,7 +238,7 @@ async function routeInternalDomainEventRequest(
         level: "error", trace_id: traceId, code: "NOTIFICATION_RULES_FAILED",
         detail: error instanceof Error ? error.message : String(error),
       }));
-      return { matched: 0, delivered: 0, skipped: 0 };
+      return { matched: 0, delivered: 0, queued: 0, skipped: 0 };
     });
 
     // Workflow Action is a durable after-commit projection of the SAME workflow
@@ -760,6 +760,7 @@ export async function runMaintenance(
   hooks: number;
   scheduler: AppSchedulerResult;
   auto_repeat: AutoRepeatRunResult;
+  email: EmailQueueRunResult;
   reservations: { expired: number; failed: number };
   alumdoor: { reconciliation_reminders: number; daily_reports: number };
 }> {
@@ -838,10 +839,15 @@ export async function runMaintenance(
     },
   });
 
+  const emailTransport = env.EMAIL_TRANSPORT_URL && env.EMAIL_FROM
+    ? new HttpEmailTransport(env.EMAIL_TRANSPORT_URL, env.EMAIL_FROM, env.EMAIL_TRANSPORT_TOKEN)
+    : null;
+  const email = await runEmailQueue(env.DB, tenantId, emailTransport, now);
+
   const reservations = await expireStockReservations(env, tenantId, now);
   const alumdoor = await runAlumdoorMaintenance(env.DB, tenantId, now);
   await recordMaintenanceState(env.DB, tenantId, { last_success_at: new Date().toISOString(), last_error: null });
-  return { outbox, hooks, scheduler, auto_repeat, reservations, alumdoor };
+  return { outbox, hooks, scheduler, auto_repeat, email, reservations, alumdoor };
   } catch (error) {
     await recordMaintenanceState(env.DB, tenantId, {
       last_error: error instanceof Error ? error.message.slice(0, 1000) : String(error).slice(0, 1000),
