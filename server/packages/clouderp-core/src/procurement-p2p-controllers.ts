@@ -343,13 +343,12 @@ function linkedInvoiceLines(data: PurchaseInvoiceData): LinkedInvoiceLine[] {
   for (const [index, item] of data.items.entries()) {
     const purchaseOrder = optionalText(item.purchase_order) ?? header;
     if (!purchaseOrder) continue;
+    const purchaseOrderItemRowId = optionalText(item.purchase_order_item_row_id);
     result.push({
       index,
       item,
       purchase_order: purchaseOrder,
-      ...(optionalText(item.purchase_order_item_row_id)
-        ? { purchase_order_item_row_id: optionalText(item.purchase_order_item_row_id) }
-        : {}),
+      ...(purchaseOrderItemRowId ? { purchase_order_item_row_id: purchaseOrderItemRowId } : {}),
     });
   }
   return result;
