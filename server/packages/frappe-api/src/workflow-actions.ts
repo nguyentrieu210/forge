@@ -137,12 +137,14 @@ export async function syncWorkflowActions(
     return { completed, created: 0, open: 0 };
   }
 
+  const stateMeta = workflow.states.find((candidate) => candidate.state === state);
+  const emailRequested = Boolean(workflow.send_email_alert && stateMeta?.send_email);
   const actionName = `WFA-${event.event_id}`;
   const result = await db.prepare(
     `INSERT INTO workflow_actions(
        tenant_id,name,reference_doctype,reference_name,workflow_name,workflow_state,
-       source_version,source_event_id,permitted_roles_json,status,created_at,modified_at
-     ) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,'Open',?10,?10)
+       source_version,source_event_id,permitted_roles_json,email_requested,status,created_at,modified_at
+     ) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,'Open',?11,?11)
      ON CONFLICT(tenant_id,source_event_id) DO NOTHING`,
   ).bind(
     tenantId,
@@ -154,6 +156,7 @@ export async function syncWorkflowActions(
     document.version,
     event.event_id,
     JSON.stringify(roles),
+    emailRequested ? 1 : 0,
     now,
   ).run();
 
