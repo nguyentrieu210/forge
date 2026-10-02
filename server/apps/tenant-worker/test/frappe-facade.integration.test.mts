@@ -9,7 +9,7 @@
  */
 import { env, exports } from "cloudflare:workers";
 import { beforeAll, describe, expect, it } from "vitest";
-import { hashPassword, mintSession, runEmailQueue, toFrappeModified, verifySession } from "../../../packages/frappe-api/src/index.js";
+import { D1EmailQueueStore, hashPassword, mintSession, runEmailQueue, toFrappeModified, verifySession } from "../../../packages/frappe-api/src/index.js";
 import { D1DocumentAccessStore } from "../../../packages/frappe-model/src/index.js";
 import { parseAppManifest, runAppScheduler } from "../../../packages/app-registry/src/index.js";
 
@@ -2399,6 +2399,68 @@ describe("mechanisms that must actually run, not merely exist", () => {
     expect(sent?.last_error).toBeNull();
     expect(sent?.sent_at).toBeTruthy();
     expect(sentMessages.some((message) => message.to === "sales@example.com")).toBe(true);
+  });
+
+  it("retries failed Email Queue rows with bounded backoff and preserves evidence", async () => {
+    const queue = new D1EmailQueueStore(env.DB);
+    const start = new Date().toISOString();
+    const queued = await queue.enqueue("demo", {
+      dedupeKey: "retry-proof-1",
+      sourceKind: "notification",
+      sourceName: "Retry proof",
+      recipientUser: "sales@example.com",
+      recipientEmail: "sales@example.com",
+      subject: "Retry proof",
+      message: "Retry me once",
+      referenceDoctype: "Field Visit",
+      referenceName: "FV-EMAIL",
+    }, start);
+    expect(queued.created).toBe(true);
+
+    const first = await runEmailQueue(env.DB, "demo", {
+      async send(message) {
+        if (message.queueName === queued.name) throw new Error("relay unavailable");
+        return { providerMessageId: "other" };
+      },
+    }, start);
+    expect(first.failed).toBeGreaterThanOrEqual(1);
+
+    const failed = await env.DB.prepare(
+      `SELECT status,attempt_count,send_after,last_error
+         FROM email_queue WHERE tenant_id='demo' AND name=?1`,
+    ).bind(queued.name).first<any>();
+    expect(failed?.status).toBe("Error");
+    expect(failed?.attempt_count).toBe(1);
+    expect(failed?.last_error).toBe("relay unavailable");
+    expect(Date.parse(failed!.send_after)).toBe(Date.parse(start) + 60_000);
+
+    const tooEarly = new Date(Date.parse(start) + 30_000).toISOString();
+    await runEmailQueue(env.DB, "demo", {
+      async send() {
+        throw new Error("must not be called before send_after");
+      },
+    }, tooEarly);
+    const unchanged = await env.DB.prepare(
+      `SELECT status,attempt_count FROM email_queue WHERE tenant_id='demo' AND name=?1`,
+    ).bind(queued.name).first<any>();
+    expect(unchanged?.status).toBe("Error");
+    expect(unchanged?.attempt_count).toBe(1);
+
+    const retryAt = new Date(Date.parse(start) + 61_000).toISOString();
+    const retried = await runEmailQueue(env.DB, "demo", {
+      async send(message) {
+        return { providerMessageId: `retry-${message.queueName}` };
+      },
+    }, retryAt);
+    expect(retried.sent).toBeGreaterThanOrEqual(1);
+    const sent = await env.DB.prepare(
+      `SELECT status,attempt_count,provider_message_id,last_error
+         FROM email_queue WHERE tenant_id='demo' AND name=?1`,
+    ).bind(queued.name).first<any>();
+    expect(sent?.status).toBe("Sent");
+    expect(sent?.attempt_count).toBe(2);
+    expect(sent?.provider_message_id).toBe(`retry-${queued.name}`);
+    expect(sent?.last_error).toBeNull();
   });
 
   it("a rule whose condition does not hold produces nothing", async () => {
