@@ -44,9 +44,26 @@ The guard:
 - blocks only `Stop`; `Warn` and `Ignore` remain non-blocking and are visible through
   the canonical Budget-vs-Actual status projection.
 
-This closes the race-prone actual-aware Stop boundary. Automatic commitment consumption
-when a source document turns into actual GL is still separate work; until then, a source
-commitment must be explicitly released or it continues to count alongside actuals.
+This closes the race-prone actual-aware Stop boundary and the declared automatic
+commitment-consumption boundary. Finance Budget Commitment remains immutable Reserve/Release
+evidence; Forge now derives the outstanding commitment by grouping net commitment by canonical
+source and subtracting only linked actual GL, capped at the source reservation.
+
+Automatic actualization is source-specific:
+- Purchase Order -> Purchase Invoice expense rows linked to the exact PO / child-row authority;
+- Material Request -> Purchase Invoice expense rows whose Material Request lineage is frozen
+  from the invoice input, exact PO item row, or PO header;
+- Expense Claim -> the claim's own in-scope account GL.
+
+A partial actual therefore replaces, rather than stacks on top of, the same committed amount.
+Exact cancellation GL reversals remove the linked actual and automatically restore the
+outstanding commitment without fabricating a Release document. Legacy source-less commitment
+evidence remains fully outstanding instead of being silently consumed.
+
+Migration 0157 evaluates this same source-linked outstanding commitment inside the GL INSERT
+transaction and includes the NEW GL row, so two concurrent submits cannot exploit a
+controller/read-model race. The in-memory store mirrors the same calculation under its mutex,
+and Budget-vs-Actual uses the same source lineage in its executable SQL projection.
 
 ## Period-close safety
 
@@ -70,13 +87,25 @@ planner that consumes historical account metadata remains future work.
 - `server/tests/period-close-timestamp.test.mjs`: malformed/overflow UTC dates and valid UTC preservation.
 - `server/scripts/test-period-closing-authority-migration.py`: original source/lock guards
   plus timestamp, inactive historical account, overlapping scope and replacement regressions.
-- `.github/workflows/r8b-business-closure.yml`: all these checks plus prior R8-B closures;
-  trigger coverage now includes P2P tests and the R8 verifier.
+- `server/migrations/tenant/0157_finance_budget_commitment_actualization.sql`: commit-time
+  source-linked automatic commitment consumption for Purchase Order, Material Request and
+  Expense Claim.
+- `server/tests/finance-budget-transaction-control.test.mjs`: in-memory partial actualization,
+  exact reversal restoration and Expense Claim source consumption.
+- `server/tests/finance-budget-actual-sql.test.mjs`: executable source-specific PO/MR/Expense
+  Claim report semantics, including exact-row Material Request isolation.
+- `server/scripts/test-finance-budget-transaction-control.py`: D1 atomic NEW-row proof for
+  automatic actualization and restoration.
+- R8-B workflow run **36996734772** on implementation commit
+  `17f6c7a9d5d74d541a1ef3f6f717bd9d5c12d397`: build, all Finance Budget read/transaction/D1
+  regressions, all prior R8-B gates, benchmark invariant and matrix verifier passed.
+- `.github/workflows/r8b-business-closure.yml`: all these checks plus prior R8-B closures.
 
 ## Still open
 
-Fiscal distribution, automatic commitment consumption and pinned ERPNext differential
-fixtures remain open. Actual-aware transactional Stop/Warn/Ignore is now commit-time guarded.
+Fiscal distribution and pinned ERPNext differential fixtures remain open. Automatic
+commitment consumption for the declared Material Request / Purchase Order / Expense Claim
+sources is now source-linked and commit-time guarded together with actual-aware Stop/Warn/Ignore.
 Period close still needs previous-year/future-close lifecycle depth, historical-account
 planner support, large-ledger processing and in-memory/D1 commit-guard parity.
 FX revaluation, consolidation, downstream Landed Cost repost, broader subcontracting
