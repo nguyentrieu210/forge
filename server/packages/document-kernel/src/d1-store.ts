@@ -11,7 +11,7 @@ import { asCloudForgeError, documentKey, errors } from "../../core/src/index.js"
 import { fromScaledInt, toScaledInt } from "../../money/src/index.js";
 import { deriveDeliveryNoteStatus, deriveO2CStatus } from "./status.js";
 import { deriveSalesOrderProgress } from "./sales-order-progress.js";
-import type { MutationStore, SubmittedQuantityQuery, TrackedStockPosition, TrackedStockState } from "./store.js";
+import type { GlAccountBalance, GlAccountBalanceQuery, MutationStore, SubmittedQuantityQuery, TrackedStockPosition, TrackedStockState } from "./store.js";
 
 interface DocumentRow {
   tenant_id: string;
@@ -286,6 +286,53 @@ export class D1MutationStore implements MutationStore {
       ? await statement.bind(query.tenantId, query.parentDoctype, query.referenceName, query.itemCode, query.excludeName).first<{ total: number }>()
       : await statement.bind(query.tenantId, query.parentDoctype, query.referenceName, query.itemCode).first<{ total: number }>();
     return Number(row?.total ?? 0);
+  }
+
+  async getGlAccountBalances(query: GlAccountBalanceQuery): Promise<GlAccountBalance[]> {
+    const rows = await this.writer.prepare(
+      `SELECT g.account,g.currency,g.currency_scale,
+              COALESCE(SUM(g.debit_minor),0) AS debit_minor,
+              COALESCE(SUM(g.credit_minor),0) AS credit_minor
+       FROM gl_entries g
+       INNER JOIN documents d
+         ON d.tenant_id=g.tenant_id
+        AND d.doctype=g.voucher_type
+        AND d.name=g.voucher_no
+       WHERE g.tenant_id=?1
+         AND json_extract(d.payload_json,'$.company')=?2
+         AND date(g.posting_at)>=date(?3)
+         AND date(g.posting_at)<=date(?4)
+         AND (?5='' OR COALESCE(
+           NULLIF(json_extract(d.payload_json,'$.branch'),''),
+           NULLIF(json_extract(g.dimensions_json,'$.branch'),''),
+           ''
+         )=?5)
+         AND (?6='' OR g.account=?6)
+       GROUP BY g.account,g.currency,g.currency_scale
+       HAVING SUM(g.debit_minor)<>0 OR SUM(g.credit_minor)<>0
+       ORDER BY g.account,g.currency,g.currency_scale`,
+    ).bind(
+      query.tenantId,
+      query.company,
+      query.fromDate,
+      query.throughDate,
+      query.branch ?? "",
+      query.account ?? "",
+    ).all<{
+      account: string;
+      currency: string;
+      currency_scale: number;
+      debit_minor: number;
+      credit_minor: number;
+    }>();
+    return (rows.results ?? []).map((row) => ({
+      account: String(row.account),
+      currency: String(row.currency),
+      currency_scale: Number(row.currency_scale),
+      debit_minor: Number(row.debit_minor),
+      credit_minor: Number(row.credit_minor),
+      balance_minor: Number(row.debit_minor) - Number(row.credit_minor),
+    }));
   }
 
   async getOutstandingMinor(tenantId: string, voucherType: string, voucherNo: string): Promise<number> {
