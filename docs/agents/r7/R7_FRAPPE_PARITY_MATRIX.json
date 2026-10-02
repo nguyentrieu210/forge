@@ -1,0 +1,683 @@
+{
+  "schema_version": "1.0.0",
+  "program": "R7-A",
+  "upstream": {
+    "app": "frappe",
+    "tag": "v16.19.0",
+    "full_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c"
+  },
+  "forge_seed": "b702376ff8b2d4dfe0a53dc2759b71e9df3c99ab",
+  "denominator": {
+    "path": "server/docs/spec/source-exact/frappe-framework-domain-ledger.json",
+    "expected_domain_count": 28
+  },
+  "allowed_classifications": [
+    "EXACT_PARITY",
+    "SEMANTIC_PARITY",
+    "FORGE_SUPERSET",
+    "INTENTIONAL_DIFFERENCE",
+    "GAP",
+    "UNRESOLVED",
+    "OUT_OF_SCOPE"
+  ],
+  "domains": [
+    {
+      "domain_id": "FRAPPE-01-METADATA-AND-DOCTYPE-RUNTIME",
+      "name": "Metadata and DocType runtime",
+      "lane": "R7-01",
+      "classification": "SEMANTIC_PARITY",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [
+        "server/packages/frappe-model",
+        "server/packages/frappe-api/src/router.ts",
+        "server/packages/app-registry"
+      ],
+      "evidence": [
+        "server/packages/frappe-api/src/router.ts",
+        "server/packages/frappe-model/src/customization.ts",
+        "server/apps/tenant-worker/test/frappe-facade.integration.test.mts"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "DocType/DocField metadata, Custom Field, Property Setter overlays, effective revision/cache invalidation and controller registry semantics are implemented with a different storage/runtime architecture but equivalent declared outcomes."
+    },
+    {
+      "domain_id": "FRAPPE-02-DOCUMENT-LIFECYCLE",
+      "name": "Document lifecycle",
+      "lane": "R7-02",
+      "classification": "SEMANTIC_PARITY",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [
+        "server/packages/document-kernel",
+        "server/packages/frappe-api/src/command.ts"
+      ],
+      "evidence": [
+        "server/docs/spec/technical/controller-compatibility.md",
+        "server/packages/frappe-api/src/command.ts",
+        "docs/VERIFICATION.md"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "Create/save/submit/cancel/amend/delete and optimistic conflict semantics are mapped to the Document Kernel lifecycle; side effects are planned through the authoritative unit-of-work/outbox boundary."
+    },
+    {
+      "domain_id": "FRAPPE-03-NAMING",
+      "name": "Naming",
+      "lane": "R7-02",
+      "classification": "SEMANTIC_PARITY",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [
+        "server/packages/frappe-model/src/autoname.ts",
+        "server/packages/frappe-model/src/store.ts"
+      ],
+      "evidence": [
+        "server/packages/frappe-model/src/autoname.ts",
+        "server/tests/autoname-and-conditions.test.mjs"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "Exact current code supports hash, classic/date series, field:, naming_series:, format:, prompt and autoincrement with tenant-scoped atomic allocation and fail-closed unsupported patterns."
+    },
+    {
+      "domain_id": "FRAPPE-04-PERMISSIONS",
+      "name": "Permissions",
+      "lane": "R7-03",
+      "classification": "INTENTIONAL_DIFFERENCE",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [
+        "server/packages/frappe-model/src/permission.ts",
+        "server/packages/policy",
+        "published Role Policy row/field rules"
+      ],
+      "evidence": [
+        "server/packages/frappe-model/src/permission.ts",
+        "server/tests/permission-v2.test.mjs",
+        "server/apps/tenant-worker/test/frappe-facade.integration.test.mts",
+        "Frappe v16.19.0 frappe/core/doctype/user_permission/user_permission.py",
+        "Frappe v16.19.0 frappe/permissions.py",
+        "GitHub Actions R7 Frappe 16 Closure run 36908752934"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "Forge implements DocPerm, owner/share, permlevel, User Permission Link scopes and Frappe 16 tree-descendant expansion, but intentionally does not execute arbitrary Python permission_query_conditions/has_permission hooks. Dynamic restrictions are expressed through bounded/versioned Role Policy and organization-scope authorities instead. The user-visible descendant behavior is now pinned by Workerd regression and passed R7 CI."
+    },
+    {
+      "domain_id": "FRAPPE-05-AUTHENTICATION-AND-SESSIONS",
+      "name": "Authentication and sessions",
+      "lane": "R7-03",
+      "classification": "INTENTIONAL_DIFFERENCE",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [
+        "server/packages/frappe-api/src/session.ts",
+        "server/packages/frappe-api/src/auth-routes.ts",
+        "server/packages/auth/src/api-credentials.ts",
+        "server/packages/auth/src/session-registry.ts"
+      ],
+      "evidence": [
+        "server/packages/frappe-api/src/session.ts",
+        "docs/agents/rc/RC-04-kernel-auth.md",
+        "docs/agents/rc/RC3_A2_PLATFORM_IAM_APPFACTORY_EVIDENCE.md",
+        "server/packages/auth/src/api-credentials.ts",
+        "server/migrations/tenant/0141_r7_auth_api_credentials.sql",
+        "server/apps/tenant-worker/test/frappe-facade.integration.test.mts",
+        "Frappe v16.19.0 frappe/auth.py",
+        "Frappe v16.19.0 frappe/core/doctype/user/user.py",
+        "GitHub Actions R7 Frappe 16 Closure run 36960220755",
+        "GitHub Actions R7 Frappe 16 Closure run 36960547760"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "Forge now closes the Frappe 16 browser-session contract plus User API-key semantics: cookie sessions, CSRF, per-session/global revocation, MFA, login rate limits, frappe.auth.get_logged_user, System-Manager generate_keys, stable api_key with one-time rotating api_secret, Authorization token/Basic authentication, and reason-bound support impersonation with signed impersonator attribution, append-only audit, and target notification. Forge intentionally does not embed Frappe's OAuth authorization server or arbitrary auth_hooks; external/federated identity and connected-app OAuth remain bounded platform/integration authorities and the generic connected-app lifecycle is tracked under FRAPPE-26."
+    },
+    {
+      "domain_id": "FRAPPE-06-REST-AND-RPC",
+      "name": "REST and RPC",
+      "lane": "R7-09",
+      "classification": "SEMANTIC_PARITY",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [
+        "server/packages/frappe-api/src/router.ts",
+        "server/packages/frappe-api/src/envelope.ts",
+        "Document Kernel"
+      ],
+      "evidence": [
+        "server/packages/frappe-api/src/router.ts",
+        "server/packages/frappe-api/src/envelope.ts",
+        "server/apps/tenant-worker/test/frappe-facade.integration.test.mts",
+        "Frappe v16.19.0 frappe/api/v2.py",
+        "Frappe v16.19.0 frappe/tests/test_api_v2.py",
+        "GitHub Actions R7 Frappe 16 Closure run 36908752934",
+        "server/packages/document-kernel/src/document-list.ts",
+        "GitHub Actions R7 Frappe 16 Closure run 36909990405"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "Forge now exposes bounded Frappe v2 document CRUD/list/copy/meta/count/ping/method-envelope behavior, including as_dict=false tuple output and permission-aware group_by aggregates through the canonical Document List authority. The Workerd regression proves grouped results remain inside User Permission scope and the R7 workflow passed. Arbitrary Python/server-script execution remains an intentional platform-security difference rather than a missing REST/RPC route."
+    },
+    {
+      "domain_id": "FRAPPE-07-DATABASE-ABSTRACTION",
+      "name": "Database abstraction",
+      "lane": "R7-10",
+      "classification": "INTENTIONAL_DIFFERENCE",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [
+        "server/packages/document-kernel",
+        "D1 transaction/batch paths",
+        "Durable Object coordination"
+      ],
+      "evidence": [
+        "server/docs/spec/source-exact/05-cloudforge-mapping-contract.md",
+        "docs/ARCHITECTURE.md"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "Forge intentionally targets Cloudflare D1/Durable Objects rather than reproducing Frappe's MariaDB/PostgreSQL abstraction. R7 requires equivalent atomicity/race/replay safety, not engine compatibility."
+    },
+    {
+      "domain_id": "FRAPPE-08-QUERY-AND-LIST-ENGINE",
+      "name": "Query and list engine",
+      "lane": "R7-06",
+      "classification": "SEMANTIC_PARITY",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [
+        "server/packages/document-kernel/src/document-list.ts",
+        "server/packages/frappe-api/src/filters.ts",
+        "server/packages/query"
+      ],
+      "evidence": [
+        "server/packages/document-kernel/src/document-list.ts",
+        "server/packages/frappe-api/src/filters.ts",
+        "server/apps/tenant-worker/test/frappe-facade.integration.test.mts"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "List/query behavior is implemented through a permission-aware AST/compiler with filtering, projection, ordering, pagination and search/link adapters; implementation differs from Frappe Query Builder."
+    },
+    {
+      "domain_id": "FRAPPE-09-BACKGROUND-JOBS",
+      "name": "Background jobs",
+      "lane": "R7-08",
+      "classification": "SEMANTIC_PARITY",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [
+        "server/apps/jobs-worker/src/index.ts",
+        "server/packages/outbox/src/publisher.ts",
+        "Cloudflare Queues + DLQ"
+      ],
+      "evidence": [
+        "server/apps/jobs-worker/src/index.ts",
+        "server/apps/jobs-worker/wrangler.jsonc",
+        "server/scripts/verify-queue-safety.mjs",
+        "server/packages/outbox/src/publisher.ts",
+        "server/DEPLOY_EVIDENCE.md"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "Frappe/RQ implementation is replaced by Cloudflare Queues: canonical outbox enqueue, tenant/event dedupe, bounded exponential retry, max-retry policy and mandatory dead-letter queue. Exhausted failures are retained in the DLQ rather than Frappe's RQ failure registry; live evidence has exercised retry and durable 30/30 processing."
+    },
+    {
+      "domain_id": "FRAPPE-10-SCHEDULER",
+      "name": "Scheduler",
+      "lane": "R7-08",
+      "classification": "INTENTIONAL_DIFFERENCE",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [
+        "server/apps/jobs-worker/src/index.ts",
+        "server/apps/jobs-worker/wrangler.jsonc",
+        "server/apps/tenant-worker/src/index-core-base.ts",
+        "server/packages/app-registry/src/manifest.ts",
+        "server/packages/app-registry/src/scheduler.ts",
+        "server/packages/app-registry/src/cron.ts",
+        "server/migrations/tenant/0142_r7_app_scheduler.sql"
+      ],
+      "evidence": [
+        "server/apps/tenant-worker/src/index-core-base.ts",
+        "docs/VERIFICATION.md",
+        "server/apps/jobs-worker/src/index.ts",
+        "server/apps/jobs-worker/wrangler.jsonc",
+        "server/packages/app-registry/src/manifest.ts",
+        "server/packages/app-registry/src/scheduler.ts",
+        "server/packages/app-registry/src/cron.ts",
+        "server/migrations/tenant/0142_r7_app_scheduler.sql",
+        "server/apps/tenant-worker/test/frappe-facade.integration.test.mts",
+        "Frappe v16.19.0 frappe/utils/scheduler.py",
+        "Frappe v16.19.0 frappe/core/doctype/scheduled_job_type/scheduled_job_type.py",
+        "Frappe v16.19.0 frappe/hooks.py",
+        "GitHub Actions R7 Frappe 16 Closure run 36961538818"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "Forge now merges installed-app scheduler_events and executes all/hourly/daily/weekly/monthly/yearly/annual plus portable five-field cron schedules in the tenant System Settings timezone. The ordinary jobs Worker drives dispatch-namespace tenants every minute; D1 last_due_key claiming prevents overlap/duplicate execution, failed slots are not retried inside the same cadence, and stale state is pruned when a method disappears. This is intentionally not Frappe's Python/Redis scheduler: long/default/maintenance labels share the bounded app-Worker execution fabric, arbitrary croniter extensions are rejected fail-closed, and custom cron does not emulate Python function discovery. The declared app-level cadence contract is closed on Forge's Worker architecture."
+    },
+    {
+      "domain_id": "FRAPPE-11-REALTIME",
+      "name": "Realtime",
+      "lane": "R7-08",
+      "classification": "INTENTIONAL_DIFFERENCE",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [
+        "server/apps/tenant-worker/src/realtime-hub.ts",
+        "server/apps/tenant-worker/src/index-core-base.ts",
+        "server/apps/tenant-worker/wrangler.jsonc",
+        "server/migrations/tenant/0143_r7_realtime.sql",
+        "server/packages/frappe-model/src/permission.ts",
+        "server/packages/frappe-api/src/auth-routes.ts"
+      ],
+      "evidence": [
+        "server/docs/spec/source-exact/05-cloudforge-mapping-contract.md",
+        "docs/TECHNICAL_DESIGN_SOCIAL_COMMERCE_SAAS.md",
+        "server/apps/tenant-worker/src/realtime-hub.ts",
+        "server/apps/tenant-worker/src/index-core-base.ts",
+        "server/apps/tenant-worker/wrangler.jsonc",
+        "server/migrations/tenant/0143_r7_realtime.sql",
+        "server/apps/tenant-worker/test/frappe-facade.integration.test.mts",
+        "Frappe v16.19.0 frappe/realtime.py",
+        "Frappe v16.19.0 realtime/handlers.js",
+        "Frappe v16.19.0 realtime/middlewares/authenticate.js",
+        "Frappe v16.19.0 realtime/index.js",
+        "GitHub Actions R7 Frappe 16 Closure run 36964256721"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "Forge now closes the generic Frappe realtime behavior on Cloudflare primitives: same-origin authenticated WebSocket connection, automatic user/website/all rooms, DocPerm-checked doctype/doc subscriptions, task/progress rooms, open-document viewer presence, after-commit list_update/docinfo_update publication, monotonic D1 sequence order, durable reconnect replay by last_sequence, source-event dedupe, and fail-closed resync when replay exceeds the bounded window. Forge intentionally uses a raw JSON WebSocket protocol plus a tenant RealtimeHub Durable Object and D1 replay log instead of Socket.IO + Redis pub/sub. Arbitrary Python/app realtime handlers and Guest socket sessions are not exposed as a platform execution surface."
+    },
+    {
+      "domain_id": "FRAPPE-12-CACHING-AND-LOCKS",
+      "name": "Caching and locks",
+      "lane": "R7-08",
+      "classification": "INTENTIONAL_DIFFERENCE",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [
+        "revisioned metadata/cache keys",
+        "Durable Object serialization/coordination",
+        "Cloudflare cache primitives"
+      ],
+      "evidence": [
+        "server/docs/spec/source-exact/05-cloudforge-mapping-contract.md",
+        "server/packages/frappe-model/src/customization.ts",
+        "server/packages/document-kernel"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "Forge intentionally does not reproduce Frappe Redis internals. Cache invalidation is revision-driven and authoritative write locking/serialization uses D1/DO semantics; R7 compares observable invalidation and mutual-exclusion outcomes."
+    },
+    {
+      "domain_id": "FRAPPE-13-FILES-AND-ATTACHMENTS",
+      "name": "Files and attachments",
+      "lane": "R7-05",
+      "classification": "SEMANTIC_PARITY",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [
+        "server/packages/frappe-api/src/files.ts",
+        "R2 + D1 file metadata"
+      ],
+      "evidence": [
+        "server/packages/frappe-api/src/files.ts",
+        "server/apps/tenant-worker/test/files.integration.test.mts",
+        "server/RUNBOOK_FRAPPE_CORE_BETA.md"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "Upload, private/public access path, permission enforcement, delete and bounded file handling are implemented on R2/D1 rather than Frappe filesystem/storage adapters."
+    },
+    {
+      "domain_id": "FRAPPE-14-PRINT-AND-PDF",
+      "name": "Print and PDF",
+      "lane": "R7-06",
+      "classification": "INTENTIONAL_DIFFERENCE",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [
+        "frappe.www.printview.get_html_and_style compatibility path",
+        "client print rendering"
+      ],
+      "evidence": [
+        "docs/API_SURFACE.md",
+        "docs/VERIFICATION.md",
+        "client/packages/adapter-frappe/src/frappe-adapter.ts"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "Forge deliberately does not expose Frappe's binary download_pdf on Workers; it exposes rendered HTML+CSS and fails unsupported PDF generation explicitly instead of returning a fake success."
+    },
+    {
+      "domain_id": "FRAPPE-15-DATA-IMPORT-EXPORT",
+      "name": "Data import/export",
+      "lane": "R7-07",
+      "classification": "INTENTIONAL_DIFFERENCE",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [
+        "server/packages/frappe-api/src/router.ts",
+        "server/migrations/tenant/0144_r7_data_import.sql",
+        "server/packages/frappe-api/src/files.ts",
+        "Document Kernel"
+      ],
+      "evidence": [
+        "server/packages/frappe-api/src/router.ts",
+        "server/migrations/tenant/0144_r7_data_import.sql",
+        "server/apps/tenant-worker/test/frappe-facade.integration.test.mts",
+        "client/packages/adapter-frappe/src/frappe-adapter.ts",
+        "Frappe v16.19.0 frappe/core/doctype/data_import/data_import.py",
+        "Frappe v16.19.0 frappe/core/doctype/data_import/importer.py",
+        "GitHub Actions R7 Frappe 16 Closure run 36967357569"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "Forge now exposes the Frappe-shaped Data Import control lifecycle end to end: Data Import document, permission-aware uploaded source file, preview, idempotent queued start, durable status/count polling, row-isolated insert/update execution through the canonical Document Kernel, error-template download and permission-aware CSV export. Workerd regression run 36967357569 proves create/upload/preview/start/status/partial-success/error-download/update-existing behavior. Forge intentionally keeps server-side spreadsheet decoding out of the Worker runtime: the durable importer accepts bounded CSV (100,000 rows per job) while XLS/XLSX normalization belongs to the browser/CLI boundary; unsupported input fails closed rather than silently changing semantics."
+    },
+    {
+      "domain_id": "FRAPPE-16-WORKFLOW",
+      "name": "Workflow",
+      "lane": "R7-04",
+      "classification": "INTENTIONAL_DIFFERENCE",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [
+        "server/packages/frappe-model workflow metadata",
+        "Document Kernel lifecycle",
+        "organization-security delegation",
+        "server/packages/frappe-api/src/workflow-actions.ts",
+        "server/migrations/tenant/0145_r7_workflow_actions.sql"
+      ],
+      "evidence": [
+        "server/packages/frappe-api/src/desk-surfaces.ts",
+        "server/apps/tenant-worker/src/index-core-base.ts",
+        "server/packages/frappe-model/src/notification-rules.ts",
+        "server/packages/frappe-model/src/generic-controller.ts",
+        "server/packages/frappe-model/src/validate.ts",
+        "server/apps/tenant-worker/test/frappe-facade.integration.test.mts",
+        "Frappe v16.19.0 frappe/model/workflow.py",
+        "Frappe v16.19.0 frappe/workflow/doctype/workflow_action/workflow_action.py",
+        "server/packages/frappe-api/src/workflow-actions.ts",
+        "server/migrations/tenant/0145_r7_workflow_actions.sql",
+        "GitHub Actions R7 Frappe 16 Closure run 36969406334"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "Forge now closes the bounded Workflow contract: state/transition/role enforcement, segregation-of-duties and delegation, one shared transition-condition authority, Workflow Document State update_field/update_value (including direct doc.<field> projection under server authority), durable after-commit Workflow Action creation/completion with permitted-role evidence, and durable workflow email intent. Actual email queue/transport remains owned and blocked only by FRAPPE-17 communications. Forge intentionally does not execute Frappe transition_tasks as arbitrary Python or expose signed Guest email-action execution; app validators/versioned document-event hooks and authenticated workflow actions are the bounded multi-tenant equivalents, consistent with FRAPPE-18/27."
+    },
+    {
+      "domain_id": "FRAPPE-17-NOTIFICATIONS-AND-COMMUNICATIONS",
+      "name": "Notifications and communications",
+      "lane": "R7-08",
+      "classification": "INTENTIONAL_DIFFERENCE",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [
+        "server/packages/frappe-model/src/notification-rules.ts",
+        "server/packages/frappe-api/src/notification-runner.ts",
+        "server/packages/frappe-api/src/email-queue.ts",
+        "server/migrations/tenant/0146_r7_email_queue.sql",
+        "tenant maintenance Email Queue runner"
+      ],
+      "evidence": [
+        "server/packages/frappe-model/src/notification-rules.ts",
+        "server/tests/notifications-auto-repeat.test.mjs",
+        "server/packages/frappe-api/src/notification-runner.ts",
+        "server/packages/frappe-api/src/email-queue.ts",
+        "server/packages/frappe-api/src/workflow-actions.ts",
+        "server/migrations/tenant/0146_r7_email_queue.sql",
+        "server/apps/tenant-worker/src/index-core-base.ts",
+        "server/apps/tenant-worker/test/frappe-facade.integration.test.mts",
+        "GitHub Actions R7 Frappe 16 Closure run 36970284103"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "Forge now implements committed Notification delivery plus durable Email Queue semantics: document-read authorization before disclosure, per-user channel preference, deterministic event/rule/recipient dedupe, durable Pending/Sending/Sent/Error state, bounded exponential retry, stale-claim recovery, provider message evidence, workflow-action email enqueue, and tenant-maintenance delivery. Forge intentionally uses a trusted provider-neutral HTTPS relay instead of Frappe SMTP/Email Account internals and keeps arbitrary Jinja/Python email execution outside the multi-tenant runtime. With no relay configured, mail remains visibly Pending and maintenance reports configured=false; the platform never records a fake send."
+    },
+    {
+      "domain_id": "FRAPPE-18-HOOKS-AND-APP-COMPOSITION",
+      "name": "Hooks and app composition",
+      "lane": "R7-09",
+      "classification": "INTENTIONAL_DIFFERENCE",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [
+        "server/packages/app-registry",
+        "server/packages/document-kernel controller registry",
+        "outbox subscribers"
+      ],
+      "evidence": [
+        "server/docs/spec/technical/controller-compatibility.md",
+        "server/FEATURE_MATRIX_v1.0.0.md"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "Forge intentionally does not execute arbitrary Python hooks/monkey patches. Controller overrides, ordered document events and app composition are represented by versioned registries and deterministic pre-commit/outbox phases."
+    },
+    {
+      "domain_id": "FRAPPE-19-MIGRATIONS-AND-PATCHES",
+      "name": "Migrations and patches",
+      "lane": "R7-07",
+      "classification": "INTENTIONAL_DIFFERENCE",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [
+        "server/migrations",
+        "server/scripts/migrate-tenant.mjs",
+        "server/packages/app-registry",
+        "D1 PITR/backup/restore tooling",
+        "server/scripts/lib/d1-migration-journal.mjs",
+        "server/scripts/lib/d1-migration-reconciliation.mjs"
+      ],
+      "evidence": [
+        "server/scripts/migrate-tenant.mjs",
+        "server/migrations/tenant/0053_migration_run_journal.sql",
+        "docs/ops/CLOUDFLARE_PRODUCTION_GOVERNANCE.md",
+        "docs/agents/rc/RC3_A3_SRE_CLOUDFLARE_EVIDENCE.md",
+        "Frappe v16.19.0 frappe/modules/patch_handler.py",
+        "Frappe v16.19.0 frappe/migrate.py",
+        "server/scripts/d1-migrate-remote.mjs",
+        "server/scripts/d1-reconcile-migrations.mjs",
+        "server/tests/d1-migration-journal.test.mjs",
+        "server/tests/d1-migration-reconciliation.test.mjs",
+        "server/docs/ops/D1_MIGRATION_RECONCILIATION.md",
+        "docs/agents/r7/R7_MIGRATION_SOURCE_REVIEW.json"
+      ],
+      "oracle_cases": [],
+      "rationale": "Pinned Frappe commits each patch body and Patch Log transactionally inside its database. Forge cannot honestly make Wrangler remote SQL transport and its D1 journal receipt one provider transaction, so it uses a deliberate fail-closed contract instead: exact SQL bytes/SHA256 are reserved before transport, uncertain outcomes cannot be replayed automatically, and any retry after uncertainty requires immutable operator evidence and one-use reconciliation. Provider deployment rollback remains a release/operations control and is not claimed by this source-only R7 lane."
+    },
+    {
+      "domain_id": "FRAPPE-20-DESK-BOOT-AND-NAVIGATION",
+      "name": "Desk boot and navigation",
+      "lane": "R7-06",
+      "classification": "SEMANTIC_PARITY",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [
+        "server/packages/frappe-api Desk facade",
+        "MetaForge runtime"
+      ],
+      "evidence": [
+        "docs/API_SURFACE.md",
+        "docs/VERIFICATION.md",
+        "server/apps/tenant-worker/test/frappe-facade.integration.test.mts"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "Boot, workspace/desktop navigation and permission-filtered client contract are exposed through the Frappe-shaped facade and have browser/integration evidence."
+    },
+    {
+      "domain_id": "FRAPPE-21-FORM-RUNTIME",
+      "name": "Form runtime",
+      "lane": "R7-06",
+      "classification": "SEMANTIC_PARITY",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [
+        "MetaForge form runtime",
+        "Frappe adapter",
+        "server metadata/document contract"
+      ],
+      "evidence": [
+        "client/docs/brd-screens/11-form-view.md",
+        "client/docs/brd-flows/00-core-flows.md",
+        "server/tests/client-contract.test.mjs"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "Field rendering, depends_on/fetch behavior, trusted Client Script compatibility execution, child grids and optimistic save/conflict behavior are represented in the current form contract."
+    },
+    {
+      "domain_id": "FRAPPE-22-LIST-REPORT-DASHBOARD-RUNTIME",
+      "name": "List/report/dashboard runtime",
+      "lane": "R7-06",
+      "classification": "SEMANTIC_PARITY",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [
+        "server/packages/frappe-api/src/desk-surfaces.ts",
+        "server/packages/query",
+        "MetaForge list/report/dashboard surfaces"
+      ],
+      "evidence": [
+        "client/docs/technical/api-map.md",
+        "server/apps/tenant-worker/test/frappe-facade.integration.test.mts",
+        "server/packages/frappe-api/src/desk-surfaces.ts"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "List/report execution, prepared-report fallback/async semantics, dashboard charts and number cards are exposed through the current Frappe-shaped client contract."
+    },
+    {
+      "domain_id": "FRAPPE-23-WEBSITE-AND-PORTAL",
+      "name": "Website and portal",
+      "lane": "R7-06",
+      "classification": "INTENTIONAL_DIFFERENCE",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [
+        "server/packages/frappe-api/src/website-router.ts",
+        "Portal User metadata foundation",
+        "server/packages/frappe-api/src/web-form-portal.ts",
+        "server/packages/frappe-api/src/website-response.ts"
+      ],
+      "evidence": [
+        "server/BUILD_REPORT.md",
+        "server/scripts/generate-verification.py",
+        "server/packages/frappe-api/src/website-router.ts",
+        "server/packages/frappe-api/src/website-response.ts",
+        "server/packages/frappe-api/src/web-form-portal.ts",
+        "server/packages/frappe-api/src/web-form-routes.ts",
+        "server/packages/frappe-model/src/web-form.ts",
+        "server/migrations/tenant/0147_r7_web_form_portal.sql",
+        "server/tests/website-response.test.mjs",
+        "server/tests/web-form-portal.test.mjs",
+        "docs/agents/r7/R7_WEBSITE_SOURCE_REVIEW.json"
+      ],
+      "oracle_cases": [],
+      "rationale": "Pinned Frappe exposes dynamic/nested website templates, Python/Jinja controller context, role-derived portal menus, owner Web Form self-service and hard deletion. Forge deliberately exposes a bounded data-defined published website plus owner-scoped Web Form read/list/update. Arbitrary server-side Python/Jinja and role-derived public navigation are not extension surfaces; portal hard-delete and authenticated single-entry creation fail with 501 until canonical versioned delete/uniqueness primitives exist, rather than bypassing kernel OCC/idempotency/audit. This row claims the reviewed intentional difference, not template/runtime parity."
+    },
+    {
+      "domain_id": "FRAPPE-24-LOCALIZATION",
+      "name": "Localization",
+      "lane": "R7-06",
+      "classification": "SEMANTIC_PARITY",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [
+        "server/packages/frappe-api/src/translations.ts",
+        "Frappe boot language/time_zone/sysdefaults",
+        "client/packages/core/src/i18n/format.ts"
+      ],
+      "evidence": [
+        "server/packages/frappe-api/src/translations.ts",
+        "server/apps/tenant-worker/test/frappe-facade.integration.test.mts",
+        "client/packages/core/src/i18n/format.ts",
+        "client/apps/demo/src/selfcheck.ts",
+        "client/I18N_MODEL.md"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "The declared framework behaviors are covered semantically: tenant/user language and timezone travel in boot/session state; tenant translations override platform fallback; number/date/currency formatting is driven by boot sysdefaults with tested Frappe-style formats. Implementation is TypeScript/D1 rather than Frappe Python/Babel."
+    },
+    {
+      "domain_id": "FRAPPE-25-AUDIT-AND-COLLABORATION",
+      "name": "Audit and collaboration",
+      "lane": "R7-05",
+      "classification": "SEMANTIC_PARITY",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [
+        "server/packages/frappe-model/src/services.ts",
+        "Document Kernel version history",
+        "frappe-api collaboration methods"
+      ],
+      "evidence": [
+        "server/packages/frappe-model/src/services.ts",
+        "docs/API_SURFACE.md",
+        "docs/VERIFICATION.md"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "Version history, comments, assignments/ToDo-like state, tags, shares and timeline composition are implemented with immutable/permission-aware Forge storage semantics."
+    },
+    {
+      "domain_id": "FRAPPE-26-INTEGRATIONS",
+      "name": "Integrations",
+      "lane": "R7-08",
+      "classification": "INTENTIONAL_DIFFERENCE",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [
+        "integration hub",
+        "social ingress",
+        "outbox",
+        "server/packages/integration-hub/src/durable-delivery.ts",
+        "server/packages/integration-hub/src/connected-app.ts",
+        "server/apps/tenant-worker/src/integration-runtime.ts",
+        "server/packages/frappe-api/src/integration-methods.ts"
+      ],
+      "evidence": [
+        "docs/agents/workstreams/WS10-integration-hub.md",
+        "server/apps/social-ingress-worker",
+        "server/packages/integration-hub/src/durable-delivery.ts",
+        "server/packages/integration-hub/src/executor.ts",
+        "server/packages/integration-hub/src/connected-app.ts",
+        "server/packages/integration-hub/src/connected-app-store.ts",
+        "server/apps/tenant-worker/src/integration-runtime.ts",
+        "server/apps/tenant-worker/src/index-core-base.ts",
+        "server/packages/frappe-api/src/integration-methods.ts",
+        "server/migrations/tenant/0148_r7_webhook_delivery.sql",
+        "server/migrations/tenant/0149_r7_connected_apps.sql",
+        "server/tests/r7-webhook-delivery.test.mjs",
+        "server/tests/r7-connected-app.test.mjs",
+        "server/tests/r7-integration-runtime.test.mjs",
+        "server/tests/r7-integration-api.test.mjs",
+        "server/tests/integration-webhook-target-policy.test.mjs",
+        "server/apps/tenant-worker/test/frappe-facade.integration.test.mts",
+        "docs/agents/r7/R7_INTEGRATION_SOURCE_REVIEW.json",
+        "server/packages/integration-hub/src/subscription-store.ts"
+      ],
+      "oracle_cases": [],
+      "rationale": "Frappe Connected App user authorization/refresh plus backend client-credentials token acquisition are covered by Forge's encrypted tenant/user-or-service-principal cache, CAS/lease refresh and trusted runtime binding. Remaining Frappe integration flexibility is deliberately narrower: Forge does not execute webhook safe_eval/Jinja, dynamic URLs or arbitrary methods/headers, and it does not discover or invoke provider revocation/introspection endpoints from browser input. Instead it uses operator-pinned HTTPS endpoints/hosts, fixed JSON POST envelopes, trusted credential references, durable retry/dead-letter/replay and local disconnect tombstones. The residual behavior is an explicit security/operations difference, not an unverified parity claim."
+    },
+    {
+      "domain_id": "FRAPPE-27-SECURITY-BOUNDARIES",
+      "name": "Security boundaries",
+      "lane": "R7-03",
+      "classification": "INTENTIONAL_DIFFERENCE",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [
+        "policy/expression DSL",
+        "tenant/auth/permission kernel",
+        "Cloudflare isolation boundaries"
+      ],
+      "evidence": [
+        "server/docs/spec/technical/controller-compatibility.md",
+        "docs/agents/rc/RC-04-kernel-auth.md",
+        "skills/forge-enterprise-completion/SKILL.md"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "Forge intentionally refuses arbitrary Python safe_exec/raw SQL/implicit global state in Workers and replaces them with allowlisted DSLs, typed errors, trusted tenant identity, server-side authorization and bounded execution."
+    },
+    {
+      "domain_id": "FRAPPE-28-TESTING-FRAMEWORK",
+      "name": "Testing framework",
+      "lane": "R7-10",
+      "classification": "OUT_OF_SCOPE",
+      "upstream_sha": "ba18090b141740e75d52aa97bfc525ff2f831f6c",
+      "forge_authority": [
+        "server/tests",
+        "validation",
+        "Cloudflare/Vitest/Node test infrastructure"
+      ],
+      "evidence": [
+        "docs/VALIDATION_GATES.md",
+        "skills/forge-enterprise-completion/SKILL.md"
+      ],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "Frappe's internal Python unit/integration test framework is a developer implementation facility, not an observable production platform contract required for Forge clients. R7 still requires Forge-native tests/oracles for every in-scope domain."
+    }
+  ]
+}

@@ -52,6 +52,46 @@ export class D1SessionRegistry {
     ).bind(tenantId, sessionId, userId, issuedAt, expiresAt).run();
   }
 
+  async registerImpersonated(
+    tenantId: string,
+    targetUserId: string,
+    sessionId: string,
+    issuedAt: string,
+    expiresAt: string,
+    audit: SessionAuditContext,
+  ): Promise<void> {
+    assertSessionId(sessionId);
+    const issuedMs = assertIso(issuedAt, "issued_at");
+    const expiresMs = assertIso(expiresAt, "expires_at");
+    if (expiresMs <= issuedMs) throw errors.validation("Session expiry must be after issuance");
+    const reason = audit.reason?.trim();
+    if (!reason) throw errors.validation("A reason is required for support impersonation");
+    if (reason.length > 500) throw errors.validation("Impersonation reason is too long");
+    if (audit.actorUserId === targetUserId) throw errors.validation("Cannot impersonate your own account");
+    const eventId = randomId("rbac");
+
+    await this.db.batch([
+      this.db.prepare(
+        `INSERT INTO user_sessions(
+           tenant_id,session_id,user_id,issued_at,expires_at,last_seen_at
+         ) VALUES(?1,?2,?3,?4,?5,?4)`,
+      ).bind(tenantId, sessionId, targetUserId, issuedAt, expiresAt),
+      this.db.prepare(
+        `INSERT INTO rbac_audit_events(
+           tenant_id,event_id,event_type,actor_user_id,target_user_id,
+           before_json,after_json,reason,source,trace_id,created_at
+         ) VALUES(
+           ?1,?2,'support.impersonation.start',?3,?4,'null',
+           json_object('session_id',?5,'expires_at',?6),
+           ?7,?8,?9,?10
+         )`,
+      ).bind(
+        tenantId, eventId, audit.actorUserId, targetUserId, sessionId, expiresAt,
+        reason, audit.source, audit.traceId, issuedAt,
+      ),
+    ]);
+  }
+
   async assertActive(
     tenantId: string,
     userId: string,

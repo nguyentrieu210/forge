@@ -2,6 +2,7 @@ import type { JsonObject, JsonValue } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
 import type { DocFieldMeta, DocPermissionMeta, DocTypeKind, DocTypeMeta, DocTypeView, DocTypeViewPolicy, MetaFieldType, WorkflowMeta } from "./types.js";
 import { assertFieldConditionSupported } from "./field-condition.js";
+import { assertWorkflowConditionSupported } from "./workflow-condition.js";
 import { parseBulkViewPolicy } from "./bulk-validate.js";
 import { parseMatrixViewPolicy } from "./matrix-validate.js";
 
@@ -399,11 +400,26 @@ export function validateWorkflow(value: unknown, expectedDoctype?: string): Work
   const states = array(input.states, "states").map((entry, index) => {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) throw errors.validation(`states[${index}] must be an object`);
     const state = entry as Record<string, unknown>;
+    const updateField = state.update_field === undefined || state.update_field === ""
+      ? undefined
+      : identifier(state.update_field, `states[${index}].update_field`);
+    const evaluateAsExpression = bool(state.evaluate_as_expression, false);
+    const updateValue = state.update_value === undefined
+      ? ""
+      : workflowUpdateScalar(state.update_value, `states[${index}].update_value`);
+    if (evaluateAsExpression) {
+      if (!updateField) throw errors.validation(`states[${index}].evaluate_as_expression requires update_field`);
+      if (typeof updateValue !== "string" || !/^doc\.[A-Za-z_][A-Za-z0-9_]*$/.test(updateValue.trim())) {
+        throw errors.validation(`states[${index}].update_value expression must be a direct doc.<field> reference`);
+      }
+    }
     return {
       state: text(state.state, `states[${index}].state`, 120),
       docstatus: safeInt(state.docstatus, `states[${index}].docstatus`, 0, 2) as 0 | 1 | 2,
       ...(state.allow_edit === undefined ? {} : { allow_edit: text(state.allow_edit, `states[${index}].allow_edit`, 120) }),
       ...(state.style === undefined ? {} : { style: text(state.style, `states[${index}].style`, 80) }),
+      ...(updateField ? { update_field: updateField, update_value: updateValue, evaluate_as_expression: evaluateAsExpression } : {}),
+      send_email: bool(state.send_email, false),
     };
   });
   const transitions = array(input.transitions, "transitions").map((entry, index) => {
@@ -414,7 +430,11 @@ export function validateWorkflow(value: unknown, expectedDoctype?: string): Work
       action: text(transition.action, `transitions[${index}].action`, 120),
       next_state: text(transition.next_state, `transitions[${index}].next_state`, 120),
       allowed_role: text(transition.allowed_role, `transitions[${index}].allowed_role`, 120),
-      ...(transition.condition === undefined ? {} : { condition: text(transition.condition, `transitions[${index}].condition`, 1000) }),
+      ...(transition.condition === undefined ? {} : (() => {
+        const condition = text(transition.condition, `transitions[${index}].condition`, 1000);
+        assertWorkflowConditionSupported(condition);
+        return { condition };
+      })()),
       allow_self_approval: bool(transition.allow_self_approval, false),
     };
   });
@@ -427,6 +447,7 @@ export function validateWorkflow(value: unknown, expectedDoctype?: string): Work
     document_type: documentType,
     state_field: identifier(input.state_field ?? "workflow_state", "state_field"),
     is_active: bool(input.is_active, true),
+    send_email_alert: bool(input.send_email_alert, false),
     states,
     transitions,
     revision: safeInt(input.revision ?? 1, "revision", 1, Number.MAX_SAFE_INTEGER),
@@ -440,6 +461,12 @@ function array(value: unknown, field: string): unknown[] {
   if (!Array.isArray(value)) throw errors.validation(`${field} must be an array`);
   return value;
 }
+function workflowUpdateScalar(value: unknown, field: string): JsonValue {
+  if (value === null || typeof value === "string" || typeof value === "boolean") return value;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  throw errors.validation(`${field} must be a scalar JSON value`);
+}
+
 function text(value: unknown, field: string, max: number): string {
   if (typeof value !== "string" || !value.trim() || value.length > max) throw errors.validation(`${field} must be a non-empty string up to ${max} characters`);
   return value.trim();

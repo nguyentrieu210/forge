@@ -109,6 +109,41 @@ export function resourceResponse(value: unknown, status = 200, headers?: Record<
   return new Response(JSON.stringify({ data: value ?? null }), { status, headers: { ...JSON_HEADERS, ...headers } });
 }
 
+/** Frappe v16 REST v2 success envelope. */
+export function v2DataResponse(
+  value: unknown,
+  status = 200,
+  extra: JsonObject = {},
+  headers?: Record<string, string>,
+): Response {
+  return new Response(JSON.stringify({ data: value ?? null, ...extra }), {
+    status,
+    headers: { ...JSON_HEADERS, ...headers },
+  });
+}
+
+/**
+ * Frappe v16 REST v2 error envelope.
+ *
+ * Forge never serializes an internal stack trace. The public contract keeps the
+ * v2 `errors[]` shape/type/message while the trace id remains the operator lookup key.
+ */
+export function v2FaultResponse(error: unknown, traceId: string): Response {
+  const normalized = asCloudForgeError(error);
+  const fault = FAULTS[normalized.code] ?? {
+    exc_type: "ValidationError" as const,
+    status: normalized.status >= 500 ? normalized.status : 417,
+  };
+  const status = normalized.status >= 500 ? normalized.status : fault.status;
+  return new Response(JSON.stringify({
+    errors: [{ type: fault.exc_type, message: normalized.message }],
+    _trace_id: traceId,
+  }), {
+    status,
+    headers: { ...JSON_HEADERS, "x-cloudforge-trace-id": traceId },
+  });
+}
+
 /**
  * Kernel error → Frappe fault response.
  *

@@ -45,6 +45,8 @@ interface SessionPayload {
   c: string;
   /** Opaque revocable session id for registry-backed sessions. */
   s?: string;
+  /** Original operator for an audited support impersonation session. */
+  p?: string;
   l?: string;
   z?: string;
 }
@@ -58,6 +60,8 @@ export interface Session {
   authenticatedAt: number;
   /** Absent only for legacy cookies minted before the session registry rollout. */
   sessionId?: string;
+  /** Original operator for an audited support impersonation session. */
+  impersonatorUserId?: string;
 }
 
 export interface MintSessionInput {
@@ -74,6 +78,8 @@ export interface MintSessionInput {
   sessionId?: string;
   /** Preserved when extending a session; omitted only for a real password login. */
   authenticatedAt?: number;
+  /** Original operator when minting/refreshing an impersonated session. */
+  impersonatorUserId?: string;
 }
 
 export interface MintedSession {
@@ -89,6 +95,10 @@ export async function mintSession(input: MintSessionInput): Promise<MintedSessio
   if (input.sessionId !== undefined && !isSessionId(input.sessionId)) {
     throw errors.authentication("Session id is invalid");
   }
+  if (input.impersonatorUserId !== undefined
+      && (!input.impersonatorUserId.trim() || input.impersonatorUserId.length > 320)) {
+    throw errors.authentication("Impersonator user id is invalid");
+  }
   const payload: SessionPayload = {
     v: 1,
     t: input.tenantId,
@@ -99,6 +109,7 @@ export async function mintSession(input: MintSessionInput): Promise<MintedSessio
     i: input.authenticatedAt ?? now,
     c: randomToken(),
     ...(input.sessionId ? { s: input.sessionId } : {}),
+    ...(input.impersonatorUserId ? { p: input.impersonatorUserId } : {}),
     ...(input.language ? { l: input.language } : {}),
     ...(input.timezone ? { z: input.timezone } : {}),
   };
@@ -135,6 +146,9 @@ export async function verifySession(sid: string, tenantId: string, secret: strin
   if (typeof payload.u !== "string" || !payload.u) throw errors.authentication("Session is invalid");
   if (!Array.isArray(payload.r) || payload.r.some((role) => typeof role !== "string")) throw errors.authentication("Session is invalid");
   if (payload.s !== undefined && !isSessionId(payload.s)) throw errors.authentication("Session is invalid");
+  if (payload.p !== undefined && (typeof payload.p !== "string" || !payload.p.trim() || payload.p.length > 320)) {
+    throw errors.authentication("Session is invalid");
+  }
 
   return {
     tenantId: payload.t,
@@ -143,12 +157,14 @@ export async function verifySession(sid: string, tenantId: string, secret: strin
       roles: [...payload.r],
       ...(payload.l ? { locale: payload.l } : {}),
       ...(payload.z ? { timezone: payload.z } : {}),
+      ...(payload.p ? { impersonator_user_id: payload.p } : {}),
     },
     epoch: typeof payload.e === "number" ? payload.e : 0,
     csrfToken: typeof payload.c === "string" ? payload.c : "",
     expiresAt: payload.x,
     authenticatedAt: payload.i,
     ...(payload.s ? { sessionId: payload.s } : {}),
+    ...(payload.p ? { impersonatorUserId: payload.p } : {}),
   };
 }
 

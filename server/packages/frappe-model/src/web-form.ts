@@ -6,7 +6,8 @@
  * grants nothing by itself.
  *
  * THE DESIGN DECISION THAT MATTERS: there is NO permission bypass. A submission runs as
- * `submit_as_role`, and the tenant must grant that role `create` on the doctype through
+ * `submit_as_role` for guests; signed-in submissions keep their trusted actor. The
+ * tenant must grant the relevant actor `create` on the doctype through
  * ordinary DocPerm. If they have not, the submission is refused by the same permission
  * layer that governs every other write. A Web Form can therefore never do more than the
  * tenant already decided that role may do — and revoking it is the same action as
@@ -31,6 +32,10 @@ export interface WebFormDefinition {
   submit_as_role: string;
   login_required: boolean;
   published: boolean;
+  allow_edit: boolean;
+  allow_delete: boolean;
+  allow_multiple: boolean;
+  show_list: boolean;
   max_per_day: number;
 }
 
@@ -71,6 +76,10 @@ export function parseWebForm(value: unknown): WebFormDefinition {
     // Unpublished by default: a form that went live the moment it was saved would be a
     // public endpoint nobody meant to open yet.
     published: input.published === true,
+    allow_edit: input.allow_edit === true,
+    allow_delete: input.allow_delete === true,
+    allow_multiple: input.allow_multiple === true,
+    show_list: input.show_list === true,
   };
 }
 
@@ -139,3 +148,4 @@ function text(value: unknown, field: string, max: number): string {
   }
   return value.trim();
 }
+

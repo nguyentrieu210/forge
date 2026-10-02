@@ -8,11 +8,9 @@
  * change whether the write should have happened, so running it before would only add
  * latency and a way for a rule to break a save.
  *
- * WHY NOT EMAIL. No mail transport is configured on this platform. A rule that claimed
- * to send mail would be a promise about something the user believes reached someone —
- * the same reason `communication.email.make` is refused outright rather than stubbed. A
- * rule may DECLARE `channel: "Email"`; it is then recorded and skipped, so the intent
- * survives for the day a transport exists and nobody is misled meanwhile.
+ * EMAIL follows the same after-commit rule but is not claimed as delivered here.
+ * Matching produces an intent; frappe-api authorizes the recipient and writes the durable
+ * Email Queue. Physical transport is a separately retried maintenance concern.
  */
 
 import type { JsonObject, JsonValue } from "../../contracts/src/index.js";
@@ -90,8 +88,8 @@ export interface PendingNotification {
   rule: string;
   for_user: string;
   subject: string;
+  message: string;
   channel: string;
-  skipped_reason?: string;
 }
 
 /**
@@ -117,10 +115,8 @@ export function notificationsFor(
         rule: rule.name,
         for_user: recipient,
         subject: interpolate(rule.subject || `${doctype} ${event}`, document),
+        message: interpolate(rule.message || rule.subject || `${doctype} ${event}`, document),
         channel: rule.channel,
-        // Recorded, not silently dropped: the tenant declared an intent this platform
-        // cannot honour, and that should be visible rather than look like delivery.
-        ...(rule.channel === "Email" ? { skipped_reason: "No mail transport is configured on this platform" } : {}),
       });
     }
   }

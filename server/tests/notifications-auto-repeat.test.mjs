@@ -59,13 +59,16 @@ test("a disabled rule is inert", () => {
   assert.equal(notificationsFor([rule({ enabled: false })], "submitted", "Leave Application", { approver: "m" }).length, 0);
 });
 
-test("an Email rule is recorded as skipped, never as delivered", () => {
-  // No mail transport exists here. Claiming delivery would be a promise about something
-  // the user believes reached a person — the same reason the email method is refused
-  // outright rather than stubbed.
-  const pending = notificationsFor([rule({ channel: "Email" })], "submitted", "Leave Application", { approver: "m" });
+test("an Email rule produces a durable-delivery intent instead of a fake send", () => {
+  const pending = notificationsFor(
+    [rule({ channel: "Email", message: "Duyệt {{ employee }}" })],
+    "submitted",
+    "Leave Application",
+    { approver: "manager@example.com", employee: "NV-1" },
+  );
   assert.equal(pending.length, 1);
-  assert.match(pending[0].skipped_reason ?? "", /no mail transport/i);
+  assert.equal(pending[0].channel, "Email");
+  assert.equal(pending[0].message, "Duyệt NV-1");
 });
 
 test("a recipient field that is empty produces no phantom notification", () => {

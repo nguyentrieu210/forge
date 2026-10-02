@@ -5,8 +5,8 @@
  * part that reads the form, enforces the ceiling, and runs the write — the only code
  * path on this platform an unauthenticated visitor can reach.
  *
- * THE GRANT COMES FROM DocPerm, NOT FROM HERE. A submission runs as an actor carrying
- * the form's `submit_as_role` and nothing else, and the ordinary permission layer then
+ * THE GRANT COMES FROM DocPerm, NOT FROM HERE. A guest submission carries the form's
+ * `submit_as_role`; a signed-in submission keeps its trusted actor. The permission layer
  * decides. If the tenant has not given that role `create` on the doctype, the write is
  * refused exactly as any other unauthorised write would be. There is no bypass to
  * remember, and revoking the role is the same action in the same place as always.
@@ -14,7 +14,7 @@
 
 import type { Actor, JsonObject } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
-import { acceptWebFormPayload, parseWebForm, visitorKey, type WebFormDefinition } from "../../frappe-model/src/index.js";
+import { acceptWebFormPayload, parseWebForm, visitorKey, type WebFormDefinition } from "../../frappe-model/src/web-form.js";
 import { isWebsitePath } from "./website.js";
 
 export const WEB_FORM_GET = "/api/method/metaforge.api.get_web_form";
@@ -48,12 +48,14 @@ export interface WebFormStore {
 export async function loadPublishedForm(store: WebFormStore, route: string): Promise<WebFormDefinition> {
   const row = await store.db.prepare(
     `SELECT name, route, doc_type, title, introduction, success_message, fields_json,
-            submit_as_role, login_required, published, max_per_day
+            submit_as_role, login_required, published, max_per_day,
+            allow_edit, allow_delete, allow_multiple, show_list
      FROM web_forms WHERE tenant_id=?1 AND route=?2 AND published=1`,
   ).bind(store.tenantId, route).first<{
     name: string; route: string; doc_type: string; title: string; introduction: string;
     success_message: string; fields_json: string; submit_as_role: string;
     login_required: number; published: number; max_per_day: number;
+    allow_edit: number; allow_delete: number; allow_multiple: number; show_list: number;
   }>();
   if (!row) throw errors.notFound("No such form");
 
@@ -62,6 +64,10 @@ export async function loadPublishedForm(store: WebFormStore, route: string): Pro
     fields: JSON.parse(row.fields_json) as string[],
     login_required: row.login_required === 1,
     published: true,
+    allow_edit: row.allow_edit === 1,
+    allow_delete: row.allow_delete === 1,
+    allow_multiple: row.allow_multiple === 1,
+    show_list: row.show_list === 1,
   });
 }
 
@@ -75,6 +81,10 @@ export function publicFormShape(form: WebFormDefinition): JsonObject {
     introduction: form.introduction,
     fields: form.fields,
     login_required: form.login_required,
+    allow_edit: form.allow_edit,
+    allow_delete: form.allow_delete,
+    allow_multiple: form.allow_multiple,
+    show_list: form.show_list,
     // `submit_as_role` and `max_per_day` are deliberately absent: they tell an attacker
     // which role to target and how much room they have before the ceiling stops them.
   };
@@ -132,11 +142,12 @@ export async function consumeSubmissionAllowance(
 /**
  * The actor a submission runs as.
  *
- * Guest, carrying ONLY the role the form names. Not the visitor's own session even when
- * they have one: a form must behave the same for everybody, or an internal user filling
- * in a public form would silently write with their own, larger rights.
+ * A trusted signed-in actor retains their identity and ordinary DocPerm rights.
+ * Anonymous submissions carry only the form role. Never merge the form role into a
+ * signed-in session: the published form must not grant that user extra privileges.
  */
-export function submissionActor(form: WebFormDefinition): Actor {
+export function submissionActor(form: WebFormDefinition, authenticated?: Actor): Actor {
+  if (authenticated && authenticated.user_id !== "Guest") return authenticated;
   return { user_id: "Guest", roles: [form.submit_as_role] };
 }
 
@@ -148,3 +159,4 @@ export function submissionDocument(
 ): JsonObject {
   return acceptWebFormPayload(form, meta, submitted);
 }
+

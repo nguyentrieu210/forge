@@ -10,6 +10,7 @@ import { errors } from "../../core/src/index.js";
 import { D1MfaService, type MfaKeyRing } from "./mfa.js";
 import { D1RbacAdministrationService } from "./rbac-administration.js";
 import { D1SessionRegistry } from "./session-registry.js";
+import { D1ApiCredentialStore } from "./api-credentials.js";
 
 export interface UserRecord {
   user_id: string;
@@ -42,12 +43,15 @@ export { D1MfaService } from "./mfa.js";
 export type { MfaAuditContext, MfaConfirmation, MfaEnrollment, MfaKey, MfaKeyRing, MfaStatus } from "./mfa.js";
 export { D1SessionRegistry } from "./session-registry.js";
 export type { RegisteredUserSession, SessionAuditContext } from "./session-registry.js";
+export { D1ApiCredentialStore } from "./api-credentials.js";
+export type { ApiCredentialAuditContext, ApiCredentialRecord } from "./api-credentials.js";
 
 export class D1UserStore {
   private readonly db: D1Database | D1DatabaseSession;
   readonly administration: D1RbacAdministrationService;
   readonly sessions: D1SessionRegistry;
   readonly mfa: D1MfaService;
+  readonly apiCredentials: D1ApiCredentialStore;
 
   constructor(db: D1Database, mfaKeys?: MfaKeyRing) {
     // Authentication must never read a stale replica: a just-revoked session, consumed
@@ -56,6 +60,7 @@ export class D1UserStore {
     this.administration = new D1RbacAdministrationService(db);
     this.sessions = new D1SessionRegistry(db);
     this.mfa = new D1MfaService(db, mfaKeys);
+    this.apiCredentials = new D1ApiCredentialStore(db);
   }
 
   async findByLogin(tenantId: string, login: string): Promise<{ user: UserRecord; passwordHash: string } | null> {

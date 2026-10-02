@@ -41,6 +41,19 @@ export interface EstablishedSession {
   refreshedCookie?: string;
 }
 
+export interface EstablishedApiCredential {
+  user: AuthenticatedUser;
+  actor: Actor;
+  credentialId: string;
+}
+
+export interface ImpersonatedSession {
+  user: AuthenticatedUser;
+  actor: Actor;
+  cookie: string;
+  csrfToken: string;
+}
+
 /**
  * Resolves the caller's session from the `sid` cookie.
  *
@@ -65,8 +78,137 @@ export async function establishSession(request: Request, context: AuthRouteConte
     roles: user.roles,
     ...(user.language ? { locale: user.language } : {}),
     ...(user.time_zone ? { timezone: user.time_zone } : {}),
+    ...(session.impersonatorUserId ? { impersonator_user_id: session.impersonatorUserId } : {}),
   };
   return { session, user, actor };
+}
+
+export async function establishFrappeApiCredential(
+  request: Request,
+  context: AuthRouteContext,
+): Promise<EstablishedApiCredential | null> {
+  const authorization = request.headers.get("authorization")?.trim() ?? "";
+  if (!authorization) return null;
+
+  const separator = authorization.indexOf(" ");
+  if (separator <= 0) return null;
+  const scheme = authorization.slice(0, separator).toLowerCase();
+  const encoded = authorization.slice(separator + 1).trim();
+  if (scheme !== "token" && scheme !== "basic") return null;
+  if (!encoded) throw errors.authentication("Invalid API credential");
+
+  let apiKey = "";
+  let apiSecret = "";
+  if (scheme === "basic") {
+    let decoded = "";
+    try { decoded = atob(encoded); }
+    catch { throw errors.authentication("Invalid API credential"); }
+    const colon = decoded.indexOf(":");
+    if (colon <= 0) throw errors.authentication("Invalid API credential");
+    apiKey = decoded.slice(0, colon);
+    apiSecret = decoded.slice(colon + 1);
+  } else {
+    const colon = encoded.indexOf(":");
+    if (colon <= 0) throw errors.authentication("Invalid API credential");
+    apiKey = encoded.slice(0, colon);
+    apiSecret = encoded.slice(colon + 1);
+  }
+  if (!apiKey || !apiSecret) throw errors.authentication("Invalid API credential");
+
+  const credentials = (context.users as D1UserStore & {
+    apiCredentials?: {
+      authenticate(tenantId: string, apiKey: string, apiSecret: string, now: string):
+        Promise<{ userId: string; credentialId: string } | null>;
+    };
+  }).apiCredentials;
+  if (!credentials) throw errors.misconfigured("API credential authority is unavailable");
+
+  const authenticated = await credentials.authenticate(
+    context.tenantId, apiKey, apiSecret, context.now(),
+  );
+  if (!authenticated) throw errors.authentication("Invalid API credential");
+
+  const user = await context.users.get(context.tenantId, authenticated.userId);
+  if (!user || !user.enabled) throw errors.authentication("API credential user is disabled or missing");
+  const roles = await context.users.listRoles(context.tenantId, user.user_id);
+  const authenticatedUser: AuthenticatedUser = { ...user, roles };
+  const actor: Actor = {
+    user_id: user.user_id,
+    roles,
+    ...(user.language ? { locale: user.language } : {}),
+    ...(user.time_zone ? { timezone: user.time_zone } : {}),
+  };
+  return { user: authenticatedUser, actor, credentialId: authenticated.credentialId };
+}
+
+export async function mintImpersonatedSession(
+  context: AuthRouteContext,
+  established: EstablishedSession,
+  targetUserId: string,
+  reasonInput: string,
+): Promise<ImpersonatedSession> {
+  const reason = reasonInput.trim();
+  if (!reason) throw errors.validation("A reason is required for support impersonation");
+  if (reason.length > 500) throw errors.validation("Impersonation reason is too long");
+  if (established.session.impersonatorUserId || established.actor.impersonator_user_id) {
+    throw errors.permission("Nested impersonation is not allowed");
+  }
+
+  const source = established.user;
+  const privileged = source.user_id === "Administrator"
+    || source.roles.includes("Administrator")
+    || source.roles.includes("System Manager");
+  if (!privileged) throw errors.permission("System Manager is required to impersonate another user");
+
+  const targetId = targetUserId.trim();
+  if (!targetId || targetId === "Guest") throw errors.validation("A valid target user is required");
+  if (targetId === source.user_id) throw errors.validation("Cannot impersonate your own account");
+  const target = await context.users.get(context.tenantId, targetId);
+  if (!target || !target.enabled) throw errors.notFound("Enabled target user not found");
+
+  const sessions = optionalSessionRegistry(context.users);
+  if (!sessions) throw errors.misconfigured("Session registry is unavailable");
+
+  const roles = await context.users.listRoles(context.tenantId, target.user_id);
+  const now = context.now();
+  const nowSeconds = isoSeconds(now);
+  const sessionId = randomToken(18);
+  const minted = await mintSession({
+    tenantId: context.tenantId,
+    userId: target.user_id,
+    roles,
+    epoch: target.session_epoch,
+    secret: context.sessionSecret,
+    sessionId,
+    now: nowSeconds,
+    authenticatedAt: established.session.authenticatedAt,
+    impersonatorUserId: source.user_id,
+    ...(target.language ? { language: target.language } : {}),
+    ...(target.time_zone ? { timezone: target.time_zone } : {}),
+  });
+  await sessions.registerImpersonated(
+    context.tenantId,
+    target.user_id,
+    sessionId,
+    new Date(nowSeconds * 1000).toISOString(),
+    new Date(minted.expiresAt * 1000).toISOString(),
+    {
+      actorUserId: source.user_id,
+      traceId: context.traceId,
+      source: "frappe.core.doctype.user.user.impersonate",
+      reason,
+    },
+  );
+
+  const user: AuthenticatedUser = { ...target, roles };
+  const actor: Actor = {
+    user_id: target.user_id,
+    roles,
+    ...(target.language ? { locale: target.language } : {}),
+    ...(target.time_zone ? { timezone: target.time_zone } : {}),
+    impersonator_user_id: source.user_id,
+  };
+  return { user, actor, cookie: minted.cookie, csrfToken: minted.csrfToken };
 }
 
 export function assertSessionCsrf(request: Request, established: EstablishedSession): void {
@@ -242,6 +384,7 @@ export async function slideSession(established: EstablishedSession, context: Aut
     now: nowSeconds,
     authenticatedAt: established.session.authenticatedAt,
     ...(established.session.sessionId ? { sessionId: established.session.sessionId } : {}),
+    ...(established.session.impersonatorUserId ? { impersonatorUserId: established.session.impersonatorUserId } : {}),
   });
   if (established.session.sessionId) {
     const sessions = optionalSessionRegistry(context.users);

@@ -12,17 +12,17 @@
  */
 
 import {
-  appMethodTarget, areaTierBasisSqm, assertItemPriceTierIsUnambiguous, blocksSelfApproval, combinedNavigation, derivePurchaseQuantityAxis, dispatchAppMethod, errors, mergeCustomizations,
+  appMethodTarget, areaTierBasisSqm, assertItemPriceTierIsUnambiguous, blocksSelfApproval, combinedNavigation, derivePurchaseQuantityAxis, dispatchAppMethod, errors, evaluateWorkflowCondition, mergeCustomizations,
   navItemPath, parseCsvImport, parseCustomField, parseDocTypeMeta, parsePropertySetter, parseQueryRequest,
   permissionAllows, renderPrintFormat, resolveAutoname, sha256Hex, validateWorkflow,
   type Actor, type AppInstaller, type AppMethodEnv, type AppReportService, type AppReportSpec,
   type CanonicalDocument, type CustomFieldRecord, type CustomizationStore, type D1CollaborationService,
   type D1MutationStore, type D1ReportService, type D1SearchStore, type D1UserStore, type DocTypeMeta,
-  type DocumentAccessStore, type DocumentListService, type ExtendedPermissionAction, type JsonObject,
+  type DocumentAccessStore, type DocumentGroupProjection, type DocumentListService, type ExtendedPermissionAction, type JsonObject,
   type JsonValue, type ListFilter, type MetadataPermissionService, type MetadataStore, type MutationAction,
   type MutationCommand, type MutationReceipt, type PropertySetterRecord, type QueryFilter,
 } from "./router-platform.js";
-import { readFrappeArgs, type FrappeArgs } from "./args.js";
+import { FrappeArgs, readFrappeArgs } from "./args.js";
 import { VERTICAL_METHODS } from "./vertical-methods.js";
 import {
   assertDocumentAction, getReadableStoredDocument, isPlatformAdmin, loadReadable, loadWritable, workflowTransitionAccess,
@@ -43,8 +43,11 @@ import type { VerticalRouterHooks } from "./vertical-methods.js";
 import { LINK_DISPLAY_RULES } from "./vertical-display.js";
 import { assertModifiedMatches, buildCommand, stripServerOwnedFields } from "./command.js";
 import { fromFrappeDoc, toFrappeDoc, toFrappeListRow } from "./doc-shape.js";
-import { faultResponse, methodResponse, resourceResponse, responseFieldsResponse } from "./envelope.js";
+import { faultResponse, methodResponse, resourceResponse, responseFieldsResponse, v2DataResponse, v2FaultResponse } from "./envelope.js";
 import { consumeSubmissionAllowance, loadPublishedForm, publicFormShape, submissionActor, submissionDocument } from "./web-form-routes.js";
+import type { IntegrationApi } from "./integration-methods.js";
+import { CloudForgeError } from "../../core/src/index.js";
+import { WEB_FORM_READ, WEB_FORM_LIST, WEB_FORM_UPDATE, WEB_FORM_DELETE, webFormPortalRead, webFormPortalList, webFormPortalUpdate, webFormPortalDelete } from "./web-form-portal.js";
 import { handleUploadFile, matchFilePath, readFileContent, serveFile, UPLOAD_FILE_PATH, type FileStore } from "./files.js";
 import {
   assertStorefrontSpec, buildStorefrontOrder, consumeOrderAllowance, storefrontCatalog,
@@ -55,6 +58,7 @@ import {
   childDocTypeNames, maskedFieldNames, tableFieldNames, toFrappeDocType, toFrappeMetaBundle, toFrappeWorkflow,
 } from "./meta-shape.js";
 import { hashPassword, verifyPassword } from "./password.js";
+import { mintImpersonatedSession, type AuthRouteContext, type EstablishedSession } from "./auth-routes.js";
 import type { D1TranslationStore } from "./translations.js";
 import { assertKanbanField, type D1DeskViewStore } from "./desk-views.js";
 import {
@@ -73,7 +77,7 @@ import {
  * wire contract changes — otherwise a browser keeps serving documents shaped by
  * the previous contract after a deploy.
  */
-export const FORGE_CONTRACT_VERSION = "16.0.0-forge.3";
+export const FORGE_CONTRACT_VERSION = "16.0.0-forge.4";
 
 export interface FrappeRouterContext extends VerticalRouterHooks {
   tenantId: string;
@@ -101,6 +105,9 @@ export interface FrappeRouterContext extends VerticalRouterHooks {
   apps: AppInstaller;
   /** User directory, for roles, password changes and session revocation. */
   users: D1UserStore;
+  /** Present only for a browser cookie session; privileged identity-switching needs it. */
+  authContext?: AuthRouteContext;
+  establishedSession?: EstablishedSession;
   /** Global-search candidate index. Never an authorisation decision. */
   search: D1SearchStore;
   /** Server-defined report engine. */
@@ -132,6 +139,8 @@ export interface FrappeRouterContext extends VerticalRouterHooks {
   csrfToken: string;
   /** Epoch seconds of the last password login; absent for app callbacks and dev actors. */
   authenticatedAt?: number;
+  /** Continue bounded background work after the HTTP response (Cloudflare waitUntil). */
+  defer?: (work: Promise<unknown>) => void;
   fullName: string;
   language: string;
   /**
@@ -149,6 +158,8 @@ export interface FrappeRouterContext extends VerticalRouterHooks {
    * deployment does not serve, rather than failing obscurely.
    */
   webForms?: { db: D1Database; salt: string; clientAddress: string };
+  /** Trusted tenant/user-bound integration control service; never exposes credential material. */
+  integrations?: IntegrationApi;
   /**
    * Where attachments live: the database row and the object store.
    *
@@ -193,14 +204,25 @@ function rbacAudit(context: FrappeRouterContext, source: string, reason?: string
 
 const RESOURCE_PATH = /^\/api\/resource\/([^/]+)(?:\/([^/]+))?$/;
 const METHOD_PATH = /^\/api\/method\/([A-Za-z0-9_.]+)$/;
+const V2_DOCUMENT_PATH = /^\/api\/v2\/document\/([^/]+)(?:\/([^/]+))?(?:\/(copy|method)(?:\/([^/]+))?)?\/?$/;
+const V2_DOCTYPE_PATH = /^\/api\/v2\/doctype\/([^/]+)\/(meta|count)\/?$/;
+const V2_METHOD_PATH = /^\/api\/v2\/method\/(.+)$/;
 
 export function isFrappePath(pathname: string): boolean {
-  return pathname.startsWith("/api/resource/") || pathname.startsWith("/api/method/");
+  return pathname.startsWith("/api/resource/")
+    || pathname.startsWith("/api/method/")
+    || pathname.startsWith("/api/v2/");
 }
 
 export async function routeFrappeApi(request: Request, url: URL, context: FrappeRouterContext): Promise<Response | null> {
   if (!isFrappePath(url.pathname)) return null;
   try {
+    if (url.pathname.startsWith("/api/v2/")) {
+      const v2 = await routeFrappeV2(request, url, context);
+      if (v2) return v2;
+      return v2FaultResponse(errors.notFound("Unknown API v2 path"), context.traceId);
+    }
+
     // BEFORE `readFrappeArgs`, which turns the body into text: an upload is multipart,
     // and reading it as text either fails outright or produces a mangled string.
     if (url.pathname === UPLOAD_FILE_PATH) {
@@ -230,8 +252,183 @@ export async function routeFrappeApi(request: Request, url: URL, context: Frappe
 
     return faultResponse(errors.notFound("Unknown API path"), context.traceId);
   } catch (error) {
-    return faultResponse(error, context.traceId);
+    return url.pathname.startsWith("/api/v2/")
+      ? v2FaultResponse(error, context.traceId)
+      : faultResponse(error, context.traceId);
   }
+}
+
+async function routeFrappeV2(
+  request: Request,
+  url: URL,
+  context: FrappeRouterContext,
+): Promise<Response | null> {
+  const method = request.method.toUpperCase();
+
+  // Upload is multipart and must be handled before generic argument parsing.
+  if (url.pathname === "/api/v2/method/upload_file") {
+    if (method !== "POST") throw errors.validation("upload_file accepts POST");
+    return v2DataResponse(await handleUploadFile(
+      request,
+      context.actor,
+      fileStore(context),
+      (doctype, name) => assertDocumentAction(context, doctype, name, "save"),
+    ));
+  }
+
+  const args = await readFrappeArgs(request, url);
+
+  const docMatch = V2_DOCUMENT_PATH.exec(url.pathname);
+  if (docMatch) {
+    const doctype = decodeURIComponent(docMatch[1]!);
+    const name = docMatch[2] ? decodeURIComponent(docMatch[2]) : null;
+    const operation = docMatch[3];
+    const operationName = docMatch[4] ? decodeURIComponent(docMatch[4]) : null;
+
+    if (operation === "copy") {
+      if (method !== "GET" || !name) throw errors.validation("Document copy accepts GET on a named document");
+      const source = await loadReadable(doctype, name, context);
+      const meta = await requireMeta(doctype, context);
+      const copy = dropNoCopyFields(structuredClone(source.data) as JsonObject, meta);
+      // Frappe copy returns a clean insertable document, not the source identity/lifecycle.
+      return v2DataResponse({ doctype, ...copy });
+    }
+
+    if (operation === "method") {
+      if (!name || !operationName) throw errors.validation("Document method requires document and method names");
+      // The compatibility layer exposes only methods backed by canonical Forge authorities.
+      // It deliberately cannot execute arbitrary Python controller/server-script methods.
+      if (operationName === "submit") {
+        if (method !== "POST") throw errors.validation("submit requires POST");
+        return v2DataResponse(await transition("submit", v2TransitionArgs(doctype, name, args), context));
+      }
+      if (operationName === "cancel") {
+        if (method !== "POST") throw errors.validation("cancel requires POST");
+        return v2DataResponse(await transition("cancel", v2TransitionArgs(doctype, name, args), context));
+      }
+      if (operationName === "add_comment") {
+        if (method !== "POST") throw errors.validation("add_comment requires POST");
+        const text = args.text("text") ?? args.text("content");
+        if (!text) throw errors.validation("text is required");
+        await assertDocumentAction(context, doctype, name, "read");
+        return v2DataResponse(await context.collaboration.addComment(
+          context.tenantId, context.actor, doctype, name, text, context.now(),
+        ));
+      }
+      throw errors.notFound(`Unsupported v2 document method: ${operationName}`);
+    }
+
+    if (!name) {
+      if (method === "GET") {
+        const asDict = !args.has("as_dict") || args.bool("as_dict", true);
+        const groupByText = args.text("group_by")?.trim();
+        const limit = clampPageLength(args.int("limit", 20));
+        if (groupByText) {
+          const groupBy = groupByText.split(",")
+            .map((field) => toKernelField(stripFieldQualifier(field.trim().replace(/`/g, ""))))
+            .filter(Boolean);
+          const requestedFields = args.array<string>("fields") ?? groupBy;
+          const projections = parseV2GroupProjections(requestedFields, groupBy);
+          const body: JsonObject = {
+            doctype,
+            filters: toKernelFilters(args.json("filters"), doctype) as unknown as JsonValue,
+            limit,
+            offset: args.int("start", 0),
+          };
+          const search = toKernelSearch(args.json("or_filters"));
+          if (search) body.search = search;
+          const grouped = await context.listService.group(context.actor, context.tenantId, body, groupBy, projections);
+          const data = asDict
+            ? grouped.rows
+            : grouped.rows.map((row) => projections.map((projection) => row[projection.alias] ?? null));
+          return v2DataResponse(data, 200, { has_next_page: grouped.has_more });
+        }
+
+        const requestedFields = args.array<string>("fields") ?? ["name"];
+        const adaptedUrl = new URL(url);
+        adaptedUrl.searchParams.set("limit", String(limit + 1));
+        adaptedUrl.searchParams.set("limit_start", String(args.int("start", 0)));
+        const adapted = await readFrappeArgs(new Request(adaptedUrl, { method: "GET", headers: request.headers }), adaptedUrl);
+        const rows = await listDocuments(doctype, adapted, context);
+        const page = rows.slice(0, limit);
+        const data = asDict
+          ? page
+          : page.map((row) => requestedFields.map((field) => row[field] ?? null));
+        return v2DataResponse(data, 200, { has_next_page: rows.length > limit });
+      }
+      if (method === "POST") return v2DataResponse(await createDocument(doctype, args, context));
+      throw errors.validation(`${method} is not supported on a v2 doctype collection`);
+    }
+
+    if (method === "GET") return v2DataResponse(toFrappeDoc(await loadReadable(doctype, name, context)));
+    if (method === "PATCH" || method === "PUT") {
+      // Deliberately stronger than upstream v2: Forge requires the last-read modified token.
+      // Never weaken OCC merely for route parity.
+      return v2DataResponse(await saveDocument(doctype, name, args, context));
+    }
+    if (method === "DELETE") {
+      await deleteDocument(doctype, name, context);
+      return v2DataResponse("ok", 202);
+    }
+    throw errors.validation(`${method} is not supported on a v2 document`);
+  }
+
+  const doctypeMatch = V2_DOCTYPE_PATH.exec(url.pathname);
+  if (doctypeMatch) {
+    const doctype = decodeURIComponent(doctypeMatch[1]!);
+    const operation = doctypeMatch[2];
+    if (method !== "GET") throw errors.validation(`${operation} accepts GET`);
+    if (operation === "meta") {
+      const meta = await requireMeta(doctype, context);
+      return v2DataResponse(toFrappeDocType(meta, await context.metadata.getWorkflow(context.tenantId, doctype)));
+    }
+    const countArgsUrl = new URL(url);
+    countArgsUrl.searchParams.set("doctype", doctype);
+    const countArgs = await readFrappeArgs(new Request(countArgsUrl, { method: "GET", headers: request.headers }), countArgsUrl);
+    return v2DataResponse(await countDocuments(countArgs, context));
+  }
+
+  const methodMatch = V2_METHOD_PATH.exec(url.pathname);
+  if (methodMatch) {
+    const methodName = decodeURIComponent(methodMatch[1]!);
+    if (methodName === "ping") return v2DataResponse("pong");
+    // Reuse the canonical method dispatcher, then translate only its public envelope.
+    // Arbitrary Python/server-script discovery is intentionally not emulated.
+    const v1 = await dispatchMethod(methodName, request, args, context);
+    const body = await v1.clone().json() as JsonObject;
+    if (!v1.ok) throw errors.validation(String(body.message ?? "Frappe method failed"));
+    return v2DataResponse(body.message ?? body);
+  }
+
+  return null;
+}
+
+function parseV2GroupProjections(fields: string[], groupBy: string[]): DocumentGroupProjection[] {
+  const aggregatePattern = /^(count|sum|avg|min|max)\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)\s+as\s+([A-Za-z_][A-Za-z0-9_]*)$/i;
+  return fields.map((raw) => {
+    const value = raw.trim().replace(/`/g, "");
+    const aggregate = aggregatePattern.exec(value);
+    if (aggregate) {
+      return {
+        aggregate: aggregate[1]!.toLowerCase() as NonNullable<DocumentGroupProjection["aggregate"]>,
+        field: toKernelField(aggregate[2]!),
+        alias: aggregate[3]!,
+      };
+    }
+    const field = toKernelField(stripFieldQualifier(value));
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(field) || !groupBy.includes(field)) {
+      throw errors.validation(`Grouped field must be in group_by or use an aggregate with AS: ${raw}`);
+    }
+    return { field, alias: field };
+  });
+}
+
+function v2TransitionArgs(doctype: string, name: string, args: FrappeArgs): FrappeArgs {
+  const modified = args.text("modified");
+  const doc: JsonObject = { doctype, name, ...(modified ? { modified } : {}) };
+  return new FrappeArgs(new Map<string, string | JsonValue>([
+    ["doc", doc],
+  ]));
 }
 
 // ---- REST resource ----------------------------------------------------------
@@ -1042,6 +1239,18 @@ async function dispatchMethod(
   if (verticalMethod) return methodResponse(await verticalMethod(args, context));
 
   switch (methodName) {
+    case WEB_FORM_READ.slice("/api/method/".length):
+      if (request.method.toUpperCase() !== "GET") throw errors.validation("Portal read requires GET");
+      return methodResponse(await webFormPortalRead(args, context));
+    case WEB_FORM_LIST.slice("/api/method/".length):
+      if (request.method.toUpperCase() !== "GET") throw errors.validation("Portal list requires GET");
+      return methodResponse(await webFormPortalList(args, context));
+    case WEB_FORM_UPDATE.slice("/api/method/".length):
+      if (request.method.toUpperCase() !== "POST") throw errors.validation("Portal update requires POST");
+      return methodResponse(await webFormPortalUpdate(args, context));
+    case WEB_FORM_DELETE.slice("/api/method/".length):
+      if (request.method.toUpperCase() !== "POST") throw errors.validation("Portal delete requires POST");
+      return methodResponse(await webFormPortalDelete(args, context));
     // ---- public web forms ---------------------------------------------------
     // Reachable without a session. Everything they may do comes from the form's own
     // `submit_as_role` and the tenant's ordinary DocPerm grant for it.
@@ -1077,6 +1286,9 @@ async function dispatchMethod(
         args.requireText("code", 200),
         args.requireText("phone", 40),
       ));
+
+    case "frappe.auth.get_logged_user":
+      return methodResponse(context.actor.user_id);
 
     case "metaforge.api.get_boot":
       return methodResponse(await bootPayload(context));
@@ -1261,6 +1473,21 @@ async function dispatchMethod(
     // ---- người dùng: liệt kê, tạo tài khoản, khoá/mở --------------------------
     // Không có ba lời gọi này thì màn phân quyền không trả lời được "ai đăng nhập được
     // vào hệ thống", và không có đường nào tạo một tài khoản ngoài việc gọi API tay.
+    case "frappe.core.doctype.user.user.generate_keys":
+      if (request.method.toUpperCase() !== "POST") throw errors.validation("generate_keys requires POST");
+      return methodResponse(await generateApiKeys(args, context));
+
+    case "metaforge.api.list_api_credentials":
+      return methodResponse(await listApiCredentials(args, context));
+
+    case "metaforge.api.revoke_api_credential":
+      if (request.method.toUpperCase() !== "POST") throw errors.validation("revoke_api_credential requires POST");
+      return methodResponse(await revokeApiCredential(args, context));
+
+    case "frappe.core.doctype.user.user.impersonate":
+      if (request.method.toUpperCase() !== "POST") throw errors.validation("impersonate requires POST");
+      return impersonateUser(args, context);
+
     case "metaforge.api.list_users":
       return methodResponse(await listUsers(context));
 
@@ -1323,11 +1550,21 @@ async function dispatchMethod(
       return methodResponse({ script: "", html_format: null, execution_time: 0 });
 
     // ---- data import -------------------------------------------------------
+    case "frappe.core.doctype.data_import.data_import.download_template":
+      return importTemplate(args, context);
+
     case "frappe.core.doctype.data_import.data_import.get_preview_from_template":
       return methodResponse(await importPreview(args, context));
 
     case "frappe.core.doctype.data_import.data_import.form_start_import":
+      if (args.text("data_import")) return methodResponse(await startImportJob(args, context));
       return methodResponse(await importApply(args, context));
+
+    case "frappe.core.doctype.data_import.data_import.get_import_status":
+      return methodResponse(await importStatus(args, context));
+
+    case "frappe.core.doctype.data_import.data_import.download_errored_template":
+      return importErroredTemplate(args, context);
 
     // ---- kanban ------------------------------------------------------------
     case "frappe.desk.doctype.kanban_board.kanban_board.get_kanban_boards":
@@ -1675,6 +1912,7 @@ async function applyWorkflow(args: FrappeArgs, context: FrappeRouterContext): Pr
   let transition: typeof workflow.transitions[number] | undefined;
   let delegation: { allowed: boolean; delegation?: string; grantor?: string } | undefined;
   for (const entry of workflow.transitions.filter((candidate) => candidate.state === state && candidate.action === action)) {
+    if (entry.condition && !evaluateWorkflowCondition(entry.condition, current.data, current.data)) continue;
     const next = workflow.states.find((candidate) => candidate.state === entry.next_state);
     const delegationAction = next && next.docstatus > current.docstatus ? "submit" : entry.action;
     const decision = await workflowTransitionAccess(context, entry.allowed_role, doctype, delegationAction, current.data);
@@ -1751,6 +1989,7 @@ async function workflowTransitions(args: FrappeArgs, context: FrappeRouterContex
 
   const transitions: JsonObject[] = [];
   for (const entry of workflow.transitions.filter((candidate) => candidate.state === state)) {
+    if (entry.condition && !evaluateWorkflowCondition(entry.condition, document.data, document.data)) continue;
     const targetDocstatus = docstatusOf(entry.next_state);
     if (blocksSelfApproval(entry, document.owner, context.actor.user_id, currentDocstatus, targetDocstatus)) continue;
     const delegationAction = targetDocstatus > currentDocstatus ? "submit" : entry.action;
@@ -2193,6 +2432,69 @@ async function listUsers(context: FrappeRouterContext): Promise<JsonObject> {
     // users can also open the form that creates one without a second call.
     available_roles: roles.filter((role) => !["All", "Guest"].includes(role)) as unknown as JsonValue,
   };
+}
+
+async function generateApiKeys(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  requireMetadataAdmin(context);
+  const user = args.requireText("user", 320);
+  const issued = await context.users.apiCredentials.issue(
+    context.tenantId,
+    user,
+    rbacAudit(context, "frappe.core.doctype.user.user.generate_keys", args.text("reason")),
+    context.now(),
+  );
+  // Match Frappe's one-time response: the secret is never readable again.
+  return { api_key: issued.api_key, api_secret: issued.api_secret };
+}
+
+async function listApiCredentials(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const user = args.text("user") ?? context.actor.user_id;
+  if (user !== context.actor.user_id) requireMetadataAdmin(context);
+  const credentials = await context.users.apiCredentials.list(context.tenantId, user);
+  return { user, credentials: credentials as unknown as JsonValue };
+}
+
+async function revokeApiCredential(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const user = args.text("user") ?? context.actor.user_id;
+  if (user !== context.actor.user_id) requireMetadataAdmin(context);
+  const credentialId = args.requireText("credential_id", 160);
+  const revoked = await context.users.apiCredentials.revoke(
+    context.tenantId,
+    user,
+    credentialId,
+    rbacAudit(context, "metaforge.api.revoke_api_credential", args.text("reason")),
+    context.now(),
+  );
+  if (!revoked) throw errors.notFound("Active API credential not found");
+  return { user, credential_id: credentialId, revoked: true };
+}
+
+async function impersonateUser(args: FrappeArgs, context: FrappeRouterContext): Promise<Response> {
+  requireMetadataAdmin(context);
+  if (!context.authContext || !context.establishedSession) {
+    throw errors.permission("Support impersonation requires an authenticated browser session");
+  }
+  const target = args.requireText("user", 320);
+  const reason = args.requireText("reason", 500);
+  const impersonated = await mintImpersonatedSession(
+    context.authContext,
+    context.establishedSession,
+    target,
+    reason,
+  );
+
+  await context.deskViews.notify(context.tenantId, {
+    name: `support-impersonation:${context.traceId}`,
+    forUser: target,
+    subject: `${context.actor.user_id} just impersonated as you. Reason: ${reason}`,
+    type: "Alert",
+    fromUser: context.actor.user_id,
+  }, context.now());
+
+  return methodResponse({ impersonated_as: target }, 200, {
+    "set-cookie": impersonated.cookie,
+    "x-frappe-csrf-token": impersonated.csrfToken,
+  });
 }
 
 /** Logins are ids, not display names: they end up in `owner` on every document. */
@@ -2645,46 +2947,433 @@ async function permissionRules(args: FrappeArgs, context: FrappeRouterContext): 
 
 // ---- data import ------------------------------------------------------------
 
-/**
- * Previews an import without writing anything.
- *
- * Unknown columns are refused here rather than silently ignored during apply: a
- * dropped column means rows import with fields missing, and the user has no way to
- * see which.
- */
-async function importPreview(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+const DATA_IMPORT_MAX_ROWS = 100_000;
+
+interface DataImportJobRow {
+  data_import_name: string;
+  reference_doctype: string;
+  import_type: "Insert New Records" | "Update Existing Records";
+  source_file_url: string;
+  status: "Pending" | "Success" | "Partial Success" | "Error" | "Timed Out";
+  payload_count: number;
+  success_count: number;
+  failed_count: number;
+  results_json: string;
+  started_at: string | null;
+}
+
+function requireImportFiles(context: FrappeRouterContext): FileStore {
+  if (!context.files) throw errors.validation("File storage is required for Data Import");
+  return {
+    db: context.files.db,
+    bucket: context.files.bucket,
+    tenantId: context.tenantId,
+    now: context.now(),
+  };
+}
+
+function decodeBase64Utf8(value: unknown): string {
+  if (typeof value !== "string") throw errors.validation("Import file content is unavailable");
+  const binary = atob(value);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return new TextDecoder().decode(bytes).replace(/^\uFEFF/, "");
+}
+
+async function readImportCsv(fileUrl: string, context: FrappeRouterContext): Promise<string> {
+  const file = await readFileContent(
+    fileUrl,
+    context.actor,
+    requireImportFiles(context),
+    async (doctype, name) => { await loadReadable(doctype, name, context); },
+  );
+  const fileName = String(file.file_name ?? "").toLowerCase();
+  const contentType = String(file.content_type ?? "").toLowerCase();
+  if (!fileName.endsWith(".csv") && !contentType.includes("csv") && contentType !== "text/plain") {
+    throw errors.validation(
+      "Server Data Import accepts CSV files. XLS/XLSX decoding stays in the browser/CLI boundary and must be converted to CSV before upload.",
+    );
+  }
+  return decodeBase64Utf8(file.base64);
+}
+
+async function loadDataImportControl(
+  name: string,
+  context: FrappeRouterContext,
+  writable = false,
+): Promise<CanonicalDocument<JsonObject>> {
+  return writable
+    ? loadWritable("Data Import", name, context)
+    : loadReadable("Data Import", name, context);
+}
+
+function dataImportIdentity(control: CanonicalDocument<JsonObject>): {
+  doctype: string;
+  importType: "Insert New Records" | "Update Existing Records";
+} {
+  const doctype = typeof control.data.reference_doctype === "string" ? control.data.reference_doctype.trim() : "";
+  if (!doctype) throw errors.validation("Data Import reference_doctype is required");
+  const raw = control.data.import_type;
+  const importType = raw === "Update Existing Records" ? raw : raw === "Insert New Records" ? raw : null;
+  if (!importType) throw errors.validation("Data Import import_type is invalid");
+  return { doctype, importType };
+}
+
+async function assertImportColumns(headers: string[], meta: DocTypeMeta): Promise<void> {
+  const known = new Set(meta.fields.map((field) => field.fieldname));
+  const unknown = headers.filter((header) => header !== "name" && !known.has(header));
+  if (unknown.length) throw errors.validation(`Unknown import columns: ${unknown.join(", ")}`);
+}
+
+function frappeImportPreview(
+  headers: string[],
+  rows: JsonObject[],
+  meta: DocTypeMeta,
+  warnings: Array<{ row: number; message: string }>,
+): JsonObject {
+  const byName = new Map(meta.fields.map((field) => [field.fieldname, field]));
+  const columns = headers.map((header, index) => {
+    const field = byName.get(header);
+    return {
+      header_title: header,
+      column_number: index,
+      skip_import: field || header === "name" ? 0 : 1,
+      df: header === "name"
+        ? { fieldname: "name", label: "ID", fieldtype: "Data", reqd: 0 }
+        : field
+          ? { fieldname: field.fieldname, label: field.label, fieldtype: field.fieldtype, reqd: field.required ? 1 : 0 }
+          : null,
+    } as JsonObject;
+  });
+  return {
+    columns,
+    data: [
+      headers,
+      ...rows.slice(0, 20).map((row) => headers.map((header) => row[header] ?? "")),
+    ] as unknown as JsonValue,
+    warnings: warnings as unknown as JsonValue,
+    total_rows: rows.length + warnings.length,
+    max_rows_exceeded: warnings.some((warning) => warning.message.includes("limited to")) ? 1 : 0,
+  };
+}
+
+/** Frappe-compatible CSV template generated from the exact effective DocType metadata. */
+async function importTemplate(args: FrappeArgs, context: FrappeRouterContext): Promise<Response> {
   const doctype = args.requireText("doctype", 160);
-  const csv = args.text("csv") ?? args.text("content") ?? "";
-  if (!csv) throw errors.validation("csv content is required");
   await context.permissions.assert({ actor: context.actor, tenantId: context.tenantId, doctype, action: "import" });
   const meta = await requireMeta(doctype, context);
   if (meta.is_child) throw errors.validation("A child doctype cannot be imported directly");
 
-  const preview = parseCsvImport(csv);
-  const known = new Set(meta.fields.map((field) => field.fieldname));
-  const unknown = preview.headers.filter((header) => header !== "name" && !known.has(header));
-  if (unknown.length) throw errors.validation(`Unknown import columns: ${unknown.join(", ")}`);
-  return preview as unknown as JsonObject;
+  const unsupported = new Set([
+    "Section Break", "Column Break", "Tab Break", "Heading", "HTML", "Button",
+    "Table", "Table MultiSelect", "Password",
+  ]);
+  const columns = [
+    "name",
+    ...meta.fields
+      .filter((field) => !unsupported.has(field.fieldtype) && !field.read_only)
+      .map((field) => field.fieldname),
+  ];
+  const csv = encodeCsv(columns, []);
+  return new Response(`﻿${csv}`, {
+    status: 200,
+    headers: {
+      "content-type": "text/csv; charset=utf-8",
+      "content-disposition": `attachment; filename="${doctype.replace(/[^A-Za-z0-9 _-]/g, "_")}-template.csv"`,
+      "cache-control": "private, no-store",
+      "x-content-type-options": "nosniff",
+    },
+  });
 }
 
 /**
- * Applies an import row by row.
+ * Preview either the native Data Import document contract or the older direct CSV
+ * compatibility shape used by low-level callers.
+ */
+async function importPreview(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const dataImportName = args.text("data_import");
+  if (!dataImportName) {
+    const doctype = args.requireText("doctype", 160);
+    const csv = args.text("csv") ?? args.text("content") ?? "";
+    if (!csv) throw errors.validation("csv content is required");
+    await context.permissions.assert({ actor: context.actor, tenantId: context.tenantId, doctype, action: "import" });
+    const meta = await requireMeta(doctype, context);
+    if (meta.is_child) throw errors.validation("A child doctype cannot be imported directly");
+    const preview = parseCsvImport(csv);
+    await assertImportColumns(preview.headers, meta);
+    return preview as unknown as JsonObject;
+  }
+
+  const control = await loadDataImportControl(dataImportName, context);
+  const { doctype, importType } = dataImportIdentity(control);
+  const fileUrl = args.text("import_file")
+    ?? (typeof control.data.import_file === "string" ? control.data.import_file : "");
+  if (!fileUrl) throw errors.validation("import_file is required");
+
+  await context.permissions.assert({ actor: context.actor, tenantId: context.tenantId, doctype, action: "import" });
+  const meta = await requireMeta(doctype, context);
+  if (meta.is_child) throw errors.validation("A child doctype cannot be imported directly");
+
+  const csv = await readImportCsv(fileUrl, context);
+  const preview = parseCsvImport(csv, DATA_IMPORT_MAX_ROWS);
+  await assertImportColumns(preview.headers, meta);
+
+  const now = context.now();
+  const db = requireImportFiles(context).db;
+  await db.prepare(
+    `INSERT INTO data_import_jobs(
+       tenant_id,data_import_name,reference_doctype,import_type,source_file_url,status,
+       payload_count,success_count,failed_count,results_json,created_by,started_at,created_at,modified_at
+     ) VALUES(?1,?2,?3,?4,?5,'Pending',?6,0,0,'[]',?7,NULL,?8,?8)
+     ON CONFLICT(tenant_id,data_import_name) DO UPDATE SET
+       reference_doctype=excluded.reference_doctype,
+       import_type=excluded.import_type,
+       source_file_url=excluded.source_file_url,
+       status='Pending',
+       payload_count=excluded.payload_count,
+       success_count=0,
+       failed_count=0,
+       results_json='[]',
+       created_by=excluded.created_by,
+       started_at=NULL,
+       modified_at=excluded.modified_at`,
+  ).bind(
+    context.tenantId, dataImportName, doctype, importType, fileUrl,
+    preview.rows.length + preview.errors.length, context.actor.user_id, now,
+  ).run();
+
+  return frappeImportPreview(preview.headers, preview.rows, meta, preview.errors);
+}
+
+async function loadImportJob(name: string, context: FrappeRouterContext): Promise<DataImportJobRow> {
+  const row = await requireImportFiles(context).db.prepare(
+    `SELECT data_import_name,reference_doctype,import_type,source_file_url,status,
+            payload_count,success_count,failed_count,results_json,started_at
+       FROM data_import_jobs WHERE tenant_id=?1 AND data_import_name=?2`,
+  ).bind(context.tenantId, name).first<DataImportJobRow>();
+  if (!row) throw errors.validation("Preview the Data Import before starting it");
+  return row;
+}
+
+async function persistImportProgress(
+  name: string,
+  context: FrappeRouterContext,
+  status: DataImportJobRow["status"],
+  success: number,
+  failed: number,
+  results: JsonObject[],
+  payloadCount?: number,
+): Promise<void> {
+  const db = requireImportFiles(context).db;
+  await db.prepare(
+    `UPDATE data_import_jobs
+       SET status=?3,success_count=?4,failed_count=?5,results_json=?6,
+           payload_count=COALESCE(?7,payload_count),modified_at=?8
+       WHERE tenant_id=?1 AND data_import_name=?2`,
+  ).bind(
+    context.tenantId, name, status, success, failed, JSON.stringify(results),
+    payloadCount ?? null, context.now(),
+  ).run();
+}
+
+async function executeImportJob(job: DataImportJobRow, context: FrappeRouterContext): Promise<void> {
+  const doctype = job.reference_doctype;
+  const meta = await requireMeta(doctype, context);
+  const csv = await readImportCsv(job.source_file_url, context);
+  const parsed = parseCsvImport(csv, DATA_IMPORT_MAX_ROWS);
+  await assertImportColumns(parsed.headers, meta);
+
+  const hardLimit = parsed.errors.find((entry) => entry.message.includes(`limited to ${DATA_IMPORT_MAX_ROWS} rows`));
+  if (hardLimit) throw errors.validation(`Data Import is bounded to ${DATA_IMPORT_MAX_ROWS} CSV rows per job`);
+
+  const results: JsonObject[] = parsed.errors.map((entry) => ({
+    row: entry.row,
+    status: "failed",
+    error: entry.message,
+  }));
+  let success = 0;
+  let failed = results.length;
+  const payloadCount = parsed.rows.length + parsed.errors.length;
+  await persistImportProgress(job.data_import_name, context, "Pending", success, failed, results, payloadCount);
+
+  for (let index = 0; index < parsed.rows.length; index += 1) {
+    const row = parsed.rows[index] as JsonObject;
+    const rowNumber = index + 2;
+    try {
+      if (job.import_type === "Update Existing Records") {
+        const name = typeof row.name === "string" ? row.name.trim() : "";
+        if (!name) throw errors.validation("Update Existing Records requires the name/ID column");
+        const current = await loadWritable(doctype, name, context);
+        const payload = toKernelPayload({ ...current.data, ...row }, meta);
+        await context.runCommand(await buildCommand({
+          tenantId: context.tenantId,
+          actor: context.actor,
+          doctype,
+          name,
+          action: "save",
+          expectedVersion: current.version,
+          document: payload,
+        }));
+        results.push({ row: rowNumber, name, status: "imported", input: row });
+      } else {
+        const payload = toKernelPayload(row, meta);
+        const name = typeof row.name === "string" && row.name.trim()
+          ? row.name.trim()
+          : await resolveNewName(doctype, meta, namingSource(row, payload), context);
+        await context.runCommand(await buildCommand({
+          tenantId: context.tenantId,
+          actor: context.actor,
+          doctype,
+          name,
+          action: "create",
+          expectedVersion: null,
+          document: payload,
+        }));
+        results.push({ row: rowNumber, name, status: "imported", input: row });
+      }
+      success += 1;
+    } catch (error) {
+      failed += 1;
+      results.push({
+        row: rowNumber,
+        status: "failed",
+        error: error instanceof Error ? error.message : "Row failed",
+        input: row,
+      });
+    }
+
+    if ((index + 1) % 25 === 0) {
+      await persistImportProgress(job.data_import_name, context, "Pending", success, failed, results, payloadCount);
+    }
+  }
+
+  const status: DataImportJobRow["status"] =
+    failed === 0 ? "Success" : success === 0 ? "Error" : "Partial Success";
+  await persistImportProgress(job.data_import_name, context, status, success, failed, results, payloadCount);
+}
+
+async function startImportJob(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const name = args.requireText("data_import", 320);
+  await loadDataImportControl(name, context, true);
+  const job = await loadImportJob(name, context);
+
+  await context.permissions.assert({
+    actor: context.actor,
+    tenantId: context.tenantId,
+    doctype: job.reference_doctype,
+    action: "import",
+  });
+  if (job.import_type === "Insert New Records") {
+    await context.permissions.assert({
+      actor: context.actor,
+      tenantId: context.tenantId,
+      doctype: job.reference_doctype,
+      action: "create",
+    });
+  }
+
+  const now = context.now();
+  const lease = await requireImportFiles(context).db.prepare(
+    `UPDATE data_import_jobs
+       SET started_at=?3,modified_at=?3
+       WHERE tenant_id=?1 AND data_import_name=?2 AND status='Pending' AND started_at IS NULL`,
+  ).bind(context.tenantId, name, now).run();
+  if ((lease.meta?.changes ?? 0) === 0) {
+    const current = await loadImportJob(name, context);
+    return { status: current.status, queued: current.status === "Pending" ? 1 : 0 };
+  }
+
+  const work = executeImportJob({ ...job, started_at: now }, context).catch(async (error) => {
+    const message = error instanceof Error ? error.message : "Data Import failed";
+    await persistImportProgress(
+      name,
+      context,
+      "Error",
+      0,
+      Math.max(job.failed_count, 1),
+      [{ row: 0, status: "failed", error: message }],
+    );
+  });
+  if (context.defer) context.defer(work);
+  else await work;
+
+  return { status: "Pending", queued: 1 };
+}
+
+async function importStatus(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const name = args.requireText("data_import_name", 320);
+  await loadDataImportControl(name, context);
+  const job = await loadImportJob(name, context);
+  return {
+    status: job.status,
+    success: job.success_count,
+    failed: job.failed_count,
+    total_records: job.payload_count,
+  };
+}
+
+async function importErroredTemplate(args: FrappeArgs, context: FrappeRouterContext): Promise<Response> {
+  const name = args.requireText("data_import_name", 320);
+  await loadDataImportControl(name, context);
+  const job = await loadImportJob(name, context);
+  let results: JsonObject[] = [];
+  try {
+    const value = JSON.parse(job.results_json);
+    if (Array.isArray(value)) results = value.filter((entry): entry is JsonObject => Boolean(entry && typeof entry === "object" && !Array.isArray(entry)));
+  } catch {
+    throw errors.validation("Stored Data Import result is invalid");
+  }
+
+  const failed = results.filter((entry) => entry.status === "failed");
+  const sourceColumns = [...new Set(failed.flatMap((entry) => {
+    const input = entry.input;
+    return input && typeof input === "object" && !Array.isArray(input) ? Object.keys(input as JsonObject) : [];
+  }))];
+  const rows = failed.map((entry) => {
+    const input = entry.input && typeof entry.input === "object" && !Array.isArray(entry.input)
+      ? entry.input as JsonObject
+      : {};
+    return {
+      __row: entry.row ?? "",
+      __error: entry.error ?? "Row failed",
+      ...input,
+    } as JsonObject;
+  });
+  const csv = encodeCsv(["__row", "__error", ...sourceColumns], rows);
+  return new Response(`﻿${csv}`, {
+    status: 200,
+    headers: {
+      "content-type": "text/csv; charset=utf-8",
+      "content-disposition": `attachment; filename="${job.reference_doctype.replace(/[^A-Za-z0-9 _-]/g, "_")}-errors.csv"`,
+      "cache-control": "private, no-store",
+      "x-content-type-options": "nosniff",
+    },
+  });
+}
+
+/**
+ * Applies a direct CSV import row by row for native/legacy callers.
  *
- * Each row is its own command, so a bad row fails alone and the outcome is
- * reported per row. Importing as one transaction would mean one typo on row 400
- * discards the 399 valid rows before it.
+ * The Data Import document route above is the Frappe UI contract. This compatibility
+ * path stays because server-side migration callers already use direct doctype+csv.
  */
 async function importApply(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
   const doctype = args.requireText("doctype", 160);
   const csv = args.text("csv") ?? args.text("content") ?? "";
   if (!csv) throw errors.validation("csv content is required");
+  const importType = args.text("import_type") === "Update Existing Records"
+    ? "Update Existing Records"
+    : "Insert New Records";
   await context.permissions.assert({ actor: context.actor, tenantId: context.tenantId, doctype, action: "import" });
-  await context.permissions.assert({ actor: context.actor, tenantId: context.tenantId, doctype, action: "create" });
+  if (importType === "Insert New Records") {
+    await context.permissions.assert({ actor: context.actor, tenantId: context.tenantId, doctype, action: "create" });
+  }
   const meta = await requireMeta(doctype, context);
   if (meta.is_child) throw errors.validation("A child doctype cannot be imported directly");
 
   const preview = parseCsvImport(csv, 100);
   if (preview.errors.length) throw errors.validation("The CSV contains malformed rows", { error_count: preview.errors.length });
+  await assertImportColumns(preview.headers, meta);
 
   const results: JsonObject[] = [];
   let imported = 0;
@@ -2693,22 +3382,34 @@ async function importApply(args: FrappeArgs, context: FrappeRouterContext): Prom
     const row = preview.rows[index] as JsonObject;
     const rowNumber = index + 2;
     try {
-      const payload = toKernelPayload(row, meta);
-      const name = typeof row.name === "string" && row.name.trim()
-        ? row.name.trim()
-        : await resolveNewName(doctype, meta, payload, context);
-      await context.runCommand(await buildCommand({
-        tenantId: context.tenantId, actor: context.actor, doctype, name,
-        action: "create", expectedVersion: null, document: payload,
-      }));
-      results.push({ row: rowNumber, name, status: "imported" });
+      if (importType === "Update Existing Records") {
+        const name = typeof row.name === "string" ? row.name.trim() : "";
+        if (!name) throw errors.validation("Update Existing Records requires the name/ID column");
+        const current = await loadWritable(doctype, name, context);
+        const payload = toKernelPayload({ ...current.data, ...row }, meta);
+        await context.runCommand(await buildCommand({
+          tenantId: context.tenantId, actor: context.actor, doctype, name,
+          action: "save", expectedVersion: current.version, document: payload,
+        }));
+        results.push({ row: rowNumber, name, status: "imported" });
+      } else {
+        const payload = toKernelPayload(row, meta);
+        const name = typeof row.name === "string" && row.name.trim()
+          ? row.name.trim()
+          : await resolveNewName(doctype, meta, namingSource(row, payload), context);
+        await context.runCommand(await buildCommand({
+          tenantId: context.tenantId, actor: context.actor, doctype, name,
+          action: "create", expectedVersion: null, document: payload,
+        }));
+        results.push({ row: rowNumber, name, status: "imported" });
+      }
       imported += 1;
     } catch (error) {
       failed += 1;
       results.push({ row: rowNumber, status: "failed", error: error instanceof Error ? error.message : "Row failed" });
     }
   }
-  return { imported, failed, results, status: failed ? "Partial Success" : "Success" };
+  return { imported, failed, results, status: failed ? (imported ? "Partial Success" : "Error") : "Success" };
 }
 
 /**
@@ -3319,7 +4020,10 @@ async function acceptWebForm(args: FrappeArgs, context: FrappeRouterContext): Pr
 
   // The submission's own actor — Guest carrying only the form's role — so the ordinary
   // permission layer decides. Nothing here grants anything.
-  const actor = submissionActor(form);
+  const actor = submissionActor(form, context.actor);
+  if (actor.user_id !== "Guest" && !form.allow_multiple) {
+    throw new CloudForgeError("NOT_IMPLEMENTED", "Single-entry portal forms require an atomic kernel uniqueness contract", 501);
+  }
   await context.permissions.assert({
     actor, tenantId: context.tenantId, doctype: form.doc_type,
     action: "create", owner: actor.user_id,

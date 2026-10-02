@@ -281,14 +281,30 @@ function writeJsonPath(root: JsonObject, path: string, value: JsonValue): void {
 
 function isLocalOrPrivateHost(hostname: string): boolean {
   const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
-  if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local")) return true;
-  if (host === "::1" || host.startsWith("fe80:") || host.startsWith("fc") || host.startsWith("fd")) return true;
+  const dnsHost = host.replace(/\.$/, "");
+  if (dnsHost === "localhost" || [".localhost", ".local", ".internal", ".home", ".lan"].some((suffix) => dnsHost.endsWith(suffix))) return true;
+  // URL canonicalizes legacy IPv4 and compresses IPv6. Admit only global
+  // unicast IPv6, excluding mapped IPv4, NAT64, local and multicast literals.
+  if (host.includes(":")) {
+    const first = Number.parseInt(host.split(":")[0] ?? "", 16);
+    if (!Number.isInteger(first) || first < 0x2000 || first > 0x3fff) return true;
+    const second = Number.parseInt(host.split(":")[1] || "0", 16);
+    // IETF special-use, documentation and deprecated 6to4 can embed local IPv4.
+    return first === 0x2002 || first === 0x3fff
+      || (first === 0x2001 && (second <= 0x01ff || second === 0x0db8));
+  }
   const match = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host);
   if (!match) return false;
   const octets = match.slice(1).map(Number);
   if (octets.some((value) => value < 0 || value > 255)) return true;
-  const [a = 0, b = 0] = octets;
-  return a === 10 || a === 127 || a === 0 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+  const [a = 0, b = 0, c = 0] = octets;
+  return a === 0 || a === 10 || a === 127 || a >= 224
+    || (a === 100 && b >= 64 && b <= 127)
+    || (a === 169 && b === 254)
+    || (a === 172 && b >= 16 && b <= 31)
+    || (a === 192 && (b === 168 || (b === 0 && (c === 0 || c === 2)) || (b === 88 && c === 99)))
+    || (a === 198 && (b === 18 || b === 19 || (b === 51 && c === 100)))
+    || (a === 203 && b === 0 && c === 113);
 }
 
 function positiveInteger(value: number, field: string, max: number): number {
@@ -316,3 +332,4 @@ async function sha256Hex(value: string): Promise<string> {
 function hex(bytes: Uint8Array): string {
   return [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
+

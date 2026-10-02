@@ -17,6 +17,7 @@ import {
   type NotificationRule,
 } from "../../frappe-model/src/index.js";
 import type { D1DeskViewStore } from "./desk-views.js";
+import { D1EmailQueueStore } from "./email-queue.js";
 
 /** The event suffix a rule subscribes to. */
 function eventSuffix(eventType: string): string {
@@ -27,6 +28,7 @@ function eventSuffix(eventType: string): string {
 export interface NotificationRunResult {
   matched: number;
   delivered: number;
+  queued: number;
   skipped: number;
 }
 
@@ -34,6 +36,8 @@ export interface NotificationRunResult {
 export interface NotificationDeliveryAuthorizer {
   canReceive(userId: string): Promise<boolean>;
   allowsInApp(userId: string, eventKey: string): Promise<boolean>;
+  allowsEmail?(userId: string, eventKey: string): Promise<boolean>;
+  emailAddress?(userId: string): Promise<string | null>;
 }
 
 /**
@@ -49,6 +53,7 @@ export async function runNotificationRules(
   event: DomainEvent,
   now: string,
   authorizer?: NotificationDeliveryAuthorizer,
+  emailQueue: Pick<D1EmailQueueStore, "enqueue"> = new D1EmailQueueStore(db),
 ): Promise<NotificationRunResult> {
   const suffix = eventSuffix(event.event_type);
   const rows = await db.prepare(
@@ -82,26 +87,17 @@ export async function runNotificationRules(
       enabled: row.enabled === 1,
     });
   }
-  if (!rules.length) return { matched: 0, delivered: 0, skipped: 0 };
+  if (!rules.length) return { matched: 0, delivered: 0, queued: 0, skipped: 0 };
 
   const document = (event.payload ?? {}) as JsonObject;
   const pending = notificationsFor(rules, suffix, event.aggregate.doctype, document);
-  if (!pending.length) return { matched: 0, delivered: 0, skipped: 0 };
+  if (!pending.length) return { matched: 0, delivered: 0, queued: 0, skipped: 0 };
 
   const deliveryAuthority = authorizer ?? await d1DeliveryAuthorizer(db, tenantId, event);
   let delivered = 0;
+  let queued = 0;
   let skipped = 0;
   for (const notification of pending) {
-    if (notification.skipped_reason) {
-      console.warn(JSON.stringify({
-        level: "warn", code: "NOTIFICATION_CHANNEL_UNAVAILABLE",
-        tenant_id: tenantId, rule: notification.rule, channel: notification.channel,
-        detail: notification.skipped_reason,
-      }));
-      skipped += 1;
-      continue;
-    }
-
     // A notification carries both a subject and an exact document identifier. Delivering
     // it to someone who cannot open that document is an information leak even if the
     // eventual GET would return 404. The rule names recipients; it does NOT grant access.
@@ -111,6 +107,49 @@ export async function runNotificationRules(
         level: "warn", code: "NOTIFICATION_RECIPIENT_NOT_AUTHORIZED",
         tenant_id: tenantId, rule: notification.rule,
       }));
+      continue;
+    }
+
+    if (notification.channel === "Email") {
+      const allowsEmail = deliveryAuthority.allowsEmail
+        ? await deliveryAuthority.allowsEmail(notification.for_user, suffix)
+        : true;
+      if (!allowsEmail) {
+        skipped += 1;
+        continue;
+      }
+      const address = deliveryAuthority.emailAddress
+        ? await deliveryAuthority.emailAddress(notification.for_user)
+        : (/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(notification.for_user) ? notification.for_user : null);
+      if (!address) {
+        skipped += 1;
+        console.warn(JSON.stringify({
+          level: "warn", code: "NOTIFICATION_EMAIL_ADDRESS_MISSING",
+          tenant_id: tenantId, rule: notification.rule,
+        }));
+        continue;
+      }
+      try {
+        const result = await emailQueue.enqueue(tenantId, {
+          dedupeKey: `${event.event_id}:${notification.rule}:${notification.for_user}`,
+          sourceKind: "notification",
+          sourceName: notification.rule,
+          recipientUser: notification.for_user,
+          recipientEmail: address,
+          subject: notification.subject,
+          message: notification.message,
+          referenceDoctype: event.aggregate.doctype,
+          referenceName: event.aggregate.name,
+        }, now);
+        if (result.created) queued += 1;
+      } catch (error) {
+        skipped += 1;
+        console.error(JSON.stringify({
+          level: "error", code: "NOTIFICATION_EMAIL_QUEUE_FAILED",
+          tenant_id: tenantId, rule: notification.rule,
+          detail: error instanceof Error ? error.message : String(error),
+        }));
+      }
       continue;
     }
 
@@ -140,7 +179,7 @@ export async function runNotificationRules(
     }
   }
 
-  return { matched: pending.length, delivered, skipped };
+  return { matched: pending.length, delivered, queued, skipped };
 }
 
 /**
@@ -160,13 +199,22 @@ async function d1DeliveryAuthorizer(
   const committed = await documents.getDocument(tenantId, event.aggregate.doctype, event.aggregate.name);
   const accessCache = new Map<string, Promise<boolean>>();
   const preferenceCache = new Map<string, Promise<boolean>>();
+  const userCache = new Map<string, ReturnType<D1UserStore["get"]>>();
+
+  const userFor = (userId: string): ReturnType<D1UserStore["get"]> => {
+    const cached = userCache.get(userId);
+    if (cached) return cached;
+    const pending = users.get(tenantId, userId);
+    userCache.set(userId, pending);
+    return pending;
+  };
 
   const canReceive = (userId: string): Promise<boolean> => {
     const cached = accessCache.get(userId);
     if (cached) return cached;
     const pending = (async () => {
       if (!committed) return false;
-      const user = await users.get(tenantId, userId);
+      const user = await userFor(userId);
       if (!user?.enabled || user.user_type !== "System User") return false;
       const actor = { user_id: userId, roles: await users.listRoles(tenantId, userId) };
       return permissions.canReadDocument(actor, tenantId, committed);
@@ -184,7 +232,15 @@ async function d1DeliveryAuthorizer(
     return pending;
   };
 
-  return { canReceive, allowsInApp };
+  const allowsEmail = (userId: string, eventKey: string): Promise<boolean> =>
+    loadChannelPreference(db, tenantId, userId, eventKey, "email").catch(() => true);
+
+  const emailAddress = async (userId: string): Promise<string | null> => {
+    const user = await userFor(userId);
+    return user?.enabled && user.email ? user.email : null;
+  };
+
+  return { canReceive, allowsInApp, allowsEmail, emailAddress };
 }
 
 /** Exact event wins over the wildcard. No row means the backwards-compatible default: on. */
@@ -207,4 +263,26 @@ async function loadInAppPreference(
   if (preference.muted === true || preference.muted === 1) return false;
   if (preference.in_app === false || preference.in_app === 0) return false;
   return true;
+}
+
+async function loadChannelPreference(
+  db: D1Database,
+  tenantId: string,
+  userId: string,
+  eventKey: string,
+  channel: "email",
+): Promise<boolean> {
+  const row = await db.prepare(
+    `SELECT payload_json FROM documents
+     WHERE tenant_id=?1 AND doctype='Notification Preference' AND docstatus<>2
+       AND json_extract(payload_json,'$.user_id')=?2
+       AND json_extract(payload_json,'$.event_type') IN (?3,'*')
+     ORDER BY CASE WHEN json_extract(payload_json,'$.event_type')=?3 THEN 0 ELSE 1 END, modified_at DESC
+     LIMIT 1`,
+  ).bind(tenantId, userId, eventKey).first<{ payload_json: string }>();
+  if (!row) return true;
+  const preference = JSON.parse(row.payload_json) as JsonObject;
+  if (preference.muted === true || preference.muted === 1) return false;
+  const value = preference[channel];
+  return value !== false && value !== 0;
 }
