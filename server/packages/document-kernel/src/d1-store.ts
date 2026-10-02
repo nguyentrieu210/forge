@@ -11,7 +11,7 @@ import { asCloudForgeError, documentKey, errors } from "../../core/src/index.js"
 import { fromScaledInt, toScaledInt } from "../../money/src/index.js";
 import { deriveDeliveryNoteStatus, deriveO2CStatus } from "./status.js";
 import { deriveSalesOrderProgress } from "./sales-order-progress.js";
-import type { GlAccountBalance, GlAccountBalanceQuery, MutationStore, SubmittedQuantityQuery, TrackedStockPosition, TrackedStockState } from "./store.js";
+import type { GlAccountBalance, GlAccountBalanceQuery, MutationStore, OpenPaymentBalance, OpenPaymentBalanceQuery, SubmittedQuantityQuery, TrackedStockPosition, TrackedStockState } from "./store.js";
 
 interface DocumentRow {
   tenant_id: string;
@@ -352,6 +352,44 @@ export class D1MutationStore implements MutationStore {
        WHERE tenant_id=?1 AND against_voucher_type=?2 AND against_voucher_no=?3`,
     ).bind(tenantId, voucherType, voucherNo).first<{ total: number }>();
     return Number(row?.total ?? 0);
+  }
+
+  async listOpenPaymentBalances(query: OpenPaymentBalanceQuery): Promise<OpenPaymentBalance[]> {
+    const rows = await this.writer.prepare(
+      `SELECT
+         p.account_type,p.party_type,p.party,p.account,
+         p.against_voucher_type,p.against_voucher_no,p.currency,p.currency_scale,
+         SUM(p.amount_minor) AS amount_minor,
+         SUM(p.base_amount_minor) AS base_amount_minor,
+         COUNT(*) AS row_count
+       FROM payment_ledger_entries p
+       INNER JOIN documents d
+         ON d.tenant_id=p.tenant_id
+        AND d.doctype=p.against_voucher_type
+        AND d.name=p.against_voucher_no
+       WHERE p.tenant_id=?1
+         AND p.against_voucher_type IN ('Sales Invoice','Purchase Invoice')
+         AND json_extract(d.payload_json,'$.company')=?2
+         AND date(p.posting_at)<=date(?3)
+       GROUP BY
+         p.account_type,p.party_type,p.party,p.account,
+         p.against_voucher_type,p.against_voucher_no,p.currency,p.currency_scale
+       HAVING SUM(p.amount_minor)<>0 OR SUM(p.base_amount_minor)<>0
+       ORDER BY p.account,p.party,p.against_voucher_type,p.against_voucher_no`,
+    ).bind(query.tenantId, query.company, query.throughDate).all<Record<string, unknown>>();
+    return (rows.results ?? []).map((row) => ({
+      account_type: String(row.account_type) as "Receivable" | "Payable",
+      party_type: String(row.party_type),
+      party: String(row.party),
+      account: String(row.account),
+      against_voucher_type: String(row.against_voucher_type) as "Sales Invoice" | "Purchase Invoice",
+      against_voucher_no: String(row.against_voucher_no),
+      currency: String(row.currency),
+      currency_scale: Number(row.currency_scale),
+      amount_minor: Number(row.amount_minor),
+      base_amount_minor: Number(row.base_amount_minor),
+      row_count: Number(row.row_count),
+    }));
   }
 
   async getStockBalanceMicros(tenantId: string, itemCode: string, warehouse: string): Promise<number> {
