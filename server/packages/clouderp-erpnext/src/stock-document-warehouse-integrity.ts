@@ -120,10 +120,28 @@ extends WarehouseScopedController<PurchaseReceiptData> {
       return plan;
     }
     if (context.command.action !== "cancel") return this.delegate.buildPlan(context);
+    await assertNoActiveLandedCostVoucher(context);
     const delegated = await this.delegate.buildPlan(context);
     const exact = await exactPurchaseReceiptCancellationPlan(context, delegated);
     await assertStockPlanRespectsReservations(context, exact.stock_entries, [context.command.aggregate.name]);
     return exact;
+  }
+}
+
+async function assertNoActiveLandedCostVoucher(context: ControllerContext<PurchaseReceiptData>): Promise<void> {
+  const vouchers = await context.reader.listDocumentsByDoctype<JsonObject>(
+    context.command.tenant_id,
+    "Landed Cost Voucher",
+  );
+  const blocking = vouchers.find((voucher) => voucher.docstatus === 1
+    && Array.isArray(voucher.data.purchase_receipts)
+    && voucher.data.purchase_receipts.some((row) =>
+      row && typeof row === "object" && !Array.isArray(row)
+      && text((row as JsonObject).purchase_receipt) === context.command.aggregate.name));
+  if (blocking) {
+    throw errors.reference(
+      `Cancel Landed Cost Voucher ${blocking.name} before cancelling Purchase Receipt ${context.command.aggregate.name}`,
+    );
   }
 }
 

@@ -10,8 +10,8 @@ type OutstandingInvariantTarget = {
  * Keeps the in-memory commit guard aligned with migration 0031.
  *
  * Invoice balances begin positive and may only move toward zero. Payment Entry
- * advances begin negative and may only be consumed toward zero. D1 enforces the
- * same two-sided model with payment_invoice_* and payment_advance_* triggers.
+ * advances and Credit Note customer credits begin negative and may only be consumed
+ * toward zero. D1 enforces the same signed-source model with matching triggers.
  */
 export class InMemoryMutationStore extends BaseInMemoryMutationStore {
   constructor() {
@@ -37,7 +37,9 @@ export class InMemoryMutationStore extends BaseInMemoryMutationStore {
       const next = existing + line.amount_minor;
       const nextBase = existingBase + line.base_amount_minor;
 
-      if (line.against_voucher_type === "Payment Entry") {
+      const negativeSource = line.against_voucher_type === "Payment Entry"
+        || line.against_voucher_type === "Credit Note";
+      if (negativeSource) {
         const contextMismatch = rows.some((entry) =>
           entry.account_type !== line.account_type
           || entry.party_type !== line.party_type
@@ -45,18 +47,19 @@ export class InMemoryMutationStore extends BaseInMemoryMutationStore {
           || entry.account !== line.account
           || entry.currency !== line.currency
           || entry.currency_scale !== line.currency_scale);
+        const sourceLabel = line.against_voucher_type === "Credit Note" ? "Customer credit" : "Payment advance";
         if (contextMismatch) {
-          throw errors.reference(`Payment advance context mismatch for ${referenceKey}`);
+          throw errors.reference(`${sourceLabel} context mismatch for ${referenceKey}`);
         }
         if (next > 0) {
-          throw errors.reference(`Allocation exceeds remaining source advance for ${referenceKey}`, {
-            advance_minor: -existing,
+          throw errors.reference(`Allocation exceeds remaining ${sourceLabel.toLowerCase()} for ${referenceKey}`, {
+            source_balance_minor: -existing,
             requested_delta_minor: line.amount_minor,
           });
         }
         if (nextBase > 0) {
-          throw errors.reference(`Base allocation exceeds remaining source advance for ${referenceKey}`, {
-            base_advance_minor: -existingBase,
+          throw errors.reference(`Base allocation exceeds remaining ${sourceLabel.toLowerCase()} for ${referenceKey}`, {
+            base_source_balance_minor: -existingBase,
             requested_base_delta_minor: line.base_amount_minor,
           });
         }

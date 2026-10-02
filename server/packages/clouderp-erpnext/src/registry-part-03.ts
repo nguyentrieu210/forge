@@ -9,6 +9,7 @@ import { LoadingPlanController } from "./loading-plan-controller.js";
 import { TransportContractController, FreightEstimateController } from "./freight-controllers.js";
 import { BankTransactionController, BankReconciliationController } from "./enterprise-controllers.js";
 import { FinanceBudgetController, FinanceBudgetRevisionController, FinanceBudgetCommitmentController } from "./finance-budget.js";
+import { ExchangeRateRevaluationController } from "./exchange-rate-revaluation.js";
 import { HrmSalarySlipController } from "./hrm-salary-slip.js";
 import { AlumDoorAwarePayrollEntryController } from "./alumdoor-payroll-entry.js";
 
@@ -38,6 +39,7 @@ export function registerErpNextControllersPart03(registry: ControllerRegistry): 
     .register(new FinanceBudgetController())
     .register(new FinanceBudgetRevisionController())
     .register(new FinanceBudgetCommitmentController())
+    .register(new ExchangeRateRevaluationController())
     .register(new HrmSalarySlipController())
     .register(new AlumDoorAwarePayrollEntryController());
 }

@@ -24,6 +24,37 @@ export interface TrackedStockPosition extends TrackedStockState {
   batch_no: string;
 }
 
+export interface GlAccountBalanceQuery {
+  tenantId: string;
+  company: string;
+  fromDate: string;
+  throughDate: string;
+  branch?: string;
+  account?: string;
+}
+
+export interface GlAccountBalance {
+  account: string;
+  currency: string;
+  currency_scale: number;
+  debit_minor: number;
+  credit_minor: number;
+  /** Immutable GL row count contributing to this aggregate slice. */
+  row_count: number;
+  /** Natural signed ledger movement: debit minus credit. */
+  balance_minor: number;
+}
+
+export interface LedgerAggregateReader {
+  /**
+   * Canonical company/date/account aggregate over immutable GL rows.
+   *
+   * Consumers such as period close, budget actuals and FX revaluation must use this
+   * port instead of compiling their own document/GL joins or persisting shadow totals.
+   */
+  getGlAccountBalances(query: GlAccountBalanceQuery): Promise<GlAccountBalance[]>;
+}
+
 /**
  * Narrow read ports exposed by the kernel package.
  *
@@ -43,10 +74,35 @@ export interface SubmittedQuantityReader {
   sumSubmittedChildQuantityMicros(query: SubmittedQuantityQuery): Promise<number>;
 }
 
+export interface OpenPaymentBalanceQuery {
+  tenantId: string;
+  company: string;
+  throughDate: string;
+}
+
+export interface OpenPaymentBalance {
+  account_type: "Receivable" | "Payable";
+  party_type: string;
+  party: string;
+  account: string;
+  against_voucher_type: "Sales Invoice" | "Purchase Invoice";
+  against_voucher_no: string;
+  currency: string;
+  currency_scale: number;
+  amount_minor: number;
+  base_amount_minor: number;
+  row_count: number;
+}
+
 export interface PaymentLedgerReader {
   getOutstandingMinor(tenantId: string, voucherType: string, voucherNo: string): Promise<number>;
   /** Outstanding in company-currency minor units, derived from the payment ledger. */
   getBaseOutstandingMinor(tenantId: string, voucherType: string, voucherNo: string): Promise<number>;
+  /**
+   * Open AR/AP balances as of one business date. Consumers such as FX revaluation
+   * must not use today's outstanding for a historical close.
+   */
+  listOpenPaymentBalances(query: OpenPaymentBalanceQuery): Promise<OpenPaymentBalance[]>;
   /** Các dòng sổ cái gốc của đúng một lần ghi chứng từ; dùng để huỷ bằng đối dấu nguyên trạng. */
   getVoucherGlEntries(tenantId: string, voucherType: string, voucherNo: string, voucherRevision: number): Promise<GeneralLedgerEntry[]>;
 }
@@ -123,7 +179,13 @@ export interface SalesFulfillmentReader {
 }
 
 export interface ProcurementProgressReader {
-  getProcuredQuantityMicros(tenantId: string, purchaseOrder: string, kind?: "Receipt" | "Billing", itemCode?: string): Promise<number>;
+  getProcuredQuantityMicros(
+    tenantId: string,
+    purchaseOrder: string,
+    kind?: "Receipt" | "Billing",
+    itemCode?: string,
+    purchaseOrderItemRowId?: string,
+  ): Promise<number>;
 }
 
 export interface MasterDataReader {
@@ -146,6 +208,7 @@ export interface PeriodLockReader {
 export interface DomainReader
   extends DocumentReader,
     SubmittedQuantityReader,
+    LedgerAggregateReader,
     PaymentLedgerReader,
     StockLedgerReader,
     ReturnProgressReader,

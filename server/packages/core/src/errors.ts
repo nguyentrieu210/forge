@@ -57,6 +57,15 @@ export function asCloudForgeError(value: unknown): CloudForgeError {
   if (value instanceof TypeError) return errors.validation(value.message);
   const message = value instanceof Error ? value.message : "Unknown failure";
   if (message.includes("PURCHASE_ALLOCATION_REVISION_CONFLICT")) return errors.purchaseAllocationConflict();
+  if (message.includes("CUSTOMER_CREDIT_LIMIT_EXCEEDED")) {
+    return errors.reference("Customer credit limit has been exceeded");
+  }
+  if (message.includes("PERIOD_CLOSE_REQUIRES_LOCK")) {
+    return errors.lifecycle("Accounting period must be locked through the Period Closing Voucher end date");
+  }
+  if (message.includes("PERIOD_CLOSE_SOURCE_CHANGED")) {
+    return errors.version(undefined, "The P&L ledger changed while Period Closing Voucher was being committed");
+  }
   if (message.includes("VERSION_CONFLICT")) return errors.version();
   if (message.includes("DOCUMENT_NOT_FOUND")) return errors.notFound();
   if (message.includes("DOCUMENT_ALREADY_EXISTS")) return errors.exists();
@@ -70,6 +79,12 @@ export function asCloudForgeError(value: unknown): CloudForgeError {
   }
   if (message.includes("PAYMENT_ADVANCE_EXCEEDED") || message.includes("PAYMENT_ADVANCE_BASE_EXCEEDED")) {
     return errors.reference("Payment allocation exceeds the remaining advance balance");
+  }
+  if (message.includes("CUSTOMER_CREDIT_CONTEXT_MISMATCH")) {
+    return errors.reference("Customer credit party, account and currency must match the source Credit Note");
+  }
+  if (message.includes("CUSTOMER_CREDIT_EXCEEDED") || message.includes("CUSTOMER_CREDIT_BASE_EXCEEDED")) {
+    return errors.reference("Customer refund/allocation exceeds the remaining Credit Note customer credit");
   }
   if (message.includes("DAILY_LEDGER_FREEZE_CONTEXT_MISMATCH")) {
     return errors.reference("Daily ledger freeze snapshot does not match the requested context");

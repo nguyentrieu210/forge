@@ -1,4 +1,4 @@
-import type { CanonicalDocument, JsonObject, MutationPlan } from "../../contracts/src/index.js";
+import type { CanonicalDocument, GeneralLedgerEntry, JsonObject, MutationPlan } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
 import type { ControllerContext, DocumentController } from "../../document-kernel/src/index.js";
 import { nextDocStatus } from "../../document-kernel/src/index.js";
@@ -12,6 +12,18 @@ const COMMITMENT_SOURCES = new Set(["Material Request", "Purchase Order", "Expen
 type BudgetScope = "Company" | "Cost Center" | "Project" | "Branch";
 type CommitmentType = "Reserve" | "Release";
 type ControlAction = "Stop" | "Warn" | "Ignore";
+type DistributionFrequency = "Monthly" | "Quarterly" | "Half-Yearly" | "Yearly";
+
+interface FinanceBudgetDistributionRow extends JsonObject {
+  row_id: string;
+  start_date: string;
+  end_date: string;
+  percent_bps: number;
+  percent: string;
+  allocation_weight: number;
+  amount_minor: number;
+  amount: string;
+}
 
 type BudgetDimensionFields = Partial<Pick<FinanceBudgetData, "cost_center" | "project" | "branch">>;
 
@@ -31,6 +43,13 @@ interface FinanceBudgetData extends JsonObject {
   currency_scale?: number;
   budget_amount_minor?: number;
   scope_key?: string;
+  fiscal_distribution_enabled?: boolean;
+  distribution_frequency?: DistributionFrequency;
+  distribute_equally?: boolean;
+  budget_distribution?: FinanceBudgetDistributionRow[];
+  budget_distribution_total_minor?: number;
+  budget_distribution_total?: string;
+  distribution_weight_total?: number;
 }
 
 interface FinanceBudgetRevisionData extends JsonObject {
@@ -58,6 +77,8 @@ interface FinanceBudgetCommitmentData extends JsonObject {
   amount_minor?: number;
   effective_budget_amount?: string;
   effective_budget_amount_minor?: number;
+  annual_effective_budget_amount?: string;
+  annual_effective_budget_amount_minor?: number;
   committed_after?: string;
   committed_after_minor?: number;
   available_after?: string;
@@ -104,8 +125,8 @@ export class FinanceBudgetRevisionController implements DocumentController<Finan
       const existing = requireExisting(context);
       assertApprover(context, false);
       const budget = await requireSubmittedBudget(context, requiredText(existing.data.budget, "budget"));
-      const effectiveAfterCancel = await effectiveBudgetAmount(context, budget, existing.name);
-      const committed = await committedAmount(context, budget.name);
+      const effectiveAfterCancel = await effectiveBudgetAmount(context, budget, existing.name, budget.data.end_date);
+      const committed = await outstandingCommittedAmount(context, budget, budget.data.end_date);
       if (committed > effectiveAfterCancel) {
         throw errors.lifecycle("Cancelling this budget revision would leave commitments above the effective budget", {
           committed_minor: committed,
@@ -130,15 +151,16 @@ export class FinanceBudgetCommitmentController implements DocumentController<Fin
       const existing = requireExisting(context);
       assertApprover(context, false);
       const budget = await requireSubmittedBudget(context, requiredText(existing.data.budget, "budget"));
-      const current = await committedAmount(context, budget.name);
-      const effect = signedCommitment(existing.data);
-      const next = addMinor([current, -effect], "budget commitment cancel");
+      const postingDate = dateText(existing.data.posting_date, "posting_date");
+      const next = await outstandingCommittedAmount(context, budget, postingDate, existing.name);
       if (next < 0) throw errors.lifecycle("Cancelling this commitment would make committed budget negative");
-      const effective = await effectiveBudgetAmount(context, budget);
+      const annualEffective = await effectiveBudgetAmount(context, budget, undefined, postingDate);
+      const effective = budgetLimitThroughDate(budget.data, annualEffective, postingDate);
       if ((budget.data.control_action ?? "Stop") === "Stop" && next > effective) {
         throw errors.lifecycle("Cancelling this release would exceed the effective budget", {
           committed_minor: next,
           effective_budget_minor: effective,
+          annual_effective_budget_minor: annualEffective,
         });
       }
       return plan(context, document(context, structuredClone(existing.data), 2, "Cancelled"));
@@ -174,6 +196,7 @@ async function normalizeBudget(context: ControllerContext<FinanceBudgetData>): P
   const amountMinor = positiveMoney(input.budget_amount, scale, "budget_amount");
   const controlAction = optionalText(input.control_action) || "Stop";
   if (!new Set(["Stop", "Warn", "Ignore"]).has(controlAction)) throw errors.validation("control_action must be Stop, Warn or Ignore");
+  const distribution = normalizeBudgetDistribution(input, startDate, endDate, amountMinor, scale);
 
   const sanitizedInput: FinanceBudgetData = { ...input };
   delete sanitizedInput.cost_center;
@@ -194,6 +217,7 @@ async function normalizeBudget(context: ControllerContext<FinanceBudgetData>): P
     budget_amount: fromScaledInt(amountMinor, scale),
     scope_key: scope.key,
     control_action: controlAction as ControlAction,
+    ...distribution,
   };
 }
 
@@ -209,7 +233,7 @@ async function normalizeRevision(context: ControllerContext<FinanceBudgetRevisio
   const resulting = addMinor([current, deltaMinor], "budget revision resulting amount");
   if (resulting < 0) throw errors.validation("Budget revision cannot make the effective budget negative");
   if (context.command.action === "submit") {
-    const committed = await committedAmount(context, budget.name);
+    const committed = await outstandingCommittedAmount(context, budget, budget.data.end_date);
     if (committed > resulting) {
       throw errors.lifecycle("Budget revision cannot reduce the budget below existing commitments", {
         committed_minor: committed,
@@ -250,9 +274,17 @@ async function normalizeCommitment(context: ControllerContext<FinanceBudgetCommi
   }
   const scale = requiredScale(budget.data);
   const amountMinor = positiveMoney(input.amount, scale, "amount");
-  const effective = await effectiveBudgetAmount(context, budget);
-  const current = await committedAmount(context, budget.name, context.existing?.name);
-  const sourceOutstanding = await sourceCommittedAmount(context, budget.name, sourceDoctype, sourceName, context.existing?.name);
+  const annualEffective = await effectiveBudgetAmount(context, budget, undefined, postingDate);
+  const effective = budgetLimitThroughDate(budget.data, annualEffective, postingDate);
+  const current = await outstandingCommittedAmount(context, budget, postingDate, context.existing?.name);
+  const sourceOutstanding = await outstandingSourceCommittedAmount(
+    context,
+    budget,
+    postingDate,
+    sourceDoctype,
+    sourceName,
+    context.existing?.name,
+  );
   if (type === "Release" && amountMinor > sourceOutstanding) {
     throw errors.lifecycle("Budget release exceeds the amount reserved for the source document", {
       source_outstanding_minor: sourceOutstanding,
@@ -284,6 +316,8 @@ async function normalizeCommitment(context: ControllerContext<FinanceBudgetCommi
     amount: fromScaledInt(amountMinor, scale),
     effective_budget_amount_minor: effective,
     effective_budget_amount: fromScaledInt(effective, scale),
+    annual_effective_budget_amount_minor: annualEffective,
+    annual_effective_budget_amount: fromScaledInt(annualEffective, scale),
     committed_after_minor: next,
     committed_after: fromScaledInt(next, scale),
     available_after_minor: available,
@@ -349,41 +383,337 @@ async function effectiveBudgetAmount<T extends JsonObject>(
   context: ControllerContext<T>,
   budget: CanonicalDocument<FinanceBudgetData>,
   excludeRevision?: string,
+  throughDate?: string,
 ): Promise<number> {
   const revisions = await listSubmitted<FinanceBudgetRevisionData>(context, "Finance Budget Revision");
   const deltas = revisions
-    .filter((doc) => doc.name !== excludeRevision && doc.data.budget === budget.name)
+    .filter((doc) =>
+      doc.name !== excludeRevision
+      && doc.data.budget === budget.name
+      && (!throughDate || (typeof doc.data.posting_date === "string" && doc.data.posting_date <= throughDate))
+    )
     .map((doc) => safeInteger(doc.data.delta_amount_minor, `Finance Budget Revision ${doc.name} delta_amount_minor`));
   return addMinor([safeInteger(budget.data.budget_amount_minor, "budget_amount_minor"), ...deltas], "effective budget amount");
 }
 
-async function committedAmount<T extends JsonObject>(
-  context: ControllerContext<T>,
-  budgetName: string,
-  excludeCommitment?: string,
-): Promise<number> {
-  const commitments = await listSubmitted<FinanceBudgetCommitmentData>(context, "Finance Budget Commitment");
-  return addMinor(commitments
-    .filter((doc) => doc.name !== excludeCommitment && doc.data.budget === budgetName)
-    .map((doc) => signedCommitment(doc.data)), "budget committed amount");
+
+function normalizeBudgetDistribution(
+  input: FinanceBudgetData,
+  startDate: string,
+  endDate: string,
+  budgetAmountMinor: number,
+  scale: number,
+): Pick<FinanceBudgetData,
+  "fiscal_distribution_enabled" | "distribution_frequency" | "distribute_equally"
+  | "budget_distribution" | "budget_distribution_total_minor" | "budget_distribution_total"
+  | "distribution_weight_total"> {
+  const enabled = input.fiscal_distribution_enabled === true;
+  if (!enabled) {
+    return {
+      fiscal_distribution_enabled: false,
+      distribute_equally: false,
+      budget_distribution: [],
+      budget_distribution_total_minor: 0,
+      budget_distribution_total: fromScaledInt(0, scale),
+      distribution_weight_total: 0,
+    };
+  }
+
+  const frequency = optionalText(input.distribution_frequency) as DistributionFrequency;
+  if (!new Set(["Monthly", "Quarterly", "Half-Yearly", "Yearly"]).has(frequency)) {
+    throw errors.validation("distribution_frequency must be Monthly, Quarterly, Half-Yearly or Yearly");
+  }
+  const periods = budgetPeriods(startDate, endDate, frequency);
+  if (periods.length === 0) throw errors.validation("Finance Budget distribution has no periods");
+  const distributeEqually = input.distribute_equally !== false;
+  const supplied = Array.isArray(input.budget_distribution) ? input.budget_distribution : [];
+
+  let percentages: number[];
+  let weights: number[];
+  let weightTotal: number;
+  if (distributeEqually) {
+    percentages = splitBasisPointsEvenly(periods.length);
+    weights = Array.from({ length: periods.length }, () => 1);
+    weightTotal = periods.length;
+  } else {
+    if (supplied.length !== periods.length) {
+      throw errors.validation("Manual budget_distribution must contain exactly one row per distribution period");
+    }
+    percentages = supplied.map((row, index) => {
+      const expected = periods[index]!;
+      if (dateText(row.start_date, `budget_distribution[${index}].start_date`) !== expected.start_date
+        || dateText(row.end_date, `budget_distribution[${index}].end_date`) !== expected.end_date) {
+        throw errors.validation(`budget_distribution[${index}] dates must match the ${frequency} fiscal period`);
+      }
+      return distributionPercentBps(row, index);
+    });
+    if (percentages.reduce((sum, value) => sum + value, 0) !== 10_000) {
+      throw errors.validation("Manual budget distribution percentages must total exactly 100%");
+    }
+    weights = [...percentages];
+    weightTotal = 10_000;
+  }
+
+  let cumulativeBps = 0;
+  let cumulativeWeight = 0;
+  let previousAllocated = 0;
+  const rows: FinanceBudgetDistributionRow[] = periods.map((period, index) => {
+    cumulativeBps += percentages[index]!;
+    cumulativeWeight += weights[index]!;
+    const cumulativeAllocated = proportionalMinorRatio(budgetAmountMinor, cumulativeWeight, weightTotal);
+    const amountMinor = cumulativeAllocated - previousAllocated;
+    previousAllocated = cumulativeAllocated;
+    return {
+      row_id: `DIST-${index + 1}`,
+      start_date: period.start_date,
+      end_date: period.end_date,
+      percent_bps: percentages[index]!,
+      percent: fromScaledInt(percentages[index]!, 2),
+      allocation_weight: weights[index]!,
+      amount_minor: amountMinor,
+      amount: fromScaledInt(amountMinor, scale),
+    };
+  });
+  if (cumulativeBps !== 10_000 || cumulativeWeight !== weightTotal || previousAllocated !== budgetAmountMinor) {
+    throw errors.lifecycle("Finance Budget distribution normalization did not close to the annual budget");
+  }
+  return {
+    fiscal_distribution_enabled: true,
+    distribution_frequency: frequency,
+    distribute_equally: distributeEqually,
+    budget_distribution: rows,
+    budget_distribution_total_minor: budgetAmountMinor,
+    budget_distribution_total: fromScaledInt(budgetAmountMinor, scale),
+    distribution_weight_total: weightTotal,
+  };
 }
 
-async function sourceCommittedAmount<T extends JsonObject>(
+function distributionPercentBps(row: FinanceBudgetDistributionRow, index: number): number {
+  if (Number.isSafeInteger(row.percent_bps) && row.percent_bps > 0) return row.percent_bps;
+  const value = (row as JsonObject).percent;
+  if (typeof value !== "string" && typeof value !== "number") {
+    throw errors.validation(`budget_distribution[${index}].percent is required for manual distribution`);
+  }
+  const bps = toScaledInt(value, 2, `budget_distribution[${index}].percent`);
+  if (!Number.isSafeInteger(bps) || bps <= 0 || bps > 10_000) {
+    throw errors.validation(`budget_distribution[${index}].percent must be within 0-100`);
+  }
+  return bps;
+}
+
+function splitBasisPointsEvenly(count: number): number[] {
+  if (!Number.isSafeInteger(count) || count <= 0) throw errors.validation("Budget distribution period count is invalid");
+  const base = Math.floor(10_000 / count);
+  const remainder = 10_000 % count;
+  return Array.from({ length: count }, (_, index) => base + (index < remainder ? 1 : 0));
+}
+
+function budgetPeriods(
+  startDate: string,
+  endDate: string,
+  frequency: DistributionFrequency,
+): Array<{ start_date: string; end_date: string }> {
+  const increment = frequency === "Monthly" ? 1 : frequency === "Quarterly" ? 3 : frequency === "Half-Yearly" ? 6 : 12;
+  const periods: Array<{ start_date: string; end_date: string }> = [];
+  let cursor = parseIsoDate(startDate);
+  const end = parseIsoDate(endDate);
+  while (cursor.getTime() <= end.getTime()) {
+    const periodStart = formatIsoDate(cursor);
+    const calendarStart = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth(), 1));
+    const candidateEnd = new Date(Date.UTC(
+      calendarStart.getUTCFullYear(),
+      calendarStart.getUTCMonth() + increment,
+      0,
+    ));
+    const periodEnd = candidateEnd.getTime() > end.getTime() ? end : candidateEnd;
+    periods.push({ start_date: periodStart, end_date: formatIsoDate(periodEnd) });
+    cursor = new Date(periodEnd.getTime() + 86_400_000);
+  }
+  return periods;
+}
+
+function budgetLimitThroughDate(data: FinanceBudgetData, annualEffectiveMinor: number, throughDate: string): number {
+  if (data.fiscal_distribution_enabled !== true) return annualEffectiveMinor;
+  const rows = Array.isArray(data.budget_distribution) ? data.budget_distribution : [];
+  if (rows.length === 0) throw errors.lifecycle("Finance Budget fiscal distribution is enabled but missing");
+  const weightTotal = safeInteger(data.distribution_weight_total, "distribution_weight_total");
+  if (weightTotal <= 0 || weightTotal > 10_000) {
+    throw errors.lifecycle("Finance Budget distribution weight total is invalid");
+  }
+  const cumulativeWeight = rows
+    .filter((row) => typeof row.start_date === "string" && row.start_date <= throughDate)
+    .reduce((sum, row) => sum + safeInteger(row.allocation_weight, "budget distribution allocation_weight"), 0);
+  if (cumulativeWeight < 0 || cumulativeWeight > weightTotal) {
+    throw errors.lifecycle("Finance Budget fiscal distribution cumulative weight is invalid");
+  }
+  return proportionalMinorRatio(annualEffectiveMinor, cumulativeWeight, weightTotal);
+}
+
+function proportionalMinorRatio(amountMinor: number, numerator: number, denominator: number): number {
+  if (!Number.isSafeInteger(amountMinor) || amountMinor < 0
+    || !Number.isSafeInteger(numerator) || numerator < 0
+    || !Number.isSafeInteger(denominator) || denominator <= 0 || denominator > 10_000
+    || numerator > denominator) {
+    throw errors.lifecycle("Finance Budget proportional amount inputs are invalid");
+  }
+  const quotient = Math.floor(amountMinor / denominator);
+  const remainder = amountMinor % denominator;
+  const result = quotient * numerator + Math.floor((remainder * numerator + Math.floor(denominator / 2)) / denominator);
+  if (!Number.isSafeInteger(result)) throw errors.lifecycle("Finance Budget proportional amount exceeds safe integer range");
+  return result;
+}
+
+function parseIsoDate(value: string): Date {
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  if (Number.isNaN(parsed.getTime())) throw errors.validation("Finance Budget distribution date is invalid");
+  return parsed;
+}
+
+function formatIsoDate(value: Date): string {
+  return value.toISOString().slice(0, 10);
+}
+
+async function outstandingCommittedAmount<T extends JsonObject>(
   context: ControllerContext<T>,
-  budgetName: string,
+  budget: CanonicalDocument<FinanceBudgetData>,
+  throughDate: string,
+  excludeCommitment?: string,
+): Promise<number> {
+  const groups = await commitmentGroups(context, budget.name, throughDate, excludeCommitment);
+  let total = 0;
+  for (const group of groups.values()) {
+    if (group.raw_minor <= 0) continue;
+    const actual = group.source_doctype && group.source_name
+      ? await linkedSourceActualMinor(context, budget, throughDate, group.source_doctype, group.source_name)
+      : 0;
+    total = addMinor([total, group.raw_minor - Math.min(group.raw_minor, Math.max(0, actual))], "outstanding budget commitment");
+  }
+  return total;
+}
+
+async function outstandingSourceCommittedAmount<T extends JsonObject>(
+  context: ControllerContext<T>,
+  budget: CanonicalDocument<FinanceBudgetData>,
+  throughDate: string,
   sourceDoctype: string,
   sourceName: string,
   excludeCommitment?: string,
 ): Promise<number> {
+  const groups = await commitmentGroups(context, budget.name, throughDate, excludeCommitment);
+  const group = groups.get(`${sourceDoctype}\u0000${sourceName}`);
+  if (!group || group.raw_minor <= 0) return 0;
+  const actual = await linkedSourceActualMinor(context, budget, throughDate, sourceDoctype, sourceName);
+  return group.raw_minor - Math.min(group.raw_minor, Math.max(0, actual));
+}
+
+async function commitmentGroups<T extends JsonObject>(
+  context: ControllerContext<T>,
+  budgetName: string,
+  throughDate: string,
+  excludeCommitment?: string,
+): Promise<Map<string, { source_doctype: string; source_name: string; raw_minor: number }>> {
   const commitments = await listSubmitted<FinanceBudgetCommitmentData>(context, "Finance Budget Commitment");
-  return addMinor(commitments
-    .filter((doc) =>
-      doc.name !== excludeCommitment
-      && doc.data.budget === budgetName
-      && doc.data.source_doctype === sourceDoctype
-      && doc.data.source_name === sourceName
+  const groups = new Map<string, { source_doctype: string; source_name: string; raw_minor: number }>();
+  for (const doc of commitments) {
+    if (doc.name === excludeCommitment || doc.data.budget !== budgetName) continue;
+    const postingDate = typeof doc.data.posting_date === "string" ? doc.data.posting_date : "";
+    if (postingDate && postingDate > throughDate) continue;
+    const sourceDoctype = typeof doc.data.source_doctype === "string" ? doc.data.source_doctype : "";
+    const sourceName = typeof doc.data.source_name === "string" ? doc.data.source_name : "";
+    const key = sourceDoctype && sourceName ? `${sourceDoctype}\u0000${sourceName}` : `__legacy__\u0000${doc.name}`;
+    const group = groups.get(key) ?? { source_doctype: sourceDoctype, source_name: sourceName, raw_minor: 0 };
+    group.raw_minor = addMinor([group.raw_minor, signedCommitment(doc.data)], "source budget commitment");
+    groups.set(key, group);
+  }
+  return groups;
+}
+
+async function linkedSourceActualMinor<T extends JsonObject>(
+  context: ControllerContext<T>,
+  budget: CanonicalDocument<FinanceBudgetData>,
+  throughDate: string,
+  sourceDoctype: string,
+  sourceName: string,
+): Promise<number> {
+  const account = requiredText(budget.data.account, "Finance Budget account");
+  const accountData = await context.reader.getMasterRecordData(context.command.tenant_id, "Account", account);
+  const rootType = typeof accountData?.root_type === "string" ? accountData.root_type : "";
+  const movement = (line: GeneralLedgerEntry): number =>
+    rootType === "Income" ? line.credit_minor - line.debit_minor : line.debit_minor - line.credit_minor;
+
+  const candidates = sourceDoctype === "Expense Claim"
+    ? [await context.reader.getDocument<JsonObject>(context.command.tenant_id, "Expense Claim", sourceName)].filter(
+      (doc): doc is CanonicalDocument<JsonObject> => Boolean(doc),
     )
-    .map((doc) => signedCommitment(doc.data)), "source committed amount");
+    : await context.reader.listDocumentsByDoctype<JsonObject>(context.command.tenant_id, "Purchase Invoice");
+
+  let actual = 0;
+  for (const voucher of candidates) {
+    if (voucher.data.company !== budget.data.company) continue;
+    const maxRevision = Math.max(1, voucher.version);
+    for (let revision = 1; revision <= maxRevision; revision += 1) {
+      const lines = await context.reader.getVoucherGlEntries(
+        context.command.tenant_id,
+        voucher.doctype,
+        voucher.name,
+        revision,
+      );
+      for (const line of lines) {
+        if (line.account !== account || line.posting_at.slice(0, 10) > throughDate) continue;
+        if (!budgetScopeMatches(budget.data, voucher.data, line)) continue;
+        if (!commitmentSourceMatches(sourceDoctype, sourceName, voucher, line.line_key)) continue;
+        actual = addMinor([actual, movement(line)], "linked source actual amount");
+      }
+    }
+  }
+  return actual;
+}
+
+function commitmentSourceMatches(
+  sourceDoctype: string,
+  sourceName: string,
+  voucher: CanonicalDocument<JsonObject>,
+  lineKey: string,
+): boolean {
+  if (sourceDoctype === "Expense Claim") {
+    return voucher.doctype === "Expense Claim" && voucher.name === sourceName;
+  }
+  if (voucher.doctype !== "Purchase Invoice") return false;
+  let canonicalLineKey = lineKey;
+  while (canonicalLineKey.startsWith("REV-")) canonicalLineKey = canonicalLineKey.slice(4);
+  if (!canonicalLineKey.startsWith("EXPENSE-")) return false;
+  const rowId = canonicalLineKey.slice("EXPENSE-".length);
+  const items = Array.isArray(voucher.data.items) ? voucher.data.items : [];
+  const item = items.find((raw): raw is JsonObject =>
+    Boolean(raw && typeof raw === "object" && !Array.isArray(raw) && String((raw as JsonObject).row_id ?? "") === rowId));
+  if (!item) return false;
+  if (sourceDoctype === "Purchase Order") {
+    const purchaseOrder = optionalText(item.purchase_order) || optionalText(voucher.data.against_purchase_order);
+    return purchaseOrder === sourceName;
+  }
+  if (sourceDoctype === "Material Request") {
+    return optionalText(item.material_request) === sourceName;
+  }
+  return false;
+}
+
+function budgetScopeMatches(budget: FinanceBudgetData, documentData: JsonObject, line: GeneralLedgerEntry): boolean {
+  const scope = budget.budget_against;
+  if (scope === "Company") return true;
+  const dimensions = line.accounting_dimensions ?? {};
+  if (scope === "Branch") {
+    const branch = optionalText(documentData.branch) || optionalText(dimensions.branch);
+    return branch === budget.branch;
+  }
+  if (scope === "Cost Center") {
+    const costCenter = line.cost_center || optionalText(dimensions.cost_center);
+    return costCenter === budget.cost_center;
+  }
+  if (scope === "Project") {
+    const project = optionalText(documentData.project) || optionalText(dimensions.project);
+    return project === budget.project;
+  }
+  return false;
 }
 
 function signedCommitment(data: FinanceBudgetCommitmentData): number {
@@ -489,6 +819,10 @@ function document<T extends JsonObject>(
   docstatus: 0 | 1 | 2,
   status: string,
 ): CanonicalDocument<T> {
+  const distribution = context.command.aggregate.doctype === "Finance Budget"
+    && Array.isArray((data as JsonObject).budget_distribution)
+    ? ((data as JsonObject).budget_distribution as JsonObject[])
+    : [];
   return {
     tenant_id: context.command.tenant_id,
     doctype: context.command.aggregate.doctype,
@@ -500,7 +834,13 @@ function document<T extends JsonObject>(
     created_at: context.existing?.created_at ?? context.now,
     modified_at: context.now,
     data,
-    children: [],
+    children: distribution.map((row, index) => ({
+      fieldname: "budget_distribution",
+      child_doctype: "Finance Budget Distribution",
+      row_id: String(row.row_id ?? `DIST-${index + 1}`),
+      idx: index + 1,
+      data: structuredClone(row),
+    })),
   };
 }
 

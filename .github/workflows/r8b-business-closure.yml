@@ -1,0 +1,108 @@
+name: R8-B Business Closure
+
+on:
+  pull_request:
+    paths:
+      - "server/packages/contracts/**"
+      - "server/packages/document-kernel/**"
+      - "server/packages/clouderp-core/**"
+      - "server/packages/clouderp-selling/**"
+      - "server/packages/clouderp-stock/**"
+      - "server/packages/clouderp-erpnext/**"
+      - "server/packages/query/**"
+      - "server/packages/policy/**"
+      - "server/tests/subcontracting-closure.test.mjs"
+      - "server/tests/landed-cost-authority.test.mjs"
+      - "server/scripts/test-landed-cost-repost-migration.py"
+      - "server/tests/customer-credit-authority.test.mjs"
+      - "server/tests/period-closing-authority.test.mjs"
+      - "server/tests/period-close-timestamp.test.mjs"
+      - "server/tests/finance-closure-query.test.mjs"
+      - "server/tests/finance-budget-actual-sql.test.mjs"
+      - "server/tests/finance-budget.test.mjs"
+      - "server/tests/finance-budget-transaction-control.test.mjs"
+      - "server/tests/exchange-rate-revaluation.test.mjs"
+      - "server/tests/procurement-p2p-closure.test.mjs"
+      - "server/tests/finance-closure-policy.test.mjs"
+      - "server/tests/r8-erpnext-depth.test.mjs"
+      - "server/migrations/tenant/0141_subcontracting_authority.sql"
+      - "server/migrations/tenant/0142_landed_cost_valuation_identity.sql"
+      - "server/migrations/tenant/0143_purchase_invoice_row_authority.sql"
+      - "server/migrations/tenant/0150_customer_credit_authority.sql"
+      - "server/migrations/tenant/0151_period_closing_voucher.sql"
+      - "server/migrations/tenant/0152_period_close_scope_safety.sql"
+      - "server/migrations/tenant/0153_finance_budget_transaction_control.sql"
+      - "server/migrations/tenant/0154_exchange_rate_revaluation.sql"
+      - "server/migrations/tenant/0155_customer_credit_refund.sql"
+      - "server/migrations/tenant/0156_customer_credit_allocation.sql"
+      - "server/migrations/tenant/0157_finance_budget_commitment_actualization.sql"
+      - "server/migrations/tenant/0158_finance_budget_fiscal_distribution.sql"
+      - "server/scripts/test-customer-credit-authority-migration.py"
+      - "server/scripts/test-customer-credit-allocation-migration.py"
+      - "server/scripts/test-period-closing-authority-migration.py"
+      - "server/scripts/test-finance-budget-transaction-control.py"
+      - "server/scripts/test-exchange-rate-revaluation-migration.py"
+      - "server/scripts/verify-r8-erpnext-depth.mjs"
+      - "docs/agents/r8/**"
+      - ".github/workflows/r8b-business-closure.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  subcontracting:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Build server
+        run: pnpm --dir server run build
+      - name: Subcontracting regression
+        run: node --test server/tests/subcontracting-closure.test.mjs
+      - name: Landed Cost authority regression
+        run: node --test server/tests/landed-cost-authority.test.mjs
+      - name: Landed Cost repost migration regression
+        run: python3 server/scripts/test-landed-cost-repost-migration.py
+      - name: P2P row authority regression
+        run: node --test server/tests/procurement-p2p-closure.test.mjs
+      - name: Customer credit policy regression
+        run: node --test server/tests/customer-credit-authority.test.mjs
+      - name: Customer credit atomic migration regression
+        run: python3 server/scripts/test-customer-credit-authority-migration.py
+      - name: Customer credit allocation migration regression
+        run: python3 server/scripts/test-customer-credit-allocation-migration.py
+      - name: Period Closing Voucher regression
+        run: node --test server/tests/period-closing-authority.test.mjs
+      - name: Period Closing UTC timestamp regression
+        run: node --test server/tests/period-close-timestamp.test.mjs
+      - name: Period close atomic migration regression
+        run: python3 server/scripts/test-period-closing-authority-migration.py
+      - name: Finance Budget vs Actual query regression
+        run: node --test server/tests/finance-closure-query.test.mjs
+      - name: Finance Budget vs Actual executable SQL regression
+        run: node --test server/tests/finance-budget-actual-sql.test.mjs
+      - name: Finance Budget controller regression
+        run: node --test server/tests/finance-budget.test.mjs
+      - name: Finance Budget transaction-control parity regression
+        run: node --test server/tests/finance-budget-transaction-control.test.mjs
+      - name: Finance Budget atomic GL guard regression
+        run: python3 server/scripts/test-finance-budget-transaction-control.py
+      - name: Exchange Rate Revaluation controller regression
+        run: node --test server/tests/exchange-rate-revaluation.test.mjs
+      - name: Exchange Rate Revaluation D1 source guard regression
+        run: python3 server/scripts/test-exchange-rate-revaluation-migration.py
+      - name: Finance close/budget RBAC regression
+        run: node --test server/tests/finance-closure-policy.test.mjs
+      - name: R8 benchmark invariant
+        run: node server/scripts/verify-r8-erpnext-depth.mjs --audit-complete
+      - name: R8 matrix regression
+        run: node --test server/tests/r8-erpnext-depth.test.mjs

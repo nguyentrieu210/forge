@@ -1,5 +1,6 @@
 import { ControllerRegistry } from "../../document-kernel/src/index.js";
 import { JournalEntryController, StockEntryController } from "./controllers.js";
+import { PeriodClosingVoucherController } from "./period-closing-controller.js";
 import { PurchaseFundingMaterialRequestController } from "./purchase-funding-material-request.js";
 import { ProcurementRequestForQuotationController, ProcurementSupplierContractController, ProcurementSupplierQuotationController } from "./procurement-integrity-controllers.js";
 import { ProcurementP2PRolloutPurchaseInvoiceController, ProcurementP2PRolloutPurchaseOrderController } from "./procurement-p2p-rollout-controllers.js";
@@ -12,6 +13,7 @@ import { SupplierSelectionController } from "./supplier-selection-controller.js"
 export function registerErpCoreControllers(registry: ControllerRegistry): ControllerRegistry {
   return registry
     .register(new JournalEntryController())
+    .register(new PeriodClosingVoucherController())
     .register(new PurchaseFundingMaterialRequestController())
     .register(new ProcurementRequestForQuotationController())
     .register(new ProcurementSupplierQuotationController())

@@ -51,3 +51,71 @@ test("finance reconciliation diagnostics are restricted to accounting control ro
     );
   }
 });
+
+test("Finance Budget vs Actual is restricted to accounting control roles", () => {
+  for (const role of [
+    "System Manager",
+    "Accounts Manager",
+    "Accounts User",
+    "General Accountant",
+    "Chief Accountant",
+    "Kế toán tổng hợp",
+    "Kế toán trưởng",
+  ]) {
+    assert.doesNotThrow(() => permission.assertReport(actor([role]), "Finance Budget vs Actual"));
+  }
+
+  for (const role of ["Sales Manager", "Purchase Manager", "Stock Manager", "Director", "Giám đốc"]) {
+    assert.throws(
+      () => permission.assertReport(actor([role]), "Finance Budget vs Actual"),
+      (error) => error.code === "PERMISSION_DENIED",
+    );
+  }
+});
+
+test("Period Closing Voucher static RBAC matches accounting authority", () => {
+  assert.doesNotThrow(() => permission.assert({
+    actor: actor(["Accounts Manager"]),
+    doctype: "Period Closing Voucher",
+    action: "submit",
+  }));
+  assert.doesNotThrow(() => permission.assert({
+    actor: actor(["Accounts User"]),
+    doctype: "Period Closing Voucher",
+    action: "read",
+  }));
+  assert.throws(
+    () => permission.assert({
+      actor: actor(["Accounts User"]),
+      doctype: "Period Closing Voucher",
+      action: "submit",
+    }),
+    (error) => error.code === "PERMISSION_DENIED",
+  );
+});
+
+
+test("Exchange Rate Revaluation static RBAC matches accounting authority", () => {
+  for (const role of ["Accounts Manager", "Chief Accountant", "Kế toán trưởng"]) {
+    assert.doesNotThrow(() => permission.assert({
+      actor: actor([role]),
+      doctype: "Exchange Rate Revaluation",
+      action: "submit",
+    }));
+  }
+  for (const role of ["Accounts User", "General Accountant", "Kế toán tổng hợp"]) {
+    assert.doesNotThrow(() => permission.assert({
+      actor: actor([role]),
+      doctype: "Exchange Rate Revaluation",
+      action: "read",
+    }));
+    assert.throws(
+      () => permission.assert({
+        actor: actor([role]),
+        doctype: "Exchange Rate Revaluation",
+        action: "submit",
+      }),
+      (error) => error.code === "PERMISSION_DENIED",
+    );
+  }
+});

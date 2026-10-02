@@ -115,11 +115,16 @@ export class D1PurchaseAllocationMutationStore extends D1MutationStore {
     for (const line of plan.stock_entries) {
       statements.push(database.prepare(
         `INSERT INTO stock_ledger_entries
-         (tenant_id,voucher_type,voucher_no,voucher_revision,line_key,item_code,warehouse,actual_qty_micros,actual_weight_micros,valuation_rate_minor,stock_value_difference_minor,qty_scale,currency_scale,currency,posting_at,batch_no,serial_no,allow_negative_stock)
-         VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18)`,
+         (tenant_id,voucher_type,voucher_no,voucher_revision,line_key,source_row_id,
+          valuation_target_voucher_type,valuation_target_voucher_no,valuation_target_voucher_revision,valuation_target_row_id,
+          item_code,warehouse,actual_qty_micros,actual_weight_micros,valuation_rate_minor,stock_value_difference_minor,qty_scale,currency_scale,currency,posting_at,batch_no,serial_no,allow_negative_stock)
+         VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23)`,
       ).bind(
         command.tenant_id, command.aggregate.doctype, command.aggregate.name, plan.document.version,
-        line.line_key, line.item_code, line.warehouse, line.actual_qty_micros,
+        line.line_key, line.source_row_id ?? null,
+        line.valuation_target_voucher_type ?? null, line.valuation_target_voucher_no ?? null,
+        line.valuation_target_voucher_revision ?? null, line.valuation_target_row_id ?? null,
+        line.item_code, line.warehouse, line.actual_qty_micros,
         line.actual_weight_micros ?? null, line.valuation_rate_minor,
         line.stock_value_difference_minor, line.qty_scale, line.currency_scale, line.currency,
         line.posting_at, line.batch_no ?? null, line.serial_no ?? null, line.allow_negative_stock ? 1 : 0,
@@ -139,12 +144,13 @@ export class D1PurchaseAllocationMutationStore extends D1MutationStore {
       const voucher = resolveVoucherIdentity(line, command.aggregate.name, plan.document.version);
       statements.push(database.prepare(
         `INSERT INTO purchase_order_progress_entries
-         (tenant_id,voucher_type,voucher_no,voucher_revision,line_key,purchase_order,kind,item_code,qty_micros,posting_at)
-         VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10)`,
+         (tenant_id,voucher_type,voucher_no,voucher_revision,line_key,purchase_order,purchase_order_item_row_id,kind,item_code,qty_micros,posting_at)
+         VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11)`,
       ).bind(
         command.tenant_id, line.voucher_type ?? command.aggregate.doctype,
         voucher.voucher_no, voucher.voucher_revision,
-        line.line_key, line.purchase_order, line.kind, line.item_code, line.qty_micros, line.posting_at,
+        line.line_key, line.purchase_order, line.purchase_order_item_row_id ?? null,
+        line.kind, line.item_code, line.qty_micros, line.posting_at,
       ));
     }
 
