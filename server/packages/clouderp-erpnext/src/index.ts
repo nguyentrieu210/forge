@@ -32,3 +32,4 @@ export * from "./hrm-employee-lite.js";
 export * from "./stock-reconciliation-batch.js";
 export * from "./stock-reconciliation-batch-consumer.js";
 export * from "./warehouse-cash.js";
+export * from "./exchange-rate-revaluation.js";
