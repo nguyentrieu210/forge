@@ -8,9 +8,10 @@ Forge no longer treats `Customer.credit_limit` as a report/UI-only field. Submit
 now freeze a server-owned credit policy and D1 enforces the resulting exposure ceiling
 atomically.
 
-This closure does **not** promote all Selling/O2C semantics to parity. Fully-paid
-return/refund/customer-credit policy, exact-current ERPNext oracle replay and other
-remaining O2C differences stay open.
+This closure does **not** promote all Selling/O2C semantics to parity. R8-B now also
+closes the fully-paid return -> customer credit -> cash-refund path without creating a
+shadow receivable authority. Reusable allocation of customer credit to later invoices,
+exact-current ERPNext oracle replay and other remaining O2C differences stay open.
 
 ## Closed in this lane
 
@@ -35,6 +36,13 @@ remaining O2C differences stay open.
   the same batch than the Receivable Payment Ledger row. The open-order reservation
   therefore falls before AR is added, so exposure transfers rather than double-counts.
 - Concurrent/serialized submits cannot both cross the same credit ceiling.
+- A Credit Note against a fully settled Sales Invoice leaves the invoice at zero and
+  creates negative canonical Receivable against the Credit Note for the refundable amount.
+- Payment Entry `Pay` + `Customer` may reference only submitted Credit Note credit;
+  over-refund is rejected and unallocated customer refund is forbidden.
+- Refund posts `Dr Debtors / Cr Bank` and a positive Payment Ledger allocation against
+  the Credit Note, clearing the negative customer credit without a wallet/shadow balance.
+- Cancelling the refund reverses both GL and Payment Ledger and restores the exact credit.
 
 ## No shadow receivable authority
 
@@ -49,6 +57,8 @@ The SQL views are derived control projections only; they do not own or mutate ba
 ## Evidence
 
 - `server/packages/clouderp-selling/src/credit-policy.ts`
+- `server/packages/clouderp-selling/src/finance-controllers.ts`
+- `server/packages/clouderp-erpnext/src/controllers.ts`
 - `server/migrations/tenant/0150_customer_credit_authority.sql`
 - `server/tests/customer-credit-authority.test.mjs`
 - `server/scripts/test-customer-credit-authority-migration.py`
@@ -73,14 +83,18 @@ The focused evidence proves:
 4. two Sales Orders of 60 under a limit of 100 cannot both commit;
 5. billing 50 from a 100 Sales Order releases 50 of order exposure before the
    corresponding 50 Receivable is inserted, preserving total exposure at 100;
-6. any further positive Receivable then fails atomically at the same ceiling.
+6. any further positive Receivable then fails atomically at the same ceiling;
+7. a fully paid Sales Invoice remains at zero when its Credit Note is submitted;
+8. the refundable excess is held as negative canonical Receivable against the Credit Note;
+9. a Customer refund cannot exceed that credit and cannot be left unallocated;
+10. refund submit clears the credit with balanced Debtors/Bank GL, and cancel restores it.
 
 ## Remaining O2C boundary
 
-The next unresolved O2C policy is a different question: what a fully paid Sales Invoice
-return becomes when there is no live invoice outstanding left to reduce.
+The fully-paid return cash-refund path is now authoritative. The remaining customer-credit
+gap is **reuse**, not existence or cash-out: Forge does not yet allocate an existing Credit
+Note customer credit onto a later Sales Invoice through a first-class audited reconciliation
+command. That allocation must reuse the same Payment Ledger authority, remain bounded by
+both source credit and target invoice outstanding, and reverse exactly on cancellation.
 
-Current Forge deliberately refuses to manufacture a negative invoice outstanding or a
-shadow customer-credit wallet. A future closure must choose and prove an authoritative
-Finance contract for reusable customer credit/advance and/or cash refund, including GL,
-Payment Ledger linkage, cancellation and reconciliation.
+Exact-current ERPNext oracle replay and the other declared O2C differences also remain open.

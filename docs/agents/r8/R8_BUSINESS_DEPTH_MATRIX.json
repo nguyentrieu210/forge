@@ -117,10 +117,10 @@
       ],
       "oracle_cases": [],
       "gaps": [
-        "Fully-paid return/refund/customer-credit policy remains unresolved.",
+        "Fully-paid return customer credit and cash refund are closed; allocating customer credit to later invoices remains unresolved.",
         "Full current replay of 115 O2C oracle fixtures remains pending."
       ],
-      "rationale": "Core O2C is one of Forge's deepest areas. R8-B now adds atomic server-side customer credit-limit/hold authority, but fully-paid return/refund/customer-credit policy and exact-current oracle replay still prevent module closure."
+      "rationale": "Core O2C is one of Forge's deepest areas. R8-B now closes customer credit-limit/hold plus the fully-paid return -> customer credit -> cash refund path with exact reversal; reusable credit allocation to later invoices and exact-current ERPNext replay still keep Selling PARTIAL."
     },
     {
       "depth_id": "R8-M03-BUYING",
@@ -457,14 +457,14 @@
       ],
       "known_depth_questions": [
         "Re-run the committed ERPNext oracle differential against exact current main; stale gap labels do not count.",
-        "Resolve fully-paid return/refund/customer-credit semantics.",
+        "Prove reusable customer-credit allocation to later invoices after the cash-refund path is closed.",
         "Reconcile current stock valuation/serial-batch behavior against the pinned oracle after later Forge stock work.",
         "Prove partial/multiple delivery, invoice, payment, cancel/amend/backdate and race behavior end to end."
       ],
-      "rationale": "O2C is materially implemented and has a pinned 115-fixture ERPNext oracle plus later transaction closure. R8-B closes the previously explicit credit-limit/hold authority gap, while fully-paid return/refund policy, exact-current oracle replay and remaining stock-policy differences keep the flow PARTIAL.",
+      "rationale": "O2C is materially implemented and has a pinned 115-fixture ERPNext oracle plus later transaction closure. R8-B closes credit-limit/hold and the fully-paid return -> customer credit -> cash refund path with exact cancellation. Reusable customer-credit allocation, exact-current oracle replay and remaining stock-policy differences keep the flow PARTIAL.",
       "confirmed_findings": [
         "Pinned oracle capture is valid at 115/115 fixtures, but its older Forge-side gap prose is stale for several capabilities now present on exact current main.",
-        "Fully-paid return/refund/customer-credit policy remains an explicit Finance dependency.",
+        "A fully-paid return now creates canonical negative Receivable against the Credit Note; Payment Entry Pay/Customer can refund only that submitted credit, with bounded allocation, Debtors/Bank GL and exact cancellation.",
         "Historical downstream COGS/expense restatement after wider backdated valuation effects remains deferred in transaction convergence.",
         "Current Forge blocks expired-batch delivery while pinned ERPNext v16.20.0 oracle observes expiry as advisory; this is a real semantic divergence requiring an explicit policy disposition.",
         "R8-B now freezes Customer/Customer Group/Company credit policy on submit, enforces customer hold/release-date semantics server-side, and applies the credit ceiling atomically in D1 over canonical Payment Ledger receivables plus still-unbilled submitted Sales Order exposure; Sales Order bypass policy is preserved without creating a shadow AR balance."
@@ -526,7 +526,8 @@
         "docs/agents/transaction-closure/04-FINANCE-DAILY-LEDGER.md",
         "docs/agents/transaction-closure/07-CONVERGENCE.md",
         "server/packages/clouderp-selling/src/finance-controllers.ts",
-        "server/packages/ledger"
+        "server/packages/ledger",
+        "server/tests/customer-credit-authority.test.mjs"
       ],
       "known_depth_questions": [
         "payment allocation ordering",
@@ -536,11 +537,11 @@
         "reversal and correction lineage",
         "race/idempotency"
       ],
-      "rationale": "Meaningful current settlement semantics are proven in Forge, including FX difference posting and canonical Payment Ledger usage, but full ERPNext behavioral depth remains unproven.",
+      "rationale": "Meaningful current settlement semantics are proven in Forge, including FX difference posting, canonical Payment Ledger usage and bounded customer-credit cash refund. Full ERPNext behavioral depth remains unproven.",
       "confirmed_findings": [
         "Current Payment Entry authority includes historical-rate base allocation and explicit exchange-difference GL posting.",
         "AR/AP settlement and reversal authorities exist with integrated transaction-closure evidence.",
-        "ERPNext-exact settlement ordering, customer-credit/refund policy and branch/dimension depth are not fully closed by R8."
+        "Customer-credit cash refund is now closed; reusable credit allocation to later invoices, ERPNext-exact settlement ordering and branch/dimension depth remain open."
       ]
     },
     {

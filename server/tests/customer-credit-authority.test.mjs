@@ -2,8 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { createO2CControllerRegistry } from "../dist/packages/clouderp-selling/src/index.js";
+import { registerErpCoreControllers } from "../dist/packages/clouderp-core/src/index.js";
+import { registerStockControllers } from "../dist/packages/clouderp-stock/src/index.js";
+import { registerErpNextCoreControllers } from "../dist/packages/clouderp-erpnext/src/index.js";
 import { DocumentKernel, InMemoryMutationStore } from "../dist/packages/document-kernel/src/index.js";
-import { createAndSubmit } from "./helpers.mjs";
+import { createAndSubmit, mutate } from "./helpers.mjs";
 
 const NOW = "2026-10-02T09:00:00.000Z";
 
@@ -72,4 +75,179 @@ test("customer hold blocks submit until the release date has passed", async () =
     createAndSubmit(kernel, order("SO-HOLD")),
     /on credit hold/i,
   );
+});
+
+
+function setupRefund() {
+  const store = new InMemoryMutationStore();
+  store.seedO2CMasters({
+    company: "Demo",
+    customer: "CUST-1",
+    currency: "USD",
+    items: ["ITEM-1"],
+    warehouses: ["Stores"],
+    accounts: ["Debtors", "Sales", "Bank"],
+  });
+  const registry = registerErpNextCoreControllers(
+    registerStockControllers(registerErpCoreControllers(createO2CControllerRegistry())),
+  );
+  const kernel = new DocumentKernel(registry, store, undefined, () => NOW);
+  return { store, kernel };
+}
+
+test("fully-paid return becomes customer credit and Payment Entry refund clears it exactly", async () => {
+  const { store, kernel } = setupRefund();
+
+  await createAndSubmit(kernel, {
+    doctype: "Sales Invoice",
+    name: "SI-PAID",
+    document: {
+      customer: "CUST-1",
+      company: "Demo",
+      currency: "USD",
+      posting_at: NOW,
+      debit_to: "Debtors",
+      default_income_account: "Sales",
+      items: [{ row_id: "SI-1", item_code: "ITEM-1", qty: "1", rate: "40", income_account: "Sales" }],
+      taxes: [],
+    },
+  });
+
+  await createAndSubmit(kernel, {
+    doctype: "Payment Entry",
+    name: "PAY-FULL",
+    document: {
+      company: "Demo",
+      posting_at: NOW,
+      payment_type: "Receive",
+      party_type: "Customer",
+      party: "CUST-1",
+      paid_from: "Debtors",
+      paid_to: "Bank",
+      paid_amount: "40",
+      received_amount: "40",
+      currency: "USD",
+      references: [{
+        row_id: "PAY-1",
+        reference_doctype: "Sales Invoice",
+        reference_name: "SI-PAID",
+        allocated_amount: "40",
+      }],
+    },
+  });
+  assert.equal(await store.getOutstandingMinor("demo", "Sales Invoice", "SI-PAID"), 0);
+
+  await createAndSubmit(kernel, {
+    doctype: "Credit Note",
+    name: "CN-PAID",
+    document: {
+      customer: "CUST-1",
+      company: "Demo",
+      currency: "USD",
+      posting_at: NOW,
+      return_against: "SI-PAID",
+      debit_to: "Debtors",
+      default_income_account: "Sales",
+      items: [{ row_id: "CN-1", item_code: "ITEM-1", qty: "1", rate: "40" }],
+      taxes: [],
+    },
+  });
+
+  const credit = await store.getDocument("demo", "Credit Note", "CN-PAID");
+  assert.equal(credit.data.applied_to_invoice_minor, 0);
+  assert.equal(credit.data.customer_credit_minor, 4_000);
+  assert.equal(await store.getOutstandingMinor("demo", "Sales Invoice", "SI-PAID"), 0);
+  assert.equal(await store.getOutstandingMinor("demo", "Credit Note", "CN-PAID"), -4_000);
+
+  await assert.rejects(
+    createAndSubmit(kernel, {
+      doctype: "Payment Entry",
+      name: "REFUND-OVER",
+      document: {
+        company: "Demo",
+        posting_at: NOW,
+        payment_type: "Pay",
+        party_type: "Customer",
+        party: "CUST-1",
+        paid_from: "Bank",
+        paid_to: "Debtors",
+        paid_amount: "41",
+        received_amount: "41",
+        currency: "USD",
+        references: [{
+          row_id: "REF-OVER",
+          reference_doctype: "Credit Note",
+          reference_name: "CN-PAID",
+          allocated_amount: "41",
+        }],
+      },
+    }),
+    /exceeds outstanding/i,
+  );
+
+  await assert.rejects(
+    createAndSubmit(kernel, {
+      doctype: "Payment Entry",
+      name: "REFUND-UNALLOCATED",
+      document: {
+        company: "Demo",
+        posting_at: NOW,
+        payment_type: "Pay",
+        party_type: "Customer",
+        party: "CUST-1",
+        paid_from: "Bank",
+        paid_to: "Debtors",
+        paid_amount: "1",
+        received_amount: "1",
+        currency: "USD",
+        references: [],
+      },
+    }),
+    /fully allocated/i,
+  );
+
+  await createAndSubmit(kernel, {
+    doctype: "Payment Entry",
+    name: "REFUND-1",
+    document: {
+      company: "Demo",
+      posting_at: NOW,
+      payment_type: "Pay",
+      party_type: "Customer",
+      party: "CUST-1",
+      paid_from: "Bank",
+      paid_to: "Debtors",
+      paid_amount: "40",
+      received_amount: "40",
+      currency: "USD",
+      references: [{
+        row_id: "REF-1",
+        reference_doctype: "Credit Note",
+        reference_name: "CN-PAID",
+        allocated_amount: "40",
+      }],
+    },
+  });
+
+  assert.equal(await store.getOutstandingMinor("demo", "Credit Note", "CN-PAID"), 0);
+  const refundGl = await store.getVoucherGlEntries("demo", "Payment Entry", "REFUND-1", 2);
+  assert.equal(
+    refundGl.filter((line) => line.account === "Debtors").reduce((sum, line) => sum + line.debit_minor - line.credit_minor, 0),
+    4_000,
+  );
+  assert.equal(
+    refundGl.filter((line) => line.account === "Bank").reduce((sum, line) => sum + line.debit_minor - line.credit_minor, 0),
+    -4_000,
+  );
+
+  await mutate(kernel, {
+    commandId: "REFUND-1-cancel",
+    doctype: "Payment Entry",
+    name: "REFUND-1",
+    action: "cancel",
+    expectedVersion: 2,
+    document: {},
+  });
+  assert.equal(await store.getOutstandingMinor("demo", "Credit Note", "CN-PAID"), -4_000);
+  assert.equal(await store.getOutstandingMinor("demo", "Sales Invoice", "SI-PAID"), 0);
 });
