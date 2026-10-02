@@ -304,7 +304,7 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
       user: "sales@example.com",
       reason: "rotate R7 credential",
     }));
-    expect(second.api_key).not.toBe(first.api_key);
+    expect(second.api_key).toBe(first.api_key);
     expect(second.api_secret).not.toBe(first.api_secret);
 
     const oldCredential = await call("/api/method/frappe.auth.get_logged_user", {
