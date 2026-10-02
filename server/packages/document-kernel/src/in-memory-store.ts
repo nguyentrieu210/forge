@@ -1341,20 +1341,57 @@ export class InMemoryMutationStore implements MutationStore {
         const incomingActual = matchingIncoming
           .filter((entry) => entry.posting_at.slice(0, 10) <= throughDate)
           .reduce((sum, entry) => sum + movement(entry), 0);
+        const accumulatedBudget = this.financeBudgetLimitThroughDate(budget.data, effectiveBudget, throughDate);
         const projected = existingActual + incomingActual + committed;
         const controlAction = typeof budget.data.control_action === "string" ? budget.data.control_action : "Stop";
-        if (controlAction === "Stop" && projected > effectiveBudget) {
+        if (controlAction === "Stop" && projected > accumulatedBudget) {
           throw errors.lifecycle("FINANCE_BUDGET_TRANSACTION_EXCEEDED", {
             budget: budget.name,
             posting_date: throughDate,
-            effective_budget_minor: effectiveBudget,
+            effective_budget_minor: accumulatedBudget,
+            annual_effective_budget_minor: effectiveBudget,
             actual_after_minor: existingActual + incomingActual,
             committed_minor: committed,
-            exceeded_by_minor: projected - effectiveBudget,
+            exceeded_by_minor: projected - accumulatedBudget,
           });
         }
       }
     }
+  }
+
+  private financeBudgetLimitThroughDate(
+    budget: JsonObject,
+    annualEffectiveMinor: number,
+    throughDate: string,
+  ): number {
+    if (budget.fiscal_distribution_enabled !== true) return annualEffectiveMinor;
+    const rows = Array.isArray(budget.budget_distribution) ? budget.budget_distribution : [];
+    const weightTotal = Number(budget.distribution_weight_total ?? 0);
+    if (!Number.isSafeInteger(weightTotal) || weightTotal <= 0 || weightTotal > 10_000 || rows.length === 0) {
+      throw errors.lifecycle("FINANCE_BUDGET_DISTRIBUTION_INVALID");
+    }
+    let cumulativeWeight = 0;
+    for (const raw of rows) {
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+        throw errors.lifecycle("FINANCE_BUDGET_DISTRIBUTION_INVALID");
+      }
+      const row = raw as JsonObject;
+      const startDate = typeof row.start_date === "string" ? row.start_date : "";
+      const weight = Number(row.allocation_weight ?? 0);
+      if (!startDate || !Number.isSafeInteger(weight) || weight <= 0) {
+        throw errors.lifecycle("FINANCE_BUDGET_DISTRIBUTION_INVALID");
+      }
+      if (startDate <= throughDate) cumulativeWeight += weight;
+    }
+    if (cumulativeWeight < 0 || cumulativeWeight > weightTotal) {
+      throw errors.lifecycle("FINANCE_BUDGET_DISTRIBUTION_INVALID");
+    }
+    const quotient = Math.floor(annualEffectiveMinor / weightTotal);
+    const remainder = annualEffectiveMinor % weightTotal;
+    const result = quotient * cumulativeWeight
+      + Math.floor((remainder * cumulativeWeight + Math.floor(weightTotal / 2)) / weightTotal);
+    if (!Number.isSafeInteger(result)) throw errors.lifecycle("FINANCE_BUDGET_DISTRIBUTION_INVALID");
+    return result;
   }
 
   private financeBudgetOutstandingCommitmentMinor<T extends JsonObject>(args: {
