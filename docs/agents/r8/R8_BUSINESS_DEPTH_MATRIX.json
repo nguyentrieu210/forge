@@ -109,7 +109,11 @@
         "server/packages/clouderp-selling/src/credit-policy.ts",
         "server/migrations/tenant/0150_customer_credit_authority.sql",
         "server/tests/customer-credit-authority.test.mjs",
-        "server/scripts/test-customer-credit-authority-migration.py"
+        "server/scripts/test-customer-credit-authority-migration.py",
+        "docs/agents/r8/R8B_CUSTOMER_CREDIT_CLOSURE.md",
+        "server/migrations/tenant/0155_customer_credit_refund.sql",
+        "server/migrations/tenant/0156_customer_credit_allocation.sql",
+        "server/scripts/test-customer-credit-allocation-migration.py"
       ],
       "upstream_evidence": [
         "server/docs/spec/source-exact/oracle/ORACLE_REPORT.json",
@@ -117,10 +121,10 @@
       ],
       "oracle_cases": [],
       "gaps": [
-        "Fully-paid return customer credit and cash refund are closed; allocating customer credit to later invoices remains unresolved.",
+        "Customer credit-limit/hold, fully-paid return credit, cash refund and same-base reuse against later invoices are closed; cross-rate reuse still requires first-class realized-FX GL.",
         "Full current replay of 115 O2C oracle fixtures remains pending."
       ],
-      "rationale": "Core O2C is one of Forge's deepest areas. R8-B now closes customer credit-limit/hold plus the fully-paid return -> customer credit -> cash refund path with exact reversal; reusable credit allocation to later invoices and exact-current ERPNext replay still keep Selling PARTIAL."
+      "rationale": "Core O2C is one of Forge's deepest areas. R8-B closes customer credit-limit/hold plus fully-paid return -> canonical customer credit -> cash refund or same-base later-invoice allocation, with atomic source/target guards and exact reversal. Cross-rate realized-FX settlement and exact-current ERPNext replay still keep Selling PARTIAL."
     },
     {
       "depth_id": "R8-M03-BUYING",
@@ -455,21 +459,26 @@
         "server/packages/clouderp-selling/src/credit-policy.ts",
         "server/migrations/tenant/0150_customer_credit_authority.sql",
         "server/tests/customer-credit-authority.test.mjs",
-        "server/scripts/test-customer-credit-authority-migration.py"
+        "server/scripts/test-customer-credit-authority-migration.py",
+        "docs/agents/r8/R8B_CUSTOMER_CREDIT_CLOSURE.md",
+        "server/migrations/tenant/0155_customer_credit_refund.sql",
+        "server/migrations/tenant/0156_customer_credit_allocation.sql",
+        "server/scripts/test-customer-credit-allocation-migration.py"
       ],
       "known_depth_questions": [
         "Re-run the committed ERPNext oracle differential against exact current main; stale gap labels do not count.",
-        "Prove reusable customer-credit allocation to later invoices after the cash-refund path is closed.",
+        "Add realized-FX GL for customer-credit/payment-advance allocation when source and target historical base values differ.",
         "Reconcile current stock valuation/serial-batch behavior against the pinned oracle after later Forge stock work.",
         "Prove partial/multiple delivery, invoice, payment, cancel/amend/backdate and race behavior end to end."
       ],
-      "rationale": "O2C is materially implemented and has a pinned 115-fixture ERPNext oracle plus later transaction closure. R8-B closes credit-limit/hold and the fully-paid return -> customer credit -> cash refund path with exact cancellation. Reusable customer-credit allocation, exact-current oracle replay and remaining stock-policy differences keep the flow PARTIAL.",
+      "rationale": "O2C is materially implemented and has a pinned 115-fixture ERPNext oracle plus later transaction closure. R8-B closes credit-limit/hold, fully-paid return credit, bounded cash refund and same-base customer-credit reuse against later invoices with exact cancellation. Cross-rate realized-FX settlement, exact-current oracle replay and remaining stock-policy differences keep the flow PARTIAL.",
       "confirmed_findings": [
         "Pinned oracle capture is valid at 115/115 fixtures, but its older Forge-side gap prose is stale for several capabilities now present on exact current main.",
-        "A fully-paid return now creates canonical negative Receivable against the Credit Note; Payment Entry Pay/Customer can refund only that submitted credit, with bounded allocation, Debtors/Bank GL and exact cancellation.",
         "Historical downstream COGS/expense restatement after wider backdated valuation effects remains deferred in transaction convergence.",
         "Current Forge blocks expired-batch delivery while pinned ERPNext v16.20.0 oracle observes expiry as advisory; this is a real semantic divergence requiring an explicit policy disposition.",
-        "R8-B now freezes Customer/Customer Group/Company credit policy on submit, enforces customer hold/release-date semantics server-side, and applies the credit ceiling atomically in D1 over canonical Payment Ledger receivables plus still-unbilled submitted Sales Order exposure; Sales Order bypass policy is preserved without creating a shadow AR balance."
+        "R8-B now freezes Customer/Customer Group/Company credit policy on submit, enforces customer hold/release-date semantics server-side, and applies the credit ceiling atomically in D1 over canonical Payment Ledger receivables plus still-unbilled submitted Sales Order exposure; Sales Order bypass policy is preserved without creating a shadow AR balance.",
+        "A fully-paid return creates canonical negative Receivable against the Credit Note; that signed source can be refunded through Payment Entry or consumed by Payment Allocation against a later Sales Invoice, with atomic source/target bounds and exact cancellation.",
+        "Cross-rate Payment Allocation fails closed when source and target historical base values differ; realized-FX GL is not fabricated."
       ]
     },
     {
