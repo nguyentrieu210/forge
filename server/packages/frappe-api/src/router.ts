@@ -1455,15 +1455,18 @@ async function dispatchMethod(
     // Không có ba lời gọi này thì màn phân quyền không trả lời được "ai đăng nhập được
     // vào hệ thống", và không có đường nào tạo một tài khoản ngoài việc gọi API tay.
     case "frappe.core.doctype.user.user.generate_keys":
+      if (request.method.toUpperCase() !== "POST") throw errors.validation("generate_keys requires POST");
       return methodResponse(await generateApiKeys(args, context));
 
     case "metaforge.api.list_api_credentials":
       return methodResponse(await listApiCredentials(args, context));
 
     case "metaforge.api.revoke_api_credential":
+      if (request.method.toUpperCase() !== "POST") throw errors.validation("revoke_api_credential requires POST");
       return methodResponse(await revokeApiCredential(args, context));
 
     case "frappe.core.doctype.user.user.impersonate":
+      if (request.method.toUpperCase() !== "POST") throw errors.validation("impersonate requires POST");
       return impersonateUser(args, context);
 
     case "metaforge.api.list_users":
