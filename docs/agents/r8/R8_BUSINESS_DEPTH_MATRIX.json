@@ -129,19 +129,22 @@
         "docs/agents/transaction-closure/05-PROCUREMENT-P2P.md",
         "server/packages/clouderp-core/src/procurement-p2p-controllers.ts",
         "docs/agents/r8/R8B_SUBCONTRACTING_CLOSURE.md",
-        "server/packages/clouderp-erpnext/src/subcontracting.ts"
+        "server/packages/clouderp-erpnext/src/subcontracting.ts",
+        "docs/agents/r8/R8B_LANDED_COST_CLOSURE.md",
+        "server/packages/clouderp-erpnext/src/landed-cost-voucher.ts",
+        "server/tests/landed-cost-authority.test.mjs"
       ],
       "upstream_evidence": [
         "ERPNext v16.20.0 buying/stock subcontracting and landed-cost controllers at pinned SHA"
       ],
       "oracle_cases": [],
       "gaps": [
-        "Authoritative landed-cost application/reversal is incomplete.",
+        "Historical downstream COGS/SLE-GLE repost for landed-cost changes remains incomplete; safe authoritative apply/reverse is now implemented.",
         "Ambiguous same-item multi-PO row allocation is incomplete.",
         "Supplier-management breadth and runtime oracle remain open.",
         "Subcontracting is now first-class but remains partial around reservation, returns, secondary/process-loss and repost depth."
       ],
-      "rationale": "Normal P2P is strong, but landed cost, subcontracting and remaining Buying breadth prevent closure."
+      "rationale": "Normal P2P plus safe authoritative landed-cost apply/reverse are strong, but historical downstream repost, remaining Buying breadth and runtime parity prevent closure."
     },
     {
       "depth_id": "R8-M04-STOCK",
@@ -170,7 +173,10 @@
         "docs/agents/r8/R8_O2C_REMAP.md",
         "docs/agents/r8/R8_P1_BREADTH_REMAP.md",
         "docs/agents/transaction-closure/03-INVENTORY-WMS.md",
-        "server/packages/clouderp-stock"
+        "server/packages/clouderp-stock",
+        "docs/agents/r8/R8B_LANDED_COST_CLOSURE.md",
+        "server/packages/clouderp-erpnext/src/landed-cost-voucher.ts",
+        "server/migrations/tenant/0142_landed_cost_valuation_identity.sql"
       ],
       "upstream_evidence": [
         "server/docs/spec/source-exact/oracle/EVIDENCE_BUNDLE.md",
@@ -178,13 +184,13 @@
       ],
       "oracle_cases": [],
       "gaps": [
-        "Landed Cost Voucher-equivalent authoritative valuation application is incomplete.",
+        "Landed Cost Voucher authoritative valuation application/reversal is implemented for the no-downstream-consumption boundary; historical repost beyond that boundary remains incomplete.",
         "Historical downstream COGS restatement is incomplete.",
         "Persisted WMS task execution and full ATP are incomplete.",
         "Expired-batch policy differs from pinned ERPNext behavior.",
         "LIFO is not supported."
       ],
-      "rationale": "Stock ledger/tracking/valuation/reconciliation are mature, but several ERPNext depth and WMS execution semantics remain open."
+      "rationale": "Stock ledger/tracking/valuation/reconciliation now include targeted landed-cost capitalization and exact reversal, but historical downstream repost plus WMS/ATP and remaining ERPNext depth remain open."
     },
     {
       "depth_id": "R8-M05-MANUFACTURING",
@@ -461,7 +467,11 @@
         "server/tests/procurement-p2p-correction-boundary.test.mjs",
         "server/tests/procurement-landed-cost.test.mjs",
         "ERPNext v16.20.0 erpnext/buying/doctype/purchase_order/purchase_order.py",
-        "ERPNext v16.20.0 erpnext/stock/doctype/landed_cost_voucher/landed_cost_voucher.py"
+        "ERPNext v16.20.0 erpnext/stock/doctype/landed_cost_voucher/landed_cost_voucher.py",
+        "docs/agents/r8/R8B_LANDED_COST_CLOSURE.md",
+        "server/packages/clouderp-erpnext/src/landed-cost-voucher.ts",
+        "server/tests/landed-cost-authority.test.mjs",
+        "server/migrations/tenant/0142_landed_cost_valuation_identity.sql"
       ],
       "known_depth_questions": [
         "Partial receipt/billing/payment and over-receipt/over-billing",
@@ -471,16 +481,16 @@
         "RFQ/Supplier Quotation depth",
         "cancel/amend/backdate/race semantics"
       ],
-      "rationale": "Core source-to-pay behavior is substantial and transaction-closure evidence is strong, but ERPNext authoritative landed-cost semantics and exact runtime differential coverage remain open.",
+      "rationale": "Core source-to-pay behavior is substantial and R8-B now has authoritative targeted landed-cost capitalization with exact reversal. Historical downstream COGS/SLE-GLE repost, exact row-level multi-PO allocation and a pinned P2P runtime differential remain open.",
       "confirmed_findings": [
         "Forge has a real P2P authority chain: RFQ/Supplier Quotation selection, Purchase Order, partial Purchase Receipt, Purchase Invoice three-way match, multi-PO invoice support, Supplier Payment/Advance via Finance, Stock Return and Debit Note correction boundaries.",
         "Purchase Invoice match policy is frozen on PO and a failed receipt/quantity/price match holds before GL, Payment Ledger or procurement-progress commit.",
-        "Forge landed-cost code is allocation/preview evidence only and deliberately emits no Stock Ledger or GL; ERPNext v16.20 Landed Cost Voucher updates receipt valuation, cancels/rebuilds Stock Ledger and GL, and reposts future SLE/GLE.",
+        "R8-B now has a first-class Landed Cost Voucher: deterministic receipt-row allocation posts zero-quantity targeted Stock Ledger value plus balanced GL, exact cancellation reverses committed rows, active vouchers protect source Purchase Receipts, and unsafe historical-consumption cases fail closed pending downstream repost.",
         "Ambiguous same-item split-price PO invoice allocation still lacks authoritative purchase_order_item row identity.",
         "A dedicated pinned ERPNext P2P runtime oracle has not yet been captured, so the normal P2P path cannot be promoted beyond PARTIAL."
       ],
       "gaps": [
-        "Authoritative landed-cost stock-value application, reversal and downstream reconciliation are not implemented end to end.",
+        "Historical downstream COGS/SLE-GLE repost for backdated or already-consumed landed-cost targets remains incomplete; the safe no-downstream apply/reverse path is implemented.",
         "Ambiguous same-item split-price multi-PO invoice allocation lacks exact row-level authority.",
         "Pinned ERPNext P2P runtime differential remains to be captured."
       ]
@@ -634,7 +644,10 @@
         "server/packages/clouderp-stock/src/valuation.ts",
         "docs/agents/transaction-closure/03-INVENTORY-WMS.md",
         "docs/agents/transaction-closure/07-CONVERGENCE.md",
-        "server/docs/spec/source-exact/oracle/EVIDENCE_BUNDLE.md"
+        "server/docs/spec/source-exact/oracle/EVIDENCE_BUNDLE.md",
+        "docs/agents/r8/R8B_LANDED_COST_CLOSURE.md",
+        "server/packages/clouderp-erpnext/src/landed-cost-voucher.ts",
+        "server/tests/landed-cost-authority.test.mjs"
       ],
       "known_depth_questions": [
         "FIFO/Moving Average exactness",
@@ -645,11 +658,11 @@
         "stock-to-GL reconciliation",
         "exact reversal"
       ],
-      "rationale": "Stock valuation is now substantial, but ERPNext depth is broader and current downstream repost/landed-cost behavior is not closed.",
+      "rationale": "Stock valuation now includes targeted receipt-row landed-cost adjustments and exact reversal, but ERPNext depth is broader and historical downstream repost remains unclosed.",
       "confirmed_findings": [
         "Current Forge has server-ledger FIFO and Moving Average valuation plus bounded repost/adjustment logic, so the older oracle prose saying no valuation engine exists is stale.",
         "Pinned ERPNext oracle includes LIFO behavior; current Forge ValuationMethod is FIFO or Moving Average only.",
-        "Historical downstream COGS/expense restatement and authoritative landed-cost application/reversal remain explicit deferred boundaries."
+        "Targeted landed-cost application/reversal is now authoritative on the safe no-downstream boundary; historical downstream COGS/expense restatement remains an explicit deferred boundary."
       ]
     },
     {
