@@ -195,6 +195,44 @@ test("Landed Cost late-arriving FIFO repost splits inventory and consumed expens
   assert.equal((await store.getTrackedStockState("demo", "ITEM-1", "Stores")).stock_value_minor, 500);
 });
 
+test("Landed Cost fully-consumed FIFO source posts only expense correction and cancels exactly", async () => {
+  const { store, kernel } = setup();
+  await submitPo(kernel, "PO-2C", "1");
+  await submitReceipt(kernel, "PR-3C", "PO-2C", "PR3C-ROW", "10", "2026-10-02T08:00:00.000Z");
+  await issueStock(kernel, "ISSUE-FULL-BEFORE-LCV", "2026-10-02T08:30:00.000Z");
+
+  // The default helper issues 0.5, so issue the remaining 0.5 as a second direct Material Issue.
+  await issueStock(kernel, "ISSUE-FULL-BEFORE-LCV-2", "2026-10-02T08:31:00.000Z");
+
+  await submitLcv(kernel, "LCV-FULL-REPOST", "PR-3C", "2026-10-02T08:45:00.000Z", "COGS Repost");
+
+  const lcv = await store.getDocument("demo", "Landed Cost Voucher", "LCV-FULL-REPOST");
+  assert.equal(lcv.data.allocations[0].remaining_qty_micros, 0);
+  assert.equal(lcv.data.allocations[0].inventory_cost_minor, 0);
+  assert.equal(lcv.data.allocations[0].consumed_cost_minor, 500);
+  assert.equal(
+    (await store.getVoucherStockEntries("demo", "Landed Cost Voucher", "LCV-FULL-REPOST", 2)).length,
+    0,
+  );
+  assert.equal((await store.getTrackedStockState("demo", "ITEM-1", "Stores")).stock_value_minor, 0);
+
+  const snapshot = store.snapshot();
+  const repost = snapshot.gl_entries.find((line) =>
+    line.line_key.startsWith("REPOST-ALLOC-") && line.account === "COGS Repost");
+  assert.equal(repost?.debit_minor, 500);
+
+  await mutate(kernel, {
+    commandId: "LCV-FULL-REPOST-cancel",
+    doctype: "Landed Cost Voucher",
+    name: "LCV-FULL-REPOST",
+    action: "cancel",
+    expectedVersion: 2,
+    document: {},
+  });
+  assert.equal((await store.getDocument("demo", "Landed Cost Voucher", "LCV-FULL-REPOST")).docstatus, 2);
+  assert.equal((await store.getTrackedStockState("demo", "ITEM-1", "Stores")).stock_value_minor, 0);
+});
+
 test("Landed Cost still fails closed for a backdated voucher before existing downstream consumption", async () => {
   const { store, kernel } = setup();
   await submitPo(kernel, "PO-2B", "1");
