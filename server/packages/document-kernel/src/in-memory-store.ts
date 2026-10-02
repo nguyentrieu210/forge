@@ -560,8 +560,14 @@ export class InMemoryMutationStore implements MutationStore {
       voucher_revision: plan.document.version,
       line: structuredClone(line),
     })));
-    this.stockEntries.push(...structuredClone(plan.stock_entries));
-    this.voucherStockEntries.push(...plan.stock_entries.map((line) => ({
+    const committedStock = plan.stock_entries.map((line) => ({
+      ...structuredClone(line),
+      source_voucher_type: command.aggregate.doctype,
+      source_voucher_no: command.aggregate.name,
+      source_voucher_revision: plan.document.version,
+    }));
+    this.stockEntries.push(...committedStock);
+    this.voucherStockEntries.push(...committedStock.map((line) => ({
       tenant_id: command.tenant_id,
       voucher_type: command.aggregate.doctype,
       voucher_no: command.aggregate.name,
