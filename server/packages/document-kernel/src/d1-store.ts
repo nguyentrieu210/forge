@@ -405,7 +405,9 @@ export class D1MutationStore implements MutationStore {
 
   async getVoucherStockEntries(tenantId: string, voucherType: string, voucherNo: string, voucherRevision: number): Promise<StockLedgerEntry[]> {
     const result = await this.writer.prepare(
-      `SELECT line_key,item_code,warehouse,actual_qty_micros,actual_weight_micros,valuation_rate_minor,stock_value_difference_minor,
+      `SELECT voucher_type,voucher_no,voucher_revision,line_key,source_row_id,
+       valuation_target_voucher_type,valuation_target_voucher_no,valuation_target_voucher_revision,valuation_target_row_id,
+       item_code,warehouse,actual_qty_micros,actual_weight_micros,valuation_rate_minor,stock_value_difference_minor,
        qty_scale,currency_scale,currency,posting_at,batch_no,serial_no,allow_negative_stock
        FROM stock_ledger_entries
        WHERE tenant_id=?1 AND voucher_type=?2 AND voucher_no=?3 AND voucher_revision=?4
@@ -422,7 +424,9 @@ export class D1MutationStore implements MutationStore {
     const values: unknown[] = [tenantId, itemCode, warehouse];
     if (throughPostingAt) { conditions.push(`posting_at<=?${values.length + 1}`); values.push(throughPostingAt); }
     if (batchNo) { conditions.push(`batch_no=?${values.length + 1}`); values.push(batchNo); }
-    const sql = `SELECT voucher_type,voucher_no,voucher_revision,line_key,item_code,warehouse,actual_qty_micros,actual_weight_micros,valuation_rate_minor,stock_value_difference_minor,
+    const sql = `SELECT voucher_type,voucher_no,voucher_revision,line_key,source_row_id,
+      valuation_target_voucher_type,valuation_target_voucher_no,valuation_target_voucher_revision,valuation_target_row_id,
+      item_code,warehouse,actual_qty_micros,actual_weight_micros,valuation_rate_minor,stock_value_difference_minor,
       qty_scale,currency_scale,currency,posting_at,batch_no,serial_no,allow_negative_stock
       FROM stock_ledger_entries WHERE ${conditions.join(" AND ")}
       ORDER BY posting_at,rowid`;
@@ -1152,11 +1156,16 @@ export class D1MutationStore implements MutationStore {
     for (const line of plan.stock_entries) {
       statements.push(database.prepare(
         `INSERT INTO stock_ledger_entries
-         (tenant_id,voucher_type,voucher_no,voucher_revision,line_key,item_code,warehouse,actual_qty_micros,actual_weight_micros,valuation_rate_minor,stock_value_difference_minor,qty_scale,currency_scale,currency,posting_at,batch_no,serial_no,allow_negative_stock)
-         VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18)`,
+         (tenant_id,voucher_type,voucher_no,voucher_revision,line_key,source_row_id,
+          valuation_target_voucher_type,valuation_target_voucher_no,valuation_target_voucher_revision,valuation_target_row_id,
+          item_code,warehouse,actual_qty_micros,actual_weight_micros,valuation_rate_minor,stock_value_difference_minor,qty_scale,currency_scale,currency,posting_at,batch_no,serial_no,allow_negative_stock)
+         VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23)`,
       ).bind(
         command.tenant_id, command.aggregate.doctype, command.aggregate.name, plan.document.version,
-        line.line_key, line.item_code, line.warehouse, line.actual_qty_micros,
+        line.line_key, line.source_row_id ?? null,
+        line.valuation_target_voucher_type ?? null, line.valuation_target_voucher_no ?? null,
+        line.valuation_target_voucher_revision ?? null, line.valuation_target_row_id ?? null,
+        line.item_code, line.warehouse, line.actual_qty_micros,
         // `?? null` chứ KHÔNG `?? 0`: cột này rỗng nghĩa là không cân theo kiện, còn 0 nghĩa
         // là đã cân và được 0. Gộp hai thứ đó lại là mất luôn khả năng phân biệt.
         line.actual_weight_micros ?? null,
@@ -1455,6 +1464,11 @@ function mapStockLedgerRow(row: Record<string, unknown>): StockLedgerEntry {
     ...(row.voucher_type != null ? { source_voucher_type: String(row.voucher_type) } : {}),
     ...(row.voucher_no != null ? { source_voucher_no: String(row.voucher_no) } : {}),
     ...(row.voucher_revision != null ? { source_voucher_revision: Number(row.voucher_revision) } : {}),
+    ...(row.source_row_id != null ? { source_row_id: String(row.source_row_id) } : {}),
+    ...(row.valuation_target_voucher_type != null ? { valuation_target_voucher_type: String(row.valuation_target_voucher_type) } : {}),
+    ...(row.valuation_target_voucher_no != null ? { valuation_target_voucher_no: String(row.valuation_target_voucher_no) } : {}),
+    ...(row.valuation_target_voucher_revision != null ? { valuation_target_voucher_revision: Number(row.valuation_target_voucher_revision) } : {}),
+    ...(row.valuation_target_row_id != null ? { valuation_target_row_id: String(row.valuation_target_row_id) } : {}),
     actual_qty_micros: Number(row.actual_qty_micros),
     // `!= null` bắt cả null lẫn undefined mà VẪN giữ số 0 — `row.x ? …` sẽ nuốt mất cân 0.
     ...(row.actual_weight_micros != null ? { actual_weight_micros: Number(row.actual_weight_micros) } : {}),
