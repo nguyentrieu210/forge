@@ -163,13 +163,14 @@ export class ExchangeRateRevaluationController implements DocumentController<Exc
       const rate = await closingRate(context, row.currency, companyCurrency, postingDate);
       const targetBase = convertMinor(row.amount_minor, row.currency_scale, rate, companyScale);
       const difference = targetBase - row.base_amount_minor;
-      if (difference === 0) continue;
       if (!Number.isSafeInteger(difference)) throw errors.validation("Revaluation difference exceeds safe integer range");
 
-      const gain = row.account_type === "Receivable" ? difference > 0 : difference < 0;
-      if (gain) totalGain = safeAdd(totalGain, Math.abs(difference), "total revaluation gain");
-      else totalLoss = safeAdd(totalLoss, Math.abs(difference), "total revaluation loss");
-      totalAdjustment = safeAdd(totalAdjustment, Math.abs(difference), "total revaluation adjustment");
+      if (difference !== 0) {
+        const gain = row.account_type === "Receivable" ? difference > 0 : difference < 0;
+        if (gain) totalGain = safeAdd(totalGain, Math.abs(difference), "total revaluation gain");
+        else totalLoss = safeAdd(totalLoss, Math.abs(difference), "total revaluation loss");
+        totalAdjustment = safeAdd(totalAdjustment, Math.abs(difference), "total revaluation adjustment");
+      }
 
       entries.push({
         row_id: `FX-${entries.length + 1}`,
@@ -190,7 +191,7 @@ export class ExchangeRateRevaluationController implements DocumentController<Exc
         source_row_count: row.row_count,
       });
     }
-    if (entries.length === 0) {
+    if (entries.length === 0 || totalAdjustment === 0) {
       throw errors.reference("No non-zero foreign-currency AR/AP revaluation remains for this date");
     }
 
@@ -259,6 +260,7 @@ function buildGl(data: ExchangeRateRevaluationData): GeneralLedgerEntry[] {
   const normal: GeneralLedgerEntry[] = [];
   for (const entry of data.revaluation_entries ?? []) {
     const amount = Math.abs(entry.difference_minor);
+    if (amount === 0) continue;
     const receivable = entry.account_type === "Receivable";
     const increase = entry.difference_minor > 0;
     const partyDebit = receivable ? increase : !increase;
@@ -295,7 +297,6 @@ function buildGl(data: ExchangeRateRevaluationData): GeneralLedgerEntry[] {
   }
   const reversal = reverseGl(normal).map((line) => ({
     ...line,
-    line_key: `REV-${line.line_key}`,
     posting_at: reversalAt,
     remarks: `Auto reversal: ${line.remarks ?? "FX revaluation"}`,
   }));
