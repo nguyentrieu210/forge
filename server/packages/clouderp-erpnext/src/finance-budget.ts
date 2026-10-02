@@ -819,6 +819,10 @@ function document<T extends JsonObject>(
   docstatus: 0 | 1 | 2,
   status: string,
 ): CanonicalDocument<T> {
+  const distribution = context.command.aggregate.doctype === "Finance Budget"
+    && Array.isArray((data as JsonObject).budget_distribution)
+    ? ((data as JsonObject).budget_distribution as JsonObject[])
+    : [];
   return {
     tenant_id: context.command.tenant_id,
     doctype: context.command.aggregate.doctype,
@@ -830,7 +834,13 @@ function document<T extends JsonObject>(
     created_at: context.existing?.created_at ?? context.now,
     modified_at: context.now,
     data,
-    children: [],
+    children: distribution.map((row, index) => ({
+      fieldname: "budget_distribution",
+      child_doctype: "Finance Budget Distribution",
+      row_id: String(row.row_id ?? `DIST-${index + 1}`),
+      idx: index + 1,
+      data: structuredClone(row),
+    })),
   };
 }
 
