@@ -115,12 +115,12 @@ export class D1ApiCredentialStore {
            before_json,after_json,reason,source,trace_id,created_at
          ) VALUES(
            ?1,?2,'api_credential.issue',?3,?4,'null',
-           json_object('credential_id',?5,'rotated_previous',1),
+           json_object('credential_id',?5,'rotated_previous',?10),
            ?6,?7,?8,?9
          )`,
       ).bind(
         tenantId, eventId, audit.actorUserId, userId, credentialId,
-        reason, audit.source, audit.traceId, now,
+        reason, audit.source, audit.traceId, now, previous ? 1 : 0,
       ),
     ]);
 
