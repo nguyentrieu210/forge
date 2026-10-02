@@ -27,6 +27,10 @@ export const STATIC_DOCTYPE_PERMISSIONS: Record<string, DoctypePermission> = {
   "Payment Allocation": matrix(["Accounts Manager", "Accounts User"], ["Accounts Manager"]),
   "Journal Entry": matrix(["Accounts Manager", "Accounts User"], ["Accounts Manager"]),
   "Period Closing Voucher": matrix(["Accounts Manager", "Accounts User"], ["Accounts Manager"]),
+  "Exchange Rate Revaluation": matrix(
+    ["Accounts Manager", "Accounts User", "General Accountant", "Chief Accountant", "Kế toán tổng hợp", "Kế toán trưởng"],
+    ["Accounts Manager", "Chief Accountant", "Kế toán trưởng"],
+  ),
   "Purchase Order": matrix(["Purchase Manager", "Purchase User"], ["Purchase Manager"]),
   "Purchase Receipt": matrix(["Purchase Manager", "Purchase User", "Stock Manager", "Stock User"], ["Purchase Manager", "Stock Manager"]),
   "Purchase Invoice": matrix(["Purchase Manager", "Purchase User", "Accounts Manager", "Accounts User"], ["Accounts Manager"]),
