@@ -12,12 +12,15 @@ on:
       - "server/tests/subcontracting-closure.test.mjs"
       - "server/tests/landed-cost-authority.test.mjs"
       - "server/tests/customer-credit-authority.test.mjs"
+      - "server/tests/period-closing-authority.test.mjs"
       - "server/tests/r8-erpnext-depth.test.mjs"
       - "server/migrations/tenant/0141_subcontracting_authority.sql"
       - "server/migrations/tenant/0142_landed_cost_valuation_identity.sql"
       - "server/migrations/tenant/0143_purchase_invoice_row_authority.sql"
       - "server/migrations/tenant/0150_customer_credit_authority.sql"
+      - "server/migrations/tenant/0151_period_closing_voucher.sql"
       - "server/scripts/test-customer-credit-authority-migration.py"
+      - "server/scripts/test-period-closing-authority-migration.py"
       - "docs/agents/r8/**"
       - ".github/workflows/r8b-business-closure.yml"
   workflow_dispatch:
@@ -51,6 +54,10 @@ jobs:
         run: node --test server/tests/customer-credit-authority.test.mjs
       - name: Customer credit atomic migration regression
         run: python3 server/scripts/test-customer-credit-authority-migration.py
+      - name: Period Closing Voucher regression
+        run: node --test server/tests/period-closing-authority.test.mjs
+      - name: Period close atomic migration regression
+        run: python3 server/scripts/test-period-closing-authority-migration.py
       - name: R8 benchmark invariant
         run: node server/scripts/verify-r8-erpnext-depth.mjs --audit-complete
       - name: R8 matrix regression
