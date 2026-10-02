@@ -45,6 +45,7 @@ WITH line_state AS (
    AND c.fieldname='items'
   WHERE d.doctype='Sales Order'
     AND d.docstatus=1
+    AND COALESCE(CAST(json_extract(d.payload_json,'$.credit_limit_bypass_sales_order') AS INTEGER),0)=0
 ),
 order_weight AS (
   SELECT
