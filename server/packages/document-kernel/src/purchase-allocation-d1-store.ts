@@ -144,12 +144,13 @@ export class D1PurchaseAllocationMutationStore extends D1MutationStore {
       const voucher = resolveVoucherIdentity(line, command.aggregate.name, plan.document.version);
       statements.push(database.prepare(
         `INSERT INTO purchase_order_progress_entries
-         (tenant_id,voucher_type,voucher_no,voucher_revision,line_key,purchase_order,kind,item_code,qty_micros,posting_at)
-         VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10)`,
+         (tenant_id,voucher_type,voucher_no,voucher_revision,line_key,purchase_order,purchase_order_item_row_id,kind,item_code,qty_micros,posting_at)
+         VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11)`,
       ).bind(
         command.tenant_id, line.voucher_type ?? command.aggregate.doctype,
         voucher.voucher_no, voucher.voucher_revision,
-        line.line_key, line.purchase_order, line.kind, line.item_code, line.qty_micros, line.posting_at,
+        line.line_key, line.purchase_order, line.purchase_order_item_row_id ?? null,
+        line.kind, line.item_code, line.qty_micros, line.posting_at,
       ));
     }
 
