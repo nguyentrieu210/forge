@@ -55,6 +55,7 @@ import {
   childDocTypeNames, maskedFieldNames, tableFieldNames, toFrappeDocType, toFrappeMetaBundle, toFrappeWorkflow,
 } from "./meta-shape.js";
 import { hashPassword, verifyPassword } from "./password.js";
+import { mintImpersonatedSession, type AuthRouteContext, type EstablishedSession } from "./auth-routes.js";
 import type { D1TranslationStore } from "./translations.js";
 import { assertKanbanField, type D1DeskViewStore } from "./desk-views.js";
 import {
@@ -73,7 +74,7 @@ import {
  * wire contract changes — otherwise a browser keeps serving documents shaped by
  * the previous contract after a deploy.
  */
-export const FORGE_CONTRACT_VERSION = "16.0.0-forge.3";
+export const FORGE_CONTRACT_VERSION = "16.0.0-forge.4";
 
 export interface FrappeRouterContext extends VerticalRouterHooks {
   tenantId: string;
@@ -101,6 +102,9 @@ export interface FrappeRouterContext extends VerticalRouterHooks {
   apps: AppInstaller;
   /** User directory, for roles, password changes and session revocation. */
   users: D1UserStore;
+  /** Present only for a browser cookie session; privileged identity-switching needs it. */
+  authContext?: AuthRouteContext;
+  establishedSession?: EstablishedSession;
   /** Global-search candidate index. Never an authorisation decision. */
   search: D1SearchStore;
   /** Server-defined report engine. */
@@ -1447,6 +1451,18 @@ async function dispatchMethod(
     // ---- người dùng: liệt kê, tạo tài khoản, khoá/mở --------------------------
     // Không có ba lời gọi này thì màn phân quyền không trả lời được "ai đăng nhập được
     // vào hệ thống", và không có đường nào tạo một tài khoản ngoài việc gọi API tay.
+    case "frappe.core.doctype.user.user.generate_keys":
+      return methodResponse(await generateApiKeys(args, context));
+
+    case "metaforge.api.list_api_credentials":
+      return methodResponse(await listApiCredentials(args, context));
+
+    case "metaforge.api.revoke_api_credential":
+      return methodResponse(await revokeApiCredential(args, context));
+
+    case "frappe.core.doctype.user.user.impersonate":
+      return impersonateUser(args, context);
+
     case "metaforge.api.list_users":
       return methodResponse(await listUsers(context));
 
@@ -2379,6 +2395,69 @@ async function listUsers(context: FrappeRouterContext): Promise<JsonObject> {
     // users can also open the form that creates one without a second call.
     available_roles: roles.filter((role) => !["All", "Guest"].includes(role)) as unknown as JsonValue,
   };
+}
+
+async function generateApiKeys(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  requireMetadataAdmin(context);
+  const user = args.requireText("user", 320);
+  const issued = await context.users.apiCredentials.issue(
+    context.tenantId,
+    user,
+    rbacAudit(context, "frappe.core.doctype.user.user.generate_keys", args.text("reason")),
+    context.now(),
+  );
+  // Match Frappe's one-time response: the secret is never readable again.
+  return { api_key: issued.api_key, api_secret: issued.api_secret };
+}
+
+async function listApiCredentials(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const user = args.text("user") ?? context.actor.user_id;
+  if (user !== context.actor.user_id) requireMetadataAdmin(context);
+  const credentials = await context.users.apiCredentials.list(context.tenantId, user);
+  return { user, credentials: credentials as unknown as JsonValue };
+}
+
+async function revokeApiCredential(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
+  const user = args.text("user") ?? context.actor.user_id;
+  if (user !== context.actor.user_id) requireMetadataAdmin(context);
+  const credentialId = args.requireText("credential_id", 160);
+  const revoked = await context.users.apiCredentials.revoke(
+    context.tenantId,
+    user,
+    credentialId,
+    rbacAudit(context, "metaforge.api.revoke_api_credential", args.text("reason")),
+    context.now(),
+  );
+  if (!revoked) throw errors.notFound("Active API credential not found");
+  return { user, credential_id: credentialId, revoked: true };
+}
+
+async function impersonateUser(args: FrappeArgs, context: FrappeRouterContext): Promise<Response> {
+  requireMetadataAdmin(context);
+  if (!context.authContext || !context.establishedSession) {
+    throw errors.permission("Support impersonation requires an authenticated browser session");
+  }
+  const target = args.requireText("user", 320);
+  const reason = args.requireText("reason", 500);
+  const impersonated = await mintImpersonatedSession(
+    context.authContext,
+    context.establishedSession,
+    target,
+    reason,
+  );
+
+  await context.deskViews.notify(context.tenantId, {
+    name: `support-impersonation:${context.traceId}`,
+    forUser: target,
+    subject: `${context.actor.user_id} just impersonated as you. Reason: ${reason}`,
+    type: "Alert",
+    fromUser: context.actor.user_id,
+  }, context.now());
+
+  return methodResponse({ impersonated_as: target }, 200, {
+    "set-cookie": impersonated.cookie,
+    "x-frappe-csrf-token": impersonated.csrfToken,
+  });
 }
 
 /** Logins are ids, not display names: they end up in `owner` on every document. */
