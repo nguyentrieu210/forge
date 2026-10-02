@@ -15,6 +15,8 @@ export interface BrowserRunBinding {
 export interface TenantEnv {
   DB: D1Database;
   AGGREGATES: DurableObjectNamespace;
+  /** Tenant-wide hibernatable Frappe room hub. */
+  REALTIME?: DurableObjectNamespace;
   OUTBOX_QUEUE?: Queue<DomainEvent>;
   FILES?: R2Bucket;
   /** Cloudflare Browser Run Quick Actions binding for trusted server-side PDF rendering. */
