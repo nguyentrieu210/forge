@@ -184,10 +184,12 @@ export class InMemoryMutationStore implements MutationStore {
         currency_scale: entry.line.currency_scale,
         debit_minor: 0,
         credit_minor: 0,
+        row_count: 0,
         balance_minor: 0,
       };
       current.debit_minor += entry.line.debit_minor;
       current.credit_minor += entry.line.credit_minor;
+      current.row_count += 1;
       current.balance_minor = current.debit_minor - current.credit_minor;
       grouped.set(key, current);
     }
