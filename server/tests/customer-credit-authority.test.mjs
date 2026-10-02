@@ -400,3 +400,119 @@ test("Payment Allocation reuses Credit Note customer credit against a later Sale
   assert.equal(await store.getOutstandingMinor("demo", "Sales Invoice", "SI-LATER"), 2_500);
   assert.equal(await store.getOutstandingMinor("demo", "Credit Note", "CN-REUSABLE"), -4_000);
 });
+
+
+test("customer credit allocation fails closed when source and target historical FX bases differ", async () => {
+  const store = new InMemoryMutationStore();
+  store.seedO2CMasters({
+    company: "Demo",
+    customer: "CUST-1",
+    currency: "EUR",
+    companyCurrency: "USD",
+    items: ["ITEM-1"],
+    accounts: ["Debtors", "Sales", "Bank"],
+  });
+  store.seedMaster("Exchange Rate", "EUR:USD:2026-10-02", "demo", { rate: "1.000000" });
+  const registry = registerErpNextCoreControllers(
+    registerStockControllers(registerErpCoreControllers(createO2CControllerRegistry())),
+  );
+  const kernel = new DocumentKernel(registry, store, undefined, () => NOW);
+
+  await createAndSubmit(kernel, {
+    doctype: "Sales Invoice",
+    name: "SI-FX-SOURCE",
+    document: {
+      customer: "CUST-1",
+      company: "Demo",
+      currency: "EUR",
+      posting_at: NOW,
+      debit_to: "Debtors",
+      default_income_account: "Sales",
+      items: [{ row_id: "FX-SRC", item_code: "ITEM-1", qty: "1", rate: "40", income_account: "Sales" }],
+      taxes: [],
+    },
+  });
+  await createAndSubmit(kernel, {
+    doctype: "Payment Entry",
+    name: "PAY-FX-SOURCE",
+    document: {
+      company: "Demo",
+      posting_at: NOW,
+      payment_type: "Receive",
+      party_type: "Customer",
+      party: "CUST-1",
+      paid_from: "Debtors",
+      paid_to: "Bank",
+      paid_amount: "40",
+      received_amount: "40",
+      currency: "EUR",
+      references: [{
+        row_id: "PAY-FX",
+        reference_doctype: "Sales Invoice",
+        reference_name: "SI-FX-SOURCE",
+        allocated_amount: "40",
+      }],
+    },
+  });
+
+  store.seedMaster("Exchange Rate", "EUR:USD:2026-10-02", "demo", { rate: "1.200000" });
+  await createAndSubmit(kernel, {
+    doctype: "Credit Note",
+    name: "CN-FX-CREDIT",
+    document: {
+      customer: "CUST-1",
+      company: "Demo",
+      currency: "EUR",
+      posting_at: NOW,
+      return_against: "SI-FX-SOURCE",
+      debit_to: "Debtors",
+      default_income_account: "Sales",
+      items: [{ row_id: "CN-FX", item_code: "ITEM-1", qty: "1", rate: "40" }],
+      taxes: [],
+    },
+  });
+
+  store.seedMaster("Exchange Rate", "EUR:USD:2026-10-02", "demo", { rate: "1.100000" });
+  await createAndSubmit(kernel, {
+    doctype: "Sales Invoice",
+    name: "SI-FX-LATER",
+    document: {
+      customer: "CUST-1",
+      company: "Demo",
+      currency: "EUR",
+      posting_at: NOW,
+      debit_to: "Debtors",
+      default_income_account: "Sales",
+      items: [{ row_id: "FX-LATER", item_code: "ITEM-1", qty: "1", rate: "25", income_account: "Sales" }],
+      taxes: [],
+    },
+  });
+
+  await assert.rejects(
+    createAndSubmit(kernel, {
+      doctype: "Payment Allocation",
+      name: "PA-FX-BLOCKED",
+      document: {
+        company: "Demo",
+        party_type: "Customer",
+        party: "CUST-1",
+        party_account: "Debtors",
+        currency: "EUR",
+        posting_at: NOW,
+        source_credit_note: "CN-FX-CREDIT",
+        references: [{
+          row_id: "FX-ALLOC",
+          reference_doctype: "Sales Invoice",
+          reference_name: "SI-FX-LATER",
+          allocated_amount: "25",
+        }],
+      },
+    }),
+    /historical exchange rates requires realized FX posting/i,
+  );
+
+  assert.equal(await store.getOutstandingMinor("demo", "Credit Note", "CN-FX-CREDIT"), -4_000);
+  assert.equal(await store.getBaseOutstandingMinor("demo", "Credit Note", "CN-FX-CREDIT"), -4_800);
+  assert.equal(await store.getOutstandingMinor("demo", "Sales Invoice", "SI-FX-LATER"), 2_500);
+  assert.equal(await store.getBaseOutstandingMinor("demo", "Sales Invoice", "SI-FX-LATER"), 2_750);
+});
