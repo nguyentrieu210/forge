@@ -295,6 +295,7 @@ async function buildPurchaseOrderSubmitAllocation(
         voucher_no: source.voucher_no,
         voucher_revision: source.voucher_revision,
         purchase_order: document.name,
+        purchase_order_item_row_id: rowId,
         kind: "Receipt",
         item_code: source.item_code,
         qty_micros: appliedQty,
@@ -459,6 +460,7 @@ async function buildPurchaseReceiptSubmitAllocation(
         procurement.push({
           line_key: `RECEIPT-${safeSegment(rowId)}-${sequence}`,
           purchase_order: planned.purchase_order,
+          purchase_order_item_row_id: planned.purchase_order_item_row_id,
           kind: "Receipt",
           item_code: item.item_code,
           qty_micros: planned.qty_micros,
@@ -554,6 +556,7 @@ async function buildPurchaseReceiptCancelAllocation(
     procurement.push({
       line_key: `REV-RECEIPT-${safeSegment(source.entry_id)}`,
       purchase_order: source.purchase_order,
+      purchase_order_item_row_id: source.purchase_order_item_row_id,
       kind: "Receipt",
       item_code: item.item_code,
       qty_micros: -source.qty_micros,
