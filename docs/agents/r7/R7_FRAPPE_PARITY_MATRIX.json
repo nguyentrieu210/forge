@@ -378,14 +378,19 @@
       "evidence": [
         "server/packages/frappe-api/src/desk-surfaces.ts",
         "server/apps/tenant-worker/src/index-core-base.ts",
-        "server/packages/frappe-model/src/notification-rules.ts"
+        "server/packages/frappe-model/src/notification-rules.ts",
+        "server/packages/frappe-model/src/generic-controller.ts",
+        "server/packages/frappe-model/src/validate.ts",
+        "server/apps/tenant-worker/test/frappe-facade.integration.test.mts",
+        "Frappe v16.19.0 frappe/model/workflow.py",
+        "Frappe v16.19.0 frappe/workflow/doctype/workflow_action/workflow_action.py"
       ],
       "oracle_cases": [],
       "gaps": [
-        "Workflow email/action delivery is not complete because mail transport is absent.",
-        "Exact Frappe condition/evaluation and all workflow side-effect semantics require closure."
+        "Durable Frappe Workflow Action creation/completion and workflow email delivery are not yet implemented.",
+        "Frappe transition_tasks can invoke arbitrary Python hooks; Forge needs a bounded app-method mapping or an explicit intentional-difference closure before FRAPPE-16 can certify."
       ],
-      "rationale": "State/transition/role actions are implemented, but the declared workflow contract includes email/actions and dynamic semantics not fully closed."
+      "rationale": "State/transition/role enforcement, bounded transition conditions, offer/commit agreement, and Workflow Document State update_field/update_value semantics are implemented. Direct doc.<field> update expressions run under server workflow authority, including read-only targets. Durable Workflow Action lifecycle, email delivery, and a bounded equivalent for arbitrary Python transition_tasks remain open."
     },
     {
       "domain_id": "FRAPPE-17-NOTIFICATIONS-AND-COMMUNICATIONS",
