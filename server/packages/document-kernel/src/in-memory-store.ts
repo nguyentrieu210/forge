@@ -24,7 +24,7 @@ import { errors } from "../../core/src/index.js";
 import { fromScaledInt, toScaledInt } from "../../money/src/index.js";
 import { deriveDeliveryNoteStatus, deriveO2CStatus } from "./status.js";
 import { deriveSalesOrderProgress } from "./sales-order-progress.js";
-import type { MutationStore, SubmittedQuantityQuery, TrackedStockPosition, TrackedStockState } from "./store.js";
+import type { GlAccountBalance, GlAccountBalanceQuery, MutationStore, SubmittedQuantityQuery, TrackedStockPosition, TrackedStockState } from "./store.js";
 
 class KeyedMutex {
   private tails = new Map<string, Promise<void>>();
@@ -156,6 +156,47 @@ export class InMemoryMutationStore implements MutationStore {
       }
     }
     return total;
+  }
+
+  async getGlAccountBalances(query: GlAccountBalanceQuery): Promise<GlAccountBalance[]> {
+    const grouped = new Map<string, GlAccountBalance>();
+    for (const entry of this.voucherGlEntries) {
+      if (entry.tenant_id !== query.tenantId) continue;
+      const document = this.documents.get(this.docKey(
+        entry.tenant_id,
+        entry.voucher_type,
+        entry.voucher_no,
+      ));
+      if (!document || document.data.company !== query.company) continue;
+      const postingDate = entry.line.posting_at.slice(0, 10);
+      if (postingDate < query.fromDate || postingDate > query.throughDate) continue;
+      const documentBranch = typeof document.data.branch === "string" ? document.data.branch : "";
+      const dimensionBranch = typeof entry.line.accounting_dimensions?.branch === "string"
+        ? entry.line.accounting_dimensions.branch
+        : "";
+      const branch = documentBranch || dimensionBranch;
+      if (query.branch && branch !== query.branch) continue;
+      if (query.account && entry.line.account !== query.account) continue;
+      const key = `${entry.line.account}\u0000${entry.line.currency}\u0000${entry.line.currency_scale}`;
+      const current = grouped.get(key) ?? {
+        account: entry.line.account,
+        currency: entry.line.currency,
+        currency_scale: entry.line.currency_scale,
+        debit_minor: 0,
+        credit_minor: 0,
+        balance_minor: 0,
+      };
+      current.debit_minor += entry.line.debit_minor;
+      current.credit_minor += entry.line.credit_minor;
+      current.balance_minor = current.debit_minor - current.credit_minor;
+      grouped.set(key, current);
+    }
+    return [...grouped.values()]
+      .filter((row) => row.debit_minor !== 0 || row.credit_minor !== 0)
+      .sort((left, right) => left.account.localeCompare(right.account)
+        || left.currency.localeCompare(right.currency)
+        || left.currency_scale - right.currency_scale)
+      .map((row) => structuredClone(row));
   }
 
   async getOutstandingMinor(tenantId: string, voucherType: string, voucherNo: string): Promise<number> {
