@@ -1,0 +1,664 @@
+{
+  "schema_version": "1.0.0",
+  "program": "R8-A",
+  "purpose": "ERPNext v16 business-semantic depth benchmark against exact Forge main; audit first, implementation closure later.",
+  "upstream": {
+    "app": "erpnext",
+    "tag": "v16.20.0",
+    "full_sha": "ff46d20b259a2d65a7ded959df9f9a42991a3562"
+  },
+  "forge_seed": "b702376ff8b2d4dfe0a53dc2759b71e9df3c99ab",
+  "denominator": {
+    "path": "server/docs/spec/source-exact/erpnext-artifact-resolution-ledger.json",
+    "expected_artifact_count": 109,
+    "module_count": 11,
+    "flow_count": 18
+  },
+  "allowed_classifications": [
+    "DEEP_PARITY",
+    "SEMANTIC_PARITY",
+    "FORGE_SUPERSET",
+    "INTENTIONAL_DIFFERENCE",
+    "PARTIAL",
+    "GAP",
+    "UNRESOLVED",
+    "OUT_OF_SCOPE"
+  ],
+  "module_depth": [
+    {
+      "depth_id": "R8-M01-ACCOUNTING",
+      "module": "Accounting",
+      "classification": "UNRESOLVED",
+      "declared_artifact_count": 18,
+      "artifact_resolution_ids": [
+        "RES-ERP-ACCOUNTING-COMPANY",
+        "RES-ERP-ACCOUNTING-ACCOUNT",
+        "RES-ERP-ACCOUNTING-FISCAL-YEAR",
+        "RES-ERP-ACCOUNTING-COST-CENTER",
+        "RES-ERP-ACCOUNTING-ACCOUNTING-DIMENSION",
+        "RES-ERP-ACCOUNTING-JOURNAL-ENTRY",
+        "RES-ERP-ACCOUNTING-GL-ENTRY",
+        "RES-ERP-ACCOUNTING-SALES-INVOICE",
+        "RES-ERP-ACCOUNTING-PURCHASE-INVOICE",
+        "RES-ERP-ACCOUNTING-PAYMENT-ENTRY",
+        "RES-ERP-ACCOUNTING-PAYMENT-LEDGER-ENTRY",
+        "RES-ERP-ACCOUNTING-BANK-ACCOUNT",
+        "RES-ERP-ACCOUNTING-BANK-TRANSACTION",
+        "RES-ERP-ACCOUNTING-PAYMENT-RECONCILIATION",
+        "RES-ERP-ACCOUNTING-PERIOD-CLOSING-VOUCHER",
+        "RES-ERP-ACCOUNTING-EXCHANGE-RATE-REVALUATION",
+        "RES-ERP-ACCOUNTING-BUDGET",
+        "RES-ERP-ACCOUNTING-TAX-RULE"
+      ],
+      "forge_evidence_roots": [],
+      "upstream_evidence": [],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "R8-A has not yet completed a source-exact + behavioral depth review for this whole ERPNext module."
+    },
+    {
+      "depth_id": "R8-M02-SELLING",
+      "module": "Selling",
+      "classification": "UNRESOLVED",
+      "declared_artifact_count": 13,
+      "artifact_resolution_ids": [
+        "RES-ERP-SELLING-CUSTOMER",
+        "RES-ERP-SELLING-CUSTOMER-GROUP",
+        "RES-ERP-SELLING-TERRITORY",
+        "RES-ERP-SELLING-SALES-PERSON",
+        "RES-ERP-SELLING-QUOTATION",
+        "RES-ERP-SELLING-SALES-ORDER",
+        "RES-ERP-SELLING-DELIVERY-NOTE",
+        "RES-ERP-SELLING-SALES-INVOICE",
+        "RES-ERP-SELLING-BLANKET-ORDER",
+        "RES-ERP-SELLING-SALES-PARTNER",
+        "RES-ERP-SELLING-SHIPPING-RULE",
+        "RES-ERP-SELLING-PRICING-RULE",
+        "RES-ERP-SELLING-ITEM-PRICE"
+      ],
+      "forge_evidence_roots": [],
+      "upstream_evidence": [],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "R8-A has not yet completed a source-exact + behavioral depth review for this whole ERPNext module."
+    },
+    {
+      "depth_id": "R8-M03-BUYING",
+      "module": "Buying",
+      "classification": "UNRESOLVED",
+      "declared_artifact_count": 11,
+      "artifact_resolution_ids": [
+        "RES-ERP-BUYING-SUPPLIER",
+        "RES-ERP-BUYING-SUPPLIER-GROUP",
+        "RES-ERP-BUYING-MATERIAL-REQUEST",
+        "RES-ERP-BUYING-REQUEST-FOR-QUOTATION",
+        "RES-ERP-BUYING-SUPPLIER-QUOTATION",
+        "RES-ERP-BUYING-PURCHASE-ORDER",
+        "RES-ERP-BUYING-PURCHASE-RECEIPT",
+        "RES-ERP-BUYING-PURCHASE-INVOICE",
+        "RES-ERP-BUYING-SUPPLIER-SCORECARD",
+        "RES-ERP-BUYING-SUBCONTRACTING-ORDER",
+        "RES-ERP-BUYING-SUBCONTRACTING-RECEIPT"
+      ],
+      "forge_evidence_roots": [],
+      "upstream_evidence": [],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "R8-A has not yet completed a source-exact + behavioral depth review for this whole ERPNext module."
+    },
+    {
+      "depth_id": "R8-M04-STOCK",
+      "module": "Stock",
+      "classification": "UNRESOLVED",
+      "declared_artifact_count": 16,
+      "artifact_resolution_ids": [
+        "RES-ERP-STOCK-ITEM",
+        "RES-ERP-STOCK-ITEM-GROUP",
+        "RES-ERP-STOCK-UOM",
+        "RES-ERP-STOCK-WAREHOUSE",
+        "RES-ERP-STOCK-BIN",
+        "RES-ERP-STOCK-STOCK-ENTRY",
+        "RES-ERP-STOCK-STOCK-LEDGER-ENTRY",
+        "RES-ERP-STOCK-STOCK-RECONCILIATION",
+        "RES-ERP-STOCK-SERIAL-NO",
+        "RES-ERP-STOCK-BATCH",
+        "RES-ERP-STOCK-SERIAL-AND-BATCH-BUNDLE",
+        "RES-ERP-STOCK-PICK-LIST",
+        "RES-ERP-STOCK-PACKING-SLIP",
+        "RES-ERP-STOCK-DELIVERY-TRIP",
+        "RES-ERP-STOCK-LANDED-COST-VOUCHER",
+        "RES-ERP-STOCK-INVENTORY-DIMENSION"
+      ],
+      "forge_evidence_roots": [],
+      "upstream_evidence": [],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "R8-A has not yet completed a source-exact + behavioral depth review for this whole ERPNext module."
+    },
+    {
+      "depth_id": "R8-M05-MANUFACTURING",
+      "module": "Manufacturing",
+      "classification": "UNRESOLVED",
+      "declared_artifact_count": 10,
+      "artifact_resolution_ids": [
+        "RES-ERP-MANUFACTURING-BOM",
+        "RES-ERP-MANUFACTURING-BOM-ITEM",
+        "RES-ERP-MANUFACTURING-ROUTING",
+        "RES-ERP-MANUFACTURING-OPERATION",
+        "RES-ERP-MANUFACTURING-WORKSTATION",
+        "RES-ERP-MANUFACTURING-WORKSTATION-TYPE",
+        "RES-ERP-MANUFACTURING-PRODUCTION-PLAN",
+        "RES-ERP-MANUFACTURING-WORK-ORDER",
+        "RES-ERP-MANUFACTURING-JOB-CARD",
+        "RES-ERP-MANUFACTURING-DOWNTIME-ENTRY"
+      ],
+      "forge_evidence_roots": [],
+      "upstream_evidence": [],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "R8-A has not yet completed a source-exact + behavioral depth review for this whole ERPNext module."
+    },
+    {
+      "depth_id": "R8-M06-ASSETS",
+      "module": "Assets",
+      "classification": "UNRESOLVED",
+      "declared_artifact_count": 8,
+      "artifact_resolution_ids": [
+        "RES-ERP-ASSETS-ASSET",
+        "RES-ERP-ASSETS-ASSET-CATEGORY",
+        "RES-ERP-ASSETS-ASSET-LOCATION",
+        "RES-ERP-ASSETS-ASSET-MOVEMENT",
+        "RES-ERP-ASSETS-ASSET-REPAIR",
+        "RES-ERP-ASSETS-ASSET-CAPITALIZATION",
+        "RES-ERP-ASSETS-ASSET-DEPRECIATION-SCHEDULE",
+        "RES-ERP-ASSETS-ASSET-VALUE-ADJUSTMENT"
+      ],
+      "forge_evidence_roots": [],
+      "upstream_evidence": [],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "R8-A has not yet completed a source-exact + behavioral depth review for this whole ERPNext module."
+    },
+    {
+      "depth_id": "R8-M07-PROJECTS",
+      "module": "Projects",
+      "classification": "UNRESOLVED",
+      "declared_artifact_count": 8,
+      "artifact_resolution_ids": [
+        "RES-ERP-PROJECTS-PROJECT",
+        "RES-ERP-PROJECTS-TASK",
+        "RES-ERP-PROJECTS-PROJECT-TEMPLATE",
+        "RES-ERP-PROJECTS-PROJECT-TYPE",
+        "RES-ERP-PROJECTS-TIMESHEET",
+        "RES-ERP-PROJECTS-ACTIVITY-TYPE",
+        "RES-ERP-PROJECTS-ACTIVITY-COST",
+        "RES-ERP-PROJECTS-PROJECT-UPDATE"
+      ],
+      "forge_evidence_roots": [],
+      "upstream_evidence": [],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "R8-A has not yet completed a source-exact + behavioral depth review for this whole ERPNext module."
+    },
+    {
+      "depth_id": "R8-M08-QUALITY",
+      "module": "Quality",
+      "classification": "UNRESOLVED",
+      "declared_artifact_count": 7,
+      "artifact_resolution_ids": [
+        "RES-ERP-QUALITY-QUALITY-INSPECTION",
+        "RES-ERP-QUALITY-QUALITY-INSPECTION-TEMPLATE",
+        "RES-ERP-QUALITY-QUALITY-PROCEDURE",
+        "RES-ERP-QUALITY-QUALITY-GOAL",
+        "RES-ERP-QUALITY-QUALITY-REVIEW",
+        "RES-ERP-QUALITY-QUALITY-FEEDBACK",
+        "RES-ERP-QUALITY-QUALITY-MEETING"
+      ],
+      "forge_evidence_roots": [],
+      "upstream_evidence": [],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "R8-A has not yet completed a source-exact + behavioral depth review for this whole ERPNext module."
+    },
+    {
+      "depth_id": "R8-M09-SUPPORT",
+      "module": "Support",
+      "classification": "UNRESOLVED",
+      "declared_artifact_count": 6,
+      "artifact_resolution_ids": [
+        "RES-ERP-SUPPORT-ISSUE",
+        "RES-ERP-SUPPORT-SERVICE-LEVEL-AGREEMENT",
+        "RES-ERP-SUPPORT-SERVICE-LEVEL-PRIORITY",
+        "RES-ERP-SUPPORT-WARRANTY-CLAIM",
+        "RES-ERP-SUPPORT-MAINTENANCE-SCHEDULE",
+        "RES-ERP-SUPPORT-MAINTENANCE-VISIT"
+      ],
+      "forge_evidence_roots": [],
+      "upstream_evidence": [],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "R8-A has not yet completed a source-exact + behavioral depth review for this whole ERPNext module."
+    },
+    {
+      "depth_id": "R8-M10-COMMERCE-POS",
+      "module": "Commerce/POS",
+      "classification": "UNRESOLVED",
+      "declared_artifact_count": 8,
+      "artifact_resolution_ids": [
+        "RES-ERP-COMMERCE-POS-POS-PROFILE",
+        "RES-ERP-COMMERCE-POS-POS-INVOICE",
+        "RES-ERP-COMMERCE-POS-POS-CLOSING-ENTRY",
+        "RES-ERP-COMMERCE-POS-SUBSCRIPTION",
+        "RES-ERP-COMMERCE-POS-AUTO-REPEAT",
+        "RES-ERP-COMMERCE-POS-ITEM-WEBSITE-SPECIFICATION",
+        "RES-ERP-COMMERCE-POS-WEBSITE-ITEM",
+        "RES-ERP-COMMERCE-POS-PRODUCT-BUNDLE"
+      ],
+      "forge_evidence_roots": [],
+      "upstream_evidence": [],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "R8-A has not yet completed a source-exact + behavioral depth review for this whole ERPNext module."
+    },
+    {
+      "depth_id": "R8-M11-REGIONAL",
+      "module": "Regional",
+      "classification": "UNRESOLVED",
+      "declared_artifact_count": 4,
+      "artifact_resolution_ids": [
+        "RES-ERP-REGIONAL-COUNTRY-SPECIFIC-TAX-E-INVOICE-E-WAYBILL-REPORTS",
+        "RES-ERP-REGIONAL-CHART-TEMPLATES",
+        "RES-ERP-REGIONAL-WITHHOLDING-GST-VAT-RULES",
+        "RES-ERP-REGIONAL-LOCALIZED-PRINT-REPORT-INTEGRATION-ARTIFACTS"
+      ],
+      "forge_evidence_roots": [],
+      "upstream_evidence": [],
+      "oracle_cases": [],
+      "gaps": [],
+      "rationale": "R8-A has not yet completed a source-exact + behavioral depth review for this whole ERPNext module."
+    }
+  ],
+  "flow_depth": [
+    {
+      "flow_id": "R8-F01-O2C",
+      "name": "Order to cash and customer settlement",
+      "path": "Quotation -> Sales Order -> Delivery Note -> Sales Invoice -> Payment/Allocation -> Return/Credit -> Reconciliation",
+      "priority": "P0",
+      "classification": "PARTIAL",
+      "evidence": [
+        "server/docs/spec/source-exact/GATE2E_ORACLE_STATUS.md",
+        "docs/agents/transaction-closure/01-SALES-O2C.md",
+        "server/packages/clouderp-selling",
+        "server/packages/clouderp-finance",
+        "server/packages/clouderp-stock"
+      ],
+      "known_depth_questions": [
+        "Re-run the committed ERPNext oracle differential against exact current main; stale gap labels do not count.",
+        "Close credit-limit/hold semantics against ERPNext.",
+        "Resolve fully-paid return/refund/customer-credit semantics.",
+        "Reconcile current stock valuation/serial-batch behavior against the pinned oracle after later Forge stock work.",
+        "Prove partial/multiple delivery, invoice, payment, cancel/amend/backdate and race behavior end to end."
+      ],
+      "rationale": "Forge already has source-exact/runtime ERPNext O2C oracle evidence and a strong transaction closure, but the committed evidence itself records non-zero divergences and later Forge changes require re-audit before any parity claim."
+    },
+    {
+      "flow_id": "R8-F02-P2P",
+      "name": "Procure to pay and supplier settlement",
+      "path": "Material Request -> RFQ -> Supplier Quotation -> Purchase Order -> Purchase Receipt -> Purchase Invoice -> Payment -> Reconciliation",
+      "priority": "P0",
+      "classification": "UNRESOLVED",
+      "evidence": [
+        "docs/agents/transaction-closure/05-PROCUREMENT-P2P.md",
+        "server/packages/clouderp-buying",
+        "server/packages/clouderp-finance",
+        "server/packages/clouderp-stock"
+      ],
+      "known_depth_questions": [
+        "Partial receipt/billing/payment and over-receipt/over-billing",
+        "landed cost and valuation coupling",
+        "returns/debit notes",
+        "supplier advances/reconciliation",
+        "RFQ/Supplier Quotation depth",
+        "cancel/amend/backdate/race semantics"
+      ],
+      "rationale": "Forge has a P2P transaction-closure lineage, but R8 has not yet compared the whole flow behaviorally against the pinned ERPNext runtime."
+    },
+    {
+      "flow_id": "R8-F03-AR-AP-SETTLEMENT",
+      "name": "AR/AP allocation, advance and reconciliation",
+      "path": "Invoice -> Payment Entry -> allocation/unallocation -> advance -> reconciliation -> reversal",
+      "priority": "P0",
+      "classification": "UNRESOLVED",
+      "evidence": [
+        "docs/agents/transaction-closure/04-FINANCE-DAILY-LEDGER.md",
+        "server/packages/clouderp-finance",
+        "server/packages/ledger"
+      ],
+      "known_depth_questions": [
+        "payment allocation ordering",
+        "advance treatment",
+        "credit/debit notes",
+        "party currency vs company currency",
+        "reversal and correction lineage",
+        "race/idempotency"
+      ],
+      "rationale": "Current Forge finance authority is substantial, but exact ERPNext settlement semantics have not been closed by R8."
+    },
+    {
+      "flow_id": "R8-F04-GL-PERIOD-CLOSE",
+      "name": "General ledger, periods and financial close",
+      "path": "Voucher posting -> GL -> trial balance -> financial statements -> period close -> reopen/correction",
+      "priority": "P0",
+      "classification": "UNRESOLVED",
+      "evidence": [
+        "docs/agents/transaction-closure/04-FINANCE-DAILY-LEDGER.md",
+        "server/packages/ledger",
+        "server/packages/query"
+      ],
+      "known_depth_questions": [
+        "account types/root semantics",
+        "period closing voucher",
+        "immutable reversal",
+        "financial statement equivalence",
+        "dimensions/cost centers",
+        "exchange-rate revaluation",
+        "budget enforcement"
+      ],
+      "rationale": "R8 must compare accounting invariants and report reconciliation, not just presence of GL rows."
+    },
+    {
+      "flow_id": "R8-F05-CASH-BANK-RECON",
+      "name": "Cash, bank transactions and reconciliation",
+      "path": "Bank statement evidence -> match/allocation -> reconciliation -> reversal -> cash/bank reporting",
+      "priority": "P0",
+      "classification": "UNRESOLVED",
+      "evidence": [
+        "docs/agents/transaction-closure/04-FINANCE-DAILY-LEDGER.md",
+        "server/FEATURE_MATRIX_v0.9.0.md"
+      ],
+      "known_depth_questions": [
+        "matching engine",
+        "partial/multi-voucher matching",
+        "unreconcile/reconcile lineage",
+        "bank fees/FX",
+        "statement import",
+        "cash controls"
+      ],
+      "rationale": "The existing feature matrix explicitly describes bank reconciliation as foundation-level at v0.9; exact current main must be re-audited."
+    },
+    {
+      "flow_id": "R8-F06-PRICING-TAX-CURRENCY",
+      "name": "Pricing, taxes, rounding and multi-currency",
+      "path": "Price resolution -> pricing rule -> tax calculation -> rounding -> base/transaction currency -> FX settlement",
+      "priority": "P0",
+      "classification": "UNRESOLVED",
+      "evidence": [
+        "server/docs/spec/source-exact/GATE2E_ORACLE_STATUS.md",
+        "server/packages/clouderp-pricing",
+        "server/packages/clouderp-selling",
+        "server/packages/clouderp-finance"
+      ],
+      "known_depth_questions": [
+        "inclusive tax",
+        "tax-on-tax",
+        "actual/per-quantity charges",
+        "document discount",
+        "round-off",
+        "FX gain/loss",
+        "pricing-rule precedence",
+        "UOM currency precision"
+      ],
+      "rationale": "Earlier oracle evidence found important gaps; later Forge changes must be compared against the same pinned ERPNext baseline."
+    },
+    {
+      "flow_id": "R8-F07-STOCK-VALUATION-REPOST",
+      "name": "Inventory quantity, valuation, backdate and repost",
+      "path": "Receipt/Issue/Transfer/Reconciliation -> Stock Ledger -> valuation -> backdate -> repost -> GL reconciliation",
+      "priority": "P0",
+      "classification": "UNRESOLVED",
+      "evidence": [
+        "docs/agents/transaction-closure/03-INVENTORY-WMS.md",
+        "server/packages/clouderp-stock",
+        "server/packages/ledger"
+      ],
+      "known_depth_questions": [
+        "FIFO/Moving Average exactness",
+        "negative stock policy",
+        "valuation rate precision",
+        "backdated ordering",
+        "repost boundaries",
+        "stock-to-GL reconciliation",
+        "exact reversal"
+      ],
+      "rationale": "Forge inventory closure is strong, but R8 must re-run ERPNext differential evidence on exact current main."
+    },
+    {
+      "flow_id": "R8-F08-SERIAL-BATCH-TRACEABILITY",
+      "name": "Serial, batch, expiry and genealogy",
+      "path": "Identity creation -> receipt -> reservation/pick -> consumption/delivery -> return/cancel -> traceability",
+      "priority": "P0",
+      "classification": "UNRESOLVED",
+      "evidence": [
+        "docs/agents/transaction-closure/03-INVENTORY-WMS.md",
+        "server/packages/clouderp-stock"
+      ],
+      "known_depth_questions": [
+        "Serial and Batch Bundle semantics",
+        "batch-specific valuation",
+        "expiry policy",
+        "serial uniqueness",
+        "return/cancel lifecycle",
+        "manufacturing genealogy"
+      ],
+      "rationale": "Exact behavioral parity is not inferred from the existence of tracking tables/controllers."
+    },
+    {
+      "flow_id": "R8-F09-WMS",
+      "name": "Reservation, ATP, putaway, pick, pack and replenishment",
+      "path": "Demand -> reservation/ATP -> putaway -> picking -> packing -> transfer/delivery -> release/correction",
+      "priority": "P1",
+      "classification": "UNRESOLVED",
+      "evidence": [
+        "docs/agents/transaction-closure/03-INVENTORY-WMS.md",
+        "server/packages/clouderp-stock"
+      ],
+      "known_depth_questions": [
+        "reservation priority",
+        "warehouse hierarchy",
+        "wave/pick determinism",
+        "cycle count freeze",
+        "scanner semantics",
+        "replenishment",
+        "concurrency"
+      ],
+      "rationale": "Forge has WMS orchestration, but R8 must distinguish ERPNext parity from Forge-specific superset behavior."
+    },
+    {
+      "flow_id": "R8-F10-MFG-BOM-MRP",
+      "name": "BOM, routing, MRP and production planning",
+      "path": "BOM/version -> routing/capacity -> demand -> Production Plan/MRP -> Work Order",
+      "priority": "P0",
+      "classification": "UNRESOLVED",
+      "evidence": [
+        "docs/agents/transaction-closure/02-MANUFACTURING.md",
+        "server/packages/clouderp-manufacturing"
+      ],
+      "known_depth_questions": [
+        "multi-level explosion",
+        "effective BOM selection",
+        "substitute/alternative items",
+        "capacity planning",
+        "material request generation",
+        "revision/effective-date semantics"
+      ],
+      "rationale": "Current manufacturing closure is not itself ERPNext source-exact proof."
+    },
+    {
+      "flow_id": "R8-F11-MFG-EXEC-COST",
+      "name": "Shop-floor execution, WIP, scrap and manufacturing cost",
+      "path": "Work Order -> material transfer/issue -> Job Card -> FG/scrap -> actual cost/variance -> reversal",
+      "priority": "P0",
+      "classification": "UNRESOLVED",
+      "evidence": [
+        "docs/agents/transaction-closure/02-MANUFACTURING.md",
+        "server/packages/clouderp-manufacturing",
+        "server/packages/clouderp-stock"
+      ],
+      "known_depth_questions": [
+        "partial production",
+        "WIP accounting",
+        "operation/labor/machine cost",
+        "scrap/recovery",
+        "variance posting",
+        "rework",
+        "backdated consumption/FG"
+      ],
+      "rationale": "Forge records a read-only cost reconciliation model; R8 must compare ERPNext posting and costing depth explicitly."
+    },
+    {
+      "flow_id": "R8-F12-SUBCONTRACTING",
+      "name": "Subcontracting procurement and supplied-material accounting",
+      "path": "Subcontracting Order -> material supply -> subcontracted receipt -> consumption/valuation -> payable",
+      "priority": "P0",
+      "classification": "UNRESOLVED",
+      "evidence": [
+        "server/FEATURE_MATRIX_v0.9.0.md",
+        "server/packages/clouderp-buying",
+        "server/packages/clouderp-stock"
+      ],
+      "known_depth_questions": [
+        "supplied material transfer",
+        "consumption rules",
+        "BOM linkage",
+        "valuation",
+        "returns",
+        "supplier warehouse semantics"
+      ],
+      "rationale": "Subcontracting artifacts exist in the ERPNext denominator; current Forge depth must be proven rather than assumed."
+    },
+    {
+      "flow_id": "R8-F13-ASSETS",
+      "name": "Asset acquisition, depreciation, movement, repair and disposal",
+      "path": "Acquire/capitalize -> depreciate -> move -> repair -> value adjust -> sell/scrap -> GL",
+      "priority": "P1",
+      "classification": "UNRESOLVED",
+      "evidence": [
+        "server/FEATURE_MATRIX_v0.9.0.md",
+        "server/packages/clouderp-assets"
+      ],
+      "known_depth_questions": [
+        "depreciation methods/schedules",
+        "capitalization",
+        "asset value adjustment",
+        "repair capitalization",
+        "movement custody",
+        "disposal GL",
+        "backdated depreciation"
+      ],
+      "rationale": "Forge reports an asset lifecycle beta; R8 still needs pinned ERPNext behavior comparison."
+    },
+    {
+      "flow_id": "R8-F14-PROJECTS",
+      "name": "Projects, tasks, timesheets and profitability",
+      "path": "Project/Task -> time/cost -> billing linkage -> profitability -> correction",
+      "priority": "P1",
+      "classification": "UNRESOLVED",
+      "evidence": [
+        "server/FEATURE_MATRIX_v0.9.0.md",
+        "server/packages/clouderp-projects"
+      ],
+      "known_depth_questions": [
+        "timesheet billing",
+        "activity rates",
+        "cost recognition",
+        "task dependencies",
+        "project profitability reconciliation",
+        "multi-currency"
+      ],
+      "rationale": "Presence of project reports is not a full ERPNext business-depth claim."
+    },
+    {
+      "flow_id": "R8-F15-QUALITY",
+      "name": "Quality inspection and quality-management loop",
+      "path": "Inspection template -> inspection -> nonconformance/action -> review/goal/feedback",
+      "priority": "P1",
+      "classification": "UNRESOLVED",
+      "evidence": [
+        "server/FEATURE_MATRIX_v0.9.0.md",
+        "server/packages/clouderp-quality"
+      ],
+      "known_depth_questions": [
+        "incoming/in-process/outgoing inspection",
+        "template/spec rules",
+        "rejection linkage",
+        "nonconformance/actions",
+        "quality goals/reviews",
+        "manufacturing/procurement coupling"
+      ],
+      "rationale": "The feature matrix itself distinguishes transactional inspection from foundation-only quality features."
+    },
+    {
+      "flow_id": "R8-F16-SUPPORT",
+      "name": "Issue, SLA, warranty and maintenance service",
+      "path": "Issue/Warranty Claim -> SLA -> maintenance schedule/visit -> parts/billing evidence -> closure",
+      "priority": "P1",
+      "classification": "UNRESOLVED",
+      "evidence": [
+        "docs/agents/transaction-closure/06-WARRANTY-SERVICE.md",
+        "server/FEATURE_MATRIX_v0.9.0.md"
+      ],
+      "known_depth_questions": [
+        "SLA calendars/pauses",
+        "email ingestion",
+        "portal",
+        "warranty entitlement",
+        "maintenance scheduling",
+        "parts consumption",
+        "service billing"
+      ],
+      "rationale": "Forge has a service closure candidate, while portal/email boundaries remain known weak areas."
+    },
+    {
+      "flow_id": "R8-F17-COMMERCE-POS",
+      "name": "POS, product bundle, subscription and repeat commerce",
+      "path": "POS opening -> sale/payment/stock -> closing plus subscription/auto-repeat/product bundle",
+      "priority": "P1",
+      "classification": "UNRESOLVED",
+      "evidence": [
+        "server/FEATURE_MATRIX_v0.9.0.md",
+        "server/packages/clouderp-pos"
+      ],
+      "known_depth_questions": [
+        "POS session controls",
+        "offline/retry",
+        "returns",
+        "mixed payments",
+        "closing reconciliation",
+        "subscription schedules",
+        "auto-repeat",
+        "website item/product bundle"
+      ],
+      "rationale": "Forge POS is beta while subscription/website breadth is not claimed."
+    },
+    {
+      "flow_id": "R8-F18-REGIONAL",
+      "name": "Regional accounting, tax, e-invoice and statutory localization",
+      "path": "Country profile -> chart/tax/withholding -> statutory document -> filing/e-invoice/report",
+      "priority": "P0",
+      "classification": "UNRESOLVED",
+      "evidence": [
+        "server/FEATURE_MATRIX_v0.9.0.md",
+        "apps-src/vn-accounting"
+      ],
+      "known_depth_questions": [
+        "Vietnam statutory authority vs generic ERPNext regional modules",
+        "VAT/e-invoice",
+        "withholding",
+        "localized chart/templates",
+        "statutory reports",
+        "legal certification boundary"
+      ],
+      "rationale": "Forge has Vietnam-specific work, but ERPNext regional artifacts and local legal requirements must be separated and compared explicitly."
+    }
+  ]
+}
