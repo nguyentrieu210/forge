@@ -71,7 +71,7 @@ async function resolveLimit<T extends CreditAwareDocument>(
   company: string,
 ): Promise<LimitResolution> {
   const direct = limitFromRecord(customer, company);
-  if (hasPositiveOrExplicitLimit(direct.value)) return { ...direct, source: "Customer" };
+  if (hasConfiguredLimit(direct.value)) return { ...direct, source: "Customer" };
 
   const customerGroup = text(customer.customer_group);
   if (customerGroup) {
@@ -82,7 +82,7 @@ async function resolveLimit<T extends CreditAwareDocument>(
     );
     if (group) {
       const grouped = limitFromRecord(group, company);
-      if (hasPositiveOrExplicitLimit(grouped.value) && !grouped.bypassSalesOrder) {
+      if (hasConfiguredLimit(grouped.value) && !grouped.bypassSalesOrder) {
         return { ...grouped, source: "Customer Group" };
       }
     }
@@ -94,7 +94,7 @@ async function resolveLimit<T extends CreditAwareDocument>(
     company,
   );
   const companyLimit = companyRecord?.credit_limit;
-  if (hasPositiveOrExplicitLimit(companyLimit)) {
+  if (hasConfiguredLimit(companyLimit)) {
     return { value: companyLimit, bypassSalesOrder: false, source: "Company" };
   }
 
@@ -128,8 +128,17 @@ function normalizeLimitMinor(value: unknown, scale: number): number {
   return minor;
 }
 
-function hasPositiveOrExplicitLimit(value: unknown): boolean {
-  return value !== undefined && value !== null && value !== "";
+function hasConfiguredLimit(value: unknown): boolean {
+  if (value === undefined || value === null || value === "") return false;
+  if (typeof value === "number") return value !== 0;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return false;
+    const numeric = Number(trimmed);
+    // Invalid/negative values must reach normalizeLimitMinor and fail closed.
+    return !Number.isFinite(numeric) || numeric !== 0;
+  }
+  return true;
 }
 
 function assertCustomerNotHeld(customer: JsonObject, customerName: string, now: string): void {
