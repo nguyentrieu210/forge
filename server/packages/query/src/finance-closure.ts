@@ -433,6 +433,106 @@ function compileFinanceBudgetVsActual(
           OR (b.budget_against='Cost Center' AND ${costCenterExpr}=b.cost_center)
           OR (b.budget_against='Project' AND ${projectExpr}=b.project)
         )
+    ), commitment_source AS (
+      SELECT
+        b.budget,b.company,b.account,b.root_type,b.budget_against,b.cost_center,b.project,b.branch,
+        b.start_date,b.through_date,b.currency,b.currency_scale,
+        json_extract(cm.payload_json,'$.source_doctype') AS source_doctype,
+        json_extract(cm.payload_json,'$.source_name') AS source_name,
+        SUM(
+          CASE json_extract(cm.payload_json,'$.commitment_type')
+            WHEN 'Reserve' THEN CAST(COALESCE(json_extract(cm.payload_json,'$.amount_minor'),0) AS INTEGER)
+            WHEN 'Release' THEN -CAST(COALESCE(json_extract(cm.payload_json,'$.amount_minor'),0) AS INTEGER)
+            ELSE 0
+          END
+        ) AS raw_commitment_minor
+      FROM budget_base b
+      INNER JOIN documents cm
+        ON cm.tenant_id=?1
+       AND cm.doctype='Finance Budget Commitment'
+       AND cm.docstatus=1
+       AND json_extract(cm.payload_json,'$.budget')=b.budget
+       AND date(json_extract(cm.payload_json,'$.posting_date'))>=date(b.start_date)
+       AND date(json_extract(cm.payload_json,'$.posting_date'))<=date(b.through_date)
+      GROUP BY
+        b.budget,b.company,b.account,b.root_type,b.budget_against,b.cost_center,b.project,b.branch,
+        b.start_date,b.through_date,b.currency,b.currency_scale,source_doctype,source_name
+    ), commitment_net AS (
+      SELECT
+        cs.budget,
+        SUM(
+          MAX(
+            cs.raw_commitment_minor
+            - MIN(
+              MAX(cs.raw_commitment_minor,0),
+              MAX(
+                COALESCE((
+                  SELECT SUM(
+                    CASE cs.root_type
+                      WHEN 'Income' THEN g.credit_minor-g.debit_minor
+                      ELSE g.debit_minor-g.credit_minor
+                    END
+                  )
+                  FROM gl_entries g
+                  INNER JOIN documents d
+                    ON d.tenant_id=g.tenant_id
+                   AND d.doctype=g.voucher_type
+                   AND d.name=g.voucher_no
+                  WHERE g.tenant_id=?1
+                    AND g.account=cs.account
+                    AND g.currency=cs.currency
+                    AND g.currency_scale=cs.currency_scale
+                    AND date(g.posting_at)>=date(cs.start_date)
+                    AND date(g.posting_at)<=date(cs.through_date)
+                    AND json_extract(d.payload_json,'$.company')=cs.company
+                    AND (
+                      cs.budget_against='Company'
+                      OR (cs.budget_against='Branch' AND COALESCE(NULLIF(json_extract(d.payload_json,'$.branch'),''),NULLIF(json_extract(g.dimensions_json,'$.branch'),''),'')=cs.branch)
+                      OR (cs.budget_against='Cost Center' AND COALESCE(NULLIF(g.cost_center,''),NULLIF(json_extract(g.dimensions_json,'$.cost_center'),''),'')=cs.cost_center)
+                      OR (cs.budget_against='Project' AND COALESCE(NULLIF(json_extract(d.payload_json,'$.project'),''),NULLIF(json_extract(g.dimensions_json,'$.project'),''),'')=cs.project)
+                    )
+                    AND (
+                      (
+                        cs.source_doctype='Expense Claim'
+                        AND g.voucher_type='Expense Claim'
+                        AND g.voucher_no=cs.source_name
+                      )
+                      OR (
+                        cs.source_doctype IN ('Purchase Order','Material Request')
+                        AND g.voucher_type='Purchase Invoice'
+                        AND EXISTS (
+                          SELECT 1
+                          FROM json_each(json_extract(d.payload_json,'$.items')) AS item
+                          WHERE (
+                            g.line_key='EXPENSE-' || COALESCE(json_extract(item.value,'$.row_id'),'')
+                            OR g.line_key='REV-EXPENSE-' || COALESCE(json_extract(item.value,'$.row_id'),'')
+                          )
+                          AND (
+                            (
+                              cs.source_doctype='Purchase Order'
+                              AND COALESCE(
+                                NULLIF(json_extract(item.value,'$.purchase_order'),''),
+                                NULLIF(json_extract(d.payload_json,'$.against_purchase_order'),''),
+                                ''
+                              )=cs.source_name
+                            )
+                            OR (
+                              cs.source_doctype='Material Request'
+                              AND COALESCE(NULLIF(json_extract(item.value,'$.material_request'),''),'')=cs.source_name
+                            )
+                          )
+                        )
+                      )
+                    )
+                ),0),
+                0
+              )
+            ),
+            0
+          )
+        ) AS committed_minor
+      FROM commitment_source cs
+      GROUP BY cs.budget
     ), metrics AS (
       SELECT
         b.*,
@@ -447,20 +547,9 @@ function compileFinanceBudgetVsActual(
             AND date(json_extract(r.payload_json,'$.posting_date'))<=date(b.through_date)
         ),0) AS revision_minor,
         COALESCE((
-          SELECT SUM(
-            CASE json_extract(cm.payload_json,'$.commitment_type')
-              WHEN 'Reserve' THEN CAST(COALESCE(json_extract(cm.payload_json,'$.amount_minor'),0) AS INTEGER)
-              WHEN 'Release' THEN -CAST(COALESCE(json_extract(cm.payload_json,'$.amount_minor'),0) AS INTEGER)
-              ELSE 0
-            END
-          )
-          FROM documents cm
-          WHERE cm.tenant_id=?1
-            AND cm.doctype='Finance Budget Commitment'
-            AND cm.docstatus=1
-            AND json_extract(cm.payload_json,'$.budget')=b.budget
-            AND date(json_extract(cm.payload_json,'$.posting_date'))>=date(b.start_date)
-            AND date(json_extract(cm.payload_json,'$.posting_date'))<=date(b.through_date)
+          SELECT cn.committed_minor
+          FROM commitment_net cn
+          WHERE cn.budget=b.budget
         ),0) AS committed_minor,
         COALESCE((
           SELECT SUM(
