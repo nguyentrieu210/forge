@@ -60,6 +60,12 @@ export function asCloudForgeError(value: unknown): CloudForgeError {
   if (message.includes("CUSTOMER_CREDIT_LIMIT_EXCEEDED")) {
     return errors.reference("Customer credit limit has been exceeded");
   }
+  if (message.includes("PERIOD_CLOSE_REQUIRES_LOCK")) {
+    return errors.lifecycle("Accounting period must be locked through the Period Closing Voucher end date");
+  }
+  if (message.includes("PERIOD_CLOSE_SOURCE_CHANGED")) {
+    return errors.version(undefined, "The P&L ledger changed while Period Closing Voucher was being committed");
+  }
   if (message.includes("VERSION_CONFLICT")) return errors.version();
   if (message.includes("DOCUMENT_NOT_FOUND")) return errors.notFound();
   if (message.includes("DOCUMENT_ALREADY_EXISTS")) return errors.exists();
