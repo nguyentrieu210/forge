@@ -1253,6 +1253,10 @@ export class InMemoryMutationStore implements MutationStore {
   }
 
   private assertFinanceBudgetInvariants<T extends JsonObject>(plan: MutationPlan<T>): void {
+    if (plan.document.doctype === "Finance Budget Revision"
+      && (plan.command.action === "submit" || plan.command.action === "cancel")) {
+      this.assertFinanceBudgetRevisionPlan(plan);
+    }
     if (plan.document.doctype === "Finance Budget Commitment" && plan.document.docstatus === 1) {
       this.assertFinanceBudgetCommitmentPlan(plan);
     }
@@ -1358,6 +1362,107 @@ export class InMemoryMutationStore implements MutationStore {
             exceeded_by_minor: projected - accumulatedBudget,
           });
         }
+      }
+    }
+  }
+
+  private assertFinanceBudgetRevisionPlan<T extends JsonObject>(plan: MutationPlan<T>): void {
+    const tenantId = plan.command.tenant_id;
+    const budgetName = typeof plan.document.data.budget === "string" ? plan.document.data.budget : "";
+    const revisionDate = typeof plan.document.data.posting_date === "string" ? plan.document.data.posting_date : "";
+    const delta = Number(plan.document.data.delta_amount_minor ?? 0);
+    if (!budgetName || !revisionDate || !Number.isSafeInteger(delta) || delta === 0) return;
+
+    const effect = plan.command.action === "cancel" ? -delta : delta;
+    if (effect >= 0) return;
+
+    const budget = this.documents.get(this.docKey(tenantId, "Finance Budget", budgetName));
+    if (!budget || budget.docstatus !== 1
+      || budget.data.fiscal_distribution_enabled !== true
+      || (budget.data.control_action ?? "Stop") !== "Stop") return;
+
+    const company = typeof budget.data.company === "string" ? budget.data.company : "";
+    const account = typeof budget.data.account === "string" ? budget.data.account : "";
+    const startDate = typeof budget.data.start_date === "string" ? budget.data.start_date : "";
+    const endDate = typeof budget.data.end_date === "string" ? budget.data.end_date : "";
+    if (!company || !account || !startDate || !endDate) return;
+
+    const rows = Array.isArray(budget.data.budget_distribution) ? budget.data.budget_distribution : [];
+    const checkpoints = [...new Set(rows
+      .filter((raw): raw is JsonObject => Boolean(raw && typeof raw === "object" && !Array.isArray(raw)))
+      .map((row) => typeof row.end_date === "string" ? row.end_date : "")
+      .filter((date) => date && date >= revisionDate && date <= endDate))]
+      .sort();
+    if (checkpoints.length === 0) checkpoints.push(endDate);
+
+    const accountDocument = this.documents.get(this.docKey(tenantId, "Account", account));
+    const accountMaster = this.masterRecords.get(`${tenantId}:Account:${account}`);
+    const rootType = String(accountDocument?.data.root_type ?? accountMaster?.root_type ?? "");
+    const movement = (line: GeneralLedgerEntry): number =>
+      rootType === "Income" ? line.credit_minor - line.debit_minor : line.debit_minor - line.credit_minor;
+
+    for (const throughDate of checkpoints) {
+      let annualEffective = Number(budget.data.budget_amount_minor ?? 0)
+        + [...this.documents.values()]
+          .filter((document) =>
+            document.tenant_id === tenantId
+            && document.doctype === "Finance Budget Revision"
+            && document.docstatus === 1
+            && document.data.budget === budgetName
+            && typeof document.data.posting_date === "string"
+            && document.data.posting_date >= startDate
+            && document.data.posting_date <= throughDate
+          )
+          .reduce((sum, document) => sum + Number(document.data.delta_amount_minor ?? 0), 0);
+
+      // Submit plans are still Draft in the store; cancellation plans still have the
+      // submitted revision in the store. Apply the proposed signed effect exactly once.
+      annualEffective += effect;
+      if (!Number.isSafeInteger(annualEffective) || annualEffective < 0) {
+        throw errors.lifecycle("FINANCE_BUDGET_REVISION_DISTRIBUTION_EXCEEDED", {
+          budget: budgetName,
+          posting_date: throughDate,
+          annual_effective_budget_minor: annualEffective,
+        });
+      }
+
+      const accumulatedBudget = this.financeBudgetLimitThroughDate(budget.data, annualEffective, throughDate);
+      const actual = this.voucherGlEntries
+        .filter((entry) => {
+          if (entry.tenant_id !== tenantId || entry.voucher_type === "Period Closing Voucher") return false;
+          if (entry.line.account !== account) return false;
+          const date = entry.line.posting_at.slice(0, 10);
+          if (date < startDate || date > throughDate) return false;
+          const voucher = this.documents.get(this.docKey(tenantId, entry.voucher_type, entry.voucher_no));
+          return Boolean(voucher && voucher.data.company === company
+            && this.financeBudgetScopeMatches(budget.data, voucher.data, entry.line));
+        })
+        .reduce((sum, entry) => sum + movement(entry.line), 0);
+
+      const outstanding = this.financeBudgetOutstandingCommitmentMinor({
+        tenantId,
+        budgetName,
+        budgetData: budget.data,
+        account,
+        company,
+        startDate,
+        throughDate,
+        plan,
+        movement,
+      });
+      const projected = actual + outstanding;
+      if (projected > accumulatedBudget) {
+        throw errors.lifecycle("FINANCE_BUDGET_REVISION_DISTRIBUTION_EXCEEDED", {
+          budget: budgetName,
+          revision: plan.document.name,
+          revision_posting_date: revisionDate,
+          checkpoint_date: throughDate,
+          annual_effective_budget_minor: annualEffective,
+          effective_budget_minor: accumulatedBudget,
+          actual_minor: actual,
+          committed_minor: outstanding,
+          exceeded_by_minor: projected - accumulatedBudget,
+        });
       }
     }
   }
