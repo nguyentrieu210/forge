@@ -20,6 +20,7 @@ interface FinanceBudgetDistributionRow extends JsonObject {
   end_date: string;
   percent_bps: number;
   percent: string;
+  allocation_weight: number;
   amount_minor: number;
   amount: string;
 }
@@ -48,6 +49,7 @@ interface FinanceBudgetData extends JsonObject {
   budget_distribution?: FinanceBudgetDistributionRow[];
   budget_distribution_total_minor?: number;
   budget_distribution_total?: string;
+  distribution_weight_total?: number;
 }
 
 interface FinanceBudgetRevisionData extends JsonObject {
@@ -398,7 +400,8 @@ function normalizeBudgetDistribution(
   scale: number,
 ): Pick<FinanceBudgetData,
   "fiscal_distribution_enabled" | "distribution_frequency" | "distribute_equally"
-  | "budget_distribution" | "budget_distribution_total_minor" | "budget_distribution_total"> {
+  | "budget_distribution" | "budget_distribution_total_minor" | "budget_distribution_total"
+  | "distribution_weight_total"> {
   const enabled = input.fiscal_distribution_enabled === true;
   if (!enabled) {
     return {
@@ -407,6 +410,7 @@ function normalizeBudgetDistribution(
       budget_distribution: [],
       budget_distribution_total_minor: 0,
       budget_distribution_total: fromScaledInt(0, scale),
+      distribution_weight_total: 0,
     };
   }
 
@@ -420,8 +424,12 @@ function normalizeBudgetDistribution(
   const supplied = Array.isArray(input.budget_distribution) ? input.budget_distribution : [];
 
   let percentages: number[];
+  let weights: number[];
+  let weightTotal: number;
   if (distributeEqually) {
     percentages = splitBasisPointsEvenly(periods.length);
+    weights = Array.from({ length: periods.length }, () => 1);
+    weightTotal = periods.length;
   } else {
     if (supplied.length !== periods.length) {
       throw errors.validation("Manual budget_distribution must contain exactly one row per distribution period");
@@ -437,13 +445,17 @@ function normalizeBudgetDistribution(
     if (percentages.reduce((sum, value) => sum + value, 0) !== 10_000) {
       throw errors.validation("Manual budget distribution percentages must total exactly 100%");
     }
+    weights = [...percentages];
+    weightTotal = 10_000;
   }
 
   let cumulativeBps = 0;
+  let cumulativeWeight = 0;
   let previousAllocated = 0;
   const rows: FinanceBudgetDistributionRow[] = periods.map((period, index) => {
     cumulativeBps += percentages[index]!;
-    const cumulativeAllocated = proportionalMinor(budgetAmountMinor, cumulativeBps);
+    cumulativeWeight += weights[index]!;
+    const cumulativeAllocated = proportionalMinorRatio(budgetAmountMinor, cumulativeWeight, weightTotal);
     const amountMinor = cumulativeAllocated - previousAllocated;
     previousAllocated = cumulativeAllocated;
     return {
@@ -452,11 +464,12 @@ function normalizeBudgetDistribution(
       end_date: period.end_date,
       percent_bps: percentages[index]!,
       percent: fromScaledInt(percentages[index]!, 2),
+      allocation_weight: weights[index]!,
       amount_minor: amountMinor,
       amount: fromScaledInt(amountMinor, scale),
     };
   });
-  if (cumulativeBps !== 10_000 || previousAllocated !== budgetAmountMinor) {
+  if (cumulativeBps !== 10_000 || cumulativeWeight !== weightTotal || previousAllocated !== budgetAmountMinor) {
     throw errors.lifecycle("Finance Budget distribution normalization did not close to the annual budget");
   }
   return {
@@ -466,6 +479,7 @@ function normalizeBudgetDistribution(
     budget_distribution: rows,
     budget_distribution_total_minor: budgetAmountMinor,
     budget_distribution_total: fromScaledInt(budgetAmountMinor, scale),
+    distribution_weight_total: weightTotal,
   };
 }
 
@@ -517,22 +531,29 @@ function budgetLimitThroughDate(data: FinanceBudgetData, annualEffectiveMinor: n
   if (data.fiscal_distribution_enabled !== true) return annualEffectiveMinor;
   const rows = Array.isArray(data.budget_distribution) ? data.budget_distribution : [];
   if (rows.length === 0) throw errors.lifecycle("Finance Budget fiscal distribution is enabled but missing");
-  const cumulativeBps = rows
-    .filter((row) => typeof row.start_date === "string" && row.start_date <= throughDate)
-    .reduce((sum, row) => sum + safeInteger(row.percent_bps, "budget distribution percent_bps"), 0);
-  if (cumulativeBps < 0 || cumulativeBps > 10_000) {
-    throw errors.lifecycle("Finance Budget fiscal distribution cumulative percentage is invalid");
+  const weightTotal = safeInteger(data.distribution_weight_total, "distribution_weight_total");
+  if (weightTotal <= 0 || weightTotal > 10_000) {
+    throw errors.lifecycle("Finance Budget distribution weight total is invalid");
   }
-  return proportionalMinor(annualEffectiveMinor, cumulativeBps);
+  const cumulativeWeight = rows
+    .filter((row) => typeof row.start_date === "string" && row.start_date <= throughDate)
+    .reduce((sum, row) => sum + safeInteger(row.allocation_weight, "budget distribution allocation_weight"), 0);
+  if (cumulativeWeight < 0 || cumulativeWeight > weightTotal) {
+    throw errors.lifecycle("Finance Budget fiscal distribution cumulative weight is invalid");
+  }
+  return proportionalMinorRatio(annualEffectiveMinor, cumulativeWeight, weightTotal);
 }
 
-function proportionalMinor(amountMinor: number, bps: number): number {
-  if (!Number.isSafeInteger(amountMinor) || amountMinor < 0 || !Number.isSafeInteger(bps) || bps < 0 || bps > 10_000) {
+function proportionalMinorRatio(amountMinor: number, numerator: number, denominator: number): number {
+  if (!Number.isSafeInteger(amountMinor) || amountMinor < 0
+    || !Number.isSafeInteger(numerator) || numerator < 0
+    || !Number.isSafeInteger(denominator) || denominator <= 0 || denominator > 10_000
+    || numerator > denominator) {
     throw errors.lifecycle("Finance Budget proportional amount inputs are invalid");
   }
-  const quotient = Math.floor(amountMinor / 10_000);
-  const remainder = amountMinor % 10_000;
-  const result = quotient * bps + Math.floor((remainder * bps + 5_000) / 10_000);
+  const quotient = Math.floor(amountMinor / denominator);
+  const remainder = amountMinor % denominator;
+  const result = quotient * numerator + Math.floor((remainder * numerator + Math.floor(denominator / 2)) / denominator);
   if (!Number.isSafeInteger(result)) throw errors.lifecycle("Finance Budget proportional amount exceeds safe integer range");
   return result;
 }
