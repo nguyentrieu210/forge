@@ -2276,3 +2276,188 @@ describe("R7 Frappe scheduler compatibility", () => {
     await env.DB.prepare("DELETE FROM installed_apps WHERE tenant_id='demo' AND app_id='schedapp'").run();
   });
 });
+
+
+describe("R7 Frappe realtime compatibility", () => {
+  function nextSocketJson(
+    socket: WebSocket,
+    predicate: (value: any) => boolean,
+    timeoutMs = 3000,
+  ): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        socket.removeEventListener("message", onMessage);
+        reject(new Error("Timed out waiting for realtime message"));
+      }, timeoutMs);
+      const onMessage = (event: MessageEvent) => {
+        if (typeof event.data !== "string") return;
+        let value: any;
+        try { value = JSON.parse(event.data); }
+        catch { return; }
+        if (!predicate(value)) return;
+        clearTimeout(timer);
+        socket.removeEventListener("message", onMessage);
+        resolve(value);
+      };
+      socket.addEventListener("message", onMessage);
+    });
+  }
+
+  async function openRealtime(lastSequence = 0): Promise<WebSocket> {
+    const response = await call(
+      "/api/method/frappe.realtime.connect?last_sequence=" + lastSequence,
+      { headers: { Upgrade: "websocket", Origin: "https://tenant.test" } },
+    );
+    expect(response.status).toBe(101);
+    expect(response.webSocket).toBeTruthy();
+    const socket = response.webSocket!;
+    const ready = nextSocketJson(socket, (value) => value.type === "ready");
+    socket.accept();
+    expect((await ready).user).toBeTruthy();
+    return socket;
+  }
+
+  async function closeSocket(socket: WebSocket): Promise<void> {
+    if (socket.readyState === WebSocket.CLOSED) return;
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, 500);
+      socket.addEventListener("close", () => {
+        clearTimeout(timer);
+        resolve();
+      }, { once: true });
+      socket.close(1000, "test complete");
+    });
+  }
+
+  async function committedEvent(id: string, name: string, version: number): Promise<any> {
+    const event = {
+      event_id: id,
+      event_type: "field_visit.updated",
+      tenant_id: "demo",
+      aggregate: { doctype: "Field Visit", name },
+      aggregate_version: version,
+      actor: "sales@example.com",
+      command_id: "cmd-" + id,
+      occurred_at: new Date().toISOString(),
+      schema_version: 1,
+      payload: {},
+    };
+    const response = await exports.default.fetch(new Request("https://tenant.test/internal/events", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer test-internal-service-token",
+        "content-type": "application/json",
+        "x-cloudforge-tenant": "demo",
+        "x-cloudforge-idempotency-key": id,
+      },
+      body: JSON.stringify(event),
+    }));
+    expect(response.status).toBe(200);
+    return response.json();
+  }
+
+  it("authenticates the socket, authorizes rooms, orders live events and replays a disconnect gap", async () => {
+    expect((await switchSession("sales@example.com")).status).toBe(200);
+
+    const unauthenticated = await exports.default.fetch(new Request(
+      "https://tenant.test/api/method/frappe.realtime.connect",
+      { headers: { Upgrade: "websocket", Origin: "https://tenant.test" } },
+    ));
+    expect(unauthenticated.status).toBe(403);
+
+    const socket = await openRealtime();
+    const subscribed = nextSocketJson(
+      socket,
+      (value) => value.type === "subscribed" && value.room === "doctype:Field Visit",
+    );
+    socket.send(JSON.stringify({ type: "doctype_subscribe", doctype: "Field Visit" }));
+    await subscribed;
+
+    const firstLivePromise = nextSocketJson(
+      socket,
+      (value) => value.type === "event"
+        && value.event === "list_update"
+        && value.message?.name === "FV-RT-1",
+    );
+    const first = await committedEvent("evt-realtime-1", "FV-RT-1", 1);
+    expect(first.inserted).toBe(true);
+    expect(first.realtime).toHaveLength(2);
+    expect(first.realtime[0].room).toBe("doctype:Field Visit");
+    expect(first.realtime[1].room).toBe("doc:Field Visit/FV-RT-1");
+    expect(first.realtime[0].sequence).toBeLessThan(first.realtime[1].sequence);
+    const firstLive = await firstLivePromise;
+    expect(firstLive.sequence).toBe(first.realtime[0].sequence);
+    expect(firstLive.replay).toBe(false);
+
+    const secondLivePromise = nextSocketJson(
+      socket,
+      (value) => value.type === "event"
+        && value.event === "list_update"
+        && value.message?.name === "FV-RT-2",
+    );
+    const second = await committedEvent("evt-realtime-2", "FV-RT-2", 2);
+    const secondLive = await secondLivePromise;
+    expect(secondLive.sequence).toBe(second.realtime[0].sequence);
+    expect(secondLive.sequence).toBeGreaterThan(firstLive.sequence);
+
+    const duplicate = await committedEvent("evt-realtime-2", "FV-RT-2", 2);
+    expect(duplicate.inserted).toBe(false);
+    expect(duplicate.realtime).toEqual([]);
+
+    await closeSocket(socket);
+
+    const offline = await committedEvent("evt-realtime-3", "FV-RT-3", 3);
+    expect(offline.realtime[0].sequence).toBeGreaterThan(secondLive.sequence);
+
+    const resumed = await openRealtime(secondLive.sequence);
+    const resumedSubscribed = nextSocketJson(
+      resumed,
+      (value) => value.type === "subscribed" && value.room === "doctype:Field Visit",
+    );
+    const replayed = nextSocketJson(
+      resumed,
+      (value) => value.type === "event"
+        && value.replay === true
+        && value.event === "list_update"
+        && value.message?.name === "FV-RT-3",
+    );
+    resumed.send(JSON.stringify({ type: "doctype_subscribe", doctype: "Field Visit" }));
+    await resumedSubscribed;
+    const replay = await replayed;
+    expect(replay.sequence).toBe(offline.realtime[0].sequence);
+    await closeSocket(resumed);
+
+    const secretMeta = {
+      name: "Realtime Secret",
+      module: "Custom",
+      fields: [{ fieldname: "title", label: "Title", fieldtype: "Data" }],
+      permissions: [{ role: "System Manager", read: true }],
+      revision: 1,
+    };
+    await env.DB.prepare(
+      "INSERT INTO doctype_definitions(tenant_id,doctype,module,revision,metadata_json,modified_by,modified_at) " +
+      "VALUES('demo','Realtime Secret','Custom',1,?1,'Administrator',?2) " +
+      "ON CONFLICT(tenant_id,doctype) DO UPDATE SET metadata_json=excluded.metadata_json",
+    ).bind(JSON.stringify(secretMeta), new Date().toISOString()).run();
+
+    expect((await switchSession("reader@example.com")).status).toBe(200);
+    const reader = await openRealtime(offline.realtime[0].sequence);
+
+    const allowed = nextSocketJson(
+      reader,
+      (value) => value.type === "subscribed" && value.room === "doctype:Field Visit",
+    );
+    reader.send(JSON.stringify({ type: "doctype_subscribe", doctype: "Field Visit" }));
+    await allowed;
+
+    const denied = nextSocketJson(
+      reader,
+      (value) => value.type === "error" && value.code === "COMMAND_DENIED",
+    );
+    reader.send(JSON.stringify({ type: "doctype_subscribe", doctype: "Realtime Secret" }));
+    expect(String((await denied).message)).toMatch(/not allowed|permission/i);
+
+    await closeSocket(reader);
+    expect((await switchSession("sales@example.com")).status).toBe(200);
+  });
+});
