@@ -30,7 +30,7 @@ export {
 } from "../../clouderp-selling/src/index.js";
 export type { D1MutationStore, DocumentGroupProjection, DocumentListService, ListFilter } from "../../document-kernel/src/index.js";
 export {
-  blocksSelfApproval, mergeCustomizations, parseCsvImport, parseCustomField, parseDocTypeMeta,
+  blocksSelfApproval, evaluateWorkflowCondition, mergeCustomizations, parseCsvImport, parseCustomField, parseDocTypeMeta,
   parsePropertySetter, permissionAllows, renderPrintFormat, resolveAutoname, validateWorkflow,
 } from "../../frappe-model/src/index.js";
 export type {
