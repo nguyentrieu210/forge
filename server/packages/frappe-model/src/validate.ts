@@ -2,6 +2,7 @@ import type { JsonObject, JsonValue } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
 import type { DocFieldMeta, DocPermissionMeta, DocTypeKind, DocTypeMeta, DocTypeView, DocTypeViewPolicy, MetaFieldType, WorkflowMeta } from "./types.js";
 import { assertFieldConditionSupported } from "./field-condition.js";
+import { assertWorkflowConditionSupported } from "./workflow-condition.js";
 import { parseBulkViewPolicy } from "./bulk-validate.js";
 import { parseMatrixViewPolicy } from "./matrix-validate.js";
 
@@ -414,7 +415,11 @@ export function validateWorkflow(value: unknown, expectedDoctype?: string): Work
       action: text(transition.action, `transitions[${index}].action`, 120),
       next_state: text(transition.next_state, `transitions[${index}].next_state`, 120),
       allowed_role: text(transition.allowed_role, `transitions[${index}].allowed_role`, 120),
-      ...(transition.condition === undefined ? {} : { condition: text(transition.condition, `transitions[${index}].condition`, 1000) }),
+      ...(transition.condition === undefined ? {} : (() => {
+        const condition = text(transition.condition, `transitions[${index}].condition`, 1000);
+        assertWorkflowConditionSupported(condition);
+        return { condition };
+      })()),
       allow_self_approval: bool(transition.allow_self_approval, false),
     };
   });
