@@ -22,3 +22,29 @@ ON stock_ledger_entries(
   valuation_target_voucher_revision,valuation_target_row_id
 )
 WHERE valuation_target_voucher_no IS NOT NULL;
+
+
+-- First-class Landed Cost Voucher metadata. Allocation rows are server-owned evidence.
+INSERT OR REPLACE INTO doctype_definitions(
+  tenant_id,doctype,module,is_custom,is_submittable,is_child,revision,metadata_json,disabled,modified_by,modified_at
+) VALUES(
+  '__standard__','Landed Cost Voucher','Buying',0,1,0,1,
+  json('{"name":"Landed Cost Voucher","module":"Buying","is_submittable":true,"is_child":false,"track_changes":true,"revision":1,"fields":[{"fieldname":"posting_at","label":"Posting At","fieldtype":"Datetime","required":true,"in_list_view":true},{"fieldname":"basis","label":"Allocation Basis","fieldtype":"Select","options":"amount\nquantity\nweight","required":true,"in_list_view":true},{"fieldname":"total_cost","label":"Total Landed Cost","fieldtype":"Currency","required":true},{"fieldname":"landed_cost_account","label":"Landed Cost Clearing Account","fieldtype":"Link","options":"Account","required":true},{"fieldname":"company","label":"Company","fieldtype":"Link","options":"Company","read_only":true},{"fieldname":"currency","label":"Currency","fieldtype":"Link","options":"Currency","read_only":true},{"fieldname":"purchase_receipts","label":"Purchase Receipts","fieldtype":"Table","options":"Landed Cost Voucher Receipt","required":true},{"fieldname":"allocations","label":"Allocations","fieldtype":"Table","options":"Landed Cost Voucher Allocation","read_only":true}],"permissions":[],"custom":false}'),
+  0,'migration-0142','2026-10-02T00:00:00.000Z'
+);
+
+INSERT OR REPLACE INTO doctype_definitions(
+  tenant_id,doctype,module,is_custom,is_submittable,is_child,revision,metadata_json,disabled,modified_by,modified_at
+) VALUES(
+  '__standard__','Landed Cost Voucher Receipt','Buying',0,0,1,1,
+  json('{"name":"Landed Cost Voucher Receipt","module":"Buying","is_submittable":false,"is_child":true,"track_changes":false,"revision":1,"fields":[{"fieldname":"purchase_receipt","label":"Purchase Receipt","fieldtype":"Link","options":"Purchase Receipt","required":true,"in_list_view":true}],"permissions":[],"custom":false}'),
+  0,'migration-0142','2026-10-02T00:00:00.000Z'
+);
+
+INSERT OR REPLACE INTO doctype_definitions(
+  tenant_id,doctype,module,is_custom,is_submittable,is_child,revision,metadata_json,disabled,modified_by,modified_at
+) VALUES(
+  '__standard__','Landed Cost Voucher Allocation','Buying',0,0,1,1,
+  json('{"name":"Landed Cost Voucher Allocation","module":"Buying","is_submittable":false,"is_child":true,"track_changes":false,"revision":1,"fields":[{"fieldname":"purchase_receipt","label":"Purchase Receipt","fieldtype":"Link","options":"Purchase Receipt","read_only":true,"in_list_view":true},{"fieldname":"purchase_receipt_row_id","label":"Receipt Row","fieldtype":"Data","read_only":true},{"fieldname":"item_code","label":"Item","fieldtype":"Link","options":"Item","read_only":true,"in_list_view":true},{"fieldname":"warehouse","label":"Warehouse","fieldtype":"Link","options":"Warehouse","read_only":true},{"fieldname":"stock_account","label":"Stock Account","fieldtype":"Link","options":"Account","read_only":true},{"fieldname":"basis_units","label":"Basis Units","fieldtype":"Int","read_only":true},{"fieldname":"allocated_cost_minor","label":"Allocated Cost Minor","fieldtype":"Int","read_only":true}],"permissions":[],"custom":false}'),
+  0,'migration-0142','2026-10-02T00:00:00.000Z'
+);
