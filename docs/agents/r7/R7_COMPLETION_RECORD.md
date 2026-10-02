@@ -2,9 +2,9 @@
 
 ## Current decision
 
-`R7-A CLOSURE CANDIDATE`.
+`R7-A FRAPPE_PLATFORM_CLOSED`.
 
-The machine matrix now has **0 GAP / 0 UNRESOLVED** across the pinned 28-domain Frappe v16.19.0 denominator. The GitHub workflow has been upgraded to execute `r7:frappe:certify`; this record is promoted to `FRAPPE_PLATFORM_CLOSED` only after the exact candidate head passes that workflow.
+The machine matrix has **0 GAP / 0 UNRESOLVED** across the pinned 28-domain Frappe v16.19.0 denominator. Implementation/certification head `ce64f77f8c2a1991a6d88ced76592d44aecd23d5` passed GitHub Actions R7 run `36984495200`, including the executable `r7:frappe:certify` gate, changed-authority TypeScript guard, runtime safety regression and Workerd facade regression.
 
 ## Exact identity
 
@@ -13,7 +13,7 @@ The machine matrix now has **0 GAP / 0 UNRESOLVED** across the pinned 28-domain 
 - Frappe: `v16.19.0` @ `ba18090b141740e75d52aa97bfc525ff2f831f6c`.
 - Denominator: 28 domains from `server/docs/spec/source-exact/frappe-framework-domain-ledger.json`.
 
-## Candidate matrix
+## Certified matrix
 
 | Classification | Count |
 |---|---:|
@@ -44,7 +44,7 @@ npm run r7:frappe:certify
 npm run test:r7-runtime
 ```
 
-The certifier also rejects a closed row that retains stale non-empty `gaps`, so a cosmetic classification flip cannot hide unresolved text.
+The certifier also rejects a closed row that retains stale non-empty `gaps`, so a cosmetic classification flip cannot hide unresolved text. Run `36984495200` passed this gate on the exact implementation head before this documentation-only closure record.
 
 ## Boundary
 

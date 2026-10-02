@@ -1,6 +1,6 @@
 # R7-A — Frappe 16 Platform Closure
 
-Status: ACTIVE ON BRANCH  
+Status: CLOSED — `FRAPPE_PLATFORM_CLOSED`  
 Base Forge commit: `b702376ff8b2d4dfe0a53dc2759b71e9df3c99ab`  
 Pinned upstream: Frappe `v16.19.0` @ `ba18090b141740e75d52aa97bfc525ff2f831f6c`
 
@@ -118,4 +118,4 @@ R7-A may claim `FRAPPE_PLATFORM_CLOSED` only when:
 
 The executable gate is `npm run r7:frappe:certify` from `server/`.
 
-Until that gate is green, the truthful claim is only: R7-A audit/convergence in progress.
+Certification evidence: implementation head `ce64f77f8c2a1991a6d88ced76592d44aecd23d5` passed R7 GitHub Actions run `36984495200`, including `r7:frappe:certify`, changed-authority TypeScript, runtime safety and Workerd facade regression. R7-A is therefore closed for the pinned Frappe v16.19.0 platform denominator. This remains source/runtime certification only and does not authorize production mutation.
