@@ -158,7 +158,13 @@ test("Landed Cost fails closed when historical downstream COGS propagation would
     submitLcv(kernel, "LCV-BLOCKED", "PR-3", "2026-10-02T08:45:00.000Z"),
     /historical COGS repost is required/i,
   );
-  assert.equal(await store.getDocument("demo", "Landed Cost Voucher", "LCV-BLOCKED"), null);
+  const blocked = await store.getDocument("demo", "Landed Cost Voucher", "LCV-BLOCKED");
+  assert.equal(blocked.docstatus, 0, "failed submit keeps the editable draft");
+  assert.equal(
+    (await store.getVoucherStockEntries("demo", "Landed Cost Voucher", "LCV-BLOCKED", blocked.version)).length,
+    0,
+    "failed submit must not commit Stock Ledger",
+  );
 });
 
 test("Landed Cost exact cancellation is blocked after downstream stock consumption", async () => {
