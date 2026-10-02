@@ -251,3 +251,140 @@ test("fully-paid return becomes customer credit and Payment Entry refund clears 
   assert.equal(await store.getOutstandingMinor("demo", "Credit Note", "CN-PAID"), -4_000);
   assert.equal(await store.getOutstandingMinor("demo", "Sales Invoice", "SI-PAID"), 0);
 });
+
+
+test("Payment Allocation reuses Credit Note customer credit against a later Sales Invoice with exact reversal", async () => {
+  const { store, kernel } = setupRefund();
+
+  await createAndSubmit(kernel, {
+    doctype: "Sales Invoice",
+    name: "SI-CREDIT-SOURCE",
+    document: {
+      customer: "CUST-1",
+      company: "Demo",
+      currency: "USD",
+      posting_at: NOW,
+      debit_to: "Debtors",
+      default_income_account: "Sales",
+      items: [{ row_id: "SRC-1", item_code: "ITEM-1", qty: "1", rate: "40", income_account: "Sales" }],
+      taxes: [],
+    },
+  });
+  await createAndSubmit(kernel, {
+    doctype: "Payment Entry",
+    name: "PAY-CREDIT-SOURCE",
+    document: {
+      company: "Demo",
+      posting_at: NOW,
+      payment_type: "Receive",
+      party_type: "Customer",
+      party: "CUST-1",
+      paid_from: "Debtors",
+      paid_to: "Bank",
+      paid_amount: "40",
+      received_amount: "40",
+      currency: "USD",
+      references: [{
+        row_id: "PAY-SRC",
+        reference_doctype: "Sales Invoice",
+        reference_name: "SI-CREDIT-SOURCE",
+        allocated_amount: "40",
+      }],
+    },
+  });
+  await createAndSubmit(kernel, {
+    doctype: "Credit Note",
+    name: "CN-REUSABLE",
+    document: {
+      customer: "CUST-1",
+      company: "Demo",
+      currency: "USD",
+      posting_at: NOW,
+      return_against: "SI-CREDIT-SOURCE",
+      debit_to: "Debtors",
+      default_income_account: "Sales",
+      items: [{ row_id: "CN-SRC", item_code: "ITEM-1", qty: "1", rate: "40" }],
+      taxes: [],
+    },
+  });
+  assert.equal(await store.getOutstandingMinor("demo", "Credit Note", "CN-REUSABLE"), -4_000);
+
+  await createAndSubmit(kernel, {
+    doctype: "Sales Invoice",
+    name: "SI-LATER",
+    document: {
+      customer: "CUST-1",
+      company: "Demo",
+      currency: "USD",
+      posting_at: NOW,
+      debit_to: "Debtors",
+      default_income_account: "Sales",
+      items: [{ row_id: "LATER-1", item_code: "ITEM-1", qty: "1", rate: "25", income_account: "Sales" }],
+      taxes: [],
+    },
+  });
+  assert.equal(await store.getOutstandingMinor("demo", "Sales Invoice", "SI-LATER"), 2_500);
+
+  await assert.rejects(
+    createAndSubmit(kernel, {
+      doctype: "Payment Allocation",
+      name: "PA-CREDIT-OVER-TARGET",
+      document: {
+        company: "Demo",
+        party_type: "Customer",
+        party: "CUST-1",
+        party_account: "Debtors",
+        currency: "USD",
+        posting_at: NOW,
+        source_credit_note: "CN-REUSABLE",
+        references: [{
+          row_id: "ALLOC-OVER",
+          reference_doctype: "Sales Invoice",
+          reference_name: "SI-LATER",
+          allocated_amount: "26",
+        }],
+      },
+    }),
+    /exceeds outstanding/i,
+  );
+
+  await createAndSubmit(kernel, {
+    doctype: "Payment Allocation",
+    name: "PA-CREDIT-1",
+    document: {
+      company: "Demo",
+      party_type: "Customer",
+      party: "CUST-1",
+      party_account: "Debtors",
+      currency: "USD",
+      posting_at: NOW,
+      source_credit_note: "CN-REUSABLE",
+      references: [{
+        row_id: "ALLOC-1",
+        reference_doctype: "Sales Invoice",
+        reference_name: "SI-LATER",
+        allocated_amount: "25",
+      }],
+    },
+  });
+
+  assert.equal(await store.getOutstandingMinor("demo", "Sales Invoice", "SI-LATER"), 0);
+  assert.equal(await store.getOutstandingMinor("demo", "Credit Note", "CN-REUSABLE"), -1_500);
+  assert.equal((await store.getVoucherGlEntries("demo", "Payment Allocation", "PA-CREDIT-1", 2)).length, 0);
+
+  const allocation = await store.getDocument("demo", "Payment Allocation", "PA-CREDIT-1");
+  assert.equal(allocation.data.source_voucher_type, "Credit Note");
+  assert.equal(allocation.data.source_voucher_no, "CN-REUSABLE");
+  assert.equal(allocation.data.total_allocated_amount_minor, 2_500);
+
+  await mutate(kernel, {
+    commandId: "PA-CREDIT-1-cancel",
+    doctype: "Payment Allocation",
+    name: "PA-CREDIT-1",
+    action: "cancel",
+    expectedVersion: 2,
+    document: {},
+  });
+  assert.equal(await store.getOutstandingMinor("demo", "Sales Invoice", "SI-LATER"), 2_500);
+  assert.equal(await store.getOutstandingMinor("demo", "Credit Note", "CN-REUSABLE"), -4_000);
+});
