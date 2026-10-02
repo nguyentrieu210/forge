@@ -138,9 +138,11 @@ def expect_rejected(marker, fn):
 # Stop = actual + commitments <= effective budget, atomically on GL insert.
 account("642")
 budget("BUD-STOP", "642", 1000)
+insert_doc("Purchase Order", "PO-STOP", {"company": "Kairo"})
 insert_doc("Finance Budget Commitment", "COM-STOP", {
     "budget": "BUD-STOP", "posting_date": "2026-04-01",
     "commitment_type": "Reserve", "amount_minor": 200,
+    "source_doctype": "Purchase Order", "source_name": "PO-STOP",
 })
 ensure_voucher("Journal Entry", "JE-BASE")
 insert_gl("Journal Entry", "JE-BASE", "L1", "642", 700, 0)
