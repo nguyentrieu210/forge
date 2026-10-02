@@ -213,6 +213,19 @@ export interface WorkflowStateMeta extends JsonObject {
   docstatus: 0 | 1 | 2;
   allow_edit?: string;
   style?: string;
+  /**
+   * Frappe Workflow Document State side effect. Applied by workflow authority
+   * after transition selection, never trusted from a client payload.
+   */
+  update_field?: string;
+  update_value?: JsonValue;
+  /**
+   * Bounded expression support: direct `doc.<field>` projection only.
+   * Arbitrary Python safe_eval remains outside tenant metadata execution.
+   */
+  evaluate_as_expression?: boolean;
+  /** Carries upstream state-level email intent for the communications lane. */
+  send_email?: boolean;
 }
 
 export interface WorkflowTransitionMeta extends JsonObject {
