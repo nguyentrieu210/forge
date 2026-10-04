@@ -15,7 +15,7 @@ OCC/idempotency and append-only correction evidence.
 
 ## Priority lanes
 
-1. **R9-01 Projected inventory / ATP for MRP — IMPLEMENTED, FINAL CI PENDING**
+1. **R9-01 Projected inventory / ATP for MRP — IMPLEMENTED + VERIFIED**
    - on-hand + dated open Purchase Order supply + dated open Work Order supply;
    - subtract active reservations;
    - keep safety stock explicit;
