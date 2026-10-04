@@ -15,6 +15,8 @@ assert db.execute('SELECT metadata_json,revision FROM doctype_definitions').fetc
 fields = json.loads(first[0])['fields']
 assert len(fields) == 6 and len({row['fieldname'] for row in fields}) == 6
 assert fields[0]['label'] == 'Total Completed Quantity (Accepted + Rejected)'
+accepted = next(row for row in fields if row['fieldname'] == 'accepted_qty')
+assert accepted['read_only'] is True, 'Frappe metadata checkbox flags must remain JSON booleans, not 0/1 integers'
 base = dict(received_qty_micros=2000000, accepted_qty_micros=1500000,
             rejected_qty_micros=500000, rejected_service_policy='Pay Full Service',
             rejected_warehouse='Rejected', target_warehouse='Finished', supplier_warehouse='Supplier')
@@ -50,4 +52,4 @@ reject(lambda: db.execute("UPDATE documents SET docstatus=1 WHERE name='draft'")
 # Cancellation does not strand an invalid submitted row: it leaves the active projection.
 db.execute("UPDATE documents SET docstatus=2 WHERE name='valid'")
 assert db.execute('SELECT COUNT(*) FROM subcontracting_rejected_violations').fetchone()[0] == 0
-print('subcontracting rejected-finished migration: repeat apply, legacy, full/mixed rejection, insert/update/draft guards passed')
+print('subcontracting rejected-finished migration: repeat apply, metadata booleans, legacy, full/mixed rejection, insert/update/draft guards passed')
