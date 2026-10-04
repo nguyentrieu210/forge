@@ -174,11 +174,11 @@
       ],
       "oracle_cases": [],
       "gaps": [
-        "Landed Cost late-arriving repost is closed for already-consumed FIFO layers that terminate in direct Material Issue; chronological replay across backdated future consumption, transfers, manufacturing/WIP, deliveries and non-FIFO valuation remains incomplete.",
+        "Landed Cost late-arriving repost is closed for terminal unbatched FIFO Material Issue and Delivery Note consumption; value propagation through transfers, manufacturing/WIP and non-FIFO valuation remains incomplete.",
         "Supplier-management breadth and runtime oracle remain open.",
         "Subcontracting is now first-class but remains partial around reservation, returns, secondary/process-loss and repost depth."
       ],
-      "rationale": "Normal P2P, exact PO-row Purchase Invoice authority and authoritative landed-cost apply/reverse now include race-protected direct FIFO Material Issue expense repost. Full chronological downstream valuation propagation, supplier-management breadth/runtime oracle and remaining subcontracting depth still prevent closure."
+      "rationale": "Normal P2P, exact PO-row Purchase Invoice authority and authoritative landed-cost apply/reverse now include race-protected terminal FIFO Material Issue and Delivery Note expense/COGS repost. Full value propagation through transfer/manufacturing chains, supplier-management breadth/runtime oracle and remaining subcontracting depth still prevent closure."
     },
     {
       "depth_id": "R8-M04-STOCK",
@@ -220,12 +220,12 @@
       ],
       "oracle_cases": [],
       "gaps": [
-        "Landed Cost can now split a late FIFO adjustment between remaining inventory and already-consumed direct Material Issue expense with commit-time history fingerprinting; chronological propagation through backdated later issues, transfers, manufacturing/WIP, deliveries and Moving Average remains incomplete.",
+        "Landed Cost can split a late FIFO adjustment between remaining inventory and already-consumed terminal Material Issue/Delivery Note cost with commit-time history fingerprinting; propagation through transfers, manufacturing/WIP and Moving Average remains incomplete.",
         "Persisted WMS task execution and full ATP are incomplete.",
         "Expired-batch policy differs from pinned ERPNext behavior.",
         "LIFO is not supported."
       ],
-      "rationale": "Stock ledger/tracking/valuation/reconciliation now include targeted landed-cost capitalization, direct FIFO Material Issue repost, race guards and exact reversal. Full chronological value propagation plus WMS/ATP and remaining ERPNext depth remain open."
+      "rationale": "Stock ledger/tracking/valuation/reconciliation now include targeted landed-cost capitalization plus terminal FIFO Material Issue and Delivery Note repost, race guards and exact reversal. Transfer/manufacturing value propagation plus WMS/ATP and remaining ERPNext depth remain open."
     },
     {
       "depth_id": "R8-M05-MANUFACTURING",
@@ -527,7 +527,7 @@
         "RFQ/Supplier Quotation depth",
         "cancel/amend/backdate/race semantics"
       ],
-      "rationale": "Source-to-pay includes exact PO-row authority, past and future direct FIFO Material Issue landed-cost corrections and exact latest-voucher reversal. Arbitrary downstream value propagation and pinned P2P runtime differential remain open.",
+      "rationale": "Source-to-pay includes exact PO-row authority plus past/future terminal FIFO Material Issue and Delivery Note landed-cost corrections with exact latest-voucher reversal. Transfer/manufacturing value propagation and pinned P2P runtime differential remain open.",
       "confirmed_findings": [
         "Forge has a real P2P authority chain: RFQ/Supplier Quotation selection, Purchase Order, partial Purchase Receipt, Purchase Invoice three-way match, multi-PO invoice support, Supplier Payment/Advance via Finance, Stock Return and Debit Note correction boundaries.",
         "Purchase Invoice match policy is frozen on PO and a failed receipt/quantity/price match holds before GL, Payment Ledger or procurement-progress commit.",
@@ -535,10 +535,11 @@
         "A dedicated pinned ERPNext P2P runtime oracle has not yet been captured, so the normal P2P path cannot be promoted beyond PARTIAL.",
         "R8-B now binds Purchase Invoice receipt/billing progress and three-way matching to exact Purchase Order child-row identity; duplicate same-item split-price rows fail closed unless an exact row is supplied, and Subcontracting Receipt uses the same row authority for submit/cancel dependencies.",
         "Supplier Payment Entry advances can now be allocated cross-rate to Purchase Invoices with independent source/target base clearing and balanced realized-FX Payable GL; exact cancellation is regression-proven.",
-        "2026-10-04: future direct FIFO issues receive immutable targeted corrections, balanced Stock/COGS GL and valuation-audit reconciliation. Full-history submit/cancel fingerprints reject source drift; batch/serial and wider propagation remain fail closed."
+        "2026-10-04: future direct FIFO issues receive immutable targeted corrections, balanced Stock/COGS GL and valuation-audit reconciliation. Full-history submit/cancel fingerprints reject source drift; batch/serial and wider propagation remain fail closed.",
+        "2026-10-04: submitted Delivery Notes are now proven terminal FIFO consumers for both late and backdated Landed Cost. The immutable correction reconciles Stock Ledger replay and posts the consumed delta to the configured COGS/expense difference account."
       ],
       "gaps": [
-        "Landed Cost chronological propagation is closed for direct unbatched FIFO Material Issues. Transfers, manufacturing/WIP, deliveries, non-FIFO valuation and cancellation across later stock mutations remain incomplete.",
+        "Landed Cost chronological propagation is closed for terminal unbatched FIFO Material Issues and Delivery Notes. Transfers, manufacturing/WIP, non-FIFO valuation and cancellation across later stock mutations remain incomplete.",
         "Pinned ERPNext P2P runtime differential remains to be captured."
       ]
     },
@@ -736,12 +737,13 @@
         "stock-to-GL reconciliation",
         "exact reversal"
       ],
-      "rationale": "Stock valuation now includes targeted receipt-row landed-cost adjustments and exact reversal, but ERPNext depth is broader and historical downstream repost remains unclosed.",
+      "rationale": "Stock valuation now includes targeted receipt-row landed-cost adjustments, terminal FIFO Material Issue/Delivery Note chronological correction and exact reversal. Transfer/manufacturing propagation and non-FIFO historical repost remain unclosed.",
       "confirmed_findings": [
         "Current Forge has server-ledger FIFO and Moving Average valuation plus bounded repost/adjustment logic, so the older oracle prose saying no valuation engine exists is stale.",
         "Pinned ERPNext oracle includes LIFO behavior; current Forge ValuationMethod is FIFO or Moving Average only.",
         "Targeted landed-cost application/reversal is now authoritative on the safe no-downstream boundary; historical downstream COGS/expense restatement remains an explicit deferred boundary.",
-        "2026-10-04: future direct FIFO issues receive immutable targeted corrections, balanced Stock/COGS GL and valuation-audit reconciliation. Full-history submit/cancel fingerprints reject source drift; batch/serial and wider propagation remain fail closed."
+        "2026-10-04: future direct FIFO issues receive immutable targeted corrections, balanced Stock/COGS GL and valuation-audit reconciliation. Full-history submit/cancel fingerprints reject source drift; batch/serial and wider propagation remain fail closed.",
+        "2026-10-04: Delivery Note consumption is covered in the same chronological FIFO replay path as direct Material Issue, with regression proof for both consumption before and after the LCV posting timestamp."
       ]
     },
     {
