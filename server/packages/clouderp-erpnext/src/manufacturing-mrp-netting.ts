@@ -148,6 +148,7 @@ export async function netMrpAgainstOnHand(
 export async function netMrpAgainstProjectedAvailability(
   mrp: MrpExplosionResult,
   getAvailability: (
+    company: string,
     itemCode: string,
     warehouse: string,
     throughDate: string,
@@ -170,7 +171,7 @@ export async function netMrpAgainstProjectedAvailability(
       continue;
     }
 
-    const snapshot = await getAvailability(row.item_code, warehouse, throughDate);
+    const snapshot = await getAvailability(mrp.company, row.item_code, warehouse, throughDate);
     const onHand = safeInteger(snapshot.on_hand_qty_micros, "on_hand_qty_micros");
     const openPurchase = safeNonNegative(snapshot.open_purchase_qty_micros ?? 0, "open_purchase_qty_micros");
     const openManufacture = safeNonNegative(snapshot.open_manufacture_qty_micros ?? 0, "open_manufacture_qty_micros");
