@@ -3,11 +3,11 @@ import type { StockEntryData } from "../../../packages/clouderp-core/src/index.j
 import type { SalesOrderData } from "../../../packages/clouderp-selling/src/types.js";
 import { errors } from "../../../packages/core/src/index.js";
 import { D1MutationStore } from "../../../packages/document-kernel/src/index.js";
+import { createProjectedMrpAvailabilityResolver } from "../../../packages/clouderp-erpnext/src/index.js";
 import type {
   CalibrationRecordData, CapaData, ManufacturingDowntimeData, ManufacturingRoutingData,
   NonConformanceReportData, ProductionPlanData, QualityPlanData, RootCauseAnalysisData,
   VersionedBomData, WorkOrderData, WorkstationCapacityCalendarData,
-  createProjectedMrpAvailabilityResolver,
 } from "../../../packages/clouderp-erpnext/src/index.js";
 import { D1DocumentAccessStore, D1MetadataStore, MetadataPermissionService } from "../../../packages/frappe-model/src/index.js";
 import { isManufacturingBomBulkApiPath, isManufacturingBomBulkFrappePath, routeManufacturingBomBulkApi } from "./manufacturing-bom-bulk-api.js";
