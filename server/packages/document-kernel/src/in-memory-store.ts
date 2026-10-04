@@ -24,7 +24,7 @@ import { errors } from "../../core/src/index.js";
 import { fromScaledInt, toScaledInt } from "../../money/src/index.js";
 import { deriveDeliveryNoteStatus, deriveO2CStatus } from "./status.js";
 import { deriveSalesOrderProgress } from "./sales-order-progress.js";
-import type { MutationStore, SubmittedQuantityQuery, TrackedStockPosition, TrackedStockState } from "./store.js";
+import type { FinanceAccountMetadata, GlAccountBalance, GlAccountBalanceQuery, MutationStore, OpenPaymentBalance, OpenPaymentBalanceQuery, SubmittedQuantityQuery, TrackedStockPosition, TrackedStockState } from "./store.js";
 
 class KeyedMutex {
   private tails = new Map<string, Promise<void>>();
@@ -52,6 +52,7 @@ interface BundleCheckpoint {
   stockEntriesLength: number;
   voucherStockEntriesLength: number;
   paymentEntriesLength: number;
+  voucherPaymentEntriesLength: number;
   fulfillmentEntriesLength: number;
   lineFulfillmentEntriesLength: number;
   procurementEntriesLength: number;
@@ -86,6 +87,13 @@ export class InMemoryMutationStore implements MutationStore {
     line: StockLedgerEntry;
   }> = [];
   private readonly paymentEntries: PaymentLedgerEntry[] = [];
+  private readonly voucherPaymentEntries: Array<{
+    tenant_id: string;
+    voucher_type: string;
+    voucher_no: string;
+    voucher_revision: number;
+    line: PaymentLedgerEntry;
+  }> = [];
   private readonly fulfillmentEntries: FulfillmentEntry[] = [];
   private readonly lineFulfillmentEntries: FulfillmentEntry[] = [];
   private readonly procurementEntries: ProcurementEntry[] = [];
@@ -158,16 +166,122 @@ export class InMemoryMutationStore implements MutationStore {
     return total;
   }
 
+  async listFinanceAccountMetadata(tenantId: string): Promise<FinanceAccountMetadata[]> {
+    const accounts = new Map<string, FinanceAccountMetadata>();
+    const flag = (value: unknown): boolean => value === true || value === 1 || value === "1"
+      || (typeof value === "string" && value.trim().toLowerCase() === "true");
+    const metadata = (name: string, data: JsonObject, active: boolean): FinanceAccountMetadata => ({
+      name, company: String(data.company ?? ""), root_type: String(data.root_type ?? ""),
+      is_group: flag(data.is_group), active,
+    });
+    const prefix = `${tenantId}:Account:`;
+    for (const [key, data] of this.masterRecords) {
+      if (key.startsWith(prefix)) accounts.set(key.slice(prefix.length),
+        metadata(key.slice(prefix.length), data, !flag(data.disabled)));
+    }
+    for (const document of this.documents.values()) {
+      if (document.tenant_id === tenantId && document.doctype === "Account") {
+        accounts.set(document.name, metadata(document.name, document.data,
+          document.docstatus !== 2 && !flag(document.data.disabled)));
+      }
+    }
+    return [...accounts.values()].sort((left, right) => left.name.localeCompare(right.name));
+  }
+
+  async getGlAccountBalances(query: GlAccountBalanceQuery): Promise<GlAccountBalance[]> {
+    const grouped = new Map<string, GlAccountBalance>();
+    for (const entry of this.voucherGlEntries) {
+      if (entry.tenant_id !== query.tenantId) continue;
+      const document = this.documents.get(this.docKey(
+        entry.tenant_id,
+        entry.voucher_type,
+        entry.voucher_no,
+      ));
+      if (!document || document.data.company !== query.company) continue;
+      const postingDate = entry.line.posting_at.slice(0, 10);
+      if (postingDate < query.fromDate || postingDate > query.throughDate) continue;
+      const documentBranch = typeof document.data.branch === "string" ? document.data.branch : "";
+      const dimensionBranch = typeof entry.line.accounting_dimensions?.branch === "string"
+        ? entry.line.accounting_dimensions.branch
+        : "";
+      const branch = documentBranch || dimensionBranch;
+      if (query.branch && branch !== query.branch) continue;
+      if (query.account && entry.line.account !== query.account) continue;
+      const key = `${entry.line.account}\u0000${entry.line.currency}\u0000${entry.line.currency_scale}`;
+      const current = grouped.get(key) ?? {
+        account: entry.line.account,
+        currency: entry.line.currency,
+        currency_scale: entry.line.currency_scale,
+        debit_minor: 0,
+        credit_minor: 0,
+        row_count: 0,
+        balance_minor: 0,
+      };
+      current.debit_minor += entry.line.debit_minor;
+      current.credit_minor += entry.line.credit_minor;
+      current.row_count += 1;
+      current.balance_minor = current.debit_minor - current.credit_minor;
+      grouped.set(key, current);
+    }
+    return [...grouped.values()]
+      .filter((row) => row.debit_minor !== 0 || row.credit_minor !== 0)
+      .sort((left, right) => left.account.localeCompare(right.account)
+        || left.currency.localeCompare(right.currency)
+        || left.currency_scale - right.currency_scale)
+      .map((row) => structuredClone(row));
+  }
+
   async getOutstandingMinor(tenantId: string, voucherType: string, voucherNo: string): Promise<number> {
-    return this.paymentEntries
-      .filter((line) => line.against_voucher_type === voucherType && line.against_voucher_no === voucherNo)
-      .reduce((total, line) => total + line.amount_minor, 0);
+    return this.voucherPaymentEntries
+      .filter((entry) => entry.tenant_id === tenantId
+        && entry.line.against_voucher_type === voucherType
+        && entry.line.against_voucher_no === voucherNo)
+      .reduce((total, entry) => total + entry.line.amount_minor, 0);
   }
 
   async getBaseOutstandingMinor(tenantId: string, voucherType: string, voucherNo: string): Promise<number> {
-    return this.paymentEntries
-      .filter((line) => line.against_voucher_type === voucherType && line.against_voucher_no === voucherNo)
-      .reduce((total, line) => total + line.base_amount_minor, 0);
+    return this.voucherPaymentEntries
+      .filter((entry) => entry.tenant_id === tenantId
+        && entry.line.against_voucher_type === voucherType
+        && entry.line.against_voucher_no === voucherNo)
+      .reduce((total, entry) => total + entry.line.base_amount_minor, 0);
+  }
+
+  async listOpenPaymentBalances(query: OpenPaymentBalanceQuery): Promise<OpenPaymentBalance[]> {
+    const grouped = new Map<string, OpenPaymentBalance>();
+    for (const entry of this.voucherPaymentEntries) {
+      const line = entry.line;
+      if (entry.tenant_id !== query.tenantId) continue;
+      if (line.against_voucher_type !== "Sales Invoice" && line.against_voucher_type !== "Purchase Invoice") continue;
+      if (line.posting_at.slice(0, 10) > query.throughDate) continue;
+      const source = this.documents.get(this.docKey(query.tenantId, line.against_voucher_type, line.against_voucher_no ?? ""));
+      if (!source || source.data.company !== query.company) continue;
+      const key = [line.account_type,line.party_type,line.party,line.account,line.against_voucher_type,line.against_voucher_no,line.currency,line.currency_scale].join("\u0000");
+      const current = grouped.get(key) ?? {
+        account_type: line.account_type,
+        party_type: line.party_type,
+        party: line.party,
+        account: line.account,
+        against_voucher_type: line.against_voucher_type,
+        against_voucher_no: line.against_voucher_no ?? "",
+        currency: line.currency,
+        currency_scale: line.currency_scale,
+        amount_minor: 0,
+        base_amount_minor: 0,
+        row_count: 0,
+      };
+      current.amount_minor += line.amount_minor;
+      current.base_amount_minor += line.base_amount_minor;
+      current.row_count += 1;
+      grouped.set(key, current);
+    }
+    return [...grouped.values()]
+      .filter((row) => row.amount_minor !== 0 || row.base_amount_minor !== 0)
+      .sort((left, right) => left.account.localeCompare(right.account)
+        || left.party.localeCompare(right.party)
+        || left.against_voucher_type.localeCompare(right.against_voucher_type)
+        || left.against_voucher_no.localeCompare(right.against_voucher_no))
+      .map((row) => structuredClone(row));
   }
 
   async getStockBalanceMicros(tenantId: string, itemCode: string, warehouse: string): Promise<number> {
@@ -358,9 +472,13 @@ export class InMemoryMutationStore implements MutationStore {
     purchaseOrder: string,
     kind?: "Receipt" | "Billing",
     itemCode?: string,
+    purchaseOrderItemRowId?: string,
   ): Promise<number> {
     return this.procurementEntries
-      .filter((line) => line.purchase_order === purchaseOrder && (!kind || line.kind === kind) && (!itemCode || line.item_code === itemCode))
+      .filter((line) => line.purchase_order === purchaseOrder
+        && (!kind || line.kind === kind)
+        && (!itemCode || line.item_code === itemCode)
+        && (!purchaseOrderItemRowId || line.purchase_order_item_row_id === purchaseOrderItemRowId))
       .reduce((total, line) => total + line.qty_micros, 0);
   }
 
@@ -532,6 +650,10 @@ export class InMemoryMutationStore implements MutationStore {
     this.assertAssetDepreciationInvariants(plan);
     this.assertSuiteBreadthInvariants(plan);
     this.assertBankReconciliationInvariants(plan);
+    this.assertFinanceBudgetInvariants(plan);
+    this.assertExchangeRateRevaluationInvariants(plan);
+    this.assertSubcontractingEntitlementInvariants(plan);
+    this.assertPeriodCloseChronology(plan);
     this.assertAmendChain(command);
   }
 
@@ -560,8 +682,14 @@ export class InMemoryMutationStore implements MutationStore {
       voucher_revision: plan.document.version,
       line: structuredClone(line),
     })));
-    this.stockEntries.push(...structuredClone(plan.stock_entries));
-    this.voucherStockEntries.push(...plan.stock_entries.map((line) => ({
+    const committedStock = plan.stock_entries.map((line) => ({
+      ...structuredClone(line),
+      source_voucher_type: command.aggregate.doctype,
+      source_voucher_no: command.aggregate.name,
+      source_voucher_revision: plan.document.version,
+    }));
+    this.stockEntries.push(...committedStock);
+    this.voucherStockEntries.push(...committedStock.map((line) => ({
       tenant_id: command.tenant_id,
       voucher_type: command.aggregate.doctype,
       voucher_no: command.aggregate.name,
@@ -569,6 +697,13 @@ export class InMemoryMutationStore implements MutationStore {
       line: structuredClone(line),
     })));
     this.paymentEntries.push(...structuredClone(plan.payment_entries));
+    this.voucherPaymentEntries.push(...plan.payment_entries.map((line) => ({
+      tenant_id: command.tenant_id,
+      voucher_type: command.aggregate.doctype,
+      voucher_no: command.aggregate.name,
+      voucher_revision: plan.document.version,
+      line: structuredClone(line),
+    })));
     const fulfillment = structuredClone(plan.fulfillment_entries);
     this.lineFulfillmentEntries.push(...fulfillment.filter((line) => Boolean(line.sales_order_line_key)));
     this.fulfillmentEntries.push(...fulfillment.filter((line) => !line.skip_legacy_projection));
@@ -605,6 +740,7 @@ export class InMemoryMutationStore implements MutationStore {
       stockEntriesLength: this.stockEntries.length,
       voucherStockEntriesLength: this.voucherStockEntries.length,
       paymentEntriesLength: this.paymentEntries.length,
+      voucherPaymentEntriesLength: this.voucherPaymentEntries.length,
       fulfillmentEntriesLength: this.fulfillmentEntries.length,
       lineFulfillmentEntriesLength: this.lineFulfillmentEntries.length,
       procurementEntriesLength: this.procurementEntries.length,
@@ -630,6 +766,7 @@ export class InMemoryMutationStore implements MutationStore {
     this.stockEntries.splice(checkpoint.stockEntriesLength);
     this.voucherStockEntries.splice(checkpoint.voucherStockEntriesLength);
     this.paymentEntries.splice(checkpoint.paymentEntriesLength);
+    this.voucherPaymentEntries.splice(checkpoint.voucherPaymentEntriesLength);
     this.fulfillmentEntries.splice(checkpoint.fulfillmentEntriesLength);
     this.lineFulfillmentEntries.splice(checkpoint.lineFulfillmentEntriesLength);
     this.procurementEntries.splice(checkpoint.procurementEntriesLength);
@@ -779,6 +916,55 @@ export class InMemoryMutationStore implements MutationStore {
     }
   }
   private assertStockInvariants<T extends JsonObject>(plan: MutationPlan<T>): void {
+    if (plan.command.aggregate.doctype === "Landed Cost Voucher"
+      && (plan.command.action === "submit" || (plan.command.action === "cancel"
+        && Array.isArray(plan.document.data.allocations) && plan.document.data.allocations.some((raw) =>
+          raw && typeof raw === "object" && !Array.isArray(raw) && Array.isArray(raw.chronological_reposts) && raw.chronological_reposts.length > 0)))
+      && Array.isArray(plan.document.data.allocations)) {
+      const postingAt = String(plan.document.data.posting_at ?? "");
+      for (const raw of plan.document.data.allocations) {
+        if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
+        const allocation = raw as JsonObject;
+        const itemCode = String(allocation.item_code ?? "");
+        const warehouse = String(allocation.warehouse ?? "");
+        const history = this.stockEntries.filter((line) =>
+          line.item_code === itemCode
+          && line.warehouse === warehouse
+          && !(plan.command.action === "cancel" && line.source_voucher_type === "Landed Cost Voucher"
+            && line.source_voucher_no === plan.command.aggregate.name)
+          && line.posting_at <= String(allocation.history_until ?? postingAt));
+        const rowCount = history.length;
+        const qty = history.reduce((sum, line) => sum + line.actual_qty_micros, 0);
+        const value = history.reduce((sum, line) => sum + line.stock_value_difference_minor, 0);
+        if (rowCount !== Number(allocation.history_row_count)
+          || qty !== Number(allocation.history_qty_micros)
+          || value !== Number(allocation.history_value_minor)) {
+          throw errors.reference("Landed Cost stock history changed after planning; retry submit");
+        }
+        const propagationFingerprints = Array.isArray(allocation.propagation_fingerprints)
+          ? allocation.propagation_fingerprints
+          : [];
+        for (const rawFingerprint of propagationFingerprints) {
+          if (!rawFingerprint || typeof rawFingerprint !== "object" || Array.isArray(rawFingerprint)) continue;
+          const fingerprint = rawFingerprint as JsonObject;
+          const propagatedHistory = this.stockEntries.filter((line) =>
+            line.item_code === String(fingerprint.item_code ?? "")
+            && line.warehouse === String(fingerprint.warehouse ?? "")
+            && !(plan.command.action === "cancel" && line.source_voucher_type === "Landed Cost Voucher"
+              && line.source_voucher_no === plan.command.aggregate.name)
+            && line.posting_at <= String(fingerprint.history_until ?? postingAt));
+          const propagatedRows = propagatedHistory.length;
+          const propagatedQty = propagatedHistory.reduce((sum, line) => sum + line.actual_qty_micros, 0);
+          const propagatedValue = propagatedHistory.reduce((sum, line) => sum + line.stock_value_difference_minor, 0);
+          if (propagatedRows !== Number(fingerprint.history_row_count)
+            || propagatedQty !== Number(fingerprint.history_qty_micros)
+            || propagatedValue !== Number(fingerprint.history_value_minor)) {
+            throw errors.reference("Landed Cost propagated stock history changed after planning; retry submit");
+          }
+        }
+      }
+    }
+
     const pending = new Map<string, number>();
     const pendingSerial = new Map<string, number>();
     const pendingBatch = new Map<string, number>();
@@ -852,14 +1038,18 @@ export class InMemoryMutationStore implements MutationStore {
     for (const line of plan.payment_entries) {
       if (!line.against_voucher_type || !line.against_voucher_no) continue;
       const referenceKey = `${line.against_voucher_type}:${line.against_voucher_no}`;
-      const existing = this.paymentEntries
-        .filter((entry) => entry.against_voucher_type === line.against_voucher_type && entry.against_voucher_no === line.against_voucher_no)
-        .reduce((total, entry) => total + entry.amount_minor, 0);
+      const existing = this.voucherPaymentEntries
+        .filter((entry) => entry.tenant_id === plan.command.tenant_id
+          && entry.line.against_voucher_type === line.against_voucher_type
+          && entry.line.against_voucher_no === line.against_voucher_no)
+        .reduce((total, entry) => total + entry.line.amount_minor, 0);
       const next = existing + (pending.get(referenceKey) ?? 0) + line.amount_minor;
       if (next < 0) throw errors.reference(`Allocation exceeds outstanding for ${referenceKey}`, { outstanding_minor: existing, requested_delta_minor: line.amount_minor });
-      const existingBase = this.paymentEntries
-        .filter((entry) => entry.against_voucher_type === line.against_voucher_type && entry.against_voucher_no === line.against_voucher_no)
-        .reduce((total, entry) => total + entry.base_amount_minor, 0);
+      const existingBase = this.voucherPaymentEntries
+        .filter((entry) => entry.tenant_id === plan.command.tenant_id
+          && entry.line.against_voucher_type === line.against_voucher_type
+          && entry.line.against_voucher_no === line.against_voucher_no)
+        .reduce((total, entry) => total + entry.line.base_amount_minor, 0);
       const pendingBaseKey = `${referenceKey}:base`;
       const nextBase = existingBase + (pending.get(pendingBaseKey) ?? 0) + line.base_amount_minor;
       if (nextBase < 0) throw errors.reference(`Base allocation exceeds outstanding for ${referenceKey}`, { base_outstanding_minor: existingBase, requested_base_delta_minor: line.base_amount_minor });
@@ -996,6 +1186,839 @@ export class InMemoryMutationStore implements MutationStore {
           && closing.doctype === "POS Closing Entry" && closing.docstatus === 1 && closing.data.opening_entry === opening.name));
       if (anotherOpen) throw errors.reference(`POS Profile ${profile} already has an open session`);
     }
+  }
+
+  private assertPeriodCloseChronology<T extends JsonObject>(plan: MutationPlan<T>): void {
+    const document = plan.document;
+    if (document.doctype !== "Period Closing Voucher") return;
+    const data = document.data;
+    const branch = typeof data.branch === "string" ? data.branch : "";
+    if (document.docstatus === 2 && [...this.documents.values()].some((close) =>
+      close.tenant_id === document.tenant_id && close.doctype === document.doctype
+      && close.name !== document.name && close.docstatus === 1
+      && close.data.company === data.company
+      && String(close.data.period_end_date ?? "") > String(data.period_end_date ?? "")
+      && (!branch || !close.data.branch || close.data.branch === branch))) {
+      throw errors.lifecycle("PERIOD_CLOSE_FUTURE_CLOSE_EXISTS");
+    }
+    if (document.docstatus !== 1) return;
+    const lockDate = this.periodLocks.get(`${document.tenant_id}:${String(data.company ?? "")}`);
+    if (!lockDate || lockDate < String(data.period_end_date ?? "")) {
+      throw errors.lifecycle("PERIOD_CLOSE_REQUIRES_LOCK");
+    }
+    let sourceRows = 0;
+    let sourceDebit = 0n;
+    let sourceCredit = 0n;
+    const prior = new Map<string, bigint>();
+    const inactive = new Map<string, bigint>();
+    for (const entry of this.voucherGlEntries) {
+      if (entry.tenant_id !== document.tenant_id) continue;
+      const source = this.documents.get(this.docKey(entry.tenant_id, entry.voucher_type, entry.voucher_no));
+      if (!source || source.data.company !== data.company) continue;
+      const sourceBranch = source.data.branch || entry.line.accounting_dimensions?.branch || "";
+      if (branch && sourceBranch !== branch) continue;
+      const accountDocument = this.documents.get(this.docKey(document.tenant_id, "Account", entry.line.account));
+      const account = accountDocument?.data ?? this.masterRecords.get(`${document.tenant_id}:Account:${entry.line.account}`);
+      if (!account || !["Income", "Expense"].includes(String(account.root_type))
+        || account.is_group === true || account.is_group === 1 || account.is_group === "1"
+        || String(account.is_group ?? "").trim().toLowerCase() === "true") continue;
+      if (account.company && account.company !== data.company) continue;
+      const master = this.masterRecords.get(`${document.tenant_id}:Account:${entry.line.account}`);
+      const candidate = accountDocument ? accountDocument.data : master;
+      const activeAccount = candidate && (!accountDocument || accountDocument.docstatus !== 2)
+        && candidate.disabled !== true && candidate.disabled !== 1 && candidate.disabled !== "1"
+        && String(candidate.disabled ?? "").trim().toLowerCase() !== "true"
+        ? candidate : null;
+      const active = Boolean(activeAccount);
+      const fingerprintAccount = active && activeAccount?.company === data.company;
+      const key = `${entry.line.account}:${entry.line.currency}:${entry.line.currency_scale}`;
+      const debit = BigInt(entry.line.debit_minor);
+      const credit = BigInt(entry.line.credit_minor);
+      const postingDate = entry.line.posting_at.slice(0, 10);
+      const parsedDate = Date.parse(entry.line.posting_at);
+      if (!Number.isFinite(parsedDate) || new Date(parsedDate).toISOString().slice(0, 10) !== postingDate) {
+        throw errors.lifecycle("PERIOD_CLOSE_INVALID_SOURCE_DATE");
+      }
+      if (postingDate < String(data.period_start_date ?? "")) {
+        prior.set(key, (prior.get(key) ?? 0n) + debit - credit);
+      } else if (postingDate <= String(data.period_end_date ?? "")) {
+        // Historical rows still participate in date/residual validation. Only
+        // active accounts contribute to the planner's source fingerprint (D1
+        // finance_active_accounts); zero-net disabled history is valid.
+        if (fingerprintAccount) {
+          sourceRows += 1;
+          sourceDebit += debit;
+          sourceCredit += credit;
+        } else if (!active) {
+          inactive.set(key, (inactive.get(key) ?? 0n) + debit - credit);
+        }
+      }
+    }
+    if ([...prior.values()].some((balance) => balance !== 0n)) {
+      throw errors.lifecycle("PERIOD_CLOSE_PRIOR_PNL_BALANCE");
+    }
+    if ([...inactive.values()].some((balance) => balance !== 0n)) {
+      throw errors.lifecycle("PERIOD_CLOSE_INACTIVE_PNL_BALANCE");
+    }
+    if (!Number.isSafeInteger(data.source_debit_minor) || !Number.isSafeInteger(data.source_credit_minor)
+      || sourceRows !== data.source_gl_row_count
+      || sourceDebit !== BigInt(Number(data.source_debit_minor))
+      || sourceCredit !== BigInt(Number(data.source_credit_minor))) {
+      throw errors.lifecycle("PERIOD_CLOSE_SOURCE_CHANGED");
+    }
+  }
+
+  private assertSubcontractingEntitlementInvariants<T extends JsonObject>(plan: MutationPlan<T>): void {
+    const kind = plan.document.doctype;
+    if (!["Stock Entry", "Subcontracting Receipt", "Subcontracting Order", "Purchase Order"].includes(kind)) return;
+    const tenant = plan.command.tenant_id;
+    const current = this.documents.get(this.docKey(tenant, kind, plan.document.name));
+    const affected = new Set<string>();
+    for (const document of [current, plan.document]) {
+      if (!document) continue;
+      if (document.doctype === "Subcontracting Order") affected.add(document.name);
+      const reference = document.data.subcontracting_order;
+      if (typeof reference === "string" && reference) affected.add(reference);
+    }
+    const documents = [...this.documents.values()].filter((document) => document.tenant_id === tenant
+      && !(document.doctype === kind && document.name === plan.document.name));
+    documents.push(plan.document);
+    if (kind === "Purchase Order") {
+      for (const document of documents) {
+        if (document.doctype === "Subcontracting Order" && document.docstatus === 1
+          && document.data.purchase_order === plan.document.name) affected.add(document.name);
+      }
+    }
+    if (!affected.size) return;
+    const fail = (): never => { throw errors.reference("Subcontracting source snapshot or material entitlement changed; retry mutation"); };
+    const rows = (data: JsonObject, field: string): JsonObject[] => {
+      const value = data[field];
+      if (!Array.isArray(value)) return fail();
+      return value.map((row) => row && typeof row === "object" && !Array.isArray(row) ? row as JsonObject : fail());
+    };
+    const integer = (value: unknown, positive = false): number => {
+      if (typeof value !== "number" || !Number.isSafeInteger(value) || value < (positive ? 1 : 0)) return fail();
+      return value;
+    };
+    const add = (left: number, right: number): number => {
+      const result = left + right;
+      if (!Number.isSafeInteger(result)) return fail();
+      return result;
+    };
+    const active = documents.filter((document) => document.docstatus === 1);
+    for (const orderName of affected) {
+      const order = active.find((document) => document.doctype === "Subcontracting Order" && document.name === orderName);
+      const execution = active.filter((document) => ["Stock Entry", "Subcontracting Receipt"].includes(document.doctype)
+        && document.data.subcontracting_order === orderName);
+      if (!order) { if (execution.length) fail(); continue; }
+      const data = order.data;
+      const po = active.find((document) => document.doctype === "Purchase Order" && document.name === data.purchase_order);
+      if (!po || ![true, 1, "1", "true"].includes(po.data.is_subcontracted as boolean | number | string)) fail();
+      for (const field of ["company", "supplier", "currency"]) if (data[field] !== po!.data[field]) fail();
+      const quantity = integer(data.qty_micros, true);
+      const service = integer(data.service_amount_minor);
+      const poRow = rows(po!.data, "items").find((row) => row.row_id === data.purchase_order_row_id && row.item_code === data.service_item);
+      if (!poRow) fail();
+      const ordered = active.filter((document) => document.doctype === "Subcontracting Order"
+        && document.data.purchase_order === data.purchase_order && document.data.purchase_order_row_id === data.purchase_order_row_id)
+        .reduce((total, document) => add(total, integer(document.data.qty_micros, true)), 0);
+      if (ordered > integer(poRow!.qty_micros, true)) fail();
+      const materials = new Map<string, { item: string; source: string; required: number; sent: number; consumed: number }>();
+      for (const row of rows(data, "supplied_items")) {
+        if (typeof row.bom_row_id !== "string" || !row.bom_row_id || materials.has(row.bom_row_id)
+          || typeof row.item_code !== "string" || !row.item_code || typeof row.source_warehouse !== "string" || !row.source_warehouse) fail();
+        materials.set(row.bom_row_id as string, { item: row.item_code as string, source: row.source_warehouse as string,
+          required: integer(row.required_qty_micros, true), sent: 0, consumed: 0 });
+      }
+      if (!materials.size) fail();
+      let received = 0;
+      let serviceUsed = 0;
+      for (const document of execution) {
+        const executionData = document.data;
+        if (document.doctype === "Stock Entry") {
+          if (executionData.company !== data.company || executionData.purpose !== "Material Transfer") fail();
+          const returned = executionData.subcontracting_material_return ?? false;
+          if (![true, false, 0, 1].includes(returned as boolean | number)) fail();
+          const items = rows(executionData, "items");
+          if (!items.length) fail();
+          for (const row of items) {
+            const material = materials.get(String(row.bom_row_id ?? ""));
+            if (!material || row.item_code !== material.item
+              || row.source_warehouse !== (returned ? data.supplier_warehouse : material.source)
+              || row.target_warehouse !== (returned ? material.source : data.supplier_warehouse)) fail();
+            material!.sent = add(material!.sent, (returned ? -1 : 1) * integer(row.qty_micros, true));
+          }
+        } else {
+          for (const field of ["company", "supplier", "currency", "purchase_order", "purchase_order_row_id", "service_item",
+            "production_item", "supplier_warehouse", "target_warehouse"]) if (executionData[field] !== data[field]) fail();
+          const receiptQty = integer(executionData.received_qty_micros, true);
+          const rejectedQty = integer(executionData.rejected_qty_micros === undefined ? 0 : executionData.rejected_qty_micros);
+          if (rejectedQty > receiptQty) fail();
+          if (executionData.accepted_qty_micros !== undefined
+            && integer(executionData.accepted_qty_micros) !== receiptQty - rejectedQty) fail();
+          if (rejectedQty > 0 && (executionData.rejected_service_policy !== "Pay Full Service"
+            || typeof executionData.rejected_warehouse !== "string" || !executionData.rejected_warehouse.trim()
+            || executionData.rejected_warehouse === data.target_warehouse
+            || executionData.rejected_warehouse === data.supplier_warehouse)) fail();
+          received = add(received, receiptQty);
+          serviceUsed = add(serviceUsed, integer(executionData.service_cost_minor));
+          const supplied = rows(executionData, "supplied_items");
+          const seen = new Set<string>();
+          if (supplied.length !== materials.size) fail();
+          for (const row of supplied) {
+            const key = String(row.bom_row_id ?? "");
+            const material = materials.get(key);
+            if (!material || row.item_code !== material.item || seen.has(key)) fail();
+            seen.add(key);
+            material!.consumed = add(material!.consumed, integer(row.consumed_qty_micros));
+          }
+        }
+      }
+      if (received > quantity || serviceUsed > service) fail();
+      for (const material of materials.values()) {
+        if (material.sent < 0 || material.sent > material.required || material.consumed > material.sent) fail();
+      }
+    }
+  }
+
+  private assertExchangeRateRevaluationInvariants<T extends JsonObject>(plan: MutationPlan<T>): void {
+    if (plan.command.aggregate.doctype !== "Exchange Rate Revaluation" || plan.command.action !== "submit") return;
+    const data = plan.document.data;
+    const tenantId = plan.command.tenant_id;
+    const company = typeof data.company === "string" ? data.company : "";
+    const postingAt = typeof data.posting_at === "string" ? data.posting_at : "";
+    const companyCurrency = typeof data.company_currency === "string" ? data.company_currency : "";
+    const gainLossAccount = typeof data.gain_loss_account === "string" ? data.gain_loss_account : "";
+    const companyScale = Number(data.company_currency_scale ?? 2);
+    const entries = Array.isArray(data.revaluation_entries) ? data.revaluation_entries : [];
+    if (!company || !postingAt || !companyCurrency || !gainLossAccount || entries.length === 0) {
+      throw errors.lifecycle("FINANCE_FX_SOURCE_SNAPSHOT_REQUIRED");
+    }
+    const postingDate = postingAt.slice(0, 10);
+    const reversalAt = typeof data.reversal_at === "string" ? data.reversal_at : "";
+    const expectedReversal = new Date(postingAt);
+    expectedReversal.setUTCDate(expectedReversal.getUTCDate() + 1);
+    if (!reversalAt || reversalAt.slice(0, 10) !== expectedReversal.toISOString().slice(0, 10)) {
+      throw errors.lifecycle("FINANCE_FX_INVALID_REVERSAL_DATE");
+    }
+
+    const companyMaster = this.documents.get(this.docKey(tenantId, "Company", company))?.data
+      ?? this.masterRecords.get(`${tenantId}:Company:${company}`);
+    const currencyMaster = this.documents.get(this.docKey(tenantId, "Currency", companyCurrency))?.data
+      ?? this.masterRecords.get(`${tenantId}:Currency:${companyCurrency}`);
+    if (!companyMaster
+      || companyMaster.default_currency !== companyCurrency
+      || companyMaster.exchange_gain_loss_account !== gainLossAccount
+      || !currencyMaster
+      || Number(currencyMaster.currency_scale ?? 2) !== companyScale) {
+      throw errors.lifecycle("FINANCE_FX_COMPANY_SNAPSHOT_DRIFT");
+    }
+
+    const duplicate = [...this.documents.values()].find((document) =>
+      document.tenant_id === tenantId
+      && document.doctype === "Exchange Rate Revaluation"
+      && document.docstatus === 1
+      && document.name !== plan.document.name
+      && document.data.company === company
+      && typeof document.data.posting_at === "string"
+      && document.data.posting_at.slice(0, 10) === postingDate
+    );
+    if (duplicate) throw errors.lifecycle("FINANCE_FX_DUPLICATE_DATE");
+
+    // Recheck unsupported non-party foreign balances inside the mutation mutex;
+    // a backdated GL row or Account currency change after planning must not turn
+    // an AR/AP-only revaluation into a silently incomplete company close.
+    for (const stored of this.voucherGlEntries) {
+      if (stored.tenant_id !== tenantId || stored.line.posting_at.slice(0, 10) > postingDate) continue;
+      const source = this.documents.get(this.docKey(tenantId, stored.voucher_type, stored.voucher_no));
+      if (!source || source.data.company !== company) continue;
+      const accountDocument = this.documents.get(this.docKey(tenantId, "Account", stored.line.account));
+      const account = accountDocument
+        ? accountDocument.data
+        : this.masterRecords.get(`${tenantId}:Account:${stored.line.account}`);
+      if (!account) continue;
+      const accountCurrency = String(account.account_currency ?? "").trim() || String(account.currency ?? "").trim();
+      const accountType = String(account.account_type ?? "").trim();
+      const rootType = String(account.root_type ?? "").trim();
+      if (!accountCurrency || accountCurrency === companyCurrency
+        || accountType === "Receivable" || accountType === "Payable"
+        || !(rootType === "Asset" || rootType === "Liability" || accountType === "Bank" || accountType === "Cash")) continue;
+      // Equal company-currency debits/credits are not proof of equal foreign
+      // units. Fail closed even for zero net or apparent reversal history until
+      // immutable account-currency amounts establish the actual foreign balance.
+      if (stored.line.debit_minor !== 0 || stored.line.credit_minor !== 0) {
+        throw errors.lifecycle("FINANCE_FX_NON_PARTY_DUAL_CURRENCY_REQUIRED");
+      }
+    }
+
+    const grouped = new Map<string, {
+      account_type: string; party_type: string; party: string; account: string;
+      against_voucher_type: string; against_voucher_no: string; currency: string;
+      currency_scale: number; outstanding_minor: number; base_outstanding_minor: number; source_row_count: number;
+    }>();
+    for (const stored of this.voucherPaymentEntries) {
+      if (stored.tenant_id !== tenantId) continue;
+      const line = stored.line;
+      if (line.against_voucher_type !== "Sales Invoice" && line.against_voucher_type !== "Purchase Invoice") continue;
+      if (!line.against_voucher_no || line.posting_at.slice(0, 10) > postingDate) continue;
+      if (line.currency === companyCurrency) continue;
+      const source = this.documents.get(this.docKey(tenantId, line.against_voucher_type, line.against_voucher_no));
+      if (!source || source.data.company !== company) continue;
+      const key = [line.account_type,line.party_type,line.party,line.account,line.against_voucher_type,line.against_voucher_no,line.currency,line.currency_scale].join("\u0000");
+      const row = grouped.get(key) ?? {
+        account_type: line.account_type,
+        party_type: line.party_type,
+        party: line.party,
+        account: line.account,
+        against_voucher_type: line.against_voucher_type,
+        against_voucher_no: line.against_voucher_no,
+        currency: line.currency,
+        currency_scale: line.currency_scale,
+        outstanding_minor: 0,
+        base_outstanding_minor: 0,
+        source_row_count: 0,
+      };
+      row.outstanding_minor += line.amount_minor;
+      row.base_outstanding_minor += line.base_amount_minor;
+      row.source_row_count += 1;
+      grouped.set(key, row);
+    }
+    const sourceRows = [...grouped.values()].filter((row) => row.outstanding_minor !== 0 || row.base_outstanding_minor !== 0);
+    if (sourceRows.length !== entries.length) throw errors.lifecycle("FINANCE_FX_SOURCE_COUNT_DRIFT");
+
+    for (const raw of entries) {
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw errors.lifecycle("FINANCE_FX_SOURCE_BALANCE_DRIFT");
+      const entry = raw as JsonObject;
+      const match = sourceRows.find((row) =>
+        row.account_type === entry.account_type
+        && row.party_type === entry.party_type
+        && row.party === entry.party
+        && row.account === entry.account
+        && row.against_voucher_type === entry.against_voucher_type
+        && row.against_voucher_no === entry.against_voucher_no
+        && row.currency === entry.currency
+        && row.currency_scale === Number(entry.currency_scale)
+      );
+      if (!match
+        || match.outstanding_minor !== Number(entry.outstanding_minor)
+        || match.base_outstanding_minor !== Number(entry.base_outstanding_minor)
+        || match.source_row_count !== Number(entry.source_row_count)) {
+        throw errors.lifecycle("FINANCE_FX_SOURCE_BALANCE_DRIFT");
+      }
+      const foreign = String(entry.currency ?? "");
+      const exactName = `${foreign}:${companyCurrency}:${postingDate}`;
+      const fallbackName = `${foreign}:${companyCurrency}`;
+      const rateMaster = this.documents.get(this.docKey(tenantId, "Exchange Rate", exactName))?.data
+        ?? this.masterRecords.get(`${tenantId}:Exchange Rate:${exactName}`)
+        ?? this.documents.get(this.docKey(tenantId, "Exchange Rate", fallbackName))?.data
+        ?? this.masterRecords.get(`${tenantId}:Exchange Rate:${fallbackName}`);
+      const rawRate = rateMaster?.rate;
+      const rateMicros = typeof rawRate === "string" || typeof rawRate === "number"
+        ? toScaledInt(rawRate, 6, "exchange rate")
+        : -1;
+      if (rateMicros !== Number(entry.closing_rate_micros)) throw errors.lifecycle("FINANCE_FX_RATE_DRIFT");
+    }
+  }
+
+  private assertFinanceBudgetInvariants<T extends JsonObject>(plan: MutationPlan<T>): void {
+    if (plan.document.doctype === "Finance Budget Revision"
+      && (plan.document.docstatus === 1 || plan.command.action === "cancel")) {
+      this.assertFinanceBudgetRevisionPlan(plan);
+    }
+    if (plan.document.doctype === "Finance Budget Commitment" && plan.document.docstatus === 1) {
+      this.assertFinanceBudgetCommitmentPlan(plan);
+    }
+    if (plan.gl_entries.length === 0 || plan.command.aggregate.doctype === "Period Closing Voucher") return;
+    const tenantId = plan.command.tenant_id;
+    const company = typeof plan.document.data.company === "string" ? plan.document.data.company : "";
+    if (!company) return;
+
+    const budgets = [...this.documents.values()].filter((document) =>
+      document.tenant_id === tenantId
+      && document.doctype === "Finance Budget"
+      && document.docstatus === 1
+      && document.data.company === company
+    );
+
+    for (const budget of budgets) {
+      const account = typeof budget.data.account === "string" ? budget.data.account : "";
+      const startDate = typeof budget.data.start_date === "string" ? budget.data.start_date : "";
+      const endDate = typeof budget.data.end_date === "string" ? budget.data.end_date : "";
+      const budgetCurrency = typeof budget.data.currency === "string" ? budget.data.currency : "";
+      const budgetScale = Number(budget.data.currency_scale ?? 2);
+      if (!account || !startDate || !endDate || !budgetCurrency || !Number.isSafeInteger(budgetScale)) continue;
+
+      const matchingIncoming = plan.gl_entries.filter((line) =>
+        line.account === account
+        && line.posting_at.slice(0, 10) >= startDate
+        && line.posting_at.slice(0, 10) <= endDate
+        && this.financeBudgetScopeMatches(budget.data, plan.document.data, line)
+      );
+      if (matchingIncoming.length === 0) continue;
+
+      for (const line of matchingIncoming) {
+        if (line.currency !== budgetCurrency || line.currency_scale !== budgetScale) {
+          throw errors.lifecycle("FINANCE_BUDGET_GL_CURRENCY_SCALE_MISMATCH", {
+            budget: budget.name,
+            expected_currency: budgetCurrency,
+            expected_currency_scale: budgetScale,
+            actual_currency: line.currency,
+            actual_currency_scale: line.currency_scale,
+          });
+        }
+      }
+
+      const accountDocument = this.documents.get(this.docKey(tenantId, "Account", account));
+      const accountMaster = this.masterRecords.get(`${tenantId}:Account:${account}`);
+      const rootType = String(accountDocument?.data.root_type ?? accountMaster?.root_type ?? "");
+      const movement = (line: GeneralLedgerEntry): number =>
+        rootType === "Income" ? line.credit_minor - line.debit_minor : line.debit_minor - line.credit_minor;
+
+      const postingDates = [...new Set(matchingIncoming.map((line) => line.posting_at.slice(0, 10)))].sort();
+      for (const throughDate of postingDates) {
+        const effectiveBudget = Number(budget.data.budget_amount_minor ?? 0)
+          + [...this.documents.values()]
+            .filter((document) =>
+              document.tenant_id === tenantId
+              && document.doctype === "Finance Budget Revision"
+              && document.docstatus === 1
+              && document.data.budget === budget.name
+              && typeof document.data.posting_date === "string"
+              && document.data.posting_date >= startDate
+              && document.data.posting_date <= throughDate
+            )
+            .reduce((sum, document) => sum + Number(document.data.delta_amount_minor ?? 0), 0);
+
+        const committed = this.financeBudgetOutstandingCommitmentMinor({
+          tenantId,
+          budgetName: budget.name,
+          budgetData: budget.data,
+          account,
+          company,
+          startDate,
+          throughDate,
+          plan,
+          movement,
+        });
+
+        const existingActual = this.voucherGlEntries
+          .filter((entry) => {
+            if (entry.tenant_id !== tenantId || entry.voucher_type === "Period Closing Voucher") return false;
+            if (entry.line.account !== account) return false;
+            const postingDate = entry.line.posting_at.slice(0, 10);
+            if (postingDate < startDate || postingDate > throughDate) return false;
+            const source = this.documents.get(this.docKey(tenantId, entry.voucher_type, entry.voucher_no));
+            return Boolean(source && source.data.company === company
+              && this.financeBudgetScopeMatches(budget.data, source.data, entry.line));
+          })
+          .reduce((sum, entry) => sum + movement(entry.line), 0);
+
+        const incomingActual = matchingIncoming
+          .filter((entry) => entry.posting_at.slice(0, 10) <= throughDate)
+          .reduce((sum, entry) => sum + movement(entry), 0);
+        const accumulatedBudget = this.financeBudgetLimitThroughDate(budget.data, effectiveBudget, throughDate);
+        const projected = existingActual + incomingActual + committed;
+        const controlAction = typeof budget.data.control_action === "string" ? budget.data.control_action : "Stop";
+        if (controlAction === "Stop" && projected > accumulatedBudget) {
+          throw errors.lifecycle("FINANCE_BUDGET_TRANSACTION_EXCEEDED", {
+            budget: budget.name,
+            posting_date: throughDate,
+            effective_budget_minor: accumulatedBudget,
+            annual_effective_budget_minor: effectiveBudget,
+            actual_after_minor: existingActual + incomingActual,
+            committed_minor: committed,
+            exceeded_by_minor: projected - accumulatedBudget,
+          });
+        }
+      }
+    }
+  }
+
+  private assertFinanceBudgetRevisionPlan<T extends JsonObject>(plan: MutationPlan<T>): void {
+    const tenantId = plan.command.tenant_id;
+    const budgetName = typeof plan.document.data.budget === "string" ? plan.document.data.budget : "";
+    const revisionDate = typeof plan.document.data.posting_date === "string" ? plan.document.data.posting_date : "";
+    const delta = Number(plan.document.data.delta_amount_minor ?? 0);
+    if (!budgetName || !revisionDate || !Number.isSafeInteger(delta) || delta === 0) return;
+
+    const effect = plan.command.action === "cancel" ? -delta : delta;
+    if (effect >= 0) return;
+
+    const budget = this.documents.get(this.docKey(tenantId, "Finance Budget", budgetName));
+    if (!budget || budget.docstatus !== 1
+      || budget.data.fiscal_distribution_enabled !== true
+      || (budget.data.control_action ?? "Stop") !== "Stop") return;
+
+    const company = typeof budget.data.company === "string" ? budget.data.company : "";
+    const account = typeof budget.data.account === "string" ? budget.data.account : "";
+    const startDate = typeof budget.data.start_date === "string" ? budget.data.start_date : "";
+    const endDate = typeof budget.data.end_date === "string" ? budget.data.end_date : "";
+    if (!company || !account || !startDate || !endDate) return;
+
+    const rows = Array.isArray(budget.data.budget_distribution) ? budget.data.budget_distribution : [];
+    // Usage and caps change on ledger/commitment/revision dates. Period ends alone
+    // lose temporary overruns hidden by later releases or reversals. The day before
+    // each change also represents the interval containing a newly backdated revision.
+    const dates = new Set<string>([revisionDate, endDate]);
+    const addCheckpoint = (date: string): void => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+      dates.add(date);
+      const prior = new Date(`${date}T00:00:00Z`);
+      prior.setUTCDate(prior.getUTCDate() - 1);
+      dates.add(prior.toISOString().slice(0, 10));
+    };
+    for (const raw of rows) {
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
+      addCheckpoint(String(raw.start_date ?? ""));
+      addCheckpoint(String(raw.end_date ?? ""));
+    }
+    for (const document of this.documents.values()) {
+      if (document.tenant_id === tenantId && document.docstatus === 1
+        && (document.doctype === "Finance Budget Commitment" || document.doctype === "Finance Budget Revision")
+        && document.data.budget === budgetName) addCheckpoint(String(document.data.posting_date ?? ""));
+    }
+    for (const entry of this.voucherGlEntries) {
+      if (entry.tenant_id === tenantId && entry.line.account === account) {
+        addCheckpoint(entry.line.posting_at.slice(0, 10));
+      }
+    }
+    const checkpoints = [...dates].filter((date) => date >= revisionDate && date >= startDate && date <= endDate).sort();
+
+    const accountDocument = this.documents.get(this.docKey(tenantId, "Account", account));
+    const accountMaster = this.masterRecords.get(`${tenantId}:Account:${account}`);
+    const rootType = String(accountDocument?.data.root_type ?? accountMaster?.root_type ?? "");
+    const movement = (line: GeneralLedgerEntry): number =>
+      rootType === "Income" ? line.credit_minor - line.debit_minor : line.debit_minor - line.credit_minor;
+
+    for (const throughDate of checkpoints) {
+      let annualEffective = Number(budget.data.budget_amount_minor ?? 0)
+        + [...this.documents.values()]
+          .filter((document) =>
+            document.tenant_id === tenantId
+            && document.doctype === "Finance Budget Revision"
+            && document.docstatus === 1
+            && document.data.budget === budgetName
+            && typeof document.data.posting_date === "string"
+            && document.data.posting_date >= startDate
+            && document.data.posting_date <= throughDate
+          )
+          .reduce((sum, document) => sum + Number(document.data.delta_amount_minor ?? 0), 0);
+
+      // Submit plans are still Draft in the store; cancellation plans still have the
+      // submitted revision in the store. Apply the proposed signed effect exactly once.
+      annualEffective += effect;
+      if (!Number.isSafeInteger(annualEffective) || annualEffective < 0) {
+        throw errors.lifecycle("FINANCE_BUDGET_REVISION_DISTRIBUTION_EXCEEDED", {
+          budget: budgetName,
+          posting_date: throughDate,
+          annual_effective_budget_minor: annualEffective,
+        });
+      }
+
+      const accumulatedBudget = this.financeBudgetLimitThroughDate(budget.data, annualEffective, throughDate);
+      const actual = this.voucherGlEntries
+        .filter((entry) => {
+          if (entry.tenant_id !== tenantId || entry.voucher_type === "Period Closing Voucher") return false;
+          if (entry.line.account !== account) return false;
+          const date = entry.line.posting_at.slice(0, 10);
+          if (date < startDate || date > throughDate) return false;
+          const voucher = this.documents.get(this.docKey(tenantId, entry.voucher_type, entry.voucher_no));
+          return Boolean(voucher && voucher.data.company === company
+            && this.financeBudgetScopeMatches(budget.data, voucher.data, entry.line));
+        })
+        .reduce((sum, entry) => sum + movement(entry.line), 0);
+
+      const outstanding = this.financeBudgetOutstandingCommitmentMinor({
+        tenantId,
+        budgetName,
+        budgetData: budget.data,
+        account,
+        company,
+        startDate,
+        throughDate,
+        plan,
+        movement,
+      });
+      const projected = actual + outstanding;
+      if (projected > accumulatedBudget) {
+        throw errors.lifecycle("FINANCE_BUDGET_REVISION_DISTRIBUTION_EXCEEDED", {
+          budget: budgetName,
+          revision: plan.document.name,
+          revision_posting_date: revisionDate,
+          checkpoint_date: throughDate,
+          annual_effective_budget_minor: annualEffective,
+          effective_budget_minor: accumulatedBudget,
+          actual_minor: actual,
+          committed_minor: outstanding,
+          exceeded_by_minor: projected - accumulatedBudget,
+        });
+      }
+    }
+  }
+
+  private assertFinanceBudgetCommitmentPlan<T extends JsonObject>(plan: MutationPlan<T>): void {
+    const tenantId = plan.command.tenant_id;
+    const budgetName = typeof plan.document.data.budget === "string" ? plan.document.data.budget : "";
+    const postingDate = typeof plan.document.data.posting_date === "string" ? plan.document.data.posting_date : "";
+    if (!budgetName || !postingDate) return;
+    const budget = this.documents.get(this.docKey(tenantId, "Finance Budget", budgetName));
+    if (!budget || budget.docstatus !== 1) return;
+    const company = typeof budget.data.company === "string" ? budget.data.company : "";
+    const account = typeof budget.data.account === "string" ? budget.data.account : "";
+    const startDate = typeof budget.data.start_date === "string" ? budget.data.start_date : "";
+    if (!company || !account || !startDate) return;
+
+    const annualEffective = Number(budget.data.budget_amount_minor ?? 0)
+      + [...this.documents.values()]
+        .filter((document) =>
+          document.tenant_id === tenantId
+          && document.doctype === "Finance Budget Revision"
+          && document.docstatus === 1
+          && document.data.budget === budgetName
+          && typeof document.data.posting_date === "string"
+          && document.data.posting_date >= startDate
+          && document.data.posting_date <= postingDate
+        )
+        .reduce((sum, document) => sum + Number(document.data.delta_amount_minor ?? 0), 0);
+    const accumulatedBudget = this.financeBudgetLimitThroughDate(budget.data, annualEffective, postingDate);
+
+    const accountDocument = this.documents.get(this.docKey(tenantId, "Account", account));
+    const accountMaster = this.masterRecords.get(`${tenantId}:Account:${account}`);
+    const rootType = String(accountDocument?.data.root_type ?? accountMaster?.root_type ?? "");
+    const movement = (line: GeneralLedgerEntry): number =>
+      rootType === "Income" ? line.credit_minor - line.debit_minor : line.debit_minor - line.credit_minor;
+
+    const actual = this.voucherGlEntries
+      .filter((entry) => {
+        if (entry.tenant_id !== tenantId || entry.voucher_type === "Period Closing Voucher") return false;
+        if (entry.line.account !== account) return false;
+        const date = entry.line.posting_at.slice(0, 10);
+        if (date < startDate || date > postingDate) return false;
+        const voucher = this.documents.get(this.docKey(tenantId, entry.voucher_type, entry.voucher_no));
+        return Boolean(voucher && voucher.data.company === company
+          && this.financeBudgetScopeMatches(budget.data, voucher.data, entry.line));
+      })
+      .reduce((sum, entry) => sum + movement(entry.line), 0);
+
+    const outstanding = this.financeBudgetOutstandingCommitmentMinor({
+      tenantId,
+      budgetName,
+      budgetData: budget.data,
+      account,
+      company,
+      startDate,
+      throughDate: postingDate,
+      plan,
+      movement,
+    });
+    const projected = actual + outstanding;
+    const controlAction = typeof budget.data.control_action === "string" ? budget.data.control_action : "Stop";
+    if (controlAction === "Stop" && projected > accumulatedBudget) {
+      throw errors.lifecycle("FINANCE_BUDGET_TRANSACTION_EXCEEDED", {
+        budget: budgetName,
+        posting_date: postingDate,
+        annual_effective_budget_minor: annualEffective,
+        effective_budget_minor: accumulatedBudget,
+        actual_minor: actual,
+        committed_minor: outstanding,
+        exceeded_by_minor: projected - accumulatedBudget,
+      });
+    }
+  }
+
+  private financeBudgetLimitThroughDate(
+    budget: JsonObject,
+    annualEffectiveMinor: number,
+    throughDate: string,
+  ): number {
+    if (budget.fiscal_distribution_enabled !== true) return annualEffectiveMinor;
+    const rows = Array.isArray(budget.budget_distribution) ? budget.budget_distribution : [];
+    const weightTotal = Number(budget.distribution_weight_total ?? 0);
+    if (!Number.isSafeInteger(weightTotal) || weightTotal <= 0 || weightTotal > 10_000 || rows.length === 0) {
+      throw errors.lifecycle("FINANCE_BUDGET_DISTRIBUTION_INVALID");
+    }
+    let cumulativeWeight = 0;
+    for (const raw of rows) {
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+        throw errors.lifecycle("FINANCE_BUDGET_DISTRIBUTION_INVALID");
+      }
+      const row = raw as JsonObject;
+      const startDate = typeof row.start_date === "string" ? row.start_date : "";
+      const weight = Number(row.allocation_weight ?? 0);
+      if (!startDate || !Number.isSafeInteger(weight) || weight <= 0) {
+        throw errors.lifecycle("FINANCE_BUDGET_DISTRIBUTION_INVALID");
+      }
+      if (startDate <= throughDate) cumulativeWeight += weight;
+    }
+    if (cumulativeWeight < 0 || cumulativeWeight > weightTotal) {
+      throw errors.lifecycle("FINANCE_BUDGET_DISTRIBUTION_INVALID");
+    }
+    const quotient = Math.floor(annualEffectiveMinor / weightTotal);
+    const remainder = annualEffectiveMinor % weightTotal;
+    const result = quotient * cumulativeWeight
+      + Math.floor((remainder * cumulativeWeight + Math.floor(weightTotal / 2)) / weightTotal);
+    if (!Number.isSafeInteger(result)) throw errors.lifecycle("FINANCE_BUDGET_DISTRIBUTION_INVALID");
+    return result;
+  }
+
+  private financeBudgetOutstandingCommitmentMinor<T extends JsonObject>(args: {
+    tenantId: string;
+    budgetName: string;
+    budgetData: JsonObject;
+    account: string;
+    company: string;
+    startDate: string;
+    throughDate: string;
+    plan: MutationPlan<T>;
+    movement: (line: GeneralLedgerEntry) => number;
+  }): number {
+    const groups = new Map<string, { sourceDoctype: string; sourceName: string; rawMinor: number }>();
+    for (const document of this.documents.values()) {
+      if (document.tenant_id !== args.tenantId
+        || document.doctype !== "Finance Budget Commitment"
+        || document.docstatus !== 1
+        || document.data.budget !== args.budgetName
+        || typeof document.data.posting_date !== "string"
+        || document.data.posting_date < args.startDate
+        || document.data.posting_date > args.throughDate) continue;
+      const sourceDoctype = typeof document.data.source_doctype === "string" ? document.data.source_doctype : "";
+      const sourceName = typeof document.data.source_name === "string" ? document.data.source_name : "";
+      const amount = Number(document.data.amount_minor ?? 0);
+      if (!Number.isSafeInteger(amount)) continue;
+      // Legacy seeded/evidence commitments without source identity remain fully outstanding.
+      // They must never disappear merely because automatic actualization was introduced.
+      const key = sourceDoctype && sourceName
+        ? `${sourceDoctype}\u0000${sourceName}`
+        : `__legacy__\u0000${document.name}`;
+      const group = groups.get(key) ?? { sourceDoctype, sourceName, rawMinor: 0 };
+      group.rawMinor += document.data.commitment_type === "Release" ? -amount : amount;
+      groups.set(key, group);
+    }
+
+    if (args.plan.document.doctype === "Finance Budget Commitment"
+      && args.plan.document.docstatus === 1
+      && args.plan.document.data.budget === args.budgetName
+      && typeof args.plan.document.data.posting_date === "string"
+      && args.plan.document.data.posting_date >= args.startDate
+      && args.plan.document.data.posting_date <= args.throughDate) {
+      const data = args.plan.document.data;
+      const sourceDoctype = typeof data.source_doctype === "string" ? data.source_doctype : "";
+      const sourceName = typeof data.source_name === "string" ? data.source_name : "";
+      const amount = Number(data.amount_minor ?? 0);
+      if (Number.isSafeInteger(amount) && amount > 0) {
+        const key = sourceDoctype && sourceName
+          ? `${sourceDoctype}\u0000${sourceName}`
+          : `__incoming__\u0000${args.plan.document.name}`;
+        const group = groups.get(key) ?? { sourceDoctype, sourceName, rawMinor: 0 };
+        group.rawMinor += data.commitment_type === "Release" ? -amount : amount;
+        groups.set(key, group);
+      }
+    }
+
+    let outstanding = 0;
+    for (const group of groups.values()) {
+      if (group.rawMinor <= 0) continue;
+      let linkedActual = 0;
+
+      for (const entry of this.voucherGlEntries) {
+        if (entry.tenant_id !== args.tenantId || entry.voucher_type === "Period Closing Voucher") continue;
+        if (entry.line.account !== args.account) continue;
+        const postingDate = entry.line.posting_at.slice(0, 10);
+        if (postingDate < args.startDate || postingDate > args.throughDate) continue;
+        const voucher = this.documents.get(this.docKey(args.tenantId, entry.voucher_type, entry.voucher_no));
+        if (!voucher || voucher.data.company !== args.company
+          || !this.financeBudgetScopeMatches(args.budgetData, voucher.data, entry.line)) continue;
+        if (!this.financeBudgetCommitmentSourceMatches(
+          group.sourceDoctype,
+          group.sourceName,
+          entry.voucher_type,
+          entry.voucher_no,
+          voucher.data,
+          entry.line.line_key,
+        )) continue;
+        linkedActual += args.movement(entry.line);
+      }
+
+      const incomingDateEligible = args.plan.gl_entries.some((line) => line.posting_at.slice(0, 10) <= args.throughDate);
+      if (incomingDateEligible) {
+        for (const line of args.plan.gl_entries) {
+          if (line.account !== args.account) continue;
+          const postingDate = line.posting_at.slice(0, 10);
+          if (postingDate < args.startDate || postingDate > args.throughDate) continue;
+          if (!this.financeBudgetScopeMatches(args.budgetData, args.plan.document.data, line)) continue;
+          if (!this.financeBudgetCommitmentSourceMatches(
+            group.sourceDoctype,
+            group.sourceName,
+            args.plan.command.aggregate.doctype,
+            args.plan.command.aggregate.name,
+            args.plan.document.data,
+            line.line_key,
+          )) continue;
+          linkedActual += args.movement(line);
+        }
+      }
+
+      const consumed = Math.min(group.rawMinor, Math.max(0, linkedActual));
+      outstanding += group.rawMinor - consumed;
+    }
+    return outstanding;
+  }
+
+  private financeBudgetCommitmentSourceMatches(
+    sourceDoctype: string,
+    sourceName: string,
+    voucherType: string,
+    voucherNo: string,
+    voucherData: JsonObject,
+    lineKey: string,
+  ): boolean {
+    if (sourceDoctype === "Expense Claim") {
+      return voucherType === "Expense Claim" && voucherNo === sourceName;
+    }
+    if (voucherType !== "Purchase Invoice") return false;
+    const canonicalLineKey = lineKey.startsWith("REV-") ? lineKey.slice(4) : lineKey;
+    if (!canonicalLineKey.startsWith("EXPENSE-")) return false;
+    const rowId = canonicalLineKey.slice("EXPENSE-".length);
+    const items = Array.isArray(voucherData.items) ? voucherData.items : [];
+    const item = items.find((raw): raw is JsonObject =>
+      Boolean(raw && typeof raw === "object" && !Array.isArray(raw) && String((raw as JsonObject).row_id ?? "") === rowId));
+    if (!item) return false;
+    if (sourceDoctype === "Purchase Order") {
+      const purchaseOrder = typeof item.purchase_order === "string" && item.purchase_order
+        ? item.purchase_order
+        : typeof voucherData.against_purchase_order === "string" ? voucherData.against_purchase_order : "";
+      return purchaseOrder === sourceName;
+    }
+    if (sourceDoctype === "Material Request") {
+      return typeof item.material_request === "string" && item.material_request === sourceName;
+    }
+    return false;
+  }
+
+  private financeBudgetScopeMatches(
+    budget: JsonObject,
+    document: JsonObject,
+    line: GeneralLedgerEntry,
+  ): boolean {
+    const scope = typeof budget.budget_against === "string" ? budget.budget_against : "Company";
+    if (scope === "Company") return true;
+    const dimensions = line.accounting_dimensions ?? {};
+    if (scope === "Branch") {
+      const branch = typeof document.branch === "string" && document.branch
+        ? document.branch : typeof dimensions.branch === "string" ? dimensions.branch : "";
+      return branch === budget.branch;
+    }
+    if (scope === "Cost Center") {
+      const costCenter = line.cost_center
+        ?? (typeof dimensions.cost_center === "string" ? dimensions.cost_center : "");
+      return costCenter === budget.cost_center;
+    }
+    if (scope === "Project") {
+      const project = typeof document.project === "string" && document.project
+        ? document.project : typeof dimensions.project === "string" ? dimensions.project : "";
+      return project === budget.project;
+    }
+    return false;
   }
 
   /**

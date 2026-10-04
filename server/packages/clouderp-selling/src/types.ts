@@ -215,8 +215,12 @@ export interface PaymentReference extends JsonObject {
   reference_name: string;
   allocated_amount: DecimalInput;
   allocated_amount_minor?: number;
+  /** Historical base amount consumed from the target invoice. */
   base_allocated_amount?: string;
   base_allocated_amount_minor?: number;
+  /** Historical base amount consumed from the signed source advance/credit. */
+  source_base_allocated_amount?: string;
+  source_base_allocated_amount_minor?: number;
 }
 
 export interface PaymentEntryData extends JsonObject {

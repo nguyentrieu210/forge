@@ -17,10 +17,16 @@ interface LinkedInvoiceLine {
   index: number;
   item: PurchaseItem;
   purchase_order: string;
+  purchase_order_item_row_id?: string;
+}
+
+interface ResolvedInvoiceLine extends LinkedInvoiceLine {
+  purchase_order_item_row_id: string;
 }
 
 interface PurchaseMatchEvidence extends JsonObject {
   purchase_order: string;
+  purchase_order_item_row_id: string;
   item_code: string;
   policy_version: number;
   receipt_match_required: boolean;
@@ -103,37 +109,96 @@ export class ProcurementP2PPurchaseInvoiceController extends PurchaseInvoiceCont
     }
 
     const poCache = new Map<string, { name: string; data: PurchaseOrderData; docstatus: number }>();
-    const grouped = groupLinkedLines(linked);
-    const evidence: PurchaseMatchEvidence[] = [];
-    let hasLegacyPolicy = false;
+    const resolved: ResolvedInvoiceLine[] = [];
 
-    for (const group of grouped.values()) {
-      let po = poCache.get(group.purchase_order);
+    for (const line of linked) {
+      let po = poCache.get(line.purchase_order);
       if (!po) {
         const document = await context.reader.getDocument<PurchaseOrderData>(
           context.command.tenant_id,
           "Purchase Order",
-          group.purchase_order,
+          line.purchase_order,
         );
         if (!document || document.docstatus !== 1) {
-          throw errors.reference(`Submitted Purchase Order ${group.purchase_order} is required`);
+          throw errors.reference(`Submitted Purchase Order ${line.purchase_order} is required`);
         }
         po = { name: document.name, data: document.data, docstatus: document.docstatus };
-        poCache.set(group.purchase_order, po);
+        poCache.set(line.purchase_order, po);
       }
       assertPurchaseInvoiceContext(normalizedData, po.data, po.name);
 
-      const orderLines = po.data.items.filter((row) => row.item_code === group.item_code);
-      if (orderLines.length === 0) {
-        throw errors.reference(`Item ${group.item_code} is not in Purchase Order ${po.name}`);
+      const candidates = po.data.items.filter((row) => row.item_code === line.item.item_code);
+      if (candidates.length === 0) {
+        throw errors.reference(`Item ${line.item.item_code} is not in Purchase Order ${po.name}`);
       }
-      const orderedQty = sumStockQty(orderLines, `Purchase Order ${po.name} ${group.item_code}`);
+      const explicit = optionalText(line.item.purchase_order_item_row_id);
+      let target: PurchaseItem | undefined;
+      if (explicit) {
+        target = candidates.find((row) => row.row_id === explicit);
+        if (!target) {
+          throw errors.reference(
+            `Purchase Invoice row ${line.index + 1} references Purchase Order ${po.name} row ${explicit}, but that row does not contain ${line.item.item_code}`,
+          );
+        }
+      } else {
+        if (candidates.length !== 1) {
+          throw errors.reference(
+            `Purchase Invoice row ${line.index + 1} must specify purchase_order_item_row_id because Purchase Order ${po.name} repeats item ${line.item.item_code}`,
+          );
+        }
+        target = candidates[0];
+      }
+      const rowId = optionalText(target?.row_id);
+      if (!target || !rowId) throw errors.reference(`Purchase Order ${po.name} item row has no row_id`);
+
+      const materialRequest = optionalText(line.item.material_request)
+        || optionalText(target.material_request)
+        || optionalText(po.data.material_request);
+      const normalizedLine: PurchaseItem = {
+        ...line.item,
+        purchase_order: po.name,
+        purchase_order_item_row_id: rowId,
+        ...(materialRequest ? { material_request: materialRequest } : {}),
+      };
+      normalizedData.items[line.index] = normalizedLine;
+      resolved.push({
+        ...line,
+        item: normalizedLine,
+        purchase_order: po.name,
+        purchase_order_item_row_id: rowId,
+      });
+    }
+
+    const grouped = groupLinkedLines(resolved);
+    const evidence: PurchaseMatchEvidence[] = [];
+    let hasLegacyPolicy = false;
+
+    for (const group of grouped.values()) {
+      const po = poCache.get(group.purchase_order)!;
+      const orderLine = po.data.items.find((row) => row.row_id === group.purchase_order_item_row_id);
+      if (!orderLine || orderLine.item_code !== group.item_code) {
+        throw errors.reference(
+          `Purchase Order ${po.name} row ${group.purchase_order_item_row_id} does not match ${group.item_code}`,
+        );
+      }
+      const sameItemRows = po.data.items.filter((row) => row.item_code === group.item_code);
+      if (sameItemRows.length > 1) {
+        await assertNoLegacyAggregateProgress(
+          context,
+          po.name,
+          group.item_code,
+          sameItemRows,
+        );
+      }
+
+      const orderedQty = stockQtyMicros(orderLine);
       const currentInvoiceQty = sumStockQty(group.lines.map((line) => line.item), `Purchase Invoice ${group.item_code}`);
       const billedBefore = await context.reader.getProcuredQuantityMicros(
         context.command.tenant_id,
         po.name,
         "Billing",
         group.item_code,
+        group.purchase_order_item_row_id,
       );
       const invoicedQty = safeAdd(billedBefore, currentInvoiceQty, `Purchase Invoice billed quantity for ${group.item_code}`);
       const receivedQty = await context.reader.getProcuredQuantityMicros(
@@ -141,8 +206,9 @@ export class ProcurementP2PPurchaseInvoiceController extends PurchaseInvoiceCont
         po.name,
         "Receipt",
         group.item_code,
+        group.purchase_order_item_row_id,
       );
-      const orderedRate = effectiveRatePerStockUnitMinor(orderLines, `Purchase Order ${po.name} ${group.item_code}`);
+      const orderedRate = effectiveRatePerStockUnitMinor([orderLine], `Purchase Order ${po.name} row ${group.purchase_order_item_row_id}`);
       const invoiceRate = effectiveRatePerStockUnitMinor(group.lines.map((line) => line.item), `Purchase Invoice ${group.item_code}`);
       const raw = po.data as JsonObject;
       const policyVersion = integerOrZero(raw.purchase_match_policy_version);
@@ -150,10 +216,13 @@ export class ProcurementP2PPurchaseInvoiceController extends PurchaseInvoiceCont
       if (policyVersion !== PURCHASE_MATCH_POLICY_VERSION) {
         hasLegacyPolicy = true;
         if (invoicedQty > orderedQty) {
-          throw errors.reference(`Billing quantity for ${group.item_code} exceeds Purchase Order ${po.name}`);
+          throw errors.reference(
+            `Billing quantity for ${group.item_code} row ${group.purchase_order_item_row_id} exceeds Purchase Order ${po.name}`,
+          );
         }
         evidence.push({
           purchase_order: po.name,
+          purchase_order_item_row_id: group.purchase_order_item_row_id,
           item_code: group.item_code,
           policy_version: 0,
           receipt_match_required: false,
@@ -182,7 +251,7 @@ export class ProcurementP2PPurchaseInvoiceController extends PurchaseInvoiceCont
       );
       const receiptMatchRequired = booleanValue(raw.receipt_match_required, true);
       const result = evaluateThreeWayMatch([{
-        line_key: `${po.name}:${group.item_code}`,
+        line_key: `${po.name}:${group.purchase_order_item_row_id}`,
         item_code: group.item_code,
         ordered_qty_micros: orderedQty,
         received_qty_micros: receivedQty,
@@ -197,10 +266,13 @@ export class ProcurementP2PPurchaseInvoiceController extends PurchaseInvoiceCont
         require_receipt_before_invoice: receiptMatchRequired,
       });
       if (result.status === "Hold") {
-        throw errors.reference(`Purchase Invoice procurement hold for ${po.name}/${group.item_code}: ${result.hold_reasons.join("; ")}`);
+        throw errors.reference(
+          `Purchase Invoice procurement hold for ${po.name}/${group.purchase_order_item_row_id}: ${result.hold_reasons.join("; ")}`,
+        );
       }
       evidence.push({
         purchase_order: po.name,
+        purchase_order_item_row_id: group.purchase_order_item_row_id,
         item_code: group.item_code,
         policy_version: PURCHASE_MATCH_POLICY_VERSION,
         receipt_match_required: receiptMatchRequired,
@@ -275,18 +347,47 @@ function linkedInvoiceLines(data: PurchaseInvoiceData): LinkedInvoiceLine[] {
   for (const [index, item] of data.items.entries()) {
     const purchaseOrder = optionalText(item.purchase_order) ?? header;
     if (!purchaseOrder) continue;
-    result.push({ index, item, purchase_order: purchaseOrder });
+    const purchaseOrderItemRowId = optionalText(item.purchase_order_item_row_id);
+    if (purchaseOrderItemRowId) {
+      result.push({
+        index,
+        item,
+        purchase_order: purchaseOrder,
+        purchase_order_item_row_id: purchaseOrderItemRowId,
+      });
+    } else {
+      result.push({
+        index,
+        item,
+        purchase_order: purchaseOrder,
+      });
+    }
   }
   return result;
 }
 
-function groupLinkedLines(lines: LinkedInvoiceLine[]): Map<string, { purchase_order: string; item_code: string; lines: LinkedInvoiceLine[] }> {
-  const groups = new Map<string, { purchase_order: string; item_code: string; lines: LinkedInvoiceLine[] }>();
+function groupLinkedLines(lines: ResolvedInvoiceLine[]): Map<string, {
+  purchase_order: string;
+  purchase_order_item_row_id: string;
+  item_code: string;
+  lines: ResolvedInvoiceLine[];
+}> {
+  const groups = new Map<string, {
+    purchase_order: string;
+    purchase_order_item_row_id: string;
+    item_code: string;
+    lines: ResolvedInvoiceLine[];
+  }>();
   for (const line of lines) {
-    const key = `${line.purchase_order}\u0000${line.item.item_code}`;
+    const key = `${line.purchase_order}\u0000${line.purchase_order_item_row_id}`;
     const current = groups.get(key);
     if (current) current.lines.push(line);
-    else groups.set(key, { purchase_order: line.purchase_order, item_code: line.item.item_code, lines: [line] });
+    else groups.set(key, {
+      purchase_order: line.purchase_order,
+      purchase_order_item_row_id: line.purchase_order_item_row_id,
+      item_code: line.item.item_code,
+      lines: [line],
+    });
   }
   return groups;
 }
@@ -301,12 +402,50 @@ function buildBillingProgressEntries(
     return {
       line_key: `${reverse ? "REV-" : ""}BILL-${line.item.row_id || line.index + 1}`,
       purchase_order: line.purchase_order,
+      ...(line.purchase_order_item_row_id ? { purchase_order_item_row_id: line.purchase_order_item_row_id } : {}),
       kind: "Billing",
       item_code: line.item.item_code,
       qty_micros: reverse ? -qty : qty,
       posting_at: data.posting_at,
     };
   });
+}
+
+async function assertNoLegacyAggregateProgress(
+  context: ControllerContext<PurchaseInvoiceData>,
+  purchaseOrder: string,
+  itemCode: string,
+  rows: PurchaseItem[],
+): Promise<void> {
+  for (const kind of ["Receipt", "Billing"] as const) {
+    const aggregate = await context.reader.getProcuredQuantityMicros(
+      context.command.tenant_id,
+      purchaseOrder,
+      kind,
+      itemCode,
+    );
+    let resolved = 0;
+    for (const row of rows) {
+      const rowId = optionalText(row.row_id);
+      if (!rowId) throw errors.reference(`Purchase Order ${purchaseOrder} has an item row without row_id`);
+      resolved = safeAdd(
+        resolved,
+        await context.reader.getProcuredQuantityMicros(
+          context.command.tenant_id,
+          purchaseOrder,
+          kind,
+          itemCode,
+          rowId,
+        ),
+        `${kind} row progress`,
+      );
+    }
+    if (aggregate !== resolved) {
+      throw errors.reference(
+        `Purchase Order ${purchaseOrder} has legacy ${kind.toLowerCase()} progress without row identity for duplicate item ${itemCode}`,
+      );
+    }
+  }
 }
 
 function assertPurchaseInvoiceContext(invoice: PurchaseInvoiceData, order: PurchaseOrderData, orderName: string): void {

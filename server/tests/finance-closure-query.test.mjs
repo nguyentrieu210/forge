@@ -121,3 +121,61 @@ test("closure compiler preserves RC-022 and existing finance reports", () => {
   });
   assert.match(aging.sql, /p\.account_type='Receivable'/);
 });
+
+test("Finance Budget vs Actual derives effective budget, commitments and scoped actuals from canonical documents/GL", () => {
+  const compiled = compiler.compile({
+    report: "Finance Budget vs Actual",
+    tenant_id: "tenant-a",
+    filters: [
+      { field: "as_of_date", operator: "=", value: "2026-09-30" },
+      company,
+      { field: "status", operator: "!=", value: "Within Budget" },
+    ],
+  });
+
+  assert.match(compiled.sql, /b\.doctype='Finance Budget'/);
+  assert.match(compiled.sql, /r\.doctype='Finance Budget Revision'/);
+  assert.match(compiled.sql, /cm\.doctype='Finance Budget Commitment'/);
+  assert.match(compiled.sql, /FROM gl_entries g/);
+  assert.match(compiled.sql, /LEFT JOIN finance_historical_accounts a/);
+  assert.match(compiled.sql, /g\.voucher_type<>'Period Closing Voucher'/);
+  assert.match(compiled.sql, /b\.budget_against='Branch'/);
+  assert.match(compiled.sql, /b\.budget_against='Cost Center'/);
+  assert.match(compiled.sql, /b\.budget_against='Project'/);
+  assert.match(compiled.sql, /g\.cost_center/);
+  assert.match(compiled.sql, /g\.dimensions_json,'\$\.project'/);
+  assert.match(compiled.sql, /budget_amount_minor\+revision_minor AS effective_budget_minor/);
+  assert.match(compiled.sql, /accumulated_budget_minor-actual_minor-committed_minor AS available_minor/);
+  assert.match(compiled.sql, /accumulated_distribution_weight/);
+  assert.ok(compiled.columns.some((column) => column.field === "accumulated_budget_minor"));
+  assert.deepEqual(compiled.params.slice(0, 3), ["tenant-a", "2026-09-30", "Demo Company"]);
+  assert.ok(!compiled.sql.includes("budget_actual_snapshot"));
+  assert.ok(!compiled.sql.includes("budget_actual_balances"));
+});
+
+test("Finance Budget vs Actual fails closed on missing control scope and unsafe filters", () => {
+  assert.throws(() => compiler.compile({
+    report: "Finance Budget vs Actual",
+    tenant_id: "tenant-a",
+    filters: [{ field: "as_of_date", operator: "=", value: "2026-09-30" }],
+  }), (error) => error.code === "VALIDATION_ERROR");
+
+  assert.throws(() => compiler.compile({
+    report: "Finance Budget vs Actual",
+    tenant_id: "tenant-a",
+    filters: [
+      { field: "as_of_date", operator: "=", value: "2026-09-31" },
+      company,
+    ],
+  }), (error) => error.code === "VALIDATION_ERROR");
+
+  assert.throws(() => compiler.compile({
+    report: "Finance Budget vs Actual",
+    tenant_id: "tenant-a",
+    filters: [
+      { field: "as_of_date", operator: "=", value: "2026-09-30" },
+      company,
+      { field: "payload_json", operator: "like", value: "%x%" },
+    ],
+  }), (error) => error.code === "VALIDATION_ERROR");
+});

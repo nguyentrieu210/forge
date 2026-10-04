@@ -203,6 +203,11 @@ export function replayValuation(
   const layers: FifoLayer[] = [];
   const sorted = [...entries].sort((a,b) => a.posting_at.localeCompare(b.posting_at));
   for (const entry of sorted) {
+    // Chronological LCV issue corrections reconcile immutable ledger totals. FIFO
+    // replay has already recomputed that issue from the adjusted receipt layer;
+    // applying this accounting correction a second time would reduce stock twice.
+    if (entry.actual_qty_micros === 0 && entry.source_voucher_type === "Landed Cost Voucher"
+      && /^(?:REV-)?LCV-REPOST-/.test(entry.line_key)) continue;
     const delta = entry.actual_qty_micros;
     if (delta > 0) {
       const incomingValue = entry.stock_value_difference_minor !== 0
@@ -235,7 +240,18 @@ export function replayValuation(
     // Repost/landed-cost adjustments change stock value without changing quantity.
     if (entry.stock_value_difference_minor !== 0) {
       value = safeAdd(value, entry.stock_value_difference_minor);
-      if (method === "FIFO" && layers.length > 0) distributeAdjustment(layers, entry.stock_value_difference_minor);
+      if (method === "FIFO" && layers.length > 0) {
+        const targeted = valuationTargetLayers(layers, entry);
+        if (targeted.length === 0 && hasValuationTarget(entry)) {
+          throw errors.reference("Targeted valuation source row is no longer open in FIFO", {
+            target_voucher_type: entry.valuation_target_voucher_type,
+            target_voucher_no: entry.valuation_target_voucher_no,
+            target_voucher_revision: entry.valuation_target_voucher_revision,
+            target_row_id: entry.valuation_target_row_id,
+          });
+        }
+        distributeAdjustment(targeted.length > 0 ? targeted : layers, entry.stock_value_difference_minor);
+      }
     }
   }
   if (qty === 0 && value !== 0) throw errors.validation("Valuation replay leaves value with zero quantity", { stock_value_minor: value });
@@ -249,6 +265,28 @@ export function replayValuation(
 
 export function expectedCurrentStockValue(entries: StockLedgerEntry[], method: ValuationMethod): number {
   return replayValuation(entries, method).value_minor;
+}
+
+function hasValuationTarget(entry: StockLedgerEntry): boolean {
+  return Boolean(
+    entry.valuation_target_voucher_type
+    || entry.valuation_target_voucher_no
+    || entry.valuation_target_voucher_revision !== undefined
+    || entry.valuation_target_row_id,
+  );
+}
+
+function valuationTargetLayers(layers: FifoLayer[], adjustment: StockLedgerEntry): FifoLayer[] {
+  if (!hasValuationTarget(adjustment)) return [];
+  if (!adjustment.valuation_target_voucher_type || !adjustment.valuation_target_voucher_no
+    || adjustment.valuation_target_voucher_revision === undefined || !adjustment.valuation_target_row_id) {
+    throw errors.validation("Targeted valuation adjustment requires complete voucher and row identity");
+  }
+  return layers.filter((layer) =>
+    layer.source.source_voucher_type === adjustment.valuation_target_voucher_type
+    && layer.source.source_voucher_no === adjustment.valuation_target_voucher_no
+    && layer.source.source_voucher_revision === adjustment.valuation_target_voucher_revision
+    && layer.source.source_row_id === adjustment.valuation_target_row_id);
 }
 
 function distributeAdjustment(layers: FifoLayer[], adjustment: number): void {

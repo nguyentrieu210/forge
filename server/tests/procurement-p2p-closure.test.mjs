@@ -207,3 +207,122 @@ test("P2P keeps approved PO quantity as a hard billing ceiling even when match t
     /exceeds approved Purchase Order/i,
   );
 });
+
+
+test("P2P binds duplicate same-item split-price flows to the exact Purchase Order row", async () => {
+  const { store, kernel } = setup();
+
+  await createAndSubmit(kernel, {
+    doctype: "Purchase Order",
+    name: "PO-SPLIT-PRICE",
+    document: {
+      supplier: "SUP-1",
+      company: "Demo",
+      currency: "USD",
+      transaction_date: "2026-08-04",
+      receipt_match_required: true,
+      items: [
+        { row_id: "PO-LOW", item_code: "ITEM-1", qty: "5", rate: "10" },
+        { row_id: "PO-HIGH", item_code: "ITEM-1", qty: "5", rate: "20" },
+      ],
+      taxes: [],
+    },
+  });
+
+  for (const [name, rowId, rate] of [
+    ["PR-LOW", "PO-LOW", "10"],
+    ["PR-HIGH", "PO-HIGH", "20"],
+  ]) {
+    await createAndSubmit(kernel, {
+      doctype: "Purchase Receipt",
+      name,
+      document: {
+        supplier: "SUP-1",
+        company: "Demo",
+        currency: "USD",
+        posting_at: now(),
+        against_purchase_order: "PO-SPLIT-PRICE",
+        items: [{
+          row_id: `${name}-ROW`,
+          purchase_order_item_row_id: rowId,
+          item_code: "ITEM-1",
+          qty: "5",
+          rate,
+          valuation_rate: rate,
+          warehouse: "Stores",
+        }],
+      },
+    });
+  }
+
+  await assert.rejects(
+    createAndSubmit(kernel, invoice("PI-AMBIGUOUS", "PO-SPLIT-PRICE", "ITEM-1", 1, 20)),
+    /must specify purchase_order_item_row_id.*repeats item/i,
+  );
+
+  const makeRowInvoice = (name, rowId, qty, rate) => ({
+    doctype: "Purchase Invoice",
+    name,
+    document: {
+      supplier: "SUP-1",
+      company: "Demo",
+      currency: "USD",
+      posting_at: now(),
+      credit_to: "Creditors",
+      against_purchase_order: "PO-SPLIT-PRICE",
+      items: [{
+        row_id: `${name}-ROW`,
+        purchase_order_item_row_id: rowId,
+        item_code: "ITEM-1",
+        qty: String(qty),
+        rate: String(rate),
+        expense_account: "Expense",
+      }],
+      taxes: [],
+    },
+  });
+
+  await createAndSubmit(kernel, makeRowInvoice("PI-HIGH", "PO-HIGH", 2, 20));
+  const high = await store.getDocument("demo", "Purchase Invoice", "PI-HIGH");
+  assert.equal(high.data.items[0].purchase_order_item_row_id, "PO-HIGH");
+  assert.equal(high.data.purchase_match_evidence[0].purchase_order_item_row_id, "PO-HIGH");
+  assert.equal(high.data.purchase_match_evidence[0].ordered_rate_minor, 2000);
+  assert.equal(high.data.purchase_match_evidence[0].invoice_rate_minor, 2000);
+
+  await assert.rejects(
+    createAndSubmit(kernel, makeRowInvoice("PI-HIGH-WRONG-PRICE", "PO-HIGH", 1, 10)),
+    /procurement hold.*price/i,
+  );
+
+  await createAndSubmit(kernel, makeRowInvoice("PI-LOW", "PO-LOW", 5, 10));
+  assert.equal(
+    await store.getProcuredQuantityMicros("demo", "PO-SPLIT-PRICE", "Billing", "ITEM-1", "PO-LOW"),
+    5_000_000,
+  );
+  assert.equal(
+    await store.getProcuredQuantityMicros("demo", "PO-SPLIT-PRICE", "Billing", "ITEM-1", "PO-HIGH"),
+    2_000_000,
+  );
+
+  await assert.rejects(
+    createAndSubmit(kernel, makeRowInvoice("PI-HIGH-OVER", "PO-HIGH", 4, 20)),
+    /row PO-HIGH.*exceeds|procurement hold.*quantity/i,
+  );
+
+  await mutate(kernel, {
+    commandId: "PI-HIGH-cancel",
+    doctype: "Purchase Invoice",
+    name: "PI-HIGH",
+    action: "cancel",
+    expectedVersion: 2,
+    document: {},
+  });
+  assert.equal(
+    await store.getProcuredQuantityMicros("demo", "PO-SPLIT-PRICE", "Billing", "ITEM-1", "PO-HIGH"),
+    0,
+  );
+  assert.equal(
+    await store.getProcuredQuantityMicros("demo", "PO-SPLIT-PRICE", "Billing", "ITEM-1", "PO-LOW"),
+    5_000_000,
+  );
+});

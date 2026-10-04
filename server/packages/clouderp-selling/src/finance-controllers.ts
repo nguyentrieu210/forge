@@ -31,13 +31,25 @@ interface PaymentAllocationData extends JsonObject {
   company_currency?: string;
   company_currency_scale?: number;
   posting_at: string;
-  source_payment_entry: string;
+  source_payment_entry?: string;
+  source_credit_note?: string;
+  /** Server-owned normalized source identity; keeps ledger replay independent of UI aliases. */
+  source_voucher_type?: "Payment Entry" | "Credit Note";
+  source_voucher_no?: string;
   reason?: string;
   references: PaymentReference[];
   total_allocated_amount?: string;
   total_allocated_amount_minor?: number;
+  /** Target invoice historical company-currency base cleared by this allocation. */
   total_base_allocated_amount?: string;
   total_base_allocated_amount_minor?: number;
+  /** Signed-source historical company-currency base consumed by this allocation. */
+  total_source_base_allocated_amount?: string;
+  total_source_base_allocated_amount_minor?: number;
+  /** Server-derived Company exchange gain/loss account when historical bases differ. */
+  exchange_gain_loss_account?: string;
+  exchange_difference?: string;
+  exchange_difference_minor?: number;
 }
 
 function convertMinor(
@@ -130,11 +142,14 @@ export class FinancePaymentEntryController extends PaymentEntryController {
     const receive = input.payment_type === "Receive";
     const pay = input.payment_type === "Pay";
     if (!receive && !pay) throw errors.validation("Payment Entry supports Receive or Pay");
-    const expectedPartyType = receive ? "Customer" : "Supplier";
-    const referenceDoctype = receive ? "Sales Invoice" : "Purchase Invoice";
-    if (input.party_type !== expectedPartyType) {
-      throw errors.validation(`${input.payment_type} payment requires ${expectedPartyType} party type`);
+    const customerRefund = pay && input.party_type === "Customer";
+    const supportedDirection = (receive && input.party_type === "Customer")
+      || (pay && (input.party_type === "Supplier" || customerRefund));
+    if (!supportedDirection) {
+      throw errors.validation("Receive supports Customer; Pay supports Supplier or Customer refund");
     }
+    const expectedPartyType = input.party_type;
+    const referenceDoctype = receive ? "Sales Invoice" : customerRefund ? "Credit Note" : "Purchase Invoice";
     if (!input.party || !input.company || !input.paid_from || !input.paid_to || !input.currency || !input.posting_at) {
       throw errors.validation("Company, party, accounts, posting date and currency are required");
     }
@@ -183,14 +198,19 @@ export class FinancePaymentEntryController extends PaymentEntryController {
       let baseAllocated = convertMinor(allocatedMinor, transactionScale, currency.rateMicros, currency.companyScale, `references[${index}].base_allocated_amount`);
       if (context.command.action === "submit") {
         const invoice = await requireSubmitted<JsonObject>(context as unknown as ControllerContext<JsonObject>, referenceDoctype, reference.reference_name);
-        const invoiceParty = receive ? invoice.data.customer : invoice.data.supplier;
+        const invoiceParty = input.party_type === "Customer" ? invoice.data.customer : invoice.data.supplier;
         if (invoiceParty !== input.party) throw errors.reference(`${referenceDoctype} ${reference.reference_name} belongs to another ${expectedPartyType.toLowerCase()}`);
         if (invoice.data.company !== input.company) throw errors.reference(`${referenceDoctype} ${reference.reference_name} belongs to another company`);
         if (invoice.data.currency !== input.currency) throw errors.reference(`${referenceDoctype} ${reference.reference_name} uses another currency`);
-        const invoicePartyAccount = receive ? invoice.data.debit_to : invoice.data.credit_to;
+        const invoicePartyAccount = input.party_type === "Customer" ? invoice.data.debit_to : invoice.data.credit_to;
         if (invoicePartyAccount !== partyAccount) throw errors.reference(`${referenceDoctype} ${reference.reference_name} uses another party account`);
-        const outstanding = await context.reader.getOutstandingMinor(context.command.tenant_id, referenceDoctype, reference.reference_name);
-        const baseOutstanding = await context.reader.getBaseOutstandingMinor(context.command.tenant_id, referenceDoctype, reference.reference_name);
+        const rawOutstanding = await context.reader.getOutstandingMinor(context.command.tenant_id, referenceDoctype, reference.reference_name);
+        const rawBaseOutstanding = await context.reader.getBaseOutstandingMinor(context.command.tenant_id, referenceDoctype, reference.reference_name);
+        const outstanding = customerRefund ? -rawOutstanding : rawOutstanding;
+        const baseOutstanding = customerRefund ? -rawBaseOutstanding : rawBaseOutstanding;
+        if (outstanding < 0 || baseOutstanding < 0) {
+          throw errors.ledger(`${referenceDoctype} ${reference.reference_name} has an invalid settlement balance`);
+        }
         if (allocatedMinor > outstanding) {
           throw errors.reference(`Allocated amount exceeds outstanding for ${reference.reference_name}`, {
             outstanding_minor: outstanding,
@@ -218,6 +238,9 @@ export class FinancePaymentEntryController extends PaymentEntryController {
       throw errors.validation("Allocated amount cannot exceed paid amount", { paid_minor: paidMinor, allocated_minor: allocatedMinor });
     }
     const unallocatedMinor = paidMinor - allocatedMinor;
+    if (customerRefund && unallocatedMinor !== 0) {
+      throw errors.validation("Customer refund must be fully allocated to submitted Credit Note customer credit");
+    }
     const currentBaseAllocated = convertMinor(allocatedMinor, transactionScale, currency.rateMicros, currency.companyScale, "current base allocated amount");
     const baseUnallocated = basePaidMinor - currentBaseAllocated;
     const basePartyTotal = addMinor([baseAllocatedTotal, baseUnallocated], "base party amount");
@@ -240,7 +263,7 @@ export class FinancePaymentEntryController extends PaymentEntryController {
       base_paid_amount: fromScaledInt(basePaidMinor, currency.companyScale),
       base_party_amount_minor: basePartyTotal,
       base_party_amount: fromScaledInt(basePartyTotal, currency.companyScale),
-      ...(receive
+      ...(input.party_type === "Customer"
         ? { base_receivable_amount_minor: basePartyTotal, base_receivable_amount: fromScaledInt(basePartyTotal, currency.companyScale) }
         : { base_payable_amount_minor: basePartyTotal, base_payable_amount: fromScaledInt(basePartyTotal, currency.companyScale) }),
       received_amount_minor: suppliedBankMinor,
@@ -282,20 +305,25 @@ export class FinancePaymentEntryController extends PaymentEntryController {
         posting_at: data.posting_at,
       });
     }
-    const payment: PaymentLedgerEntry[] = data.references.map((reference, index) => ({
-      line_key: `ALLOC-${reference.row_id || index + 1}`,
-      account_type: receive ? "Receivable" : "Payable",
-      party_type: data.party_type,
-      party: data.party,
-      account: partyAccount,
-      amount_minor: negateMinor(reference.allocated_amount_minor ?? toScaledInt(reference.allocated_amount, transactionScale)),
-      base_amount_minor: negateMinor(reference.base_allocated_amount_minor ?? 0),
-      currency: data.currency,
-      currency_scale: transactionScale,
-      against_voucher_type: reference.reference_doctype,
-      against_voucher_no: reference.reference_name,
-      posting_at: data.posting_at,
-    }));
+    const customerRefund = !receive && data.party_type === "Customer";
+    const payment: PaymentLedgerEntry[] = data.references.map((reference, index) => {
+      const allocated = reference.allocated_amount_minor ?? toScaledInt(reference.allocated_amount, transactionScale);
+      const baseAllocated = reference.base_allocated_amount_minor ?? 0;
+      return {
+        line_key: `ALLOC-${reference.row_id || index + 1}`,
+        account_type: data.party_type === "Customer" ? "Receivable" : "Payable",
+        party_type: data.party_type,
+        party: data.party,
+        account: partyAccount,
+        amount_minor: customerRefund ? allocated : negateMinor(allocated),
+        base_amount_minor: customerRefund ? baseAllocated : negateMinor(baseAllocated),
+        currency: data.currency,
+        currency_scale: transactionScale,
+        against_voucher_type: reference.reference_doctype,
+        against_voucher_no: reference.reference_name,
+        posting_at: data.posting_at,
+      };
+    });
     const unallocated = data.unallocated_amount_minor ?? 0;
     if (unallocated > 0) {
       const allocated = addMinor(data.references.map((reference) => reference.allocated_amount_minor ?? 0), "allocated amount");
@@ -309,7 +337,7 @@ export class FinancePaymentEntryController extends PaymentEntryController {
       const baseUnallocated = (data.base_paid_amount_minor ?? bank) - currentBaseAllocated;
       payment.push({
         line_key: "ADVANCE",
-        account_type: receive ? "Receivable" : "Payable",
+        account_type: data.party_type === "Customer" ? "Receivable" : "Payable",
         party_type: data.party_type,
         party: data.party,
         account: partyAccount,
@@ -337,7 +365,7 @@ export class PaymentAllocationController implements DocumentController<PaymentAl
       : await this.normalize(context);
     const docstatus = nextDocStatus(context.command.action);
     const status = docstatus === 0 ? "Draft" : docstatus === 1 ? "Submitted" : "Cancelled";
-    const payment = this.ledger(context, data);
+    const ledgers = this.ledger(context, data);
     const document: CanonicalDocument<PaymentAllocationData> = {
       tenant_id: context.command.tenant_id,
       doctype: this.doctype,
@@ -371,9 +399,9 @@ export class PaymentAllocationController implements DocumentController<PaymentAl
     return {
       command: context.command,
       document,
-      gl_entries: [],
+      gl_entries: ledgers.gl,
       stock_entries: [],
-      payment_entries: payment,
+      payment_entries: ledgers.payment,
       fulfillment_entries: [],
       events: [domainEvent({
         type: eventType,
@@ -391,8 +419,8 @@ export class PaymentAllocationController implements DocumentController<PaymentAl
 
   private async normalize(context: ControllerContext<PaymentAllocationData>): Promise<PaymentAllocationData> {
     const input = context.command.document;
-    if (!input.company || !input.party || !input.party_account || !input.currency || !input.posting_at || !input.source_payment_entry) {
-      throw errors.validation("Company, party, party account, currency, posting date and source payment are required");
+    if (!input.company || !input.party || !input.party_account || !input.currency || !input.posting_at) {
+      throw errors.validation("Company, party, party account, currency and posting date are required");
     }
     if (input.party_type !== "Customer" && input.party_type !== "Supplier") {
       throw errors.validation("Party type must be Customer or Supplier");
@@ -400,22 +428,60 @@ export class PaymentAllocationController implements DocumentController<PaymentAl
     if (!Array.isArray(input.references) || input.references.length === 0) {
       throw errors.validation("Payment Allocation requires at least one invoice reference");
     }
-    const source = await requireSubmitted<PaymentEntryData>(context as unknown as ControllerContext<JsonObject>, "Payment Entry", input.source_payment_entry);
-    const sourcePartyAccount = source.data.payment_type === "Receive" ? source.data.paid_from : source.data.paid_to;
-    if (source.data.company !== input.company || source.data.party_type !== input.party_type || source.data.party !== input.party
-      || sourcePartyAccount !== input.party_account || source.data.currency !== input.currency) {
-      throw errors.reference("Source Payment Entry does not match company, party, account or currency");
+
+    const sourcePaymentEntry = typeof input.source_payment_entry === "string" ? input.source_payment_entry.trim() : "";
+    const sourceCreditNote = typeof input.source_credit_note === "string" ? input.source_credit_note.trim() : "";
+    if (Boolean(sourcePaymentEntry) === Boolean(sourceCreditNote)) {
+      throw errors.validation("Payment Allocation requires exactly one source: Payment Entry advance or Credit Note customer credit");
     }
-    const transactionScale = source.data.currency_scale ?? 2;
-    const companyScale = source.data.company_currency_scale ?? transactionScale;
-    const sourceRemaining = -await context.reader.getOutstandingMinor(context.command.tenant_id, "Payment Entry", input.source_payment_entry);
-    const sourceBaseRemaining = -await context.reader.getBaseOutstandingMinor(context.command.tenant_id, "Payment Entry", input.source_payment_entry);
-    if (sourceRemaining <= 0 || sourceBaseRemaining < 0) throw errors.reference("Source Payment Entry has no remaining advance");
+    if (sourceCreditNote && input.party_type !== "Customer") {
+      throw errors.validation("Credit Note source is available only for Customer receivable allocation");
+    }
+
+    const sourceVoucherType = sourceCreditNote ? "Credit Note" as const : "Payment Entry" as const;
+    const sourceVoucherNo = sourceCreditNote || sourcePaymentEntry;
+    const source = await requireSubmitted<JsonObject>(
+      context as unknown as ControllerContext<JsonObject>,
+      sourceVoucherType,
+      sourceVoucherNo,
+    );
+    const sourcePartyType = sourceVoucherType === "Credit Note" ? "Customer" : source.data.party_type;
+    const sourceParty = sourceVoucherType === "Credit Note" ? source.data.customer : source.data.party;
+    const sourcePartyAccount = sourceVoucherType === "Credit Note"
+      ? source.data.debit_to
+      : source.data.payment_type === "Receive" ? source.data.paid_from : source.data.paid_to;
+    if (source.data.company !== input.company || sourcePartyType !== input.party_type || sourceParty !== input.party
+      || sourcePartyAccount !== input.party_account || source.data.currency !== input.currency) {
+      throw errors.reference(`Source ${sourceVoucherType} does not match company, party, account or currency`);
+    }
+    const transactionScale = typeof source.data.currency_scale === "number" ? source.data.currency_scale : 2;
+    const companyScale = typeof source.data.company_currency_scale === "number"
+      ? source.data.company_currency_scale
+      : transactionScale;
+    const sourceRemaining = -await context.reader.getOutstandingMinor(
+      context.command.tenant_id,
+      sourceVoucherType,
+      sourceVoucherNo,
+    );
+    const sourceBaseRemaining = -await context.reader.getBaseOutstandingMinor(
+      context.command.tenant_id,
+      sourceVoucherType,
+      sourceVoucherNo,
+    );
+    const sourceLabel = sourceVoucherType === "Credit Note" ? "customer credit" : "advance";
+    if (sourceRemaining <= 0 || sourceBaseRemaining < 0) {
+      throw errors.reference(`Source ${sourceVoucherType} has no remaining ${sourceLabel}`);
+    }
     const targetDoctype = input.party_type === "Customer" ? "Sales Invoice" : "Purchase Invoice";
+    const sourceRate = typeof source.data.source_exchange_rate_micros === "number"
+      ? source.data.source_exchange_rate_micros
+      : typeof source.data.conversion_rate_micros === "number"
+        ? source.data.conversion_rate_micros
+        : 1_000_000;
     const seen = new Set<string>();
     const references: PaymentReference[] = [];
     let total = 0;
-    let totalBase = 0;
+    let totalTargetBase = 0;
     for (const [index, reference] of input.references.entries()) {
       if (reference.reference_doctype !== targetDoctype) {
         throw errors.validation(`Only ${targetDoctype} references are allowed`);
@@ -432,52 +498,150 @@ export class PaymentAllocationController implements DocumentController<PaymentAl
       }
       const outstanding = await context.reader.getOutstandingMinor(context.command.tenant_id, targetDoctype, reference.reference_name);
       const baseOutstanding = await context.reader.getBaseOutstandingMinor(context.command.tenant_id, targetDoctype, reference.reference_name);
+      if (outstanding < 0 || baseOutstanding < 0) {
+        throw errors.ledger(`${targetDoctype} ${reference.reference_name} has an invalid settlement balance`);
+      }
       if (allocated > outstanding) throw errors.reference(`Allocated amount exceeds outstanding for ${reference.reference_name}`);
-      const sourceRate = source.data.source_exchange_rate_micros ?? 1_000_000;
-      const currentBase = convertMinor(allocated, transactionScale, sourceRate, companyScale, `references[${index}].base_allocated_amount`);
-      const baseAllocated = allocated === outstanding ? baseOutstanding : Math.min(currentBase, baseOutstanding);
+
+      const invoiceScale = typeof invoice.data.currency_scale === "number" ? invoice.data.currency_scale : transactionScale;
+      const invoiceRate = typeof invoice.data.conversion_rate_micros === "number"
+        ? invoice.data.conversion_rate_micros
+        : 1_000_000;
+      const targetHistoricalBase = convertMinor(
+        allocated,
+        invoiceScale,
+        invoiceRate,
+        companyScale,
+        `references[${index}].target_base_allocated_amount`,
+      );
+      const targetBaseAllocated = allocated === outstanding
+        ? baseOutstanding
+        : Math.min(targetHistoricalBase, baseOutstanding);
+
       total = addMinor([total, allocated], "total allocated amount");
-      totalBase = addMinor([totalBase, baseAllocated], "total base allocated amount");
+      totalTargetBase = addMinor([totalTargetBase, targetBaseAllocated], "total target base allocated amount");
       references.push({
         ...reference,
         row_id: reference.row_id || `ROW-${index + 1}`,
         allocated_amount_minor: allocated,
         allocated_amount: fromScaledInt(allocated, transactionScale),
-        base_allocated_amount_minor: baseAllocated,
-        base_allocated_amount: fromScaledInt(baseAllocated, companyScale),
+        base_allocated_amount_minor: targetBaseAllocated,
+        base_allocated_amount: fromScaledInt(targetBaseAllocated, companyScale),
       });
     }
-    if (context.command.action === "submit") {
-      if (total > sourceRemaining || totalBase > sourceBaseRemaining) {
-        throw errors.reference("Payment Allocation exceeds remaining source advance", {
-          source_remaining_minor: sourceRemaining,
-          requested_minor: total,
-          source_base_remaining_minor: sourceBaseRemaining,
-          requested_base_minor: totalBase,
-        });
+
+    if (total > sourceRemaining) {
+      throw errors.reference(`Payment Allocation exceeds remaining source ${sourceLabel}`, {
+        source_voucher_type: sourceVoucherType,
+        source_voucher_no: sourceVoucherNo,
+        source_remaining_minor: sourceRemaining,
+        requested_minor: total,
+      });
+    }
+
+    const desiredSourceBase = total === sourceRemaining
+      ? sourceBaseRemaining
+      : Math.min(
+        convertMinor(total, transactionScale, sourceRate, companyScale, "total source base allocated amount"),
+        sourceBaseRemaining,
+      );
+    let cumulativeAllocated = 0;
+    let cumulativeSourceBase = 0;
+    for (const [index, reference] of references.entries()) {
+      cumulativeAllocated = addMinor(
+        [cumulativeAllocated, reference.allocated_amount_minor ?? 0],
+        "cumulative source allocation",
+      );
+      const cumulativeTargetBase = index === references.length - 1
+        ? desiredSourceBase
+        : Math.min(
+          convertMinor(
+            cumulativeAllocated,
+            transactionScale,
+            sourceRate,
+            companyScale,
+            `references[${index}].cumulative_source_base_allocated_amount`,
+          ),
+          desiredSourceBase,
+        );
+      const sourceBaseAllocated = cumulativeTargetBase - cumulativeSourceBase;
+      if (sourceBaseAllocated < 0) {
+        throw errors.ledger("Payment Allocation source base distribution became negative");
       }
+      reference.source_base_allocated_amount_minor = sourceBaseAllocated;
+      reference.source_base_allocated_amount = fromScaledInt(sourceBaseAllocated, companyScale);
+      cumulativeSourceBase = cumulativeTargetBase;
+    }
+    const totalSourceBase = cumulativeSourceBase;
+    if (totalSourceBase > sourceBaseRemaining) {
+      throw errors.reference(`Payment Allocation exceeds remaining source ${sourceLabel} base balance`, {
+        source_voucher_type: sourceVoucherType,
+        source_voucher_no: sourceVoucherNo,
+        source_base_remaining_minor: sourceBaseRemaining,
+        requested_source_base_minor: totalSourceBase,
+      });
+    }
+
+    const exchangeDifference = totalSourceBase - totalTargetBase;
+    let exchangeGainLossAccount = "";
+    const companyCurrency = typeof source.data.company_currency === "string"
+      ? source.data.company_currency
+      : input.currency;
+    if (exchangeDifference !== 0) {
+      const company = await context.reader.getMasterRecordData(context.command.tenant_id, "Company", input.company);
+      exchangeGainLossAccount = typeof company?.exchange_gain_loss_account === "string"
+        ? company.exchange_gain_loss_account.trim()
+        : "";
+      if (context.command.action === "submit") {
+        if (!exchangeGainLossAccount) {
+          throw errors.reference(`Company ${input.company} must define exchange_gain_loss_account for Payment Allocation FX difference`);
+        }
+        await assertMaster(context as unknown as ControllerContext<JsonObject>, "Account", exchangeGainLossAccount);
+      }
+    }
+
+    if (context.command.action === "submit") {
       await assertUnlocked(context as unknown as ControllerContext<JsonObject>, input.company, input.posting_at);
     }
     return {
       ...input,
+      ...(sourcePaymentEntry ? { source_payment_entry: sourcePaymentEntry } : {}),
+      ...(sourceCreditNote ? { source_credit_note: sourceCreditNote } : {}),
+      source_voucher_type: sourceVoucherType,
+      source_voucher_no: sourceVoucherNo,
       references,
       currency_scale: transactionScale,
-      company_currency: source.data.company_currency ?? input.currency,
+      company_currency: companyCurrency,
       company_currency_scale: companyScale,
       total_allocated_amount_minor: total,
       total_allocated_amount: fromScaledInt(total, transactionScale),
-      total_base_allocated_amount_minor: totalBase,
-      total_base_allocated_amount: fromScaledInt(totalBase, companyScale),
+      total_base_allocated_amount_minor: totalTargetBase,
+      total_base_allocated_amount: fromScaledInt(totalTargetBase, companyScale),
+      total_source_base_allocated_amount_minor: totalSourceBase,
+      total_source_base_allocated_amount: fromScaledInt(totalSourceBase, companyScale),
+      ...(exchangeGainLossAccount ? { exchange_gain_loss_account: exchangeGainLossAccount } : {}),
+      exchange_difference_minor: exchangeDifference,
+      exchange_difference: fromScaledInt(exchangeDifference, companyScale),
     };
   }
 
-  private ledger(context: ControllerContext<PaymentAllocationData>, data: PaymentAllocationData): PaymentLedgerEntry[] {
-    if (context.command.action !== "submit" && context.command.action !== "cancel") return [];
+  private ledger(
+    context: ControllerContext<PaymentAllocationData>,
+    data: PaymentAllocationData,
+  ): { gl: GeneralLedgerEntry[]; payment: PaymentLedgerEntry[] } {
+    if (context.command.action !== "submit" && context.command.action !== "cancel") {
+      return { gl: [], payment: [] };
+    }
     const accountType = data.party_type === "Customer" ? "Receivable" : "Payable";
     const scale = data.currency_scale ?? 2;
-    const normal = data.references.flatMap((reference, index): PaymentLedgerEntry[] => {
+    const companyScale = data.company_currency_scale ?? scale;
+    const companyCurrency = data.company_currency ?? data.currency;
+    const normalPayment = data.references.flatMap((reference, index): PaymentLedgerEntry[] => {
       const amount = reference.allocated_amount_minor ?? toScaledInt(reference.allocated_amount, scale);
-      const base = reference.base_allocated_amount_minor ?? 0;
+      const sourceBase = reference.source_base_allocated_amount_minor
+        ?? reference.base_allocated_amount_minor
+        ?? 0;
+      const targetBase = reference.base_allocated_amount_minor ?? 0;
       const row = reference.row_id || `ROW-${index + 1}`;
       return [
         {
@@ -487,11 +651,11 @@ export class PaymentAllocationController implements DocumentController<PaymentAl
           party: data.party,
           account: data.party_account,
           amount_minor: amount,
-          base_amount_minor: base,
+          base_amount_minor: sourceBase,
           currency: data.currency,
           currency_scale: scale,
-          against_voucher_type: "Payment Entry",
-          against_voucher_no: data.source_payment_entry,
+          against_voucher_type: data.source_voucher_type ?? (data.source_credit_note ? "Credit Note" : "Payment Entry"),
+          against_voucher_no: data.source_voucher_no ?? data.source_credit_note ?? data.source_payment_entry!,
           posting_at: data.posting_at,
         },
         {
@@ -501,7 +665,7 @@ export class PaymentAllocationController implements DocumentController<PaymentAl
           party: data.party,
           account: data.party_account,
           amount_minor: -amount,
-          base_amount_minor: -base,
+          base_amount_minor: -targetBase,
           currency: data.currency,
           currency_scale: scale,
           against_voucher_type: reference.reference_doctype,
@@ -510,7 +674,46 @@ export class PaymentAllocationController implements DocumentController<PaymentAl
         },
       ];
     });
-    return context.command.action === "cancel" ? reversePayment(normal) : normal;
+
+    const difference = data.exchange_difference_minor
+      ?? ((data.total_source_base_allocated_amount_minor ?? 0) - (data.total_base_allocated_amount_minor ?? 0));
+    const normalGl: GeneralLedgerEntry[] = [];
+    if (difference !== 0) {
+      if (!data.exchange_gain_loss_account) {
+        throw errors.validation("exchange_gain_loss_account is required for Payment Allocation exchange difference");
+      }
+      const customer = data.party_type === "Customer";
+      const partyDebit = customer ? Math.max(difference, 0) : Math.max(-difference, 0);
+      const partyCredit = customer ? Math.max(-difference, 0) : Math.max(difference, 0);
+      normalGl.push(
+        {
+          line_key: "PARTY-EXCHANGE-DIFFERENCE",
+          account: data.party_account,
+          party_type: data.party_type,
+          party: data.party,
+          debit_minor: partyDebit,
+          credit_minor: partyCredit,
+          currency: companyCurrency,
+          currency_scale: companyScale,
+          posting_at: data.posting_at,
+          remarks: `Payment Allocation realized FX for ${data.source_voucher_type ?? (data.source_credit_note ? "Credit Note" : "Payment Entry")} ${data.source_voucher_no ?? data.source_credit_note ?? data.source_payment_entry}`,
+        },
+        {
+          line_key: "EXCHANGE-DIFFERENCE",
+          account: data.exchange_gain_loss_account,
+          debit_minor: partyCredit,
+          credit_minor: partyDebit,
+          currency: companyCurrency,
+          currency_scale: companyScale,
+          posting_at: data.posting_at,
+          remarks: "Payment Allocation realized exchange gain/loss",
+        },
+      );
+    }
+
+    return context.command.action === "cancel"
+      ? { gl: reverseGl(normalGl), payment: reversePayment(normalPayment) }
+      : { gl: normalGl, payment: normalPayment };
   }
 }
 

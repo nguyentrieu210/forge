@@ -46,6 +46,20 @@ export interface CreditNoteData extends JsonObject {
   grand_total_minor?: number;
   base_net_total_minor?: number;
   base_grand_total_minor?: number;
+  /** Portion of this credit that clears the original invoice's live outstanding. */
+  applied_to_invoice?: string;
+  applied_to_invoice_minor?: number;
+  base_applied_to_invoice?: string;
+  base_applied_to_invoice_minor?: number;
+  /** Excess return value retained as reusable/refundable customer credit. */
+  customer_credit?: string;
+  customer_credit_minor?: number;
+  base_customer_credit?: string;
+  base_customer_credit_minor?: number;
+  /** Company-owned account snapshot used when historical AR base and return-date base differ. */
+  exchange_gain_loss_account?: string;
+  exchange_difference?: string;
+  exchange_difference_minor?: number;
 }
 
 export interface DebitNoteData extends JsonObject {
@@ -174,12 +188,18 @@ export interface AssetDepreciationData extends JsonObject {
 }
 
 
+export interface ProductionPlanSubassemblyBom extends JsonObject {
+  item_code: string;
+  bom_no: string;
+}
+
 export interface ProductionPlanItem extends JsonObject {
   row_id: string;
   item_code: string;
   bom_no: string;
   planned_qty: DecimalInput;
   planned_qty_micros?: number;
+  subassembly_boms?: ProductionPlanSubassemblyBom[];
   warehouse?: string;
 }
 

@@ -5,6 +5,7 @@ import { nextDocStatus } from "../../document-kernel/src/index.js";
 import { reverseGl, reversePayment } from "../../ledger/src/index.js";
 import { toScaledInt } from "../../money/src/index.js";
 import { SalesInvoiceController } from "./controllers.js";
+import { snapshotCustomerCreditPolicy } from "./credit-policy.js";
 import type { SalesInvoiceData } from "./types.js";
 
 /**
@@ -24,7 +25,7 @@ export class ArSalesInvoiceController extends SalesInvoiceController {
 
     if (!isReturn) {
       if (returnAgainst) throw errors.validation("return_against requires is_return=true");
-      return data;
+      return snapshotCustomerCreditPolicy(context, data, "Sales Invoice");
     }
 
     if (!returnAgainst) throw errors.validation("Credit/return Sales Invoice requires return_against");

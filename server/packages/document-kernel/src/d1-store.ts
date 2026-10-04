@@ -11,7 +11,7 @@ import { asCloudForgeError, documentKey, errors } from "../../core/src/index.js"
 import { fromScaledInt, toScaledInt } from "../../money/src/index.js";
 import { deriveDeliveryNoteStatus, deriveO2CStatus } from "./status.js";
 import { deriveSalesOrderProgress } from "./sales-order-progress.js";
-import type { MutationStore, SubmittedQuantityQuery, TrackedStockPosition, TrackedStockState } from "./store.js";
+import type { FinanceAccountMetadata, GlAccountBalance, GlAccountBalanceQuery, MutationStore, OpenPaymentBalance, OpenPaymentBalanceQuery, SubmittedQuantityQuery, TrackedStockPosition, TrackedStockState } from "./store.js";
 
 interface DocumentRow {
   tenant_id: string;
@@ -288,6 +288,72 @@ export class D1MutationStore implements MutationStore {
     return Number(row?.total ?? 0);
   }
 
+  async listFinanceAccountMetadata(tenantId: string): Promise<FinanceAccountMetadata[]> {
+    const rows = await this.writer.prepare(
+      `SELECT h.name,h.company,h.root_type,h.is_group,
+              CASE WHEN a.name IS NULL THEN 0 ELSE 1 END AS active
+       FROM finance_historical_accounts h
+       LEFT JOIN finance_active_accounts a ON a.tenant_id=h.tenant_id AND a.name=h.name
+       WHERE h.tenant_id=?1 ORDER BY h.name`,
+    ).bind(tenantId).all<{
+      name: string; company: string | null; root_type: string | null; is_group: number; active: number;
+    }>();
+    return (rows.results ?? []).map((row) => ({
+      name: row.name, company: row.company ?? "", root_type: row.root_type ?? "",
+      is_group: row.is_group !== 0, active: row.active === 1,
+    }));
+  }
+
+  async getGlAccountBalances(query: GlAccountBalanceQuery): Promise<GlAccountBalance[]> {
+    const rows = await this.writer.prepare(
+      `SELECT g.account,g.currency,g.currency_scale,
+              COALESCE(SUM(g.debit_minor),0) AS debit_minor,
+              COALESCE(SUM(g.credit_minor),0) AS credit_minor,
+              COUNT(*) AS row_count
+       FROM gl_entries g
+       INNER JOIN documents d
+         ON d.tenant_id=g.tenant_id
+        AND d.doctype=g.voucher_type
+        AND d.name=g.voucher_no
+       WHERE g.tenant_id=?1
+         AND json_extract(d.payload_json,'$.company')=?2
+         AND date(g.posting_at)>=date(?3)
+         AND date(g.posting_at)<=date(?4)
+         AND (?5='' OR COALESCE(
+           NULLIF(json_extract(d.payload_json,'$.branch'),''),
+           NULLIF(json_extract(g.dimensions_json,'$.branch'),''),
+           ''
+         )=?5)
+         AND (?6='' OR g.account=?6)
+       GROUP BY g.account,g.currency,g.currency_scale
+       HAVING SUM(g.debit_minor)<>0 OR SUM(g.credit_minor)<>0
+       ORDER BY g.account,g.currency,g.currency_scale`,
+    ).bind(
+      query.tenantId,
+      query.company,
+      query.fromDate,
+      query.throughDate,
+      query.branch ?? "",
+      query.account ?? "",
+    ).all<{
+      account: string;
+      currency: string;
+      currency_scale: number;
+      debit_minor: number;
+      credit_minor: number;
+      row_count: number;
+    }>();
+    return (rows.results ?? []).map((row) => ({
+      account: String(row.account),
+      currency: String(row.currency),
+      currency_scale: Number(row.currency_scale),
+      debit_minor: Number(row.debit_minor),
+      credit_minor: Number(row.credit_minor),
+      row_count: Number(row.row_count),
+      balance_minor: Number(row.debit_minor) - Number(row.credit_minor),
+    }));
+  }
+
   async getOutstandingMinor(tenantId: string, voucherType: string, voucherNo: string): Promise<number> {
     const row = await this.writer.prepare(
       `SELECT COALESCE(SUM(amount_minor),0) AS total FROM payment_ledger_entries
@@ -302,6 +368,44 @@ export class D1MutationStore implements MutationStore {
        WHERE tenant_id=?1 AND against_voucher_type=?2 AND against_voucher_no=?3`,
     ).bind(tenantId, voucherType, voucherNo).first<{ total: number }>();
     return Number(row?.total ?? 0);
+  }
+
+  async listOpenPaymentBalances(query: OpenPaymentBalanceQuery): Promise<OpenPaymentBalance[]> {
+    const rows = await this.writer.prepare(
+      `SELECT
+         p.account_type,p.party_type,p.party,p.account,
+         p.against_voucher_type,p.against_voucher_no,p.currency,p.currency_scale,
+         SUM(p.amount_minor) AS amount_minor,
+         SUM(p.base_amount_minor) AS base_amount_minor,
+         COUNT(*) AS row_count
+       FROM payment_ledger_entries p
+       INNER JOIN documents d
+         ON d.tenant_id=p.tenant_id
+        AND d.doctype=p.against_voucher_type
+        AND d.name=p.against_voucher_no
+       WHERE p.tenant_id=?1
+         AND p.against_voucher_type IN ('Sales Invoice','Purchase Invoice')
+         AND json_extract(d.payload_json,'$.company')=?2
+         AND date(p.posting_at)<=date(?3)
+       GROUP BY
+         p.account_type,p.party_type,p.party,p.account,
+         p.against_voucher_type,p.against_voucher_no,p.currency,p.currency_scale
+       HAVING SUM(p.amount_minor)<>0 OR SUM(p.base_amount_minor)<>0
+       ORDER BY p.account,p.party,p.against_voucher_type,p.against_voucher_no`,
+    ).bind(query.tenantId, query.company, query.throughDate).all<Record<string, unknown>>();
+    return (rows.results ?? []).map((row) => ({
+      account_type: String(row.account_type) as "Receivable" | "Payable",
+      party_type: String(row.party_type),
+      party: String(row.party),
+      account: String(row.account),
+      against_voucher_type: String(row.against_voucher_type) as "Sales Invoice" | "Purchase Invoice",
+      against_voucher_no: String(row.against_voucher_no),
+      currency: String(row.currency),
+      currency_scale: Number(row.currency_scale),
+      amount_minor: Number(row.amount_minor),
+      base_amount_minor: Number(row.base_amount_minor),
+      row_count: Number(row.row_count),
+    }));
   }
 
   async getStockBalanceMicros(tenantId: string, itemCode: string, warehouse: string): Promise<number> {
@@ -405,7 +509,9 @@ export class D1MutationStore implements MutationStore {
 
   async getVoucherStockEntries(tenantId: string, voucherType: string, voucherNo: string, voucherRevision: number): Promise<StockLedgerEntry[]> {
     const result = await this.writer.prepare(
-      `SELECT line_key,item_code,warehouse,actual_qty_micros,actual_weight_micros,valuation_rate_minor,stock_value_difference_minor,
+      `SELECT voucher_type,voucher_no,voucher_revision,line_key,source_row_id,
+       valuation_target_voucher_type,valuation_target_voucher_no,valuation_target_voucher_revision,valuation_target_row_id,
+       item_code,warehouse,actual_qty_micros,actual_weight_micros,valuation_rate_minor,stock_value_difference_minor,
        qty_scale,currency_scale,currency,posting_at,batch_no,serial_no,allow_negative_stock
        FROM stock_ledger_entries
        WHERE tenant_id=?1 AND voucher_type=?2 AND voucher_no=?3 AND voucher_revision=?4
@@ -422,7 +528,9 @@ export class D1MutationStore implements MutationStore {
     const values: unknown[] = [tenantId, itemCode, warehouse];
     if (throughPostingAt) { conditions.push(`posting_at<=?${values.length + 1}`); values.push(throughPostingAt); }
     if (batchNo) { conditions.push(`batch_no=?${values.length + 1}`); values.push(batchNo); }
-    const sql = `SELECT voucher_type,voucher_no,voucher_revision,line_key,item_code,warehouse,actual_qty_micros,actual_weight_micros,valuation_rate_minor,stock_value_difference_minor,
+    const sql = `SELECT voucher_type,voucher_no,voucher_revision,line_key,source_row_id,
+      valuation_target_voucher_type,valuation_target_voucher_no,valuation_target_voucher_revision,valuation_target_row_id,
+      item_code,warehouse,actual_qty_micros,actual_weight_micros,valuation_rate_minor,stock_value_difference_minor,
       qty_scale,currency_scale,currency,posting_at,batch_no,serial_no,allow_negative_stock
       FROM stock_ledger_entries WHERE ${conditions.join(" AND ")}
       ORDER BY posting_at,rowid`;
@@ -625,11 +733,16 @@ export class D1MutationStore implements MutationStore {
     purchaseOrder: string,
     kind?: "Receipt" | "Billing",
     itemCode?: string,
+    purchaseOrderItemRowId?: string,
   ): Promise<number> {
     const conditions = ["tenant_id=?1", "purchase_order=?2"];
     const values: unknown[] = [tenantId, purchaseOrder];
     if (kind) { conditions.push(`kind=?${values.length + 1}`); values.push(kind); }
     if (itemCode) { conditions.push(`item_code=?${values.length + 1}`); values.push(itemCode); }
+    if (purchaseOrderItemRowId) {
+      conditions.push(`purchase_order_item_row_id=?${values.length + 1}`);
+      values.push(purchaseOrderItemRowId);
+    }
     const row = await this.writer.prepare(
       `SELECT COALESCE(SUM(qty_micros),0) AS total FROM purchase_order_progress_entries WHERE ${conditions.join(" AND ")}`,
     ).bind(...values).first<{ total: number }>();
@@ -1152,11 +1265,16 @@ export class D1MutationStore implements MutationStore {
     for (const line of plan.stock_entries) {
       statements.push(database.prepare(
         `INSERT INTO stock_ledger_entries
-         (tenant_id,voucher_type,voucher_no,voucher_revision,line_key,item_code,warehouse,actual_qty_micros,actual_weight_micros,valuation_rate_minor,stock_value_difference_minor,qty_scale,currency_scale,currency,posting_at,batch_no,serial_no,allow_negative_stock)
-         VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18)`,
+         (tenant_id,voucher_type,voucher_no,voucher_revision,line_key,source_row_id,
+          valuation_target_voucher_type,valuation_target_voucher_no,valuation_target_voucher_revision,valuation_target_row_id,
+          item_code,warehouse,actual_qty_micros,actual_weight_micros,valuation_rate_minor,stock_value_difference_minor,qty_scale,currency_scale,currency,posting_at,batch_no,serial_no,allow_negative_stock)
+         VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23)`,
       ).bind(
         command.tenant_id, command.aggregate.doctype, command.aggregate.name, plan.document.version,
-        line.line_key, line.item_code, line.warehouse, line.actual_qty_micros,
+        line.line_key, line.source_row_id ?? null,
+        line.valuation_target_voucher_type ?? null, line.valuation_target_voucher_no ?? null,
+        line.valuation_target_voucher_revision ?? null, line.valuation_target_row_id ?? null,
+        line.item_code, line.warehouse, line.actual_qty_micros,
         // `?? null` chứ KHÔNG `?? 0`: cột này rỗng nghĩa là không cân theo kiện, còn 0 nghĩa
         // là đã cân và được 0. Gộp hai thứ đó lại là mất luôn khả năng phân biệt.
         line.actual_weight_micros ?? null,
@@ -1190,11 +1308,12 @@ export class D1MutationStore implements MutationStore {
     for (const line of plan.procurement_entries ?? []) {
       statements.push(database.prepare(
         `INSERT INTO purchase_order_progress_entries
-         (tenant_id,voucher_type,voucher_no,voucher_revision,line_key,purchase_order,kind,item_code,qty_micros,posting_at)
-         VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10)`,
+         (tenant_id,voucher_type,voucher_no,voucher_revision,line_key,purchase_order,purchase_order_item_row_id,kind,item_code,qty_micros,posting_at)
+         VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11)`,
       ).bind(
         command.tenant_id, command.aggregate.doctype, command.aggregate.name, plan.document.version,
-        line.line_key, line.purchase_order, line.kind, line.item_code, line.qty_micros, line.posting_at,
+        line.line_key, line.purchase_order, line.purchase_order_item_row_id ?? null,
+        line.kind, line.item_code, line.qty_micros, line.posting_at,
       ));
     }
     for (const line of plan.stock_bundle_usages ?? []) {
@@ -1455,6 +1574,11 @@ function mapStockLedgerRow(row: Record<string, unknown>): StockLedgerEntry {
     ...(row.voucher_type != null ? { source_voucher_type: String(row.voucher_type) } : {}),
     ...(row.voucher_no != null ? { source_voucher_no: String(row.voucher_no) } : {}),
     ...(row.voucher_revision != null ? { source_voucher_revision: Number(row.voucher_revision) } : {}),
+    ...(row.source_row_id != null ? { source_row_id: String(row.source_row_id) } : {}),
+    ...(row.valuation_target_voucher_type != null ? { valuation_target_voucher_type: String(row.valuation_target_voucher_type) } : {}),
+    ...(row.valuation_target_voucher_no != null ? { valuation_target_voucher_no: String(row.valuation_target_voucher_no) } : {}),
+    ...(row.valuation_target_voucher_revision != null ? { valuation_target_voucher_revision: Number(row.valuation_target_voucher_revision) } : {}),
+    ...(row.valuation_target_row_id != null ? { valuation_target_row_id: String(row.valuation_target_row_id) } : {}),
     actual_qty_micros: Number(row.actual_qty_micros),
     // `!= null` bắt cả null lẫn undefined mà VẪN giữ số 0 — `row.x ? …` sẽ nuốt mất cân 0.
     ...(row.actual_weight_micros != null ? { actual_weight_micros: Number(row.actual_weight_micros) } : {}),

@@ -68,6 +68,8 @@ export interface PurchaseItem extends UomLine {
    * giữa đơn mua và phiếu nhập: một đơn giao làm nhiều đợt, và một chuyến giao gộp nhiều đơn.
    */
   purchase_order?: string;
+  /** Exact Purchase Order child row. Required when one PO repeats the same item. */
+  purchase_order_item_row_id?: string;
   /** Yêu cầu vật tư của riêng dòng này. Bỏ trống thì lấy theo đầu phiếu. */
   material_request?: string;
   rate: DecimalInput;
@@ -91,6 +93,8 @@ export interface PurchaseItem extends UomLine {
 
 export interface PurchaseOrderData extends JsonObject {
   supplier: string;
+  /** Explicit commercial intent for ERPNext-style subcontracting service orders. */
+  is_subcontracted?: boolean | number;
   company: string;
   currency: string;
   currency_scale?: number;
@@ -291,6 +295,8 @@ export interface JournalEntryData extends JsonObject {
 
 export interface StockEntryItem extends JsonObject {
   row_id: string;
+  /** Exact BOM row identity when stock movement belongs to a manufacturing/subcontract snapshot. */
+  bom_row_id?: string;
   item_code: string;
   qty: DecimalInput;
   qty_micros?: number;
@@ -314,6 +320,8 @@ export interface StockEntryData extends JsonObject {
   currency_scale?: number;
   allow_negative_stock?: boolean;
   work_order?: string;
+  /** Submitted Subcontracting Order whose frozen supplied-material snapshot owns this transfer. */
+  subcontracting_order?: string;
   finished_good_item?: string;
   finished_good_qty?: DecimalInput;
   finished_good_qty_micros?: number;

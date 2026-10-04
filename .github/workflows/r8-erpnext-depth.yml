@@ -1,0 +1,30 @@
+name: R8 ERPNext Business Depth
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "docs/agents/r8/**"
+      - "server/scripts/verify-r8-erpnext-depth.mjs"
+      - "server/tests/r8-erpnext-depth.test.mjs"
+      - "server/source-lock.json"
+      - "server/docs/spec/source-exact/erpnext-artifact-resolution-ledger.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Structural audit
+        run: node server/scripts/verify-r8-erpnext-depth.mjs
+      - name: Benchmark completion gate
+        run: node server/scripts/verify-r8-erpnext-depth.mjs --audit-complete
+      - name: R8 regression
+        run: node --test server/tests/r8-erpnext-depth.test.mjs

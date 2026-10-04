@@ -23,6 +23,8 @@ export interface TrackedStockRequest {
   valuationRateMinor: number;
   stockValueMinor: number;
   lineKey: string;
+  /** Stable child-row identity from the source business document. */
+  sourceRowId?: string;
   bundleName?: string;
   automaticFifoAllocations?: FifoAllocation[];
   allowNegativeStock?: boolean;
@@ -252,6 +254,7 @@ function buildBundleStockLine(
 ): StockLedgerEntry {
   return {
     line_key: `${request.lineKey}-${row.row_id || index + 1}`,
+    ...(request.sourceRowId ? { source_row_id: request.sourceRowId } : {}),
     item_code: request.itemCode,
     warehouse: request.warehouse,
     actual_qty_micros: request.direction === "Inward" ? qty : -qty,
@@ -286,7 +289,7 @@ export function normalizeBundleRows(entries: SerialBatchBundleRow[]): SerialBatc
 
 function baseLine(request: TrackedStockRequest): StockLedgerEntry {
   return {
-    line_key: request.lineKey, item_code: request.itemCode, warehouse: request.warehouse,
+    line_key: request.lineKey, ...(request.sourceRowId ? { source_row_id: request.sourceRowId } : {}), item_code: request.itemCode, warehouse: request.warehouse,
     actual_qty_micros: request.direction === "Inward" ? request.qtyMicros : -request.qtyMicros,
     ...(request.weightMicros == null
       ? {}

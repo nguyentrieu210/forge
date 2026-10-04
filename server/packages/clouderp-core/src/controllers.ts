@@ -206,7 +206,7 @@ export class PurchaseReceiptController extends BaseController<PurchaseReceiptDat
     if(context.command.action==="submit") { await assertUnlocked(context,input.company,input.posting_at); await assertMasters(context,[["Supplier",input.supplier],["Company",input.company],["Currency",input.currency],...items.map((i):[string,string]=>["Item",i.item_code]),...items.map((i):[string,string]=>["Warehouse",i.warehouse!])]);
       const byOrder=new Map<string,PurchaseItem[]>();
       for(const item of items){const name=orderOf(item)!;const list=byOrder.get(name);if(list)list.push(item);else byOrder.set(name,[item]);}
-      for(const [name,lines] of byOrder){const po=await requireSubmitted<PurchaseOrderData>(context,"Purchase Order",name); assertPurchaseContext(input,po.data,"Purchase Receipt"); await assertPurchaseRemaining(context,po,lines,"Receipt");} }
+      for(const [name,lines] of byOrder){const po=await requireSubmitted<PurchaseOrderData>(context,"Purchase Order",name); assertPurchaseContext(input,po.data,"Purchase Receipt"); resolvePurchaseOrderRowReferences(po,lines,"Purchase Receipt"); await assertPurchaseRemaining(context,po,lines,"Receipt");} }
     return {...input,currency_scale:currency.transactionScale,items,allow_negative_stock:allowNegative};
   }
   async ledger(context: ControllerContext<PurchaseReceiptData>,data:PurchaseReceiptData):Promise<LedgerResult> { if(!["submit","cancel"].includes(context.command.action))return{}; const scale=data.currency_scale??2;
@@ -235,8 +235,8 @@ export class PurchaseReceiptController extends BaseController<PurchaseReceiptDat
        * là giá vốn một đơn vị tồn — thứ mà phiếu xuất sau này nhân lên. Chia lại cho 1.200
        * là ghi giá một ký vào chỗ dành cho giá một cây, và lỗi sáu lần quay lại ở đầu kia.
        */
-      const ratePerStockUnit=ratePerUnitMinor(value,stockQty);const tracked=await buildTrackedStockLines(context as unknown as ControllerContext<JsonObject>,{itemCode:item.item_code,warehouse:item.warehouse!,qtyMicros:stockQty,direction:"Inward",postingAt:data.posting_at,currency:data.currency,currencyScale:scale,valuationRateMinor:ratePerStockUnit,stockValueMinor:value,lineKey:`ITEM-${item.row_id||index+1}`,...(item.actual_weight_micros!==undefined?{weightMicros:item.actual_weight_micros}:{}),...(item.serial_and_batch_bundle?{bundleName:item.serial_and_batch_bundle}:{})});stock.push(...tracked.stock);usages.push(...tracked.usages);}
-    const procurement=data.items.map((item,index):ProcurementEntry=>({line_key:`RECEIPT-${item.row_id||index+1}`,purchase_order:(item.purchase_order??data.against_purchase_order)!,kind:"Receipt",item_code:item.item_code,qty_micros:stockQtyMicros(item),posting_at:data.posting_at}));
+      const ratePerStockUnit=ratePerUnitMinor(value,stockQty);const tracked=await buildTrackedStockLines(context as unknown as ControllerContext<JsonObject>,{itemCode:item.item_code,warehouse:item.warehouse!,qtyMicros:stockQty,direction:"Inward",postingAt:data.posting_at,currency:data.currency,currencyScale:scale,valuationRateMinor:ratePerStockUnit,stockValueMinor:value,lineKey:`ITEM-${item.row_id||index+1}`,...(item.actual_weight_micros!==undefined?{weightMicros:item.actual_weight_micros}:{}),...(item.serial_and_batch_bundle?{bundleName:item.serial_and_batch_bundle}:{})});stock.push(...tracked.stock.map((line)=>({...line,source_row_id:item.row_id||`ROW-${index+1}`})));usages.push(...tracked.usages);}
+    const procurement=data.items.map((item,index):ProcurementEntry=>({line_key:`RECEIPT-${item.row_id||index+1}`,purchase_order:(item.purchase_order??data.against_purchase_order)!,...(item.purchase_order_item_row_id?{purchase_order_item_row_id:item.purchase_order_item_row_id}:{}),kind:"Receipt",item_code:item.item_code,qty_micros:stockQtyMicros(item),posting_at:data.posting_at}));
     /**
      * Hàng về thì GHI SỔ CÁI, không chỉ ghi sổ kho.
      *
@@ -267,7 +267,7 @@ export class PurchaseReceiptController extends BaseController<PurchaseReceiptDat
 export class PurchaseInvoiceController extends BaseController<PurchaseInvoiceData> {
   readonly doctype="Purchase Invoice";
   async normalize(context:ControllerContext<PurchaseInvoiceData>):Promise<PurchaseInvoiceData>{const input=context.command.document;if(!input.supplier||!input.company||!input.currency||!input.posting_at||!input.credit_to)throw errors.validation("Supplier, company, currency, posting_at and payable account are required");
-    const currency=await resolveCurrency(context,input.company,input.currency,input.posting_at,context.command.action==="submit");const pricedItems=await applyBuyingPricing(context,input.items,input.buying_price_list,input.currency,input.posting_at,input.supplier,input.supplier_group);const totals=calculateSalesTotals(pricedItems as never,input.taxes??[],currency.transactionScale);const items=await applyUomConversion(context,(totals.items as unknown as PurchaseItem[]).map((item,index): PurchaseItem=>{const source=input.items[index]!;if(!source.expense_account)throw errors.validation(`Expense account is required at row ${index+1}`);return{...item,expense_account:source.expense_account,...(source.warehouse ? { warehouse: source.warehouse } : {})}}),{transactionKind:"purchase"});
+    const currency=await resolveCurrency(context,input.company,input.currency,input.posting_at,context.command.action==="submit");const pricedItems=await applyBuyingPricing(context,input.items,input.buying_price_list,input.currency,input.posting_at,input.supplier,input.supplier_group);const totals=calculateSalesTotals(pricedItems as never,input.taxes??[],currency.transactionScale);const items=await applyUomConversion(context,(totals.items as unknown as PurchaseItem[]).map((item,index): PurchaseItem=>{const source=input.items[index]!;if(!source.expense_account)throw errors.validation(`Expense account is required at row ${index+1}`);return{...item,expense_account:source.expense_account,...(source.warehouse ? { warehouse: source.warehouse } : {}),...(source.purchase_order?{purchase_order:source.purchase_order}:{}),...(source.purchase_order_item_row_id?{purchase_order_item_row_id:source.purchase_order_item_row_id}:{}),...(source.material_request?{material_request:source.material_request}:{})}}),{transactionKind:"purchase"});
     if(context.command.action==="submit"){await assertUnlocked(context,input.company,input.posting_at);await assertMasters(context,[["Supplier",input.supplier],["Company",input.company],["Currency",input.currency],["Account",input.credit_to],...items.map(i=>["Item",i.item_code] as [string,string]),...items.map(i=>["Account",i.expense_account!] as [string,string]),...totals.taxes.map(t=>["Account",t.account] as [string,string])]);if(input.against_purchase_order){const po=await requireSubmitted<PurchaseOrderData>(context,"Purchase Order",input.against_purchase_order);assertPurchaseContext(input,po.data,"Purchase Invoice");await assertPurchaseRemaining(context,po,items,"Billing");}}
     const bases=baseTotals(totals,currency);return{...input,currency_scale:currency.transactionScale,company_currency:currency.companyCurrency,company_currency_scale:currency.companyScale,conversion_rate:fromScaledInt(currency.rateMicros,6),conversion_rate_micros:currency.rateMicros,...totals,items,...bases,outstanding_amount_minor:totals.grand_total_minor,outstanding_amount:fromScaledInt(totals.grand_total_minor,currency.transactionScale)} as PurchaseInvoiceData; }
   ledger(context:ControllerContext<PurchaseInvoiceData>,data:PurchaseInvoiceData):LedgerResult{if(!["submit","cancel"].includes(context.command.action))return{};const txScale=data.currency_scale??2;const baseScale=data.company_currency_scale??txScale;const rate=data.conversion_rate_micros??1_000_000;const currency=data.company_currency??data.currency;
@@ -316,6 +316,40 @@ function assertPurchaseContext(target:{supplier:string;company:string;currency:s
  * đơn vị chung là cách duy nhất so được hai chứng từ khai bằng hai đơn vị khác nhau; sổ
  * tiến độ (`purchase_order_progress_entries`) vì thế cũng ghi bằng đơn vị tồn.
  */
+function resolvePurchaseOrderRowReferences(
+  po: CanonicalDocument<PurchaseOrderData>,
+  items: PurchaseItem[],
+  label: string,
+): void {
+  for (const [index, item] of items.entries()) {
+    const candidates = po.data.items.filter((row) => row.item_code === item.item_code);
+    if (candidates.length === 0) {
+      throw errors.reference(`Item ${item.item_code} is not in Purchase Order ${po.name}`);
+    }
+    const explicit = typeof item.purchase_order_item_row_id === "string"
+      ? item.purchase_order_item_row_id.trim()
+      : "";
+    if (explicit) {
+      const target = candidates.find((row) => row.row_id === explicit);
+      if (!target) {
+        throw errors.reference(
+          `${label} row ${index + 1} references Purchase Order ${po.name} row ${explicit}, but that row does not contain ${item.item_code}`,
+        );
+      }
+      item.purchase_order_item_row_id = explicit;
+      continue;
+    }
+    if (candidates.length !== 1) {
+      throw errors.reference(
+        `${label} row ${index + 1} must specify purchase_order_item_row_id because Purchase Order ${po.name} repeats item ${item.item_code}`,
+      );
+    }
+    const inferred = candidates[0]!.row_id;
+    if (!inferred) throw errors.reference(`Purchase Order ${po.name} item row has no row_id`);
+    item.purchase_order_item_row_id = inferred;
+  }
+}
+
 async function assertPurchaseRemaining(
   context: ControllerContext<JsonObject>,
   po: CanonicalDocument<PurchaseOrderData>,
@@ -343,6 +377,57 @@ async function assertPurchaseRemaining(
     }
     tolerancePct = declared;
   }
+  const requestedByRow = new Map<string, { item_code: string; qty_micros: number }>();
+  for (const item of items) {
+    if (!item.purchase_order_item_row_id) continue;
+    const current = requestedByRow.get(item.purchase_order_item_row_id);
+    if (current && current.item_code !== item.item_code) {
+      throw errors.reference(`Purchase Order row ${item.purchase_order_item_row_id} cannot represent multiple items`);
+    }
+    requestedByRow.set(item.purchase_order_item_row_id, {
+      item_code: item.item_code,
+      qty_micros: (current?.qty_micros ?? 0) + stockQtyMicros(item),
+    });
+  }
+
+  if (items.every((item) => Boolean(item.purchase_order_item_row_id))) {
+    for (const [rowId, wanted] of requestedByRow) {
+      const row = po.data.items.find((candidate) => candidate.row_id === rowId);
+      if (!row || row.item_code !== wanted.item_code) {
+        throw errors.reference(`Purchase Order ${po.name} row ${rowId} does not match item ${wanted.item_code}`);
+      }
+      const sameItemRows = po.data.items.filter((candidate) => candidate.item_code === wanted.item_code);
+      if (sameItemRows.length > 1) {
+        const aggregateUsed = await context.reader.getProcuredQuantityMicros(
+          context.command.tenant_id, po.name, kind, wanted.item_code,
+        );
+        let resolvedUsed = 0;
+        for (const candidate of sameItemRows) {
+          resolvedUsed += await context.reader.getProcuredQuantityMicros(
+            context.command.tenant_id, po.name, kind, wanted.item_code, candidate.row_id,
+          );
+        }
+        if (aggregateUsed !== resolvedUsed) {
+          throw errors.reference(
+            `Purchase Order ${po.name} has legacy ${kind.toLowerCase()} progress without row identity for duplicate item ${wanted.item_code}`,
+          );
+        }
+      }
+      const orderedQty = stockQtyMicros(row);
+      const max = Math.floor(orderedQty * (1 + tolerancePct / 100));
+      const used = await context.reader.getProcuredQuantityMicros(
+        context.command.tenant_id, po.name, kind, wanted.item_code, rowId,
+      );
+      if (used + wanted.qty_micros > max) {
+        throw errors.reference(
+          `${kind} quantity for ${wanted.item_code} row ${rowId} exceeds Purchase Order row quantity`
+          + (tolerancePct > 0 ? ` plus ${tolerancePct}% supplier tolerance` : ""),
+        );
+      }
+    }
+    return;
+  }
+
   for (const [item, qty] of requested) {
     const orderedQty = ordered.get(item);
     if (orderedQty === undefined) throw errors.reference(`Item ${item} is not in Purchase Order ${po.name}`);

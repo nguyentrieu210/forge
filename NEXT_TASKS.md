@@ -1,6 +1,6 @@
 # NEXT TASKS
 
-Ngày cập nhật: **2026-08-16**.
+Ngày cập nhật: **2026-10-04**.
 
 Đây là active queue ngắn. Lịch sử implementation/convergence nằm trong Git/PR và retained evidence; không kéo các board/prompt/handoff cũ trở lại làm live plan.
 
@@ -59,3 +59,17 @@ Follow-on work must consume the certified R7 contract rather than reopen it impl
 2. A later .NET implementation should port the language-neutral observable contracts and preserve Forge safety invariants, not clone Frappe internals.
 3. Any proposed change to an R7 `INTENTIONAL_DIFFERENCE` must be an explicit architecture/product decision with new evidence.
 4. Production deploy/migration/provider/customer-data mutation still requires separate authorization and release evidence.
+
+## Post-R8 product backlog
+
+R8 is no longer an active program. Do not reopen its branch merely to chase a blanket
+"ERPNext parity" score.
+
+Residual business-depth work is tracked in GitHub issue **#997** and the canonical
+`docs/agents/r8/R8_BUSINESS_DEPTH_MATRIX.json`. Prioritize only what a real Forge product
+needs: recursive stock valuation/repost, dual-currency bank/cash finance, WIP/variance/ATP,
+deeper subcontracting, or the remaining Assets/Projects/Quality/Support/Commerce/Regional
+rows.
+
+A PARTIAL row is not debt that may be hidden by renaming it. Close it only with executable
+evidence or an explicit reviewed product-scope decision.
