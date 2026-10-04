@@ -72,10 +72,10 @@ Các test mới nằm trong pattern `manufacturing-*.test.mjs`, nên chạy cùn
 - `server/tests/manufacturing-mrp-projected-availability.test.mjs`;
 - `server/tests/manufacturing-mrp-projected-api.test.mjs`.
 
-Head implementation `4e282de417a55f5051cac42953f7c6225186cf07` đã qua:
+Final verified source + documentation checkpoint passed:
 
-- R8-B Business Closure run `37200359656`: success;
-- R7 Frappe 16 Closure run `37200359648`: success.
+- R8-B Business Closure run `37200463115`: success;
+- R7 Frappe 16 Closure run `37200463125`: success.
 
 ## Giới hạn còn lại
 
