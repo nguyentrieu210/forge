@@ -213,6 +213,40 @@ export async function netMrpAgainstProjectedAvailability(
   };
 }
 
+export function materialRequestDraftsFromProjectedMrp(
+  result: MrpProjectedNettingResult,
+  requestedBy?: string,
+): JsonObject[] {
+  const drafts: JsonObject[] = [];
+  for (const [type, rows] of [
+    ["Purchase", result.purchase_requirements],
+    ["Manufacture", result.manufacture_requirements],
+  ] as const) {
+    const required = rows.filter((row) => row.net_requirement_micros > 0);
+    if (required.length === 0) continue;
+    drafts.push({
+      company: result.company,
+      material_request_type: type,
+      transaction_date: result.planning_date,
+      ...(requestedBy ? { requested_by: requestedBy } : {}),
+      mrp_source_doctype: "Production Plan",
+      mrp_source_name: result.production_plan,
+      mrp_schema_version: 1,
+      mrp_netting_mode: result.netting_mode,
+      note: `MRP ${type} requirement generated from Production Plan ${result.production_plan}; projected availability netting applied`,
+      items: required.map((row, index) => ({
+        row_id: `MRP-${type.toUpperCase()}-${index + 1}`,
+        item_code: row.item_code,
+        qty: row.net_requirement,
+        ...(row.warehouse ? { warehouse: row.warehouse } : {}),
+        ...(row.schedule_date ? { schedule_date: row.schedule_date } : {}),
+        note: `${row.source_count} MRP source path${row.source_count === 1 ? "" : "s"}; gross ${row.gross_qty}; projected allocation ${row.allocated_projected}`,
+      })),
+    });
+  }
+  return drafts;
+}
+
 function sortedRows(mrp: MrpExplosionResult): Array<MrpRequirement & { requirement_type: "Purchase" | "Manufacture" }> {
   return [
     ...mrp.purchase_requirements.map((row) => ({ ...row, requirement_type: "Purchase" as const })),
