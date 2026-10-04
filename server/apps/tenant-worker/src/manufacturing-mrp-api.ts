@@ -161,7 +161,10 @@ async function assertUsedBomsReadable(
   context: ManufacturingMrpApiContext,
 ): Promise<void> {
   const used = new Set<string>();
-  for (const output of result.planned_outputs) used.add(output.bom_no);
+  for (const output of result.planned_outputs) {
+    used.add(output.bom_no);
+    for (const choice of output.subassembly_boms ?? []) used.add(choice.bom_no);
+  }
   for (const requirement of [...result.purchase_requirements, ...result.manufacture_requirements]) {
     for (const source of requirement.sources) used.add(String(source.bom_no));
   }

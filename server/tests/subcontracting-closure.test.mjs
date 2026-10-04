@@ -396,3 +396,125 @@ test("commit rejects competing subcontract supply, return and receipt plans agai
   await assert.rejects(store.execute(receiptB), /material entitlement changed/i);
   assert.deepEqual(store.snapshot(), before);
 });
+
+test("rejected finished units require explicit payment policy and segregate exact stock value", async () => {
+  const { store, kernel } = setup();
+  store.seedMaster("Warehouse", "Rejected", "demo", { company: "Demo", is_group: 0 });
+  store.seedMaster("Warehouse", "Foreign", "demo", { company: "Other", is_group: 0 });
+  await submitBom(kernel);
+  await submitPo(kernel);
+  await submitOrder(kernel);
+  await createAndSubmit(kernel, { doctype: "Stock Entry", name: "OPEN-REJECTION", document: {
+    company: "Demo", posting_at: "2026-10-02T08:00:00.000Z", purpose: "Material Receipt",
+    items: [{ row_id: "OPEN", item_code: "RAW", qty: "4", valuation_rate: "10", target_warehouse: "Raw" }],
+  }});
+  await transfer(kernel, "SEND-REJECTION", 4);
+  const base = { subcontracting_order: "SCO-1", posting_at: NOW, received_qty: "2", rejected_qty: "0.5",
+    rejected_warehouse: "Rejected", stock_account: "Stock", stock_received_but_not_billed: "SRBNB" };
+  const submit = (name, data) => createAndSubmit(kernel, { doctype: "Subcontracting Receipt", name, document: data });
+  await assert.rejects(submit("NO-POLICY", base), /explicit Pay Full Service/);
+  await assert.rejects(submit("BAD-QTY", { ...base, rejected_qty: "2.000001" }), /between zero and total/);
+  await assert.rejects(submit("NEG-QTY", { ...base, rejected_qty: "-1" }), /between zero and total/);
+  const payable = { ...base, rejected_service_policy: "Pay Full Service" };
+  await assert.rejects(submit("BAD-WH", { ...payable, rejected_warehouse: "Finished" }), /separate rejected warehouse/);
+  await assert.rejects(submit("WRONG-COMPANY", { ...payable, rejected_warehouse: "Foreign" }), /belongs to Other/i);
+  const { makeCommand } = await import("../dist/packages/test-harness/src/index.js");
+  await mutate(kernel, { doctype: "Subcontracting Receipt", name: "TAMPERED-REJECT", document: payable,
+    action: "create", expectedVersion: null, commandId: "tampered-reject-create" });
+  const plan = await kernel.prepare(await makeCommand({ doctype: "Subcontracting Receipt", name: "TAMPERED-REJECT",
+    document: payable, action: "submit", expectedVersion: 1, commandId: "tampered-reject-submit" }), store);
+  const tampered = structuredClone(plan);
+  delete tampered.document.data.rejected_service_policy;
+  await assert.rejects(store.execute(tampered), /material entitlement changed/i);
+  assert.equal((await store.getDocument("demo", "Subcontracting Receipt", "TAMPERED-REJECT")).docstatus, 0);
+  assert.equal(await store.getStockBalanceMicros("demo", "FG", "Rejected"), 0);
+  await submit("REJECT-SPLIT", payable);
+  const result = await store.getDocument("demo", "Subcontracting Receipt", "REJECT-SPLIT");
+  assert.equal(result.data.accepted_qty_micros, 1.5 * Q);
+  assert.equal(result.data.rejected_qty_micros, 0.5 * Q);
+  assert.equal(result.data.material_cost_minor, 4000);
+  assert.equal(result.data.service_cost_minor, 1000);
+  assert.equal(result.data.accepted_value_minor, 3750);
+  assert.equal(result.data.rejected_value_minor, 1250);
+  assert.equal(await store.getStockBalanceMicros("demo", "FG", "Finished"), 1.5 * Q);
+  assert.equal(await store.getStockBalanceMicros("demo", "FG", "Rejected"), 0.5 * Q);
+  assert.equal(await store.getProcuredQuantityMicros("demo", "PO-SUB", "Receipt", "SUB-SERVICE", "SERVICE-1"), 2 * Q);
+  const gl = await store.getVoucherGlEntries("demo", "Subcontracting Receipt", "REJECT-SPLIT", result.version);
+  assert.equal(gl.reduce((sum, row) => sum + row.debit_minor, 0), 1000);
+  assert.equal(gl.reduce((sum, row) => sum + row.credit_minor, 0), 1000);
+  await mutate(kernel, { doctype: "Subcontracting Receipt", name: "REJECT-SPLIT", action: "cancel", expectedVersion: result.version, document: {} });
+  assert.equal(await store.getStockBalanceMicros("demo", "FG", "Finished"), 0);
+  assert.equal(await store.getStockBalanceMicros("demo", "FG", "Rejected"), 0);
+  assert.equal(await store.getStockBalanceMicros("demo", "RAW", "Supplier"), 4 * Q);
+  assert.equal(await store.getProcuredQuantityMicros("demo", "PO-SUB", "Receipt", "SUB-SERVICE", "SERVICE-1"), 0);
+});
+
+test("all rejected receipt creates no accepted stock and reverses exactly", async () => {
+  const { store, kernel } = setup();
+  store.seedMaster("Warehouse", "Rejected", "demo", { company: "Demo", is_group: 0 });
+  await submitBom(kernel); await submitPo(kernel); await submitOrder(kernel);
+  await createAndSubmit(kernel, { doctype: "Stock Entry", name: "OPEN-ALL", document: {
+    company: "Demo", posting_at: "2026-10-02T08:00:00.000Z", purpose: "Material Receipt",
+    items: [{ row_id: "OPEN", item_code: "RAW", qty: "4", valuation_rate: "10", target_warehouse: "Raw" }],
+  }});
+  await transfer(kernel, "SEND-ALL", 4);
+  await createAndSubmit(kernel, { doctype: "Subcontracting Receipt", name: "ALL-REJECTED", document: {
+    subcontracting_order: "SCO-1", posting_at: NOW, received_qty: "2", rejected_qty: "2",
+    rejected_service_policy: "Pay Full Service", rejected_warehouse: "Rejected",
+    stock_account: "Stock", stock_received_but_not_billed: "SRBNB",
+  }});
+  const doc = await store.getDocument("demo", "Subcontracting Receipt", "ALL-REJECTED");
+  assert.equal(doc.data.accepted_value_minor, 0);
+  assert.equal(doc.data.rejected_value_minor, 5000);
+  assert.equal(await store.getStockBalanceMicros("demo", "FG", "Finished"), 0);
+  assert.equal(await store.getStockBalanceMicros("demo", "FG", "Rejected"), 2 * Q);
+  await createAndSubmit(kernel, { doctype: "Stock Entry", name: "REJECTED-ISSUE", document: {
+    company: "Demo", posting_at: "2026-10-02T10:00:00.000Z", purpose: "Material Issue",
+    items: [{ row_id: "ISSUE", item_code: "FG", qty: "1", source_warehouse: "Rejected" }],
+  }});
+  await assert.rejects(mutate(kernel, { doctype: "Subcontracting Receipt", name: doc.name,
+    action: "cancel", expectedVersion: doc.version, document: {}, commandId: "blocked-rejected-reversal" }), /Insufficient stock/i);
+  assert.equal((await store.getDocument("demo", "Subcontracting Receipt", doc.name)).docstatus, 1);
+  const issue = await store.getDocument("demo", "Stock Entry", "REJECTED-ISSUE");
+  await mutate(kernel, { doctype: "Stock Entry", name: issue.name, commandId: "cancel-rejected-issue", action: "cancel", expectedVersion: issue.version, document: {} });
+  await mutate(kernel, { doctype: "Subcontracting Receipt", name: doc.name, commandId: "cancel-all-rejected", action: "cancel", expectedVersion: doc.version, document: {} });
+  assert.equal(await store.getStockBalanceMicros("demo", "FG", "Rejected"), 0);
+});
+
+test("tracked accepted and rejected receipt splits rounded value and releases both bundles on cancel", async () => {
+  const { store, kernel } = setup();
+  store.seedMaster("Warehouse", "Rejected", "demo", { company: "Demo", is_group: 0 });
+  store.seedMaster("Item", "FG", "demo", { is_stock_item: 1, stock_uom: "Nos", valuation_method: "FIFO", has_batch_no: 1 });
+  for (const batch of ["GOOD-BATCH", "BAD-BATCH"]) store.seedMaster("Batch", batch, "demo", { item: "FG" });
+  await submitBom(kernel); await submitPo(kernel); await submitOrder(kernel);
+  await createAndSubmit(kernel, { doctype: "Stock Entry", name: "OPEN-BATCH-REJECT", document: {
+    company: "Demo", posting_at: "2026-10-02T08:00:00.000Z", purpose: "Material Receipt",
+    items: [{ row_id: "OPEN", item_code: "RAW", qty: "4", valuation_rate: "10", target_warehouse: "Raw" }],
+  }});
+  await transfer(kernel, "SEND-BATCH-REJECT", 4);
+  for (const [name, warehouse, batch, qty] of [
+    ["ACCEPTED-BUNDLE", "Finished", "GOOD-BATCH", "0.666667"],
+    ["REJECTED-BUNDLE", "Rejected", "BAD-BATCH", "0.333333"],
+  ]) await createAndSubmit(kernel, { doctype: "Serial and Batch Bundle", name, document: {
+    item_code: "FG", warehouse, type: "Inward", posting_at: NOW, entries: [{ row_id: "B", batch_no: batch, qty }],
+  }});
+  await createAndSubmit(kernel, { doctype: "Subcontracting Receipt", name: "TRACKED-REJECT", document: {
+    subcontracting_order: "SCO-1", posting_at: NOW, received_qty: "1", rejected_qty: "0.333333",
+    rejected_service_policy: "Pay Full Service", rejected_warehouse: "Rejected",
+    finished_good_bundle: "ACCEPTED-BUNDLE", rejected_good_bundle: "REJECTED-BUNDLE",
+    stock_account: "Stock", stock_received_but_not_billed: "SRBNB",
+  }});
+  const doc = await store.getDocument("demo", "Subcontracting Receipt", "TRACKED-REJECT");
+  assert.equal(doc.data.accepted_value_minor, 1667);
+  assert.equal(doc.data.rejected_value_minor, 833);
+  const lines = await store.getVoucherStockEntries("demo", "Subcontracting Receipt", doc.name, doc.version);
+  assert.equal(lines.find(row => row.batch_no === "GOOD-BATCH").stock_value_difference_minor, 1667);
+  assert.equal(lines.find(row => row.batch_no === "BAD-BATCH").stock_value_difference_minor, 833);
+  await mutate(kernel, { doctype: "Subcontracting Receipt", name: doc.name, commandId: "cancel-tracked-reject",
+    action: "cancel", expectedVersion: doc.version, document: {} });
+  for (const bundle of ["ACCEPTED-BUNDLE", "REJECTED-BUNDLE"]) {
+    assert.equal(store.snapshot().stock_bundle_usages.filter(row => row.bundle_name === bundle).reduce((sum, row) => sum + row.usage_delta, 0), 0);
+  }
+  assert.equal(await store.getStockBalanceMicros("demo", "FG", "Finished"), 0);
+  assert.equal(await store.getStockBalanceMicros("demo", "FG", "Rejected"), 0);
+});

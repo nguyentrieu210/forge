@@ -10,8 +10,12 @@ on:
       - "server/packages/clouderp-stock/**"
       - "server/packages/clouderp-erpnext/**"
       - "server/packages/query/**"
+      - "server/apps/tenant-worker/src/manufacturing-mrp-api.ts"
       - "server/packages/policy/**"
       - "server/tests/subcontracting-closure.test.mjs"
+      - "server/tests/o2c.test.mjs"
+      - "server/docs/spec/source-exact/oracle/snapshots/ABCM-115/runtime__o2c-matrix-capture.json"
+      - "server/source-lock.json"
       - "server/tests/manufacturing-*.test.mjs"
       - "server/tests/landed-cost-authority.test.mjs"
       - "server/tests/valuation-audit.test.mjs"
@@ -24,6 +28,7 @@ on:
       - "server/tests/customer-credit-authority.test.mjs"
       - "server/tests/period-closing-authority.test.mjs"
       - "server/tests/period-close-timestamp.test.mjs"
+      - "server/tests/period-close-account-metadata.test.mjs"
       - "server/tests/finance-closure-query.test.mjs"
       - "server/tests/finance-budget-actual-sql.test.mjs"
       - "server/tests/finance-budget.test.mjs"
@@ -46,8 +51,11 @@ on:
       - "server/migrations/tenant/0158_finance_budget_fiscal_distribution.sql"
       - "server/migrations/tenant/0159*.sql"
       - "server/migrations/tenant/016*.sql"
+      - "server/migrations/tenant/017*.sql"
       - "server/scripts/test-period-close-source-insert-safety.py"
+      - "server/scripts/test-period-close-account-tombstone.py"
       - "server/scripts/test-subcontracting-commit-entitlement.py"
+      - "server/scripts/test-subcontracting-rejected-finished.py"
       - "server/scripts/test-r8-migration-chain.py"
       - "server/scripts/test-customer-credit-authority-migration.py"
       - "server/scripts/test-customer-credit-allocation-migration.py"
@@ -84,6 +92,8 @@ jobs:
         run: node --test server/tests/subcontracting-closure.test.mjs
       - name: Subcontracting commit entitlement regression
         run: python3 server/scripts/test-subcontracting-commit-entitlement.py
+      - name: Rejected subcontract finished goods commit regression
+        run: python3 server/scripts/test-subcontracting-rejected-finished.py
       - name: Manufacturing operation-cost and lifecycle regression
         run: node --test server/tests/manufacturing-*.test.mjs server/tests/alumdoor-manufacturing-lifecycle.test.mjs server/tests/rc4-a13-manufacturing-qms-release-confidence.test.mjs
       - name: Landed Cost authority regression
@@ -102,6 +112,10 @@ jobs:
         run: python3 server/scripts/test-customer-credit-allocation-migration.py
       - name: Period Closing Voucher regression
         run: node --test server/tests/period-closing-authority.test.mjs
+      - name: Period Closing historical account metadata regression
+        run: node --test server/tests/period-close-account-metadata.test.mjs
+      - name: Period Closing account tombstone regression
+        run: python3 server/scripts/test-period-close-account-tombstone.py
       - name: Period Closing UTC timestamp regression
         run: node --test server/tests/period-close-timestamp.test.mjs
       - name: Period close atomic migration regression
@@ -124,6 +138,8 @@ jobs:
         run: python3 server/scripts/test-exchange-rate-revaluation-migration.py
       - name: Finance close/budget RBAC regression
         run: node --test server/tests/finance-closure-policy.test.mjs
+      - name: O2C status projection against pinned upstream capture
+        run: node --test server/tests/o2c.test.mjs
       - name: R8 benchmark invariant
         run: node server/scripts/verify-r8-erpnext-depth.mjs --audit-complete
       - name: R8 matrix regression

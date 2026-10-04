@@ -173,7 +173,16 @@ test("FX company revaluation refuses foreign non-party balances without canonica
   }
 });
 
-test("FX non-party boundary permits domestic, zero-net and AR/AP account balances", async () => {
+test("FX controller refuses zero base net with nonzero foreign account activity", async () => {
+  const { ctx } = context({
+    masters: { ...masters(), "Account:ZERO": { account_type: "Bank", account_currency: "USD" } },
+    balances: [arBalance()],
+    glBalances: [{ ...glBalance("ZERO", 0), debit_minor: 100, credit_minor: 100, row_count: 2 }],
+  });
+  await assert.rejects(new ExchangeRateRevaluationController().buildPlan(ctx), /FINANCE_FX_NON_PARTY_DUAL_CURRENCY_REQUIRED/);
+});
+
+test("FX non-party boundary permits domestic, all-zero and AR/AP account balances", async () => {
   const { ctx } = context({
     masters: { ...masters(),
       "Account:DOMESTIC": { account_type: "Bank", account_currency: "VND" },
@@ -249,12 +258,29 @@ test("FX memory as-of boundary excludes future bank movement and other tenant/co
   assert.equal((await store.getDocument("demo", "Exchange Rate Revaluation", "FX-001")).docstatus, 1);
 });
 
-test("FX memory boundary sums exact compensating GL rows to zero", async () => {
+test("FX memory permits all-zero foreign account rows", async () => {
+  const { store, ctx } = await memoryFx();
+  await store.execute(sourcePlan("BANK-ZERO-AMOUNTS", { amount: 0 }));
+  await store.execute(await new ExchangeRateRevaluationController().buildPlan(ctx));
+  assert.equal((await store.getDocument("demo", "Exchange Rate Revaluation", "FX-001")).docstatus, 1);
+});
+
+test("FX zero base net still refuses ambiguous foreign bank units", async () => {
   const { store, ctx } = await memoryFx();
   await store.execute(sourcePlan("BANK-ORIGINAL"));
   await store.execute(sourcePlan("BANK-REVERSE", { amount: -100 }));
-  await store.execute(await new ExchangeRateRevaluationController().buildPlan(ctx));
-  assert.equal((await store.getDocument("demo", "Exchange Rate Revaluation", "FX-001")).docstatus, 1);
+  // 100 base received at 10/base-per-unit and 100 base paid at 20 can leave
+  // 5 foreign units. The one-currency ledger cannot establish the actual units.
+  await assert.rejects(new ExchangeRateRevaluationController().buildPlan(ctx), /FINANCE_FX_NON_PARTY_DUAL_CURRENCY_REQUIRED/);
+});
+
+test("FX memory commit rechecks zero base net foreign activity after planning", async () => {
+  const { store, ctx } = await memoryFx();
+  const plan = await new ExchangeRateRevaluationController().buildPlan(ctx);
+  await store.execute(sourcePlan("BANK-ZERO-RACE-DR"));
+  await store.execute(sourcePlan("BANK-ZERO-RACE-CR", { amount: -100 }));
+  await assert.rejects(store.execute(plan), /FINANCE_FX_NON_PARTY_DUAL_CURRENCY_REQUIRED/);
+  assert.equal((await store.getDocument("demo", "Exchange Rate Revaluation", "FX-001")).docstatus, 0);
 });
 
 test("FX boundary uses Account documents ahead of stale master aliases", async () => {

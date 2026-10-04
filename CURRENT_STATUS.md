@@ -64,3 +64,19 @@ Verification: server build, 279 Node tests, focused SQLite race/authority script
 R8 business certification remains blocked: 11 modules + 18 flows are PARTIAL, with zero
 UNRESOLVED. Source verification does not claim pinned ERPNext runtime parity or production
 deployment. Existing R8-A benchmark identity and denominator are preserved.
+
+## R8-B continued convergence — 2026-10-04
+
+The new source checkpoint extends FIFO transfer value carry through later terminal
+Material Issues/Delivery Notes, separates rejected subcontract finished goods under an
+explicit full-service policy, and supports root-scoped explicit subassembly BOM planning.
+Period-close planning retains inactive metadata; cancelled Account documents cannot revive
+stale imported masters, including textual checkbox flags. FX revaluation rejects non-party
+foreign activity even when company-currency net is zero until independent foreign units exist.
+
+Local verification of the converged tree: full server build, 336 Node regressions across
+47 suites, 11 SQLite authority/race scripts, and all 140 tenant migrations pass. R8 audit
+completion and R7 certification pass; R8 certification remains blocked by 29 PARTIAL rows.
+Five frozen ERPNext fixture status/progress projections are now read by the live O2C test,
+with committed-snapshot byte pin and source-lock checks. This does not replay all 115 fixtures
+or establish monetary/runtime parity. No production deployment or migration was performed.

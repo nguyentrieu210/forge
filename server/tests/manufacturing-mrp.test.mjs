@@ -166,3 +166,64 @@ test("MRP Material Request drafts are canonical demand documents, not stock or G
   assert.equal(drafts[0].requested_by, "planner@example.com");
   assert.equal(drafts[0].items.length, 2);
 });
+
+test("MRP selects explicit nested BOMs per root without changing other roots", () => {
+  const boms = [
+    bom("ROOT", "FG", 1, [row("S", "SUB", 2, "WIP")]),
+    bom("SUB-A", "SUB", 1, [row("A", "RM-A", 3)]),
+    bom("SUB-B", "SUB", 2, [row("B", "NESTED", 4)]),
+    bom("NESTED", "NESTED", 1, [row("N", "RM-B", 5)]),
+  ];
+  const result = explodeProductionPlanMrp("NESTED-CHOICES", plan([
+    { row_id: "A", item_code: "FG", bom_no: "ROOT", planned_qty: "2", subassembly_boms: [{ item_code: "SUB", bom_no: "SUB-A" }] },
+    { row_id: "B", item_code: "FG", bom_no: "ROOT", planned_qty: "1", subassembly_boms: [{ item_code: "SUB", bom_no: "SUB-B" }, { item_code: "NESTED", bom_no: "NESTED" }] },
+  ]), boms);
+  assert.deepEqual(result.purchase_requirements.map(r => [r.item_code, r.gross_qty]), [["RM-A", "12.000000"], ["RM-B", "40.000000"]]);
+  assert.deepEqual(result.manufacture_requirements.map(r => [r.item_code, r.gross_qty]), [["NESTED", "8.000000"], ["SUB", "6.000000"]]);
+  const source = result.purchase_requirements.find(r => r.item_code === "RM-A").sources[0];
+  assert.equal(source.bom_no, "SUB-A");
+  assert.equal(source.root_row_id, "A");
+  assert.equal(result.netting_mode, "gross_only");
+  const draft = materialRequestDraftsFromMrp(result).find(r => r.material_request_type === "Purchase");
+  assert.deepEqual(draft.items.map(r => [r.item_code, r.qty]), [["RM-A", "12.000000"], ["RM-B", "40.000000"]]);
+});
+
+test("MRP explicit subassembly choices reject unsubmitted, inactive, out-of-date and foreign BOMs", () => {
+  const root = bom("ROOT", "FG", 1, [row("S", "SUB", 1)]);
+  const input = plan([{ row_id: "P", item_code: "FG", bom_no: "ROOT", planned_qty: "1", subassembly_boms: [{ item_code: "SUB", bom_no: "SELECTED" }] }]);
+  for (const change of [
+    b => { b.docstatus = 0; },
+    b => { b.docstatus = 2; },
+    b => { b.data.bom_status = "Inactive"; },
+    b => { b.data.effective_from = "2026-08-04"; },
+    b => { b.data.effective_to = "2026-08-02"; },
+    b => { b.data.company = "OTHER"; },
+    b => { b.data.item = "WRONG"; },
+  ]) {
+    const selected = bom("SELECTED", "SUB", 1, [row("R", "RM", 1)]);
+    change(selected);
+    assert.throws(() => explodeProductionPlanMrp("INVALID-CHOICE", input, [root, selected]), /not submitted\/Active\/effective|does not match/);
+  }
+});
+
+test("MRP rejects malformed, duplicate, root-replacing or unused subassembly choices", () => {
+  const boms = [bom("ROOT", "FG", 1, [row("S", "SUB", 1)]), bom("SUB", "SUB", 1, [row("R", "RM", 1)]), bom("UNUSED", "UNUSED", 1, [row("U", "RM", 1)])];
+  for (const choices of [
+    null,
+    {},
+    [null],
+    [{ item_code: "SUB" }],
+    [{ item_code: "SUB", bom_no: "SUB" }, { item_code: " SUB ", bom_no: "SUB" }],
+    [{ item_code: "FG", bom_no: "ROOT" }],
+    [{ item_code: "UNUSED", bom_no: "UNUSED" }],
+  ]) {
+    assert.throws(() => explodeProductionPlanMrp("BAD-CHOICES", plan([{ row_id: "P", item_code: "FG", bom_no: "ROOT", planned_qty: "1", subassembly_boms: choices }]), boms));
+  }
+});
+
+test("MRP explicit subassembly choice preserves cycle and dimension guards", () => {
+  const input = plan([{ row_id: "P", item_code: "FG", bom_no: "ROOT", planned_qty: "1", width_m: "2", subassembly_boms: [{ item_code: "SUB", bom_no: "SUB" }] }]);
+  const root = bom("ROOT", "FG", 1, [row("S", "SUB", 1)]);
+  assert.throws(() => explodeProductionPlanMrp("CYCLE-CHOICE", input, [root, bom("SUB", "SUB", 1, [row("F", "FG", 1)])]), /circular BOM path/);
+  assert.throws(() => explodeProductionPlanMrp("DIM-CHOICE", input, [root, bom("SUB", "SUB", 1, [row("R", "RM", 1, "RAW", { qty_basis: "Theo chiều rộng" })])]), /requires explicit dimensions/);
+});

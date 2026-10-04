@@ -78,7 +78,10 @@
         "server/migrations/tenant/0162_exchange_rate_revaluation_non_party_safety.sql",
         "server/migrations/tenant/0164_period_close_chronology.sql",
         "server/migrations/tenant/0166_period_close_source_insert_safety.sql",
-        "server/scripts/test-period-close-source-insert-safety.py"
+        "server/scripts/test-period-close-source-insert-safety.py",
+        "server/migrations/tenant/0169_exchange_rate_revaluation_zero_net_safety.sql",
+        "server/migrations/tenant/0170_period_close_account_tombstone.sql",
+        "server/tests/period-close-account-metadata.test.mjs"
       ],
       "upstream_evidence": [
         "ERPNext v16.20.0 accounts doctypes/controllers at ff46d20b259a2d65a7ded959df9f9a42991a3562"
@@ -87,9 +90,9 @@
       "gaps": [
         "Foreign AR/AP period-end Exchange Rate Revaluation is closed; foreign bank/cash and other non-party monetary-account revaluation remain incomplete.",
         "Multi-company consolidation/elimination and exact bank-reconciliation runtime parity remain unproven.",
-        "Pinned ERPNext budget/close differential, large-ledger execution and historical disabled-account close planning remain unproven."
+        "Historical inactive-account metadata is planned and checked before persistence. Automatic closing/repair of inactive residuals, large-ledger execution and pinned ERPNext budget/close differential remain unproven."
       ],
-      "rationale": "Canonical GL/Payment Ledger now support P&L close with chronological prior-year and cancellation guards, source-aware budget actualization, equal/manual fiscal distribution and retroactive revision interval revalidation. Foreign AR/AP revaluation is implemented; non-party foreign GL balances fail closed because dual-currency GL evidence is absent. Consolidation, large-ledger and pinned runtime equivalence remain unproven.",
+      "rationale": "Canonical GL/Payment Ledger now support P&L close with chronological prior-year and cancellation guards, source-aware budget actualization, equal/manual fiscal distribution and retroactive revision interval revalidation. Foreign AR/AP revaluation is implemented; non-party foreign GL activity, including zero company-currency net, fails closed because dual-currency GL evidence is absent. Consolidation, large-ledger and pinned runtime equivalence remain unproven.",
       "confirmed_findings": [
         "2026-10-04: historical budget overruns hidden by later release/reversal are rejected on event-date checkpoints; earlier P&L residual and later-close cancellation guards are enforced at commit. Direct submitted close inserts recheck lock, source fingerprint and valid source dates."
       ]
@@ -250,16 +253,19 @@
         "server/packages/clouderp-erpnext/src/manufacturing-lifecycle.ts",
         "server/packages/clouderp-erpnext/src/manufacturing-mrp.ts",
         "docs/agents/r8/R8B_SUBCONTRACTING_CLOSURE.md",
-        "server/packages/clouderp-erpnext/src/subcontracting.ts"
+        "server/packages/clouderp-erpnext/src/subcontracting.ts",
+        "docs/agents/r8/R8B_MANUFACTURING_OPERATION_COST_CLOSURE.md",
+        "server/packages/clouderp-erpnext/src/manufacturing-operation-cost.ts",
+        "docs/agents/r8/R8B_SUBASSEMBLY_BOM_SELECTION_CLOSURE.md"
       ],
       "upstream_evidence": [
         "ERPNext v16.20.0 BOM/Production Plan/Work Order/Job Card controllers at pinned SHA"
       ],
       "oracle_cases": [],
       "gaps": [
-        "Phantom/substitute/full alternate BOM semantics are incomplete.",
+        "Explicit root-scoped subassembly BOM selection is implemented for MRP. Phantom/substitute, simultaneous Active alternate lifecycle and full execution semantics remain incomplete.",
         "MRP is not full ATP/projected netting.",
-        "Posted operation cost/variance and rework are incomplete.",
+        "Explicit receipt-specific operation-cost capitalization is implemented; automatic Job Card accrual, WIP/variance and rework remain incomplete.",
         "Subcontracting execution now exists, but manufacturing integration remains partial around reservation, Job Card/quality, secondary/process-loss and repost semantics."
       ],
       "rationale": "Forge manufacturing execution is strong, but ERPNext planning/cost/rework/subcontracting depth is broader."
@@ -556,7 +562,9 @@
         "docs/agents/transaction-closure/07-CONVERGENCE.md",
         "server/packages/clouderp-selling/src/finance-controllers.ts",
         "server/packages/ledger",
-        "server/tests/customer-credit-authority.test.mjs"
+        "server/tests/customer-credit-authority.test.mjs",
+        "docs/agents/r8/R8B_CUSTOMER_CREDIT_CLOSURE.md",
+        "server/migrations/tenant/0156_customer_credit_allocation.sql"
       ],
       "known_depth_questions": [
         "payment allocation ordering",
@@ -570,7 +578,7 @@
       "confirmed_findings": [
         "Current Payment Entry authority includes historical-rate base allocation and explicit exchange-difference GL posting.",
         "AR/AP settlement and reversal authorities exist with integrated transaction-closure evidence.",
-        "Customer-credit cash refund is now closed; reusable credit allocation to later invoices, ERPNext-exact settlement ordering and branch/dimension depth remain open."
+        "Customer-credit cash refund and source-linked reusable credit allocation to later invoices are implemented with exact reversals. ERPNext-exact settlement ordering and full branch/dimension depth remain open."
       ]
     },
     {
@@ -612,7 +620,10 @@
         "server/migrations/tenant/0162_exchange_rate_revaluation_non_party_safety.sql",
         "server/migrations/tenant/0164_period_close_chronology.sql",
         "server/migrations/tenant/0166_period_close_source_insert_safety.sql",
-        "server/scripts/test-period-close-source-insert-safety.py"
+        "server/scripts/test-period-close-source-insert-safety.py",
+        "server/migrations/tenant/0169_exchange_rate_revaluation_zero_net_safety.sql",
+        "server/migrations/tenant/0170_period_close_account_tombstone.sql",
+        "server/tests/period-close-account-metadata.test.mjs"
       ],
       "known_depth_questions": [
         "account types/root semantics",
@@ -623,7 +634,7 @@
         "exchange-rate revaluation",
         "budget enforcement"
       ],
-      "rationale": "Canonical GL/Payment Ledger now support P&L close with chronological prior-year and cancellation guards, source-aware budget actualization, equal/manual fiscal distribution and retroactive revision interval revalidation. Foreign AR/AP revaluation is implemented; non-party foreign GL balances fail closed because dual-currency GL evidence is absent. Consolidation, large-ledger and pinned runtime equivalence remain unproven.",
+      "rationale": "Canonical GL/Payment Ledger now support P&L close with chronological prior-year and cancellation guards, source-aware budget actualization, equal/manual fiscal distribution and retroactive revision interval revalidation. Foreign AR/AP revaluation is implemented; non-party foreign GL activity, including zero company-currency net, fails closed because dual-currency GL evidence is absent. Consolidation, large-ledger and pinned runtime equivalence remain unproven.",
       "confirmed_findings": [
         "Forge has canonical append-only GL, exact reversal, hard/soft accounting-period guards, company/branch scoped General Ledger and Trial Balance, and Finance Daily Detailed Ledger derived from the same GL authority.",
         "Pinned ERPNext Period Closing Voucher validates fiscal continuity and closing account, generates/reverses closing GL and supports background processing for large ledgers.",
@@ -637,7 +648,7 @@
       "gaps": [
         "Foreign AR/AP period-end revaluation is closed; foreign bank/cash and other non-party monetary-account revaluation remain open.",
         "Multi-company consolidation/elimination remains unproven.",
-        "Pinned ERPNext budget/close differential, large-ledger execution and historical disabled-account close planning remain unproven."
+        "Historical inactive-account metadata is planned and checked before persistence. Automatic closing/repair of inactive residuals, large-ledger execution and pinned ERPNext budget/close differential remain unproven."
       ]
     },
     {
@@ -738,14 +749,15 @@
         "stock-to-GL reconciliation",
         "exact reversal"
       ],
-      "rationale": "Stock valuation now includes targeted receipt-row Landed Cost, terminal FIFO expense correction, one-hop future Material Transfer value carry and exact reversal. Recursive downstream chains, manufacturing propagation and non-FIFO historical repost remain unclosed.",
+      "rationale": "Stock valuation includes targeted receipt-row Landed Cost, terminal FIFO expense correction, one-hop future Material Transfer value carry through terminal destination consumption and exact reversal. Recursive/shared destination chains, manufacturing propagation and non-FIFO historical repost remain unclosed.",
       "confirmed_findings": [
         "Current Forge has server-ledger FIFO and Moving Average valuation plus bounded repost/adjustment logic, so the older oracle prose saying no valuation engine exists is stale.",
         "Pinned ERPNext oracle includes LIFO behavior; current Forge ValuationMethod is FIFO or Moving Average only.",
-        "Targeted landed-cost application/reversal is now authoritative on the safe no-downstream boundary; historical downstream COGS/expense restatement remains an explicit deferred boundary.",
+        "Targeted landed-cost application/reversal is authoritative for exact FIFO receipt rows, terminal Material Issues/Delivery Notes and the documented one-hop transfer boundary. Wider downstream propagation remains incomplete.",
         "2026-10-04: future direct FIFO issues receive immutable targeted corrections, balanced Stock/COGS GL and valuation-audit reconciliation. Full-history submit/cancel fingerprints reject source drift; batch/serial and wider propagation remain fail closed.",
         "2026-10-04: Delivery Note consumption is covered in the same chronological FIFO replay path as direct Material Issue, with regression proof for both consumption before and after the LCV posting timestamp.",
-        "2026-10-04: an unconsumed future Material Transfer destination layer receives the exact opposite valuation delta from the source issue. No COGS GL is created for the internal move; source and destination history fingerprints reject stale submit/cancel plans."
+        "2026-10-04: an unconsumed future Material Transfer destination layer receives the exact opposite valuation delta from the source issue. No COGS GL is created for the internal move; source and destination history fingerprints reject stale submit/cancel plans.",
+        "2026-10-04: one-hop transfer destination FIFO layers may be partially/fully consumed by later terminal Material Issues/Delivery Notes; immutable destination stock corrections and balanced Stock/COGS GL reconcile exact expense deltas and exact unchanged-history cancellation. Recursive/shared destinations and same-timestamp destination consumption remain rejected."
       ]
     },
     {
@@ -827,7 +839,8 @@
         "server/packages/clouderp-erpnext/src/manufacturing-mrp-netting.ts",
         "server/packages/clouderp-erpnext/src/manufacturing-capacity.ts",
         "ERPNext v16.20.0 erpnext/manufacturing/doctype/bom/bom.py",
-        "ERPNext v16.20.0 erpnext/manufacturing/doctype/production_plan/production_plan.py"
+        "ERPNext v16.20.0 erpnext/manufacturing/doctype/production_plan/production_plan.py",
+        "docs/agents/r8/R8B_SUBASSEMBLY_BOM_SELECTION_CLOSURE.md"
       ],
       "known_depth_questions": [
         "multi-level explosion",
@@ -842,7 +855,8 @@
         "Forge has versioned/effective BOMs, immutable Work Order BOM checksum/snapshot, multi-level gross MRP with cycle/depth guards, Material Request conversion, routing/workstation calendars, downtime and finite day-bucket capacity planning.",
         "Forge MRP intentionally labels automatic Material Request output gross_only; its only netting preview is ON_HAND_ONLY_NOT_ATP and excludes reservations, open PO/WO supply, lead time and safety stock.",
         "Current Forge manufacturing audit explicitly marks phantom BOM as missing and substitute material as missing; alternate BOM is only foundation-level because overlapping active alternatives are forbidden.",
-        "Pinned ERPNext BOM exposes phantom/alternative-item semantics, operations, costing and secondary/scrap items, while Production Plan integrates stock reservation and Sales Order/material-request demand."
+        "Pinned ERPNext BOM exposes phantom/alternative-item semantics, operations, costing and secondary/scrap items, while Production Plan integrates stock reservation and Sales Order/material-request demand.",
+        "2026-10-04: per-root explicit subassembly BOM choices are validated and traced by MRP with read permissions on preview/conversion. Simultaneous Active alternate lifecycle, phantom/substitution and full execution policy remain open."
       ],
       "gaps": [
         "Phantom BOM semantics are missing.",
@@ -913,7 +927,9 @@
         "ERPNext v16.20.0 erpnext/subcontracting/doctype/subcontracting_receipt/subcontracting_receipt.py",
         "server/migrations/tenant/0163_subcontracting_material_return.sql",
         "server/migrations/tenant/0165_subcontracting_commit_entitlement.sql",
-        "server/scripts/test-subcontracting-commit-entitlement.py"
+        "server/scripts/test-subcontracting-commit-entitlement.py",
+        "server/migrations/tenant/0168_subcontracting_rejected_finished.sql",
+        "server/scripts/test-subcontracting-rejected-finished.py"
       ],
       "known_depth_questions": [
         "supplied material transfer",
@@ -932,7 +948,8 @@
         "Cancellation exactly reverses submitted Stock/GL/procurement progress and blocks reversal below active receipt/AP dependencies.",
         "Executable R8-B run 36964364802 passed TypeScript build, focused subcontracting lifecycle regressions and the R8 benchmark invariant.",
         "2026-10-04: canonical Stock Entry returns only unconsumed per-BOM supplier material; net entitlement, replacement-supply and receipt cancellation dependencies are checked. Receipt reversal respects stock reservations and accounting locks.",
-        "D1 and in-memory commit checks now enforce current per-BOM net supply, receipt consumption/quantity/service ceilings and source snapshots; concurrent stale transfers, returns and receipts roll back atomically."
+        "D1 and in-memory commit checks now enforce current per-BOM net supply, receipt consumption/quantity/service ceilings and source snapshots; concurrent stale transfers, returns and receipts roll back atomically.",
+        "2026-10-04: explicit rejected finished-good quantity is valued separately from accepted quantity into a distinct same-company leaf warehouse. Pay Full Service is opt-in; all-rejected, tracked split, exact cost rounding and exact reversal are tested. Returns/credit, process loss, quality hold, secondary output and wider reservation/repost remain open."
       ],
       "gaps": [
         "ERPNext-style raw-material reservation/unreservation and richer material-transfer status lifecycle are not yet implemented.",

@@ -35,6 +35,12 @@ export interface MrpRequirement extends JsonObject {
   sources: MrpSourceTrace[];
 }
 
+export interface MrpSubassemblyBomChoice extends JsonObject {
+  item_code: string;
+  bom_no: string;
+  bom_revision: number;
+}
+
 export interface MrpPlannedOutput extends JsonObject {
   row_id: string;
   item_code: string;
@@ -44,6 +50,7 @@ export interface MrpPlannedOutput extends JsonObject {
   schedule_date?: string;
   planned_qty: string;
   planned_qty_micros: number;
+  subassembly_boms?: MrpSubassemblyBomChoice[];
 }
 
 export interface MrpExplosionResult extends JsonObject {
@@ -119,6 +126,8 @@ export function explodeProductionPlanMrp(
     const warehouse = optionalText(row.warehouse);
     const dimensions = rootDimensions(row, index);
     const selected = selectRootBom(row.bom_no, itemCode, company, planningDate, byName, byItem);
+    const subassemblyBoms = selectSubassemblyBoms(row.subassembly_boms, itemCode, company, planningDate, byName, byItem);
+    const usedSubassemblies = new Set<string>();
     outputs.push({
       row_id: rowId,
       item_code: itemCode,
@@ -128,6 +137,9 @@ export function explodeProductionPlanMrp(
       ...(scheduleDate ? { schedule_date: scheduleDate } : {}),
       planned_qty: fromScaledInt(qtyMicros, 6),
       planned_qty_micros: qtyMicros,
+      ...(subassemblyBoms.size > 0 ? { subassembly_boms: [...subassemblyBoms.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([item, document]) => ({ item_code: item, bom_no: document.name, bom_revision: document.data.revision ?? 1 })) } : {}),
     });
     explodeBom({
       rootRowId: rowId,
@@ -138,11 +150,16 @@ export function explodeProductionPlanMrp(
       ...(dimensions ? { dimensions } : {}),
       selected,
       byItem,
+      subassemblyBoms,
+      usedSubassemblies,
       path: [itemCode],
       requirements,
       warnings,
       depth: 0,
     });
+    for (const item of subassemblyBoms.keys()) {
+      if (!usedSubassemblies.has(item)) throw errors.reference(`Selected subassembly BOM for ${item} is not used by planned output ${itemCode}`);
+    }
   }
 
   const sorted = [...requirements.values()]
@@ -207,6 +224,8 @@ function explodeBom(input: {
   dimensions?: PlanningDimensions;
   selected: CanonicalDocument<VersionedBomData>;
   byItem: Map<string, Array<CanonicalDocument<VersionedBomData>>>;
+  subassemblyBoms: Map<string, CanonicalDocument<VersionedBomData>>;
+  usedSubassemblies: Set<string>;
   path: string[];
   requirements: Map<string, RequirementAccumulator>;
   warnings: Set<string>;
@@ -233,7 +252,9 @@ function explodeBom(input: {
     const warehouse = optionalText(row.source_warehouse) ?? input.parentWarehouse;
     if (!warehouse) input.warnings.add(`UNALLOCATED_WAREHOUSE:${row.item_code}`);
 
-    const childBoms = input.byItem.get(row.item_code) ?? [];
+    const explicitChild = input.subassemblyBoms.get(row.item_code);
+    if (explicitChild) input.usedSubassemblies.add(row.item_code);
+    const childBoms = explicitChild ? [explicitChild] : input.byItem.get(row.item_code) ?? [];
     if (childBoms.length > 1) {
       throw errors.reference(`More than one Active BOM is effective for ${row.item_code} during MRP`);
     }
@@ -268,6 +289,8 @@ function explodeBom(input: {
         ...(input.scheduleDate ? { scheduleDate: input.scheduleDate } : {}),
         selected: childBoms[0]!,
         byItem: input.byItem,
+        subassemblyBoms: input.subassemblyBoms,
+        usedSubassemblies: input.usedSubassemblies,
         path: [...input.path, row.item_code],
         requirements: input.requirements,
         warnings: input.warnings,
@@ -285,6 +308,28 @@ function explodeBom(input: {
       });
     }
   }
+}
+
+/** Explicit choices are scoped to one root; no default/availability policy is inferred. */
+function selectSubassemblyBoms(
+  selections: ProductionPlanItem["subassembly_boms"],
+  rootItem: string,
+  company: string,
+  planningDate: string,
+  byName: Map<string, CanonicalDocument<VersionedBomData>>,
+  byItem: Map<string, Array<CanonicalDocument<VersionedBomData>>>,
+): Map<string, CanonicalDocument<VersionedBomData>> {
+  const result = new Map<string, CanonicalDocument<VersionedBomData>>();
+  if (selections === undefined) return result;
+  if (!Array.isArray(selections)) throw errors.validation("subassembly_boms must be an array of explicit item/BOM choices");
+  for (const [index, selection] of selections.entries()) {
+    if (!selection || typeof selection !== "object") throw errors.validation(`subassembly_boms[${index}] requires item_code and bom_no`);
+    const item = requiredText(selection.item_code, `subassembly_boms[${index}].item_code`);
+    const name = requiredText(selection.bom_no, `subassembly_boms[${index}].bom_no`);
+    if (item === rootItem || result.has(item)) throw errors.validation(`Subassembly BOM choice for ${item} must be unique and must not replace the planned output BOM`);
+    result.set(item, selectRootBom(name, item, company, planningDate, byName, byItem));
+  }
+  return result;
 }
 
 function selectRootBom(

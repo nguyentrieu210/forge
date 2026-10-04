@@ -188,12 +188,18 @@ export interface AssetDepreciationData extends JsonObject {
 }
 
 
+export interface ProductionPlanSubassemblyBom extends JsonObject {
+  item_code: string;
+  bom_no: string;
+}
+
 export interface ProductionPlanItem extends JsonObject {
   row_id: string;
   item_code: string;
   bom_no: string;
   planned_qty: DecimalInput;
   planned_qty_micros?: number;
+  subassembly_boms?: ProductionPlanSubassemblyBom[];
   warehouse?: string;
 }
 

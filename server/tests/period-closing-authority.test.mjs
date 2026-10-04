@@ -354,3 +354,79 @@ test("commit-time historical residual accumulation retains exact zero across lar
   };
   await createAndSubmit(kernel, closeVoucher());
 });
+
+
+for (const [label, docstatus, disabled] of [["disabled", 0, true], ["string-disabled", 0, " TRUE "], ["cancelled", 2, false]]) {
+  test(`planner rejects ${label} current P&L before a submitted mutation reaches the store`, async () => {
+    const { store, kernel } = setup();
+    await seedProfit(store, kernel);
+    // The inactive document must shadow the still-active imported Sales master.
+    store.seedDocument("Account", "Sales", "demo", {
+      company: "Demo", root_type: "Income", is_group: 0, disabled,
+    }, docstatus);
+    let submittedCommits = 0;
+    const execute = store.execute.bind(store);
+    store.execute = async (plan) => {
+      if (plan.document.doctype === "Period Closing Voucher" && plan.document.docstatus === 1) submittedCommits++;
+      return execute(plan);
+    };
+    await assert.rejects(createAndSubmit(kernel, closeVoucher()), /PERIOD_CLOSE_INACTIVE_PNL_BALANCE/);
+    assert.equal(submittedCommits, 0);
+    const metadata = await store.listFinanceAccountMetadata("demo");
+    assert.equal(metadata.filter((row) => row.name === "Sales").length, 1);
+    assert.equal(metadata.find((row) => row.name === "Sales").active, false);
+  });
+}
+
+test("planner detects disabled prior-year P&L before current-year close persistence", async () => {
+  const { store, kernel } = setup();
+  await journal(kernel, "JE-PRIOR-DISABLED", "2025-06-30T09:00:00.000Z", [
+    { row_id: "CASH", account: "Cash", debit: "100", credit: "0" },
+    { row_id: "SALES", account: "Sales", debit: "0", credit: "100" },
+  ]);
+  await journal(kernel, "JE-CURRENT-RENT", "2026-07-31T09:00:00.000Z", [
+    { row_id: "RENT", account: "Rent", debit: "60", credit: "0" },
+    { row_id: "CASH", account: "Cash", debit: "0", credit: "60" },
+  ]);
+  store.seedDocument("Account", "Sales", "demo", {
+    company: "Demo", root_type: "Income", is_group: 0, disabled: "1",
+  });
+  store.setPeriodLock("Demo", "2026-12-31");
+  let submittedCommits = 0;
+  const execute = store.execute.bind(store);
+  store.execute = async (plan) => {
+    if (plan.document.doctype === "Period Closing Voucher" && plan.document.docstatus === 1) submittedCommits++;
+    return execute(plan);
+  };
+  await assert.rejects(createAndSubmit(kernel, closeVoucher()), /PERIOD_CLOSE_PRIOR_PNL_BALANCE/);
+  assert.equal(submittedCommits, 0);
+});
+
+test("historical metadata is tenant isolated and includes inactive master evidence", async () => {
+  const { store } = setup();
+  store.seedMaster("Account", "Old Income", "demo", {
+    company: "Demo", root_type: "Income", is_group: 0, disabled: 1,
+  });
+  store.seedDocument("Account", "Foreign", "other", {
+    company: "Demo", root_type: "Income", is_group: 0,
+  });
+  const metadata = await store.listFinanceAccountMetadata("demo");
+  assert.equal(metadata.find((row) => row.name === "Old Income").active, false);
+  assert.equal(metadata.some((row) => row.name === "Foreign"), false);
+});
+
+test("commit-time guard rejects an Account cancellation after planning instead of reviving its master", async () => {
+  const { store, kernel } = setup();
+  await seedProfit(store, kernel);
+  const execute = store.execute.bind(store);
+  store.execute = async (plan) => {
+    if (plan.document.doctype === "Period Closing Voucher" && plan.document.docstatus === 1) {
+      store.seedDocument("Account", "Sales", "demo", {
+        company: "Demo", root_type: "Income", is_group: 0,
+      }, 2);
+    }
+    return execute(plan);
+  };
+  await assert.rejects(createAndSubmit(kernel, closeVoucher()), /PERIOD_CLOSE_INACTIVE_PNL_BALANCE/);
+  assert.equal((await store.getDocument("demo", "Period Closing Voucher", "PCV-2026")).docstatus, 0);
+});

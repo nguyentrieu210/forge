@@ -100,3 +100,14 @@ P2P:
 `Material Request -> RFQ -> Supplier Quotation -> Purchase Order -> Purchase Receipt -> Purchase Invoice -> Payment/Reconciliation`
 
 Focus first on landed cost, supplier advance, returns/debit, subcontracting and ambiguous same-item multi-PO allocation identity.
+
+## Current executable frozen status projection — 2026-10-04
+
+`server/tests/o2c.test.mjs` now consumes the committed ABCM-115 snapshot for the five
+status/progress cases already referenced by its workflow test: STATUS-RECALC-049,
+OUTSTANDING-031, RECEIVE-PARTIAL-035, SUBMIT-018 and SO-DN-SI-PE-HAPPY-043 (all `O2C-*`).
+Expected labels and comparable progress percentages come directly from captured summaries.
+The test checks both pinned source SHAs, capture versions and the committed snapshot hash.
+The old export manifest hash does not match the current snapshot bytes and is not reused
+as a hash certificate. Monetary inputs differ, so only these status/progress projections
+are compared; no 115-case, tax, monetary ledger or current ERPNext runtime parity is claimed.

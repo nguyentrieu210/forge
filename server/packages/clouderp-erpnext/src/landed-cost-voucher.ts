@@ -42,6 +42,7 @@ interface ChronologicalRepost extends JsonObject {
   voucher_revision: number;
   row_id: string;
   kind?: "expense" | "transfer";
+  warehouse?: string;
   target_warehouse?: string;
   target_voucher_type?: string;
   target_voucher_no?: string;
@@ -246,6 +247,7 @@ export class LandedCostVoucherController implements DocumentController<LandedCos
             difference,
             scale,
             allocationPlan.currency,
+            allocationPlan.company,
           );
           await assertUnlocked(context, allocationPlan.company, line.posting_at);
           if (consumerPlan.kind === "expense" && !repostDifferenceAccount) {
@@ -268,17 +270,23 @@ export class LandedCostVoucherController implements DocumentController<LandedCos
               target_row_id: consumerPlan.target.row_id,
             } : {}),
           });
+          if (consumerPlan.downstream?.length) {
+            if (!repostDifferenceAccount) throw errors.reference("repost_difference_account is required for chronological COGS correction");
+            chronologicalReposts.push(...consumerPlan.downstream);
+          }
           if (consumerPlan.fingerprint) {
             const key = `${consumerPlan.fingerprint.item_code}\u0000${consumerPlan.fingerprint.warehouse}`;
-            if (!propagationFingerprints.some((fingerprint) =>
+            if (propagationFingerprints.some((fingerprint) =>
               `${fingerprint.item_code}\u0000${fingerprint.warehouse}` === key)) {
-              propagationFingerprints.push(consumerPlan.fingerprint);
+              throw errors.reference("Landed Cost multiple transfers into one destination require combined chronological replay");
             }
+            propagationFingerprints.push(consumerPlan.fingerprint);
           }
         }
         const before = replayValuation(history, "FIFO", scale);
         const after = replayValuation([...history, adjustment], "FIFO", scale);
-        const ledgerChange = chronologicalReposts.reduce((sum, row) => safeAdd(sum, row.difference_minor), inventoryCost);
+        const ledgerChange = chronologicalReposts.filter((row) => !row.warehouse || row.warehouse === allocation.warehouse)
+          .reduce((sum, row) => safeAdd(sum, row.difference_minor), inventoryCost);
         if (after.layers.some((layer) => layer.value_minor < 0) || safeAdd(after.value_minor, -before.value_minor) !== ledgerChange) {
           throw errors.ledger("Chronological Landed Cost ledger and FIFO replay do not reconcile");
         }
@@ -287,6 +295,13 @@ export class LandedCostVoucherController implements DocumentController<LandedCos
       if (chronologicalReposts.length > 0 && allocationPlan.allocations.filter((other) =>
         other.item_code === allocation.item_code && other.warehouse === allocation.warehouse).length > 1) {
         throw errors.reference("Chronological Landed Cost requires one source allocation per item and warehouse to preserve sequential rounding");
+      }
+      for (const fingerprint of propagationFingerprints) {
+        if (allocationPlan.allocations.some((source) => source.item_code === allocation.item_code && source.warehouse === fingerprint.warehouse) || allocations.some((other) =>
+          other.item_code === allocation.item_code && (other.warehouse === fingerprint.warehouse
+            || other.propagation_fingerprints?.some((entry) => entry.warehouse === fingerprint.warehouse)))) {
+          throw errors.reference("Landed Cost requires independent transfer destination histories to preserve sequential rounding");
+        }
       }
       allocations.push({
         row_id: `ALLOC-${index + 1}`,
@@ -393,7 +408,7 @@ export class LandedCostVoucherController implements DocumentController<LandedCos
           line_key: `LCV-REPOST-${allocation.row_id}-${index + 1}`, source_row_id: allocation.row_id,
           valuation_target_voucher_type: repost.voucher_type, valuation_target_voucher_no: repost.voucher_no,
           valuation_target_voucher_revision: repost.voucher_revision, valuation_target_row_id: repost.row_id,
-          item_code: allocation.item_code, warehouse: allocation.warehouse, actual_qty_micros: 0,
+          item_code: allocation.item_code, warehouse: repost.warehouse ?? allocation.warehouse, actual_qty_micros: 0,
           valuation_rate_minor: 0, stock_value_difference_minor: difference,
           qty_scale: 6, currency_scale: scale, currency, posting_at: repost.posting_at,
         });
@@ -531,10 +546,12 @@ async function planChronologicalConsumer(
   difference: number,
   currencyScale: number,
   currency: string,
+  company: string,
 ): Promise<{
   kind: "expense" | "transfer";
   target?: { warehouse: string; voucher_type: string; voucher_no: string; voucher_revision: number; row_id: string };
   fingerprint?: StockHistoryFingerprint;
+  downstream?: ChronologicalRepost[];
 }> {
   if (line.source_voucher_type !== "Stock Entry" || !line.source_voucher_no) {
     await assertSupportedHistoricalConsumers(context, itemCode, [line]);
@@ -580,6 +597,9 @@ async function planChronologicalConsumer(
     itemCode,
     target.warehouse,
   );
+  if (targetHistory.some((row) => row.batch_no || row.serial_no)) {
+    throw errors.reference("Landed Cost transfer destination history requires dimension-aware batch/serial replay");
+  }
   const targetPosition = fifoSourcePosition(
     targetHistory,
     "Stock Entry",
@@ -587,11 +607,9 @@ async function planChronologicalConsumer(
     revision,
     rowId,
   );
-  if (targetPosition.remaining_qty_micros !== target.actual_qty_micros) {
-    throw errors.reference(
-      `Material Transfer ${line.source_voucher_no} destination layer has downstream consumption; recursive Landed Cost propagation is required`,
-    );
-  }
+  // Only terminal consumers are allowed here. Further transfers still require a
+  // graph-wide replay, including shared destinations and cycle handling.
+  await assertSupportedHistoricalConsumers(context, itemCode, targetPosition.consumed_by);
   const targetAdjustment: StockLedgerEntry = {
     line_key: "PLANNED-LCV-TRANSFER-IN",
     item_code: itemCode,
@@ -608,13 +626,46 @@ async function planChronologicalConsumer(
     valuation_target_voucher_revision: revision,
     valuation_target_row_id: rowId,
   };
+  const downstream: ChronologicalRepost[] = [];
+  for (let i = 0; i < targetHistory.length; i++) {
+    const consumer = targetHistory[i]!;
+    if (consumer.actual_qty_micros >= 0) continue;
+    if (consumer.posting_at <= target.posting_at) {
+      if (targetPosition.consumed_by.includes(consumer)) {
+        throw errors.reference("Landed Cost transfer destination consumption must post strictly after its receipt");
+      }
+      continue;
+    }
+    const prefix = targetHistory.slice(0, i);
+    const oldValue = valueIssue(prefix, -consumer.actual_qty_micros, "FIFO", currencyScale).stock_value_difference_minor;
+    const newValue = valueIssue([...prefix, targetAdjustment], -consumer.actual_qty_micros, "FIFO", currencyScale).stock_value_difference_minor;
+    const consumerDifference = safeAdd(newValue, -oldValue);
+    if (consumerDifference === 0) continue;
+    await assertSupportedHistoricalConsumers(context, itemCode, [consumer]);
+    await assertUnlocked(context, company, consumer.posting_at);
+    downstream.push({
+      posting_at: consumer.posting_at, difference_minor: consumerDifference,
+      consumer: `${consumer.source_voucher_type}:${consumer.source_voucher_no}:${consumer.line_key}`,
+      voucher_type: requiredText(consumer.source_voucher_type, "consumer voucher type"),
+      voucher_no: requiredText(consumer.source_voucher_no, "consumer voucher no"),
+      voucher_revision: consumer.source_voucher_revision ?? 0,
+      row_id: consumer.source_row_id ?? consumer.line_key,
+      kind: "expense", warehouse: target.warehouse,
+    });
+  }
+  const before = replayValuation(targetHistory, "FIFO", currencyScale);
   const after = replayValuation([...targetHistory, targetAdjustment], "FIFO", currencyScale);
+  const ledgerChange = downstream.reduce((sum, row) => safeAdd(sum, row.difference_minor), -difference);
+  if (safeAdd(after.value_minor, -before.value_minor) !== ledgerChange) {
+    throw errors.ledger("Chronological Landed Cost destination ledger and FIFO replay do not reconcile");
+  }
   if (after.layers.some((layer) => layer.value_minor < 0)) {
     throw errors.validation("Landed Cost transfer propagation would make a destination FIFO layer negative");
   }
 
   return {
     kind: "transfer",
+    downstream,
     target: {
       warehouse: target.warehouse,
       voucher_type: "Stock Entry",

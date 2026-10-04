@@ -118,3 +118,28 @@ inserts and rejects malformed source dates. Memory uses active accounts for the 
 fingerprint while preserving historical inactive-account/date/residual safety; historical
 and source accumulations use exact integers. Matching memory and SQLite regressions
 prove zero-net disabled history is accepted and nonzero disabled P&L is rejected.
+
+## Historical account planning — 2026-10-04
+
+The close planner now reads canonical historical account metadata through
+`LedgerAggregateReader.listFinanceAccountMetadata`, including disabled and cancelled
+accounts. D1 uses the existing historical/active account views; memory mirrors document
+precedence. Inactive prior-year residuals and current-period residuals are rejected before
+a submitted close reaches persistence. Zero-net inactive history remains acceptable and
+is excluded from the active source fingerprint.
+
+Migration `0170_period_close_account_tombstone.sql` corrects an older active-view fallback:
+a cancelled Account document must shadow a same-name imported master. The memory commit
+check applies the same rule and still rejects an account cancellation after planning.
+No permission to post to inactive accounts or automatic historical repair is introduced.
+
+Evidence: 21 focused Node tests across `period-closing-authority.test.mjs` and
+`period-close-account-metadata.test.mjs`, including real SQLite view/reader comparison;
+`test-period-close-account-tombstone.py` verifies atomic rejection of nonzero cancelled
+history and acceptance of zero-net cancelled history. Existing source-insert/chronology
+SQL regressions remain green. The wider Finance flow remains PARTIAL.
+
+The active and historical views also normalize string checkbox values such as `" TRUE "`
+for disabled/group flags, matching controller and memory classification. Real SQLite
+regressions cover inactive string flags and document/master group flags; no string flag
+can silently turn an inactive account into closing authority.

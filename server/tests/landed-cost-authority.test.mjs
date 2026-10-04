@@ -354,7 +354,7 @@ test("Backdated Landed Cost carries FIFO value through an unconsumed future Mate
   assert.equal((await store.getTrackedStockState("demo", "ITEM-1", "Transit")).stock_value_minor, 500);
 });
 
-test("Backdated Landed Cost still fails closed when a transferred FIFO layer is consumed again", async () => {
+test("Backdated Landed Cost corrects terminal consumption from a transferred FIFO layer and cancels exactly", async () => {
   const { store, kernel } = setup();
   store.seedMaster("Warehouse", "Transit", "demo", { company: "Demo", is_group: 0, disabled: 0 });
   await submitPo(kernel, "PO-LCV-TRANSFER-CONSUMED", "1");
@@ -379,11 +379,70 @@ test("Backdated Landed Cost still fails closed when a transferred FIFO layer is 
       items: [{ row_id: "TRANSIT-ISSUE", item_code: "ITEM-1", qty: "0.5", source_warehouse: "Transit" }],
     },
   });
-  await assert.rejects(
-    submitLcv(kernel, "LCV-TRANSFER-CONSUMED", "PR-LCV-TRANSFER-CONSUMED", "2026-10-02T08:15:00.000Z", "COGS Repost"),
-    /destination layer has downstream consumption/i,
-  );
-  assert.equal((await store.getDocument("demo", "Landed Cost Voucher", "LCV-TRANSFER-CONSUMED")).docstatus, 0);
+  await submitLcv(kernel, "LCV-TRANSFER-CONSUMED", "PR-LCV-TRANSFER-CONSUMED", "2026-10-02T08:15:00.000Z", "COGS Repost");
+  const lcv = await store.getDocument("demo", "Landed Cost Voucher", "LCV-TRANSFER-CONSUMED");
+  assert.equal(lcv.data.allocations[0].chronological_reposts.length, 2);
+  assert.equal(lcv.data.allocations[0].chronological_reposts[1].warehouse, "Transit");
+  assert.equal((await store.getTrackedStockState("demo", "ITEM-1", "Stores")).stock_value_minor, 750);
+  assert.equal((await store.getTrackedStockState("demo", "ITEM-1", "Transit")).stock_value_minor, 0);
+  const history = await store.getStockLedgerHistory("demo", "ITEM-1", "Transit");
+  assert.equal(auditOutgoingValuation(history, "FIFO").mismatch_count, 0);
+  const gl = await store.getVoucherGlEntries("demo", "Landed Cost Voucher", "LCV-TRANSFER-CONSUMED", 2);
+  assert.equal(gl.find(row => row.line_key.startsWith("CHRONO-COGS-"))?.debit_minor, 250);
+  assert.equal(gl.reduce((sum, row) => sum + row.debit_minor - row.credit_minor, 0), 0);
+  await mutate(kernel, { commandId: "transfer-consumed-cancel", doctype: "Landed Cost Voucher", name: "LCV-TRANSFER-CONSUMED", action: "cancel", expectedVersion: 2, document: {} });
+  assert.equal((await store.getTrackedStockState("demo", "ITEM-1", "Stores")).stock_value_minor, 500);
+  assert.equal((await store.getTrackedStockState("demo", "ITEM-1", "Transit")).stock_value_minor, 0);
+  assert.equal(auditOutgoingValuation(await store.getStockLedgerHistory("demo", "ITEM-1", "Transit"), "FIFO").mismatch_count, 0);
+});
+
+for (const purpose of ["Material Issue", "Delivery Note", "Material Transfer"]) {
+  test(`Transferred FIFO landed cost handles ${purpose} within its declared boundary`, async () => {
+    const { store, kernel } = setup();
+    store.seedMaster("Warehouse", "Transit", "demo", { company: "Demo", is_group: 0, disabled: 0 });
+    store.seedMaster("Warehouse", "Finished", "demo", { company: "Demo", is_group: 0, disabled: 0 });
+    await submitPo(kernel, "PO-DESTINATION", "1");
+    await submitReceipt(kernel, "PR-DESTINATION", "PO-DESTINATION", "ROW", "10", "2026-10-02T08:00:00.000Z");
+    await createAndSubmit(kernel, { doctype: "Stock Entry", name: "TRANSFER-DESTINATION", document: {
+      company: "Demo", posting_at: "2026-10-02T08:30:00.000Z", purpose: "Material Transfer",
+      items: [{ row_id: "ROW", item_code: "ITEM-1", qty: "0.5", source_warehouse: "Stores", target_warehouse: "Transit" }],
+    } });
+    await createAndSubmit(kernel, { doctype: purpose === "Delivery Note" ? "Delivery Note" : "Stock Entry", name: "DESTINATION-CONSUMER", document: {
+      company: "Demo", currency: "USD", posting_at: "2026-10-02T08:40:00.000Z", purpose, issue_purpose: "Xuất mẫu",
+      items: [{ row_id: "ROW", item_code: "ITEM-1", qty: "0.25", source_warehouse: "Transit", warehouse: "Transit", target_warehouse: "Finished", rate: "10" }],
+    } });
+    if (purpose === "Material Transfer") {
+      await assert.rejects(submitLcv(kernel, "LCV-DESTINATION", "PR-DESTINATION", "2026-10-02T08:15:00.000Z", "COGS Repost"), /transfer\/manufacturing\/cancelled chains/i);
+      assert.equal((await store.getTrackedStockState("demo", "ITEM-1", "Transit")).stock_value_minor, 250);
+      return;
+    }
+    await assert.rejects(submitLcv(kernel, "LCV-MISSING-ACCOUNT", "PR-DESTINATION"), /repost_difference_account/i);
+    await submitLcv(kernel, "LCV-DESTINATION", "PR-DESTINATION", "2026-10-02T08:15:00.000Z", "COGS Repost");
+    assert.equal((await store.getTrackedStockState("demo", "ITEM-1", "Transit")).stock_value_minor, 375);
+    assert.equal(auditOutgoingValuation(await store.getStockLedgerHistory("demo", "ITEM-1", "Transit"), "FIFO").mismatch_count, 0);
+    const gl = await store.getVoucherGlEntries("demo", "Landed Cost Voucher", "LCV-DESTINATION", 2);
+    assert.equal(gl.find(row => row.line_key.startsWith("CHRONO-COGS-"))?.debit_minor, 125);
+    await createAndSubmit(kernel, { doctype: "Stock Entry", name: "LATER-ISSUE", document: {
+      company: "Demo", posting_at: "2026-10-02T08:50:00.000Z", purpose: "Material Issue",
+      items: [{ row_id: "ROW", item_code: "ITEM-1", qty: "0.1", source_warehouse: "Transit" }],
+    } });
+    await assert.rejects(mutate(kernel, { commandId: "destination-cancel-stale", doctype: "Landed Cost Voucher", name: "LCV-DESTINATION", action: "cancel", expectedVersion: 2, document: {} }), /history|mutations|repost/i);
+  });
+}
+
+test("Landed Cost rejects shared transfer destinations until combined replay is available", async () => {
+  const { store, kernel } = setup();
+  store.seedMaster("Warehouse", "Transit", "demo", { company: "Demo", is_group: 0, disabled: 0 });
+  await submitPo(kernel, "PO-SHARED", "1");
+  await submitReceipt(kernel, "PR-SHARED", "PO-SHARED", "ROW", "10", "2026-10-02T08:00:00.000Z");
+  for (const [name, postingAt] of [["TRANSFER-SHARED-1", "2026-10-02T08:30:00.000Z"], ["TRANSFER-SHARED-2", "2026-10-02T08:40:00.000Z"]]) {
+    await createAndSubmit(kernel, { doctype: "Stock Entry", name, document: {
+      company: "Demo", posting_at: postingAt, purpose: "Material Transfer",
+      items: [{ row_id: "ROW", item_code: "ITEM-1", qty: "0.25", source_warehouse: "Stores", target_warehouse: "Transit" }],
+    } });
+  }
+  await assert.rejects(submitLcv(kernel, "LCV-SHARED", "PR-SHARED"), /multiple transfers.*combined chronological replay/i);
+  assert.equal((await store.getTrackedStockState("demo", "ITEM-1", "Transit")).stock_value_minor, 500);
 });
 
 test("Stock Entry transfer keeps one stable source-row identity across both warehouses", async () => {

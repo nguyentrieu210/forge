@@ -45,7 +45,19 @@ export interface GlAccountBalance {
   balance_minor: number;
 }
 
+/** Current account classification retained for historical GL, including disabled/cancelled accounts.
+ * Account documents always supersede same-name imported masters, even when inactive. */
+export interface FinanceAccountMetadata {
+  name: string;
+  company: string;
+  root_type: string;
+  is_group: boolean;
+  active: boolean;
+}
+
 export interface LedgerAggregateReader {
+  /** Historical account authority; inactive records are evidence, not permission to post. */
+  listFinanceAccountMetadata(tenantId: string): Promise<FinanceAccountMetadata[]>;
   /**
    * Canonical company/date/account aggregate over immutable GL rows.
    *

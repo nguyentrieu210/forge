@@ -122,15 +122,25 @@ The next Landed Cost depth step is **full chronological valuation repost** acros
 stock-value propagation. Remaining cases include:
 
 - broader issue/cancellation chains and rollback after subsequent stock mutations;
-- recursive warehouse transfers, transfers before the LCV posting time, and destination layers already consumed again;
+- recursive warehouse transfers, transfers before the LCV posting time, shared destination histories and same-timestamp destination consumption;
 - manufacturing/WIP and finished-goods valuation propagation;
 - Moving Average historical replay;
 - wider ERPNext-exact runtime differential fixtures.
 
-Forge supports past/future terminal FIFO Material Issue and Delivery Note corrections plus one-hop future transfer value carry without
+Forge supports past/future terminal FIFO Material Issue and Delivery Note corrections plus one-hop future transfer value carry through terminal destination Material Issues/Delivery Notes without
 rewriting other documents. Chronological cancellation requires unchanged external history,
 including immutable rows from a later voucher subsequently cancelled. Migration 0161
 checks the complete history horizon on submit and chronological cancel.
 
 That boundary is narrower than ERPNext v16.20.0, so the R8 classifications remain
 `PARTIAL`.
+
+### Transfer destination terminal consumption — 2026-10-04
+
+A one-hop future transfer destination may now be partially or fully consumed by later
+terminal Material Issues or Delivery Notes. Targeted immutable destination corrections
+post the exact incremental expense with balanced Stock/COGS GL. Fully consumed destinations
+retain zero residual stock value. Exact cancellation reverses the stored effects when both
+source and destination fingerprints remain unchanged. Recursive/shared destination paths
+and same-timestamp destination consumption remain rejected. See the updated chronological
+spec and `landed-cost-authority.test.mjs`; this is a bounded implementation, not full parity.

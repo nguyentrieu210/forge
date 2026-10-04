@@ -1,5 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { createO2CControllerRegistry } from "../dist/packages/clouderp-selling/src/index.js";
 import { DocumentKernel, InMemoryMutationStore, deriveDeliveryNoteStatus, deriveO2CStatus } from "../dist/packages/document-kernel/src/index.js";
 import { createAndSubmit, mutate, orderDocument, seedStandardMasters } from "./helpers.mjs";
@@ -491,12 +493,40 @@ test("O2C workflow status labels are re-derived server-side to match the ERPNext
   // status must reflect actual fulfilment/billing/payment state on every read, not
   // freeze at submit. Fixtures: O2C-E-STATUS-RECALC-049, O2C-C-OUTSTANDING-031,
   // O2C-D-RECEIVE-PARTIAL-035, O2C-B-SUBMIT-018, O2C-E-SO-DN-SI-PE-HAPPY-043.
+  // Compare only status/progress projections: monetary fixture inputs differ.
+  // This consumes frozen upstream observations, not the stale aggregate differential report.
+  const captureBytes = readFileSync(new URL(
+    "../docs/spec/source-exact/oracle/snapshots/ABCM-115/runtime__o2c-matrix-capture.json", import.meta.url,
+  ));
+  // Pin the committed snapshot bytes; the older manifest describes an export
+  // with different bytes and must not be presented as a current hash check.
+  assert.equal(createHash("sha256").update(captureBytes).digest("hex"),
+    "78816bd604f513af8f2118da955824e81672845d70f0a9c802367eee1520ce2f");
+  const capture = JSON.parse(captureBytes);
+  const sourceLock = JSON.parse(readFileSync(new URL("../source-lock.json", import.meta.url), "utf8"));
+  assert.equal(capture.provenance.erpnext, "16.20.0");
+  assert.equal(capture.provenance.frappe, "16.19.0");
+  assert.equal(sourceLock.sources.find((row) => row.app === "erpnext").full_sha,
+    "ff46d20b259a2d65a7ded959df9f9a42991a3562");
+  assert.equal(sourceLock.sources.find((row) => row.app === "frappe").full_sha,
+    "ba18090b141740e75d52aa97bfc525ff2f831f6c");
+  const oracle = (id) => {
+    const fixture = capture.fixtures[id];
+    assert.equal(fixture?.captured, true, `Missing upstream capture ${id}`);
+    assert.equal(fixture.summary?.kind, "state", `Invalid upstream state ${id}`);
+    return fixture.summary;
+  };
+  const progress = oracle("O2C-E-STATUS-RECALC-049");
+  const unpaid = oracle("O2C-C-OUTSTANDING-031");
+  const partial = oracle("O2C-D-RECEIVE-PARTIAL-035");
+  const delivery = oracle("O2C-B-SUBMIT-018");
+  const completed = oracle("O2C-E-SO-DN-SI-PE-HAPPY-043");
   const { store, kernel } = setup();
   const so = async () => store.getDocument("demo", "Sales Order", "SO-ST");
   const si = async () => store.getDocument("demo", "Sales Invoice", "SI-ST");
 
   await createAndSubmit(kernel, { doctype: "Sales Order", name: "SO-ST", document: orderDocument("10") });
-  assert.equal((await so()).status, "To Deliver and Bill"); // nothing delivered or billed yet
+  assert.equal((await so()).status, progress.steps.initial.status);
 
   // partial delivery (5 of 10)
   await createAndSubmit(kernel, {
@@ -504,9 +534,9 @@ test("O2C workflow status labels are re-derived server-side to match the ERPNext
     document: { customer: "CUST-0001", company: "Demo", currency: "USD", posting_at: now(), against_sales_order: "SO-ST",
       items: [{ row_id: "1", item_code: "ITEM-001", qty: "5", rate: "25", warehouse: "Stores", valuation_rate: "15" }] },
   });
-  assert.equal((await store.getDocument("demo", "Delivery Note", "DN-ST")).status, "To Bill"); // O2C-B-SUBMIT-018
-  assert.equal((await so()).data.delivered_percentage, "50.00");
-  assert.equal((await so()).status, "To Deliver and Bill"); // billed still 0
+  assert.equal((await store.getDocument("demo", "Delivery Note", "DN-ST")).status, delivery.dn.status);
+  assert.equal(Number((await so()).data.delivered_percentage), progress.steps.after_partial_dn.per_delivered);
+  assert.equal((await so()).status, progress.steps.after_partial_dn.status);
 
   // full billing (10 of 10) -> SO fully billed but only 50% delivered
   await createAndSubmit(kernel, {
@@ -516,9 +546,9 @@ test("O2C workflow status labels are re-derived server-side to match the ERPNext
       items: [{ row_id: "1", item_code: "ITEM-001", qty: "10", rate: "25", income_account: "Sales" }],
       taxes: [{ row_id: "T1", account: "Output Tax", rate: "10" }] },
   });
-  assert.equal((await so()).data.billed_percentage, "100.00");
-  assert.equal((await so()).status, "To Deliver");   // O2C-E-STATUS-RECALC-049 (delivered<100, billed==100)
-  assert.equal((await si()).status, "Unpaid");        // O2C-C-OUTSTANDING-031 (outstanding == grand 275)
+  assert.equal(Number((await so()).data.billed_percentage), progress.steps.after_full_si.per_billed);
+  assert.equal((await so()).status, progress.so.status);
+  assert.equal((await si()).status, unpaid.status);
 
   // partial payment (100 of 275) -> Partly Paid
   await createAndSubmit(kernel, {
@@ -528,7 +558,7 @@ test("O2C workflow status labels are re-derived server-side to match the ERPNext
       references: [{ row_id: "R1", reference_doctype: "Sales Invoice", reference_name: "SI-ST", allocated_amount: "100" }] },
   });
   assert.equal((await si()).data.outstanding_amount, "175.00");
-  assert.equal((await si()).status, "Partly Paid");   // O2C-D-RECEIVE-PARTIAL-035
+  assert.equal((await si()).status, partial.si_status);
 
   // settle the remaining 175 -> Paid
   await createAndSubmit(kernel, {
@@ -537,7 +567,7 @@ test("O2C workflow status labels are re-derived server-side to match the ERPNext
       paid_from: "Debtors", paid_to: "Bank", paid_amount: "175", received_amount: "175", currency: "USD", currency_scale: 2,
       references: [{ row_id: "R1", reference_doctype: "Sales Invoice", reference_name: "SI-ST", allocated_amount: "175" }] },
   });
-  assert.equal((await si()).status, "Paid");
+  assert.equal((await si()).status, completed.si.status);
 
   // deliver the remaining 5 -> SO fully delivered AND fully billed -> Completed
   await createAndSubmit(kernel, {
@@ -545,8 +575,8 @@ test("O2C workflow status labels are re-derived server-side to match the ERPNext
     document: { customer: "CUST-0001", company: "Demo", currency: "USD", posting_at: now(), against_sales_order: "SO-ST",
       items: [{ row_id: "1", item_code: "ITEM-001", qty: "5", rate: "25", warehouse: "Stores", valuation_rate: "15" }] },
   });
-  assert.equal((await so()).data.delivered_percentage, "100.00");
-  assert.equal((await so()).status, "Completed");     // O2C-E-SO-DN-SI-PE-HAPPY-043
+  assert.equal(Number((await so()).data.delivered_percentage), completed.so.per_delivered);
+  assert.equal((await so()).status, completed.so.status);
 });
 
 test("master-data existence is validated at submit, not create (intentional defer-to-submit)", async () => {

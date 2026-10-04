@@ -215,3 +215,23 @@ test("MRP tenant scope is server-controlled", async () => {
     /tenant scope is controlled/,
   );
 });
+
+test("MRP explicit subassembly choice respects selected BOM visibility in preview and conversion", async () => {
+  const planDoc = plan();
+  planDoc.data.items[0].subassembly_boms = [{ item_code: "SUB", bom_no: "BOM-SUB" }];
+  const root = bom();
+  root.data.items[0].item_code = "SUB";
+  const child = bom();
+  child.name = "BOM-SUB";
+  child.data.item = "SUB";
+  for (const url of [PREVIEW, CREATE]) {
+    const ctx = context({ planDoc, boms: [root, child], unreadable: new Set(["BOM-SUB"]) });
+    await assert.rejects(() => routeManufacturingMrpApi(request(url, { production_plan: "PLAN-1", material_request_type: "Purchase" }), new URL(url), ctx.value), /outside the current read scope/);
+    assert.equal(ctx.createCalls.length, 0);
+  }
+  const ctx = context({ planDoc, boms: [root, child] });
+  const response = await routeManufacturingMrpApi(request(PREVIEW, { production_plan: "PLAN-1" }), new URL(PREVIEW), ctx.value);
+  const result = (await json(response)).message;
+  assert.equal(result.purchase_requirements[0].gross_qty, "18.000000");
+  assert.deepEqual(result.planned_outputs[0].subassembly_boms, [{ item_code: "SUB", bom_no: "BOM-SUB", bom_revision: 1 }]);
+});

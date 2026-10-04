@@ -24,7 +24,7 @@ import { errors } from "../../core/src/index.js";
 import { fromScaledInt, toScaledInt } from "../../money/src/index.js";
 import { deriveDeliveryNoteStatus, deriveO2CStatus } from "./status.js";
 import { deriveSalesOrderProgress } from "./sales-order-progress.js";
-import type { GlAccountBalance, GlAccountBalanceQuery, MutationStore, OpenPaymentBalance, OpenPaymentBalanceQuery, SubmittedQuantityQuery, TrackedStockPosition, TrackedStockState } from "./store.js";
+import type { FinanceAccountMetadata, GlAccountBalance, GlAccountBalanceQuery, MutationStore, OpenPaymentBalance, OpenPaymentBalanceQuery, SubmittedQuantityQuery, TrackedStockPosition, TrackedStockState } from "./store.js";
 
 class KeyedMutex {
   private tails = new Map<string, Promise<void>>();
@@ -164,6 +164,28 @@ export class InMemoryMutationStore implements MutationStore {
       }
     }
     return total;
+  }
+
+  async listFinanceAccountMetadata(tenantId: string): Promise<FinanceAccountMetadata[]> {
+    const accounts = new Map<string, FinanceAccountMetadata>();
+    const flag = (value: unknown): boolean => value === true || value === 1 || value === "1"
+      || (typeof value === "string" && value.trim().toLowerCase() === "true");
+    const metadata = (name: string, data: JsonObject, active: boolean): FinanceAccountMetadata => ({
+      name, company: String(data.company ?? ""), root_type: String(data.root_type ?? ""),
+      is_group: flag(data.is_group), active,
+    });
+    const prefix = `${tenantId}:Account:`;
+    for (const [key, data] of this.masterRecords) {
+      if (key.startsWith(prefix)) accounts.set(key.slice(prefix.length),
+        metadata(key.slice(prefix.length), data, !flag(data.disabled)));
+    }
+    for (const document of this.documents.values()) {
+      if (document.tenant_id === tenantId && document.doctype === "Account") {
+        accounts.set(document.name, metadata(document.name, document.data,
+          document.docstatus !== 2 && !flag(document.data.disabled)));
+      }
+    }
+    return [...accounts.values()].sort((left, right) => left.name.localeCompare(right.name));
   }
 
   async getGlAccountBalances(query: GlAccountBalanceQuery): Promise<GlAccountBalance[]> {
@@ -1202,10 +1224,11 @@ export class InMemoryMutationStore implements MutationStore {
         || String(account.is_group ?? "").trim().toLowerCase() === "true") continue;
       if (account.company && account.company !== data.company) continue;
       const master = this.masterRecords.get(`${document.tenant_id}:Account:${entry.line.account}`);
-      const activeAccount = accountDocument && accountDocument.docstatus !== 2
-        ? (accountDocument.data.disabled === true || accountDocument.data.disabled === 1
-          || accountDocument.data.disabled === "1" ? null : accountDocument.data)
-        : master;
+      const candidate = accountDocument ? accountDocument.data : master;
+      const activeAccount = candidate && (!accountDocument || accountDocument.docstatus !== 2)
+        && candidate.disabled !== true && candidate.disabled !== 1 && candidate.disabled !== "1"
+        && String(candidate.disabled ?? "").trim().toLowerCase() !== "true"
+        ? candidate : null;
       const active = Boolean(activeAccount);
       const fingerprintAccount = active && activeAccount?.company === data.company;
       const key = `${entry.line.account}:${entry.line.currency}:${entry.line.currency_scale}`;
@@ -1328,7 +1351,16 @@ export class InMemoryMutationStore implements MutationStore {
         } else {
           for (const field of ["company", "supplier", "currency", "purchase_order", "purchase_order_row_id", "service_item",
             "production_item", "supplier_warehouse", "target_warehouse"]) if (executionData[field] !== data[field]) fail();
-          received = add(received, integer(executionData.received_qty_micros, true));
+          const receiptQty = integer(executionData.received_qty_micros, true);
+          const rejectedQty = integer(executionData.rejected_qty_micros === undefined ? 0 : executionData.rejected_qty_micros);
+          if (rejectedQty > receiptQty) fail();
+          if (executionData.accepted_qty_micros !== undefined
+            && integer(executionData.accepted_qty_micros) !== receiptQty - rejectedQty) fail();
+          if (rejectedQty > 0 && (executionData.rejected_service_policy !== "Pay Full Service"
+            || typeof executionData.rejected_warehouse !== "string" || !executionData.rejected_warehouse.trim()
+            || executionData.rejected_warehouse === data.target_warehouse
+            || executionData.rejected_warehouse === data.supplier_warehouse)) fail();
+          received = add(received, receiptQty);
           serviceUsed = add(serviceUsed, integer(executionData.service_cost_minor));
           const supplied = rows(executionData, "supplied_items");
           const seen = new Set<string>();
@@ -1396,7 +1428,6 @@ export class InMemoryMutationStore implements MutationStore {
     // Recheck unsupported non-party foreign balances inside the mutation mutex;
     // a backdated GL row or Account currency change after planning must not turn
     // an AR/AP-only revaluation into a silently incomplete company close.
-    const foreignNonPartyBalances = new Map<string, bigint>();
     for (const stored of this.voucherGlEntries) {
       if (stored.tenant_id !== tenantId || stored.line.posting_at.slice(0, 10) > postingDate) continue;
       const source = this.documents.get(this.docKey(tenantId, stored.voucher_type, stored.voucher_no));
@@ -1412,11 +1443,12 @@ export class InMemoryMutationStore implements MutationStore {
       if (!accountCurrency || accountCurrency === companyCurrency
         || accountType === "Receivable" || accountType === "Payable"
         || !(rootType === "Asset" || rootType === "Liability" || accountType === "Bank" || accountType === "Cash")) continue;
-      const key = `${stored.line.account}\u0000${stored.line.currency}\u0000${stored.line.currency_scale}`;
-      foreignNonPartyBalances.set(key, (foreignNonPartyBalances.get(key) ?? 0n) + BigInt(stored.line.debit_minor) - BigInt(stored.line.credit_minor));
-    }
-    if ([...foreignNonPartyBalances.values()].some((balance) => balance !== 0n)) {
-      throw errors.lifecycle("FINANCE_FX_NON_PARTY_DUAL_CURRENCY_REQUIRED");
+      // Equal company-currency debits/credits are not proof of equal foreign
+      // units. Fail closed even for zero net or apparent reversal history until
+      // immutable account-currency amounts establish the actual foreign balance.
+      if (stored.line.debit_minor !== 0 || stored.line.credit_minor !== 0) {
+        throw errors.lifecycle("FINANCE_FX_NON_PARTY_DUAL_CURRENCY_REQUIRED");
+      }
     }
 
     const grouped = new Map<string, {

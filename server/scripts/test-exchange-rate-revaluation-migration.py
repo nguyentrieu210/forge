@@ -43,6 +43,7 @@ db.execute("""CREATE TABLE gl_entries(
 )""")
 db.executescript((root / "migrations/tenant/0154_exchange_rate_revaluation.sql").read_text(encoding="utf-8"))
 db.executescript((root / "migrations/tenant/0162_exchange_rate_revaluation_non_party_safety.sql").read_text(encoding="utf-8"))
+db.executescript((root / "migrations/tenant/0169_exchange_rate_revaluation_zero_net_safety.sql").read_text(encoding="utf-8"))
 
 
 def master(record_type, name, data):
@@ -203,13 +204,18 @@ db.commit()
 expect("FINANCE_FX_NON_PARTY_DUAL_CURRENCY_REQUIRED", lambda: submit_fx("FX-BANK-UPDATE"))
 expect("FINANCE_FX_NON_PARTY_DUAL_CURRENCY_REQUIRED", lambda: submit_fx("FX-BANK-INSERT", True))
 
-# Exact opposite ledger rows remove the active balance; history is not deleted.
+# Opposite base rows cannot prove equal foreign units, even when the base net is zero.
 bank_row("BANK-REVERSE", -100)
 bank_row("BANK-FUTURE", 50, posting_at="2026-10-01T00:00:00Z")
 bank_row("BANK-OTHER-COMPANY", 50, company="Other")
 bank_row("BANK-OTHER-TENANT", 50, tenant="other")
 db.commit()
-submit_fx("FX-BANK-ZERO")
+expect("FINANCE_FX_NON_PARTY_DUAL_CURRENCY_REQUIRED", lambda: submit_fx("FX-BANK-ZERO-UPDATE"))
+expect("FINANCE_FX_NON_PARTY_DUAL_CURRENCY_REQUIRED", lambda: submit_fx("FX-BANK-ZERO-INSERT", True))
+# Future/other scope rows alone are allowed. Zero-valued canonical rows are allowed.
+db.execute("DELETE FROM gl_entries WHERE voucher_no IN ('BANK-POST-PLAN','BANK-REVERSE')")
+bank_row("BANK-ALL-ZERO", 0)
+submit_fx("FX-BANK-OUTSIDE-SCOPE")
 db.execute("UPDATE documents SET docstatus=2 WHERE doctype='Exchange Rate Revaluation'")
 db.commit()
 
@@ -253,3 +259,5 @@ db.execute("UPDATE master_records SET disabled=1 WHERE record_type='Account' AND
 db.commit()
 expect("FINANCE_FX_NON_PARTY_DUAL_CURRENCY_REQUIRED", lambda: submit_fx("FX-DISABLED-MASTER"))
 print("EXCHANGE_RATE_REVALUATION_HISTORICAL_ACCOUNT_PASS")
+
+print("EXCHANGE_RATE_REVALUATION_0169_ZERO_NET_PASS")

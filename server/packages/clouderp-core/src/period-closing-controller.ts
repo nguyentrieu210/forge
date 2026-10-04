@@ -185,20 +185,19 @@ export class PeriodClosingVoucherController implements DocumentController<Period
       throw errors.reference("Closing account belongs to another company");
     }
 
-    const accountRecords = await context.reader.listMasterRecordData(
-      context.command.tenant_id,
-      "Account",
-    );
+    // Historical metadata retains disabled/cancelled accounts without treating them
+    // as posting authority. Active Account documents supersede imported masters.
+    const accountRecords = await context.reader.listFinanceAccountMetadata(context.command.tenant_id);
+    const historicalPnl = new Set<string>();
     const pnl = new Map<string, "Income" | "Expense">();
     for (const record of accountRecords) {
-      const root = text(record.data.root_type);
+      const root = record.root_type;
       if (root !== "Income" && root !== "Expense") continue;
-      if (checked(record.data.is_group)) continue;
-      if (text(record.data.company) && text(record.data.company) !== companyName) continue;
-      pnl.set(record.name, root);
+      if (record.is_group) continue;
+      if (record.company && record.company !== companyName) continue;
+      historicalPnl.add(record.name);
+      if (record.active && record.company === companyName) pnl.set(record.name, root);
     }
-    if (pnl.size === 0) throw errors.reference(`Company ${companyName} has no leaf Income/Expense accounts`);
-
     // A close must not hide historical P&L that was never closed (or was reopened).
     const priorEnd = new Date(`${periodStart}T00:00:00.000Z`);
     priorEnd.setUTCDate(priorEnd.getUTCDate() - 1);
@@ -209,7 +208,7 @@ export class PeriodClosingVoucherController implements DocumentController<Period
       throughDate: priorEnd.toISOString().slice(0, 10),
       ...(text(input.branch) ? { branch: text(input.branch) } : {}),
     });
-    if (priorBalances.some((row) => pnl.has(row.account) && row.balance_minor !== 0)) {
+    if (priorBalances.some((row) => historicalPnl.has(row.account) && row.balance_minor !== 0)) {
       throw errors.lifecycle("PERIOD_CLOSE_PRIOR_PNL_BALANCE: close or correct earlier P&L before closing this period");
     }
 
@@ -220,6 +219,11 @@ export class PeriodClosingVoucherController implements DocumentController<Period
       throughDate: periodEnd,
       ...(text(input.branch) ? { branch: text(input.branch) } : {}),
     });
+    if (balances.some((row) => historicalPnl.has(row.account) && !pnl.has(row.account)
+      && row.balance_minor !== 0)) {
+      throw errors.lifecycle("PERIOD_CLOSE_INACTIVE_PNL_BALANCE: restore or correct inactive P&L accounts before closing");
+    }
+    if (pnl.size === 0) throw errors.reference(`Company ${companyName} has no leaf Income/Expense accounts`);
     const sourceRows = balances.filter((row) => pnl.has(row.account));
     let sourceRowCount = 0;
     let sourceDebit = 0;

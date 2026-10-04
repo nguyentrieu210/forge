@@ -154,13 +154,16 @@ export class ExchangeRateRevaluationController implements DocumentController<Exc
       throughDate: postingDate,
     });
     for (const balance of glBalances) {
-      if (balance.balance_minor === 0) continue;
+      // A zero base net can hide foreign units when opposite flows used different
+      // rates. Without canonical account-currency amounts only no gross activity
+      // proves that this unsupported account cannot need revaluation.
+      if (balance.debit_minor === 0 && balance.credit_minor === 0) continue;
       const accountDocument = await context.reader.getDocument<JsonObject>(context.command.tenant_id, "Account", balance.account);
       const account = accountDocument
         ? accountDocument.data
         : await context.reader.getMasterRecordData(context.command.tenant_id, "Account", balance.account);
       if (account && foreignNonPartyBalanceSheetAccount(account, companyCurrency)) {
-        throw errors.reference(`FINANCE_FX_NON_PARTY_DUAL_CURRENCY_REQUIRED: Account ${balance.account} has a foreign balance-sheet balance; canonical foreign and company-currency GL amounts are required`);
+        throw errors.reference(`FINANCE_FX_NON_PARTY_DUAL_CURRENCY_REQUIRED: Account ${balance.account} has foreign balance-sheet activity; canonical foreign and company-currency GL amounts are required`);
       }
     }
 

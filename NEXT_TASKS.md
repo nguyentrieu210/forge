@@ -67,9 +67,15 @@ Do not merge or claim BUSINESS_CLOSED while `--certify` fails. Implement and ver
 1. Full downstream landed-cost transfer/manufacturing/delivery/non-FIFO propagation.
 2. Canonical dual-currency monetary GL, bank/cash FX revaluation and consolidation.
 3. Manufacturing WIP/variance/rework policy, phantom/substitute/alternate BOM and ATP.
-4. Broader subcontracting process-loss/secondary/rejected/finished-good-return lifecycle.
+4. Broader subcontracting process-loss/secondary/quality/rejected-good-return and supplier-credit lifecycle.
 5. Pinned ERPNext runtime differential and remaining assets/projects/support/commerce/regional
-   module depth from the existing R8 matrix; historical close planning and large-ledger checks.
+   module depth from the existing R8 matrix; automatic inactive-account residual handling and large-ledger checks.
 
 Budget historical revision intervals, chronological close cancellation, direct FIFO issue
 correction and atomic supplier leftover-return entitlement now have executable evidence.
+
+The latest bounded extensions cover terminal consumption after one future FIFO transfer,
+explicit rejected-stock segregation, explicit nested BOM planning, inactive-account planning
+and zero-net foreign-activity rejection. Recursive/shared stock propagation, full alternate
+BOM lifecycle and bank/cash dual-currency revaluation remain acceptance gaps. The O2C status
+projection consumes five frozen fixtures, not a full current 115-case differential replay.

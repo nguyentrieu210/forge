@@ -85,6 +85,15 @@ interface SubcontractingReceiptData extends JsonObject {
   supplier_warehouse: string;
   target_warehouse: string;
   finished_good_bundle?: string;
+  rejected_qty?: string;
+  rejected_qty_micros?: number;
+  accepted_qty?: string;
+  accepted_qty_micros?: number;
+  rejected_warehouse?: string;
+  rejected_good_bundle?: string;
+  rejected_service_policy?: string;
+  rejected_value_minor?: number;
+  accepted_value_minor?: number;
   stock_account?: string;
   stock_received_but_not_billed?: string;
   service_cost_minor: number;
@@ -420,21 +429,33 @@ export class SubcontractingReceiptController implements DocumentController<Subco
 
     const finishedValue = safeAdd(materialCost, data.service_cost_minor);
     const finishedRate = ratePerUnitMinor(finishedValue, data.received_qty_micros);
-    const finished = await buildTrackedStockLines(context as unknown as ControllerContext<JsonObject>, {
-      itemCode: data.production_item,
-      warehouse: data.target_warehouse,
-      qtyMicros: data.received_qty_micros,
-      direction: "Inward",
-      postingAt: data.posting_at,
-      currency: data.currency,
-      currencyScale: data.currency_scale,
-      valuationRateMinor: finishedRate,
-      stockValueMinor: finishedValue,
-      lineKey: "FINISHED",
-      ...(data.finished_good_bundle ? { bundleName: data.finished_good_bundle } : {}),
-    });
-    stock.push(...finished.stock);
-    usages.push(...finished.usages);
+    const rejectedQty = data.rejected_qty_micros ?? 0;
+    const acceptedQty = data.received_qty_micros - rejectedQty;
+    const rejectedValue = ratio(finishedValue, rejectedQty, data.received_qty_micros);
+    const acceptedValue = finishedValue - rejectedValue;
+    for (const output of [
+      { qty: acceptedQty, value: acceptedValue, warehouse: data.target_warehouse, line: "FINISHED", bundle: data.finished_good_bundle },
+      { qty: rejectedQty, value: rejectedValue, warehouse: data.rejected_warehouse, line: "REJECTED", bundle: data.rejected_good_bundle },
+    ]) {
+      if (output.qty === 0) continue;
+      const finished = await buildTrackedStockLines(context as unknown as ControllerContext<JsonObject>, {
+        itemCode: data.production_item,
+        warehouse: output.warehouse!,
+        qtyMicros: output.qty,
+        direction: "Inward",
+        postingAt: data.posting_at,
+        currency: data.currency,
+        currencyScale: data.currency_scale,
+        valuationRateMinor: finishedRate,
+        stockValueMinor: output.value,
+        lineKey: output.line,
+        ...(output.bundle ? { bundleName: output.bundle } : {}),
+      });
+      stock.push(...finished.stock);
+      usages.push(...finished.usages);
+    }
+    data.accepted_value_minor = acceptedValue;
+    data.rejected_value_minor = rejectedValue;
 
     data.material_cost_minor = materialCost;
     data.finished_good_value_minor = finishedValue;
@@ -500,6 +521,26 @@ export class SubcontractingReceiptController implements DocumentController<Subco
       input.subcontracting_order,
     );
     const receivedQty = positiveMicros(input.received_qty, "received_qty");
+    const rejectedQty = input.rejected_qty === undefined || input.rejected_qty === ""
+      ? 0 : toScaledInt(input.rejected_qty, 6, "rejected_qty");
+    if (rejectedQty < 0 || rejectedQty > receivedQty) {
+      throw errors.validation("rejected_qty must be between zero and total received_qty");
+    }
+    if (rejectedQty > 0) {
+      if (input.rejected_service_policy !== "Pay Full Service") {
+        throw errors.validation("Rejected finished goods require explicit Pay Full Service policy; supplier credit/return is unsupported");
+      }
+      if (!input.rejected_warehouse || input.rejected_warehouse === order.data.target_warehouse
+        || input.rejected_warehouse === order.data.supplier_warehouse) {
+        throw errors.validation("Rejected finished goods require a separate rejected warehouse");
+      }
+      await requireLeafWarehouse(context as unknown as ControllerContext<JsonObject>, input.rejected_warehouse, order.data.company);
+    } else if (input.rejected_good_bundle || input.rejected_warehouse || input.rejected_service_policy) {
+      throw errors.validation("Rejected warehouse, bundle and policy require positive rejected_qty");
+    }
+    if (rejectedQty === receivedQty && input.finished_good_bundle) {
+      throw errors.validation("Accepted finished-good bundle requires positive accepted quantity");
+    }
     const priorReceipts = (await context.reader.listDocumentsByDoctype<SubcontractingReceiptData>(
       context.command.tenant_id,
       "Subcontracting Receipt",
@@ -598,6 +639,10 @@ export class SubcontractingReceiptController implements DocumentController<Subco
       currency_scale: order.data.currency_scale,
       received_qty: fromScaledInt(receivedQty, 6),
       received_qty_micros: receivedQty,
+      rejected_qty: fromScaledInt(rejectedQty, 6),
+      rejected_qty_micros: rejectedQty,
+      accepted_qty: fromScaledInt(receivedQty - rejectedQty, 6),
+      accepted_qty_micros: receivedQty - rejectedQty,
       supplier_warehouse: order.data.supplier_warehouse,
       target_warehouse: order.data.target_warehouse,
       service_cost_minor: serviceCost,
@@ -682,6 +727,18 @@ export class SubcontractingReceiptController implements DocumentController<Subco
         bundle_name: data.finished_good_bundle,
         item_code: data.production_item,
         warehouse: data.target_warehouse,
+        direction: "Inward",
+        usage_delta: -1,
+        posting_at: data.posting_at,
+      });
+    }
+
+    if (data.rejected_good_bundle) {
+      bundleUsages.push({
+        line_key: "REV-BUNDLE-REJECTED",
+        bundle_name: data.rejected_good_bundle,
+        item_code: data.production_item,
+        warehouse: data.rejected_warehouse!,
         direction: "Inward",
         usage_delta: -1,
         posting_at: data.posting_at,

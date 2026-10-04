@@ -11,7 +11,7 @@ import { asCloudForgeError, documentKey, errors } from "../../core/src/index.js"
 import { fromScaledInt, toScaledInt } from "../../money/src/index.js";
 import { deriveDeliveryNoteStatus, deriveO2CStatus } from "./status.js";
 import { deriveSalesOrderProgress } from "./sales-order-progress.js";
-import type { GlAccountBalance, GlAccountBalanceQuery, MutationStore, OpenPaymentBalance, OpenPaymentBalanceQuery, SubmittedQuantityQuery, TrackedStockPosition, TrackedStockState } from "./store.js";
+import type { FinanceAccountMetadata, GlAccountBalance, GlAccountBalanceQuery, MutationStore, OpenPaymentBalance, OpenPaymentBalanceQuery, SubmittedQuantityQuery, TrackedStockPosition, TrackedStockState } from "./store.js";
 
 interface DocumentRow {
   tenant_id: string;
@@ -286,6 +286,22 @@ export class D1MutationStore implements MutationStore {
       ? await statement.bind(query.tenantId, query.parentDoctype, query.referenceName, query.itemCode, query.excludeName).first<{ total: number }>()
       : await statement.bind(query.tenantId, query.parentDoctype, query.referenceName, query.itemCode).first<{ total: number }>();
     return Number(row?.total ?? 0);
+  }
+
+  async listFinanceAccountMetadata(tenantId: string): Promise<FinanceAccountMetadata[]> {
+    const rows = await this.writer.prepare(
+      `SELECT h.name,h.company,h.root_type,h.is_group,
+              CASE WHEN a.name IS NULL THEN 0 ELSE 1 END AS active
+       FROM finance_historical_accounts h
+       LEFT JOIN finance_active_accounts a ON a.tenant_id=h.tenant_id AND a.name=h.name
+       WHERE h.tenant_id=?1 ORDER BY h.name`,
+    ).bind(tenantId).all<{
+      name: string; company: string | null; root_type: string | null; is_group: number; active: number;
+    }>();
+    return (rows.results ?? []).map((row) => ({
+      name: row.name, company: row.company ?? "", root_type: row.root_type ?? "",
+      is_group: row.is_group !== 0, active: row.active === 1,
+    }));
   }
 
   async getGlAccountBalances(query: GlAccountBalanceQuery): Promise<GlAccountBalance[]> {

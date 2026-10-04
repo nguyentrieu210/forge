@@ -140,3 +140,44 @@ migration also applies twice. `verify-sql.py` and `git diff --check` pass.
 This establishes commit-time entitlement safety for the frozen R8 subcontracting model.
 It does not establish proportional rounding parity, automatic reservations, process loss,
 quality/rejection or historical valuation repost parity with ERPNext.
+
+## Explicit rejected finished-goods segregation (2026-10-04)
+
+Receipt can now split completed finished units between accepted stock and a separate
+rejected-goods warehouse. `received_qty` retains its existing meaning for order, BOM and
+PO service entitlement: **total completed units, including rejected units**. The metadata
+label now makes that visible; `accepted_qty` is derived and read-only, while `rejected_qty`
+is an explicit subset. Example: total 2, rejected 0.5 produces accepted 1.5.
+
+Positive rejection requires an explicit `rejected_service_policy="Pay Full Service"`.
+There is no default policy that silently makes rejected units payable. This bounded model
+means the supplier performed the full service and the customer keeps rejected goods as
+valued stock; material consumption, service cost and AP receipt progress apply to the total.
+It does **not** claim supplier credit, scrapping, process loss or goods return semantics.
+If full payment is inappropriate, the receipt fails closed rather than inventing a credit.
+
+The rejected warehouse must be an active leaf warehouse belonging to the same company,
+different from the accepted and supplier warehouses. Canonical tracked-stock authority
+receives both portions, with separate optional finished and rejected bundles. The total
+material-plus-service value is split proportionally, with the remainder assigned to accepted
+stock so value reconciles exactly. All-rejected receipt creates no accepted stock. Exact
+cancellation reverses both stock portions, both bundle usages, full service GL and full PO
+receipt progress; existing AP, period, reservation and physical-stock guards still apply.
+
+Migration `0168_subcontracting_rejected_finished.sql` adds metadata and D1 insert/update
+commit guards for rejected/accepted quantity coherence, separate warehouse and explicit
+payment policy. The in-memory transactional adapter validates the same constraints before
+publishing the plan, including a prepared plan whose policy is altered after preparation.
+Legacy receipts without rejection fields remain valid.
+
+Validation on this candidate: full server TypeScript compile; eight subcontract lifecycle
+tests (including mixed/all rejection, wrong-company warehouse, rounded cost split, tracked
+bundles, tampered commit and downstream rejected-stock cancellation dependency); existing
+four reservation guard tests; SQLite rejection migration repeat-apply, draft/insert/update
+and legacy compatibility checks; existing subcontract commit-entitlement SQL tests;
+`verify-sql.py`; `git diff --check`.
+
+Status remains **PARTIAL**. Segregation alone does not enforce a quality hold on subsequent
+stock movements. Automatic quality inspection, supplier return/credit and replacement
+lifecycle, process loss, secondary outputs, automatic reservations, landed-cost attachment,
+historical valuation repost and broad ERPNext runtime parity remain outside this closure.
