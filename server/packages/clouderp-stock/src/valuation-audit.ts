@@ -77,8 +77,17 @@ export function auditOutgoingValuation(
         method,
         entry.currency_scale,
       ).stock_value_difference_minor;
-      if (expected !== entry.stock_value_difference_minor) {
-        const delta = expected - entry.stock_value_difference_minor;
+      const recorded = entries.filter((correction) => correction.actual_qty_micros === 0
+        && correction.source_voucher_type === "Landed Cost Voucher"
+        && /^(?:REV-)?LCV-REPOST-/.test(correction.line_key)
+        && correction.valuation_target_voucher_type === entry.source_voucher_type
+        && correction.valuation_target_voucher_no === entry.source_voucher_no
+        && correction.valuation_target_voucher_revision === entry.source_voucher_revision
+        && correction.valuation_target_row_id === (entry.source_row_id ?? entry.line_key))
+        .reduce((sum, correction) => sum + correction.stock_value_difference_minor, entry.stock_value_difference_minor);
+      if (!Number.isSafeInteger(recorded)) throw errors.validation("Valuation correction exceeds safe integer bounds");
+      if (expected !== recorded) {
+        const delta = expected - recorded;
         if (!Number.isSafeInteger(delta)) throw errors.validation("Valuation mismatch delta exceeds safe integer bounds");
         mismatches.push({
           line_key: entry.line_key,
@@ -87,7 +96,7 @@ export function auditOutgoingValuation(
           warehouse: entry.warehouse,
           ...(entry.batch_no ? { batch_no: entry.batch_no } : {}),
           actual_qty_micros: entry.actual_qty_micros,
-          recorded_stock_value_difference_minor: entry.stock_value_difference_minor,
+          recorded_stock_value_difference_minor: recorded,
           expected_stock_value_difference_minor: expected,
           delta_minor: delta,
         });

@@ -75,6 +75,7 @@ def connection() -> sqlite3.Connection:
     db.executescript(SCHEMA)
     db.executescript(MIGRATION.read_text())
     db.executescript((ROOT / 'migrations/tenant/0152_period_close_scope_safety.sql').read_text())
+    db.executescript((ROOT / 'migrations/tenant/0164_period_close_chronology.sql').read_text())
     return db
 
 
@@ -289,3 +290,39 @@ document(db, 'Period Closing Voucher', 'PCV-2025', 1, old)
 document(db, 'Period Closing Voucher', 'PCV-2026', 0, pcv_payload())
 db.execute("UPDATE documents SET docstatus=1 WHERE name='PCV-2026'")
 print('period close direct insert and non-overlapping periods: PASS')
+
+# Later active closes prevent an earlier close from being reopened; scopes matter.
+for older_branch, later_branch, company, blocked in [('', '', 'Demo', True),
+    ('A', '', 'Demo', True), ('', 'A', 'Demo', True), ('A', 'A', 'Demo', True),
+    ('A', 'B', 'Demo', False), ('', '', 'Other', False)]:
+    db = connection(); seed_source(db); lock(db)
+    old = pcv_payload(); old.update(period_start_date='2025-01-01', period_end_date='2025-12-31', posting_at='2025-12-31T23:59:59Z', branch=older_branch)
+    document(db, 'Period Closing Voucher', 'PCV-OLD', 1, old)
+    later = pcv_payload(); later.update(branch=later_branch, company=company)
+    document(db, 'Period Closing Voucher', 'PCV-LATER', 1, later)
+    try:
+        db.execute("UPDATE documents SET docstatus=2 WHERE name='PCV-OLD'")
+    except sqlite3.IntegrityError as exc:
+        assert blocked and 'PERIOD_CLOSE_FUTURE_CLOSE_EXISTS' in str(exc), exc
+        assert db.execute("SELECT docstatus FROM documents WHERE name='PCV-OLD'").fetchone() == (1,)
+        db.execute("UPDATE documents SET docstatus=2 WHERE name='PCV-LATER'")
+        db.execute("UPDATE documents SET docstatus=2 WHERE name='PCV-OLD'")
+    else:
+        assert not blocked
+
+# Prior-year balances cannot disappear from a close; both INSERT and UPDATE fail closed.
+for path in ['insert', 'update']:
+    db = connection(); seed_source(db); lock(db)
+    db.execute("UPDATE gl_entries SET posting_at='2025-06-30T09:00:00Z' WHERE account='Sales'")
+    payload = pcv_payload(); payload.update(source_gl_row_count=1, source_credit_minor=0)
+    try:
+        if path == 'insert':
+            document(db, 'Period Closing Voucher', 'PCV-PRIOR', 1, payload)
+        else:
+            document(db, 'Period Closing Voucher', 'PCV-PRIOR', 0, payload)
+            db.execute("UPDATE documents SET docstatus=1 WHERE name='PCV-PRIOR'")
+    except sqlite3.IntegrityError as exc:
+        assert 'PERIOD_CLOSE_PRIOR_PNL_BALANCE' in str(exc), exc
+    else:
+        raise AssertionError('prior P&L escaped '+path+' guard')
+print('period close chronology and prior P&L: PASS')

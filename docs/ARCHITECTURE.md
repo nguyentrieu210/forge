@@ -138,3 +138,11 @@ Merge source không chứng minh deploy. Release claim cần exact source/releas
 - Generated/source-data artifacts phải có generator/owner rõ và không trộn vào handwritten core.
 
 Machine-readable guardrails bắt đầu tại `.sentrux/rules.toml`; navigation/ownership chi tiết tại `../SENTRUX_MAP.md`.
+
+## R8 receipt-specific operation costs
+
+Manufacture Stock Entry may capitalize explicit labor/machine/overhead clearing amounts.
+The rollout controller applies a bounded helper to the existing mutation plan, replacing
+standard operation value once and committing Stock/GL together. Exact stored reversal
+remains under Document Kernel; Job Card accrual, WIP allocation and variance/rework rules
+remain separate business contracts.

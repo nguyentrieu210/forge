@@ -3,6 +3,7 @@ import type { StockEntryData } from "../../clouderp-core/src/types.js";
 import type { ControllerContext } from "../../document-kernel/src/index.js";
 import { PhysicalStockEntryController } from "./physical-stock-entry.js";
 import { GuardedManufacturingStockEntryController } from "./manufacturing-stock-guard.js";
+import { applyManufacturingOperationCosts } from "./manufacturing-operation-cost.js";
 
 interface WorkOrderRolloutData extends JsonObject {
   manufacturing_snapshot?: JsonObject;
@@ -21,10 +22,10 @@ export class RolloutManufacturingStockEntryController extends GuardedManufacturi
   private readonly legacyController = new PhysicalStockEntryController();
 
   override async buildPlan(context: ControllerContext<StockEntryData>): Promise<MutationPlan<StockEntryData>> {
-    if (await isLegacyWorkOrderMutation(context)) {
-      return this.legacyController.buildPlan(context);
-    }
-    return super.buildPlan(context);
+    const plan = await isLegacyWorkOrderMutation(context)
+      ? await this.legacyController.buildPlan(context)
+      : await super.buildPlan(context);
+    return applyManufacturingOperationCosts(context, plan);
   }
 }
 

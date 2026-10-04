@@ -87,10 +87,12 @@ commitments. D1 migration 0158 validates submitted distribution evidence and app
 accumulated cap atomically to both GL inserts and commitment-only submits; the in-memory store
 mirrors those guards.
 
-This closes the **core equal/manual accumulated fiscal-distribution path**. It does not yet
-close retroactive lifecycle safety for a negative Budget Revision backdated into an already
-consumed distributed period. That revision needs period-by-period historical revalidation
-before the broader fiscal-distribution boundary can be called complete.
+This closes the **core equal/manual accumulated fiscal-distribution path**. Migrations
+0159 and 0160 now revalidate backdated negative revisions and cancellation of positive
+revisions against every affected historical interval. Distribution boundaries, GL,
+commitment and revision dates plus their preceding day prevent an overrun being hidden
+by a later release or reversal. Submitted-create plans and normal submit plans use the
+same in-memory guard. Pinned ERPNext differential and large-ledger evidence remain open.
 
 ## Period-close safety
 
@@ -134,11 +136,13 @@ planner that consumes historical account metadata remains future work.
 
 ## Still open
 
-Core equal/manual accumulated fiscal distribution is implemented; retroactive negative-revision period revalidation and pinned ERPNext differential fixtures remain open. Automatic
+Core equal/manual accumulated fiscal distribution and retroactive revision interval
+revalidation are implemented; pinned ERPNext differential fixtures remain open. Automatic
 commitment consumption for the declared Material Request / Purchase Order / Expense Claim
 sources is now source-linked and commit-time guarded together with actual-aware Stop/Warn/Ignore.
-Period close still needs previous-year/future-close lifecycle depth, historical-account
-planner support, large-ledger processing and in-memory/D1 commit-guard parity.
+Period close now rejects nonzero prior P&L and reopening an earlier close while a later
+overlapping close is active, with memory and D1 commit checks. Historical-account planner
+support, large-ledger processing and pinned runtime parity remain open.
 FX revaluation, consolidation, downstream Landed Cost repost, broader subcontracting
 and the remaining R8 module/flow depth remain PARTIAL. BUSINESS_CLOSED is still false.
 
@@ -150,3 +154,24 @@ No production migration, merge or deployment is performed by this closure.
   `7c7bfe1fe340302dcaf499b328842a043658552e` passed all 26 gates, including
   fiscal-distribution controller normalization, executable Budget-vs-Actual SQL, in-memory
   projected Stop, D1 migration regression, benchmark invariant and matrix verifier.
+
+### Revision interval verification — 2026-10-04
+
+The budget regression that failed in run 37000118322 is fixed: submitted-create plans
+now invoke revision validation. Tests also prove temporary historical overruns remain
+blocked after later commitment release or GL reversal, including atomic INSERT, UPDATE
+and cancellation rollback. See migrations 0159/0160 and the existing transaction-control
+Node and SQLite suites.
+
+### Converged verification — 2026-10-04
+
+Full server TypeScript build and 279 Node regressions passed on the converged tree,
+including 113 manufacturing tests and the related valuation replay/audit suites. All
+focused SQLite authority/race scripts passed. The complete sorted tenant chain (136
+migrations) replays with foreign keys enabled and passes foreign-key/integrity checks.
+R8 `--audit-complete` and the existing R7 `--certify` pass. R8 `--certify` remains
+blocked by 29 PARTIAL module/flow rows; these tests are not ERPNext runtime parity.
+
+Local Sentrux CLI is unavailable; this record makes no architecture-score claim.
+The new manufacturing helper ownership is recorded in SENTRUX_MAP and the canonical
+architecture document. No production or external-provider mutation was performed.

@@ -9,8 +9,10 @@ and General Ledger. It now covers both untouched receipt inventory and late-arri
 cost where part or all of the targeted FIFO receipt layer was already consumed by direct
 `Stock Entry / Material Issue` transactions.
 
-This is still **PARTIAL**, not ERPNext parity. Chronological repost through backdated future
-issues, transfers, manufacturing/WIP, deliveries and non-FIFO valuation remains fail-closed.
+This is still **PARTIAL**, not ERPNext parity. Backdated direct FIFO Material Issues now
+receive chronological immutable Stock/COGS corrections. Transfers, manufacturing/WIP,
+deliveries, batch/serial and non-FIFO propagation remain fail-closed. Exact current
+contract: `server/docs/spec/r8-landed-cost-chronological-closure.md`.
 
 ## Closed in this lane
 
@@ -33,9 +35,9 @@ issues, transfers, manufacturing/WIP, deliveries and non-FIFO valuation remains 
 - Historical repost is deliberately restricted to direct submitted
   `Stock Entry / Material Issue` consumers. Transfers, manufacturing/WIP, deliveries and
   other value-propagating chains still fail closed.
-- A voucher whose `posting_at` is earlier than already-posted downstream consumption still
-  fails closed. Forge does not rewrite earlier immutable issue rows or fabricate a
-  chronological future-SLE replay.
+- A voucher before later direct FIFO Material Issues replays each issue prefix and posts
+  only the incremental valuation difference. Reserved corrections identify the original
+  issue revision/row; replay avoids double application and valuation audit reconciles them.
 - D1 validates the frozen item/warehouse history row-count, quantity and value inside the
   Draft -> Submitted transaction. If stock changes after planning, submit aborts and must
   be retried. The in-memory store mirrors this check under its database mutex.
@@ -99,7 +101,8 @@ The focused evidence proves:
 4. Missing `repost_difference_account` fails before commit when a consumed share exists.
 5. A fully consumed FIFO row posts the complete landed cost to repost expense with no fake
    Stock Ledger value and cancels exactly.
-6. Backdating an LCV before already-existing downstream consumption remains fail-closed.
+6. Backdating before direct FIFO issues produces balanced, reconciled chronological corrections.
+   Unsupported value-propagating chains still fail closed.
 7. A stock mutation between planning and commit is rejected by the D1 fingerprint guard.
 8. Purchase Receipt cancellation remains blocked behind an active LCV dependency.
 9. Exact LCV cancellation restores the committed stock/GL effect without recomputation.
@@ -109,16 +112,17 @@ The focused evidence proves:
 The next Landed Cost depth step is **full chronological valuation repost** across future
 stock-value propagation. Remaining cases include:
 
-- LCV effective before already-posted later issues;
+- broader issue/cancellation chains and rollback after subsequent stock mutations;
 - warehouse transfers where changed value must propagate to the destination layer;
 - manufacturing/WIP and finished-goods valuation propagation;
 - Delivery/COGS chains with exact downstream account provenance;
 - Moving Average historical replay;
 - wider ERPNext-exact runtime differential fixtures.
 
-Until those are implemented, Forge supports late landed-cost correction only where the
-already-consumed share terminates in a direct FIFO Material Issue and can be represented as
-an append-only expense correction without rewriting another document's history.
+Forge supports past and future direct FIFO Material Issue cost corrections without
+rewriting other documents. Chronological cancellation requires unchanged external history,
+including immutable rows from a later voucher subsequently cancelled. Migration 0161
+checks the complete history horizon on submit and chronological cancel.
 
 That boundary is narrower than ERPNext v16.20.0, so the R8 classifications remain
 `PARTIAL`.

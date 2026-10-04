@@ -203,6 +203,11 @@ export function replayValuation(
   const layers: FifoLayer[] = [];
   const sorted = [...entries].sort((a,b) => a.posting_at.localeCompare(b.posting_at));
   for (const entry of sorted) {
+    // Chronological LCV issue corrections reconcile immutable ledger totals. FIFO
+    // replay has already recomputed that issue from the adjusted receipt layer;
+    // applying this accounting correction a second time would reduce stock twice.
+    if (entry.actual_qty_micros === 0 && entry.source_voucher_type === "Landed Cost Voucher"
+      && /^(?:REV-)?LCV-REPOST-/.test(entry.line_key)) continue;
     const delta = entry.actual_qty_micros;
     if (delta > 0) {
       const incomingValue = entry.stock_value_difference_minor !== 0

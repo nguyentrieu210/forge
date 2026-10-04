@@ -199,6 +199,20 @@ export class PeriodClosingVoucherController implements DocumentController<Period
     }
     if (pnl.size === 0) throw errors.reference(`Company ${companyName} has no leaf Income/Expense accounts`);
 
+    // A close must not hide historical P&L that was never closed (or was reopened).
+    const priorEnd = new Date(`${periodStart}T00:00:00.000Z`);
+    priorEnd.setUTCDate(priorEnd.getUTCDate() - 1);
+    const priorBalances = await context.reader.getGlAccountBalances({
+      tenantId: context.command.tenant_id,
+      company: companyName,
+      fromDate: "0001-01-01",
+      throughDate: priorEnd.toISOString().slice(0, 10),
+      ...(text(input.branch) ? { branch: text(input.branch) } : {}),
+    });
+    if (priorBalances.some((row) => pnl.has(row.account) && row.balance_minor !== 0)) {
+      throw errors.lifecycle("PERIOD_CLOSE_PRIOR_PNL_BALANCE: close or correct earlier P&L before closing this period");
+    }
+
     const balances = await context.reader.getGlAccountBalances({
       tenantId: context.command.tenant_id,
       company: companyName,
@@ -273,6 +287,16 @@ export class PeriodClosingVoucherController implements DocumentController<Period
   ): Promise<MutationPlan<PeriodClosingVoucherData>> {
     if (!context.existing) throw errors.notFound();
     const data = structuredClone(context.existing.data);
+    const closes = await context.reader.listDocumentsByDoctype<PeriodClosingVoucherData>(
+      context.command.tenant_id, this.doctype,
+    );
+    if (closes.some((close) => close.docstatus === 1
+      && close.name !== context.existing!.name
+      && close.data.company === data.company
+      && text(close.data.period_end_date) > text(data.period_end_date)
+      && (!text(close.data.branch) || !text(data.branch) || close.data.branch === data.branch))) {
+      throw errors.lifecycle("PERIOD_CLOSE_FUTURE_CLOSE_EXISTS: cancel later closes before reopening this period");
+    }
     const original = await context.reader.getVoucherGlEntries(
       context.command.tenant_id,
       this.doctype,

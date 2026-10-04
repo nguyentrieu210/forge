@@ -27,6 +27,7 @@ import {
 } from "../../clouderp-stock/src/index.js";
 import type { BillOfMaterialsData } from "./types.js";
 import { StockEntryIntegrityController } from "./stock-entry-integrity.js";
+import { assertStockPlanRespectsReservations } from "./outbound-reservation-guard.js";
 
 interface SubcontractingOrderSuppliedItem extends JsonObject {
   row_id: string;
@@ -94,6 +95,7 @@ interface SubcontractingReceiptData extends JsonObject {
 
 interface SubcontractingStockEntryData extends StockEntryData {
   subcontracting_order?: string;
+  subcontracting_material_return?: boolean;
   items: Array<StockEntryItem & { bom_row_id?: string }>;
 }
 
@@ -269,7 +271,10 @@ export class SubcontractingOrderController implements DocumentController<Subcont
 export class SubcontractingStockEntryController extends StockEntryIntegrityController {
   override async normalize(context: ControllerContext<StockEntryData>): Promise<StockEntryData> {
     const raw = context.command.document as SubcontractingStockEntryData;
-    if (!raw.subcontracting_order) return super.normalize(context);
+    if (!raw.subcontracting_order) {
+      if (checked(raw.subcontracting_material_return)) throw errors.validation("Subcontracting Order is required for supplier material return");
+      return super.normalize(context);
+    }
     if (raw.purpose !== "Material Transfer") {
       throw errors.validation("Subcontracting material supply must use Material Transfer");
     }
@@ -280,14 +285,15 @@ export class SubcontractingStockEntryController extends StockEntryIntegrityContr
     );
     if (raw.company !== order.data.company) throw errors.reference("Stock Entry company does not match Subcontracting Order");
 
+    const isReturn = checked(raw.subcontracting_material_return);
     const preparedItems = raw.items.map((row, index) => {
       const required = selectSuppliedRow(order.data, row.item_code, row.bom_row_id);
       return {
         ...row,
         row_id: row.row_id || `ROW-${index + 1}`,
         bom_row_id: required.bom_row_id,
-        source_warehouse: required.source_warehouse,
-        target_warehouse: order.data.supplier_warehouse,
+        source_warehouse: isReturn ? order.data.supplier_warehouse : required.source_warehouse,
+        target_warehouse: isReturn ? required.source_warehouse : order.data.supplier_warehouse,
       };
     });
 
@@ -295,21 +301,19 @@ export class SubcontractingStockEntryController extends StockEntryIntegrityContr
     // exhausted the source warehouse, asking the valuation engine first would surface
     // "insufficient stock" and hide the more authoritative subcontracting over-transfer error.
     if (context.command.action === "submit") {
-      const transfers = await context.reader.listDocumentsByDoctype<SubcontractingStockEntryData>(
-        context.command.tenant_id,
-        "Stock Entry",
+      const priorByBom = await transferredByBomRow(
+        context as unknown as ControllerContext<JsonObject>, order.name, context.command.aggregate.name,
       );
+      const consumedByBom = await consumedByBomRow(context as unknown as ControllerContext<JsonObject>, order.name);
       const currentByBom = sumTransferRows(preparedItems);
       for (const required of order.data.supplied_items) {
-        const prior = transfers
-          .filter((document) => document.name !== context.command.aggregate.name
-            && document.docstatus === 1
-            && document.data.subcontracting_order === order.name)
-          .flatMap((document) => document.data.items)
-          .filter((row) => row.bom_row_id === required.bom_row_id)
-          .reduce((sum, row) => safeAdd(sum, row.qty_micros ?? toScaledInt(row.qty, 6)), 0);
+        const prior = priorByBom.get(required.bom_row_id) ?? 0;
         const current = currentByBom.get(required.bom_row_id) ?? 0;
-        if (prior + current > required.required_qty_micros) {
+        const after = safeAdd(prior, isReturn ? -current : current);
+        if (isReturn && after < (consumedByBom.get(required.bom_row_id) ?? 0)) {
+          throw errors.reference(`Material return exceeds unconsumed supplier material for BOM row ${required.bom_row_id}`);
+        }
+        if (after > required.required_qty_micros) {
           throw errors.reference(`Transferred quantity exceeds Subcontracting Order requirement for BOM row ${required.bom_row_id}`, {
             required_qty_micros: required.required_qty_micros,
             prior_qty_micros: prior,
@@ -327,7 +331,7 @@ export class SubcontractingStockEntryController extends StockEntryIntegrityContr
       },
     } as ControllerContext<StockEntryData>;
     const normalized = await super.normalize(adjusted) as SubcontractingStockEntryData;
-    return { ...normalized, subcontracting_order: order.name };
+    return { ...normalized, subcontracting_order: order.name, subcontracting_material_return: isReturn };
   }
 
   override async buildPlan(context: ControllerContext<StockEntryData>): Promise<MutationPlan<StockEntryData>> {
@@ -344,7 +348,9 @@ export class SubcontractingStockEntryController extends StockEntryIntegrityContr
         ...plan.events,
         domainEvent({
           type: context.command.action === "submit"
-            ? "subcontracting.material_transferred"
+            ? checked((plan.document.data as SubcontractingStockEntryData).subcontracting_material_return)
+              ? "subcontracting.material_returned"
+              : "subcontracting.material_transferred"
             : context.command.action === "cancel"
               ? "subcontracting.material_transfer_reversed"
               : "subcontracting.material_transfer_updated",
@@ -466,6 +472,7 @@ export class SubcontractingReceiptController implements DocumentController<Subco
       posting_at: data.posting_at,
     }];
 
+    await assertStockPlanRespectsReservations(context, stock, [context.command.aggregate.name]);
     const status = "Completed";
     const document = canonicalDocument(context, this.doctype, data, 1, status);
     return {
@@ -622,6 +629,7 @@ export class SubcontractingReceiptController implements DocumentController<Subco
   private async buildCancelPlan(context: ControllerContext<SubcontractingReceiptData>): Promise<MutationPlan<SubcontractingReceiptData>> {
     const existing = requireExisting(context);
     const data = structuredClone(existing.data);
+    await assertUnlocked(context as unknown as ControllerContext<JsonObject>, data.company, data.posting_at);
     const po = await requireSubmitted<PurchaseOrderData>(
       context as unknown as ControllerContext<JsonObject>,
       "Purchase Order",
@@ -689,13 +697,15 @@ export class SubcontractingReceiptController implements DocumentController<Subco
       qty_micros: -data.received_qty_micros,
       posting_at: data.posting_at,
     }];
+    const reversedStock = reverseStock(stock);
+    await assertStockPlanRespectsReservations(context, reversedStock, [context.command.aggregate.name]);
     const status = "Cancelled";
     const document = canonicalDocument(context, this.doctype, data, 2, status);
     return {
       command: context.command,
       document,
       gl_entries: reverseGl(gl),
-      stock_entries: reverseStock(stock),
+      stock_entries: reversedStock,
       payment_entries: [],
       fulfillment_entries: [],
       procurement_entries: procurement,
@@ -763,7 +773,22 @@ async function transferredByBomRow(
     for (const row of document.data.items) {
       const key = text(row.bom_row_id);
       if (!key) continue;
-      result.set(key, safeAdd(result.get(key) ?? 0, row.qty_micros ?? toScaledInt(row.qty, 6)));
+      const qty = row.qty_micros ?? toScaledInt(row.qty, 6);
+      result.set(key, safeAdd(result.get(key) ?? 0, checked(document.data.subcontracting_material_return) ? -qty : qty));
+    }
+  }
+  return result;
+}
+
+async function consumedByBomRow(
+  context: ControllerContext<JsonObject>, orderName: string,
+): Promise<Map<string, number>> {
+  const receipts = await context.reader.listDocumentsByDoctype<SubcontractingReceiptData>(context.command.tenant_id, "Subcontracting Receipt");
+  const result = new Map<string, number>();
+  for (const receipt of receipts) {
+    if (receipt.docstatus !== 1 || receipt.data.subcontracting_order !== orderName) continue;
+    for (const row of receipt.data.supplied_items) {
+      result.set(row.bom_row_id, safeAdd(result.get(row.bom_row_id) ?? 0, row.consumed_qty_micros));
     }
   }
   return result;
@@ -773,25 +798,25 @@ async function assertTransferCancellationSafe(
   context: ControllerContext<StockEntryData>,
   data: SubcontractingStockEntryData,
 ): Promise<void> {
-  const receipts = (await context.reader.listDocumentsByDoctype<SubcontractingReceiptData>(
-    context.command.tenant_id,
-    "Subcontracting Receipt",
-  )).filter((document) => document.docstatus === 1 && document.data.subcontracting_order === data.subcontracting_order);
-  if (receipts.length === 0) return;
   const remainingTransferred = await transferredByBomRow(
     context as unknown as ControllerContext<JsonObject>,
     data.subcontracting_order!,
     context.command.aggregate.name,
   );
-  const consumed = new Map<string, number>();
-  for (const receipt of receipts) {
-    for (const row of receipt.data.supplied_items) {
-      consumed.set(row.bom_row_id, safeAdd(consumed.get(row.bom_row_id) ?? 0, row.consumed_qty_micros));
+  const consumed = await consumedByBomRow(context as unknown as ControllerContext<JsonObject>, data.subcontracting_order!);
+  for (const rowId of new Set([...remainingTransferred.keys(), ...consumed.keys()])) {
+    if ((remainingTransferred.get(rowId) ?? 0) < (consumed.get(rowId) ?? 0)) {
+      throw errors.reference(`Cannot cancel material transfer: active Subcontracting Receipt or material return depends on BOM row ${rowId}`);
     }
   }
-  for (const [rowId, qty] of consumed) {
-    if ((remainingTransferred.get(rowId) ?? 0) < qty) {
-      throw errors.reference(`Cannot cancel material transfer: active Subcontracting Receipt consumed BOM row ${rowId}`);
+  if (checked(data.subcontracting_material_return)) {
+    const order = await requireSubmitted<SubcontractingOrderData>(
+      context as unknown as ControllerContext<JsonObject>, "Subcontracting Order", data.subcontracting_order!,
+    );
+    for (const required of order.data.supplied_items) {
+      if ((remainingTransferred.get(required.bom_row_id) ?? 0) > required.required_qty_micros) {
+        throw errors.reference(`Cannot cancel material return: replacement transfer depends on BOM row ${required.bom_row_id}`);
+      }
     }
   }
 }

@@ -238,3 +238,11 @@ Do not create another file with the same authority under root/client/server. Upd
 ## R7 integration runtime ownership
 
 `integration-hub` owns immutable webhook fanout/delivery state and encrypted Connected App lifecycle. Tenant Worker `integration-runtime.ts` binds trusted tenant-specific operator credentials/config and outbound host policy; `index-core-base.ts` enqueues committed source events before ACK and runs bounded delivery during maintenance. `frappe-api/integration-methods.ts` owns browser-session and admin control checks, never token disclosure. Website response validators and owner-scoped Web Form services remain in `frappe-api`; all document updates use the existing kernel. No client/server or vertical dependency was introduced.
+
+## R8 manufacturing operation-cost ownership
+
+`clouderp-erpnext/manufacturing-rollout.ts` composes receipt-specific actual operation
+costs through `manufacturing-operation-cost.ts`. The helper adjusts canonical Stock Entry
+valuation and balanced GL inside the existing mutation plan; cancellation consumes stored
+ledger evidence. It creates no separate cost ledger and keeps the existing stock/kernel
+dependency direction.

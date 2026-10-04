@@ -12,7 +12,14 @@ on:
       - "server/packages/query/**"
       - "server/packages/policy/**"
       - "server/tests/subcontracting-closure.test.mjs"
+      - "server/tests/manufacturing-*.test.mjs"
       - "server/tests/landed-cost-authority.test.mjs"
+      - "server/tests/valuation-audit.test.mjs"
+      - "server/tests/batch-valuation.test.mjs"
+      - "server/tests/catch-weight-valuation.test.mjs"
+      - "server/tests/repost-item-valuation-integrity.test.mjs"
+      - "server/tests/landed-cost-allocation.test.mjs"
+      - "server/tests/procurement-landed-cost.test.mjs"
       - "server/scripts/test-landed-cost-repost-migration.py"
       - "server/tests/customer-credit-authority.test.mjs"
       - "server/tests/period-closing-authority.test.mjs"
@@ -37,6 +44,11 @@ on:
       - "server/migrations/tenant/0156_customer_credit_allocation.sql"
       - "server/migrations/tenant/0157_finance_budget_commitment_actualization.sql"
       - "server/migrations/tenant/0158_finance_budget_fiscal_distribution.sql"
+      - "server/migrations/tenant/0159*.sql"
+      - "server/migrations/tenant/016*.sql"
+      - "server/scripts/test-period-close-source-insert-safety.py"
+      - "server/scripts/test-subcontracting-commit-entitlement.py"
+      - "server/scripts/test-r8-migration-chain.py"
       - "server/scripts/test-customer-credit-authority-migration.py"
       - "server/scripts/test-customer-credit-allocation-migration.py"
       - "server/scripts/test-period-closing-authority-migration.py"
@@ -66,10 +78,18 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Build server
         run: pnpm --dir server run build
+      - name: Full tenant migration chain regression
+        run: python3 server/scripts/test-r8-migration-chain.py
       - name: Subcontracting regression
         run: node --test server/tests/subcontracting-closure.test.mjs
+      - name: Subcontracting commit entitlement regression
+        run: python3 server/scripts/test-subcontracting-commit-entitlement.py
+      - name: Manufacturing operation-cost and lifecycle regression
+        run: node --test server/tests/manufacturing-*.test.mjs server/tests/alumdoor-manufacturing-lifecycle.test.mjs server/tests/rc4-a13-manufacturing-qms-release-confidence.test.mjs
       - name: Landed Cost authority regression
         run: node --test server/tests/landed-cost-authority.test.mjs
+      - name: Valuation replay and reconciliation regression
+        run: node --test server/tests/valuation-audit.test.mjs server/tests/batch-valuation.test.mjs server/tests/catch-weight-valuation.test.mjs server/tests/repost-item-valuation-integrity.test.mjs server/tests/landed-cost-allocation.test.mjs server/tests/procurement-landed-cost.test.mjs
       - name: Landed Cost repost migration regression
         run: python3 server/scripts/test-landed-cost-repost-migration.py
       - name: P2P row authority regression
@@ -86,6 +106,8 @@ jobs:
         run: node --test server/tests/period-close-timestamp.test.mjs
       - name: Period close atomic migration regression
         run: python3 server/scripts/test-period-closing-authority-migration.py
+      - name: Period close source insert safety regression
+        run: python3 server/scripts/test-period-close-source-insert-safety.py
       - name: Finance Budget vs Actual query regression
         run: node --test server/tests/finance-closure-query.test.mjs
       - name: Finance Budget vs Actual executable SQL regression

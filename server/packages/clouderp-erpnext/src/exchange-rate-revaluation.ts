@@ -143,6 +143,27 @@ export class ExchangeRateRevaluationController implements DocumentController<Exc
     );
     if (duplicate) throw errors.lifecycle(`Exchange Rate Revaluation ${duplicate.name} already covers ${companyName} on ${postingDate}`);
 
+    // GL currently persists company-currency amounts only. A configured USD bank
+    // account's VND balance cannot tell us how many USD remain: invoice/payment
+    // transaction currency is not evidence of bank account currency. Refuse an
+    // incomplete company revaluation until a canonical dual-currency GL exists.
+    const glBalances = await context.reader.getGlAccountBalances({
+      tenantId: context.command.tenant_id,
+      company: companyName,
+      fromDate: "0001-01-01",
+      throughDate: postingDate,
+    });
+    for (const balance of glBalances) {
+      if (balance.balance_minor === 0) continue;
+      const accountDocument = await context.reader.getDocument<JsonObject>(context.command.tenant_id, "Account", balance.account);
+      const account = accountDocument
+        ? accountDocument.data
+        : await context.reader.getMasterRecordData(context.command.tenant_id, "Account", balance.account);
+      if (account && foreignNonPartyBalanceSheetAccount(account, companyCurrency)) {
+        throw errors.reference(`FINANCE_FX_NON_PARTY_DUAL_CURRENCY_REQUIRED: Account ${balance.account} has a foreign balance-sheet balance; canonical foreign and company-currency GL amounts are required`);
+      }
+    }
+
     const balances = await context.reader.listOpenPaymentBalances({
       tenantId: context.command.tenant_id,
       company: companyName,
@@ -405,6 +426,15 @@ function assertApprover(context: ControllerContext<ExchangeRateRevaluationData>)
 function checked(value: unknown): boolean {
   return value === true || value === 1 || value === "1"
     || (typeof value === "string" && value.trim().toLowerCase() === "true");
+}
+
+function foreignNonPartyBalanceSheetAccount(account: JsonObject, companyCurrency: string): boolean {
+  const accountCurrency = text(account.account_currency) || text(account.currency);
+  const accountType = text(account.account_type);
+  const rootType = text(account.root_type);
+  return Boolean(accountCurrency && accountCurrency !== companyCurrency
+    && accountType !== "Receivable" && accountType !== "Payable"
+    && (rootType === "Asset" || rootType === "Liability" || accountType === "Bank" || accountType === "Cash"));
 }
 
 function text(value: unknown): string {

@@ -11,7 +11,7 @@ import { createAndSubmit, mutate } from "./helpers.mjs";
 const NOW = "2026-10-02T09:00:00.000Z";
 const Q = 1_000_000;
 
-function setup() {
+function setup(authorizer) {
   const store = new InMemoryMutationStore();
   store.seedO2CMasters({
     company: "Demo",
@@ -32,7 +32,7 @@ function setup() {
   const registry = registerErpNextCoreControllers(
     registerStockControllers(registerErpCoreControllers(createO2CControllerRegistry())),
   );
-  return { store, kernel: new DocumentKernel(registry, store, undefined, () => NOW) };
+  return { store, kernel: new DocumentKernel(registry, store, authorizer, () => NOW) };
 }
 
 async function submitBom(kernel) {
@@ -57,7 +57,7 @@ async function submitBom(kernel) {
   });
 }
 
-async function submitPo(kernel) {
+async function submitPo(kernel, qty = "2") {
   return createAndSubmit(kernel, {
     doctype: "Purchase Order",
     name: "PO-SUB",
@@ -68,7 +68,7 @@ async function submitPo(kernel) {
       transaction_date: "2026-10-02",
       is_subcontracted: true,
       receipt_match_required: true,
-      items: [{ row_id: "SERVICE-1", item_code: "SUB-SERVICE", qty: "2", rate: "5" }],
+      items: [{ row_id: "SERVICE-1", item_code: "SUB-SERVICE", qty, rate: "5" }],
       taxes: [],
     },
   });
@@ -196,7 +196,7 @@ test("subcontracting closes material-send -> consume -> finished-good receipt wi
       expectedVersion: 2,
       document: {},
     }),
-    /active Subcontracting Receipt consumed/i,
+    /active Subcontracting Receipt or material return depends/i,
   );
 
   await mutate(kernel, {
@@ -275,4 +275,124 @@ test("subcontracting receipt cannot be cancelled below matched AP billing quanti
     }),
     /matched Purchase Invoice quantity depends on it/i,
   );
+});
+
+test("supplier leftover returns preserve per-order material entitlement and exact reversals", async () => {
+  const { store, kernel } = setup();
+  await submitBom(kernel);
+  await submitPo(kernel);
+  await submitOrder(kernel);
+  await createAndSubmit(kernel, {
+    doctype: "Stock Entry", name: "RETURN-OPEN",
+    document: { company: "Demo", posting_at: "2026-10-02T08:00:00.000Z", purpose: "Material Receipt",
+      items: [{ row_id: "OPEN", item_code: "RAW", qty: "5", valuation_rate: "10", target_warehouse: "Raw" }] },
+  });
+  await transfer(kernel, "RETURN-XFER", 4);
+  await receipt(kernel, "RETURN-SCR", 1);
+  const materialReturn = (name, qty) => createAndSubmit(kernel, {
+    doctype: "Stock Entry", name,
+    document: { company: "Demo", posting_at: NOW, purpose: "Material Transfer",
+      subcontracting_order: "SCO-1", subcontracting_material_return: true,
+      items: [{ row_id: "RETURN", bom_row_id: "RAW-1", item_code: "RAW", qty: String(qty),
+        source_warehouse: "Finished", target_warehouse: "Supplier" }] },
+  });
+  await assert.rejects(materialReturn("RETURN-OVER", 3), /exceeds unconsumed supplier material|Insufficient valuated stock/i);
+  await materialReturn("RETURN-1", 2);
+  const returned = await store.getDocument("demo", "Stock Entry", "RETURN-1");
+  assert.equal(returned.data.items[0].source_warehouse, "Supplier");
+  assert.equal(returned.data.items[0].target_warehouse, "Raw");
+  assert.equal(await store.getStockBalanceMicros("demo", "RAW", "Supplier"), 0);
+  assert.equal(await store.getStockBalanceMicros("demo", "RAW", "Raw"), 3 * Q);
+  const ledger = await store.getVoucherStockEntries("demo", "Stock Entry", "RETURN-1", returned.version);
+  assert.equal(ledger.length, 2);
+  assert.equal(ledger.reduce((sum, row) => sum + row.stock_value_difference_minor, 0), 0);
+  await assert.rejects(receipt(kernel, "RETURN-SCR-UNSUPPLIED", 1), /Insufficient material transferred/i);
+  await assert.rejects(mutate(kernel, { commandId: "RETURN-CANCEL-1", doctype: "Stock Entry", name: "RETURN-XFER", action: "cancel", expectedVersion: 2, document: {} }), /Receipt or material return depends/i);
+
+  // Returning leftovers releases the BOM ceiling for a replacement supply.
+  await transfer(kernel, "RETURN-REPLACEMENT", 2);
+  await assert.rejects(mutate(kernel, { commandId: "RETURN-CANCEL-2", doctype: "Stock Entry", name: "RETURN-1", action: "cancel", expectedVersion: 2, document: {} }), /replacement transfer depends/i);
+  await receipt(kernel, "RETURN-SCR-2", 1);
+  await assert.rejects(materialReturn("RETURN-CONSUMED", 1), /exceeds unconsumed supplier material|Insufficient valuated stock/i);
+  await mutate(kernel, { commandId: "RETURN-CANCEL-3", doctype: "Subcontracting Receipt", name: "RETURN-SCR-2", action: "cancel", expectedVersion: 2, document: {} });
+  await mutate(kernel, { commandId: "RETURN-CANCEL-4", doctype: "Stock Entry", name: "RETURN-REPLACEMENT", action: "cancel", expectedVersion: 2, document: {} });
+  await mutate(kernel, { commandId: "RETURN-CANCEL-5", doctype: "Stock Entry", name: "RETURN-1", action: "cancel", expectedVersion: 2, document: {} });
+  assert.equal(await store.getStockBalanceMicros("demo", "RAW", "Supplier"), 2 * Q);
+  assert.equal(await store.getStockBalanceMicros("demo", "RAW", "Raw"), Q);
+  await mutate(kernel, { commandId: "RETURN-CANCEL-6", doctype: "Subcontracting Receipt", name: "RETURN-SCR", action: "cancel", expectedVersion: 2, document: {} });
+  await mutate(kernel, { commandId: "RETURN-CANCEL-7", doctype: "Stock Entry", name: "RETURN-XFER", action: "cancel", expectedVersion: 2, document: {} });
+  assert.equal(await store.getStockBalanceMicros("demo", "RAW", "Supplier"), 0);
+  assert.equal(await store.getStockBalanceMicros("demo", "RAW", "Raw"), 5 * Q);
+});
+
+test("supplier pooled stock cannot fund returns against a different order's material entitlement", async () => {
+  const { store, kernel } = setup({ assert() {} });
+  await submitBom(kernel);
+  await submitPo(kernel);
+  await submitOrder(kernel);
+  for (const warehouse of ["Raw", "Supplier"]) {
+    await createAndSubmit(kernel, { doctype: "Stock Entry", name: `POOL-${warehouse}`,
+      document: { company: "Demo", posting_at: "2026-10-02T08:00:00.000Z", purpose: "Material Receipt",
+        items: [{ row_id: "POOL", item_code: "RAW", qty: "10", valuation_rate: "10", target_warehouse: warehouse }] } });
+  }
+  await transfer(kernel, "POOL-XFER", 4);
+  await receipt(kernel, "POOL-SCR", 1);
+  const command = { doctype: "Stock Entry", name: "POOL-RETURN",
+    document: { company: "Demo", posting_at: NOW, purpose: "Material Transfer",
+      subcontracting_order: "SCO-1", subcontracting_material_return: true,
+      items: [{ row_id: "RETURN", bom_row_id: "RAW-1", item_code: "RAW", qty: "3" }] } };
+  await mutate(kernel, { ...command, commandId: "POOL-return-create", action: "create", expectedVersion: null });
+  await assert.rejects(mutate(kernel, { ...command, commandId: "POOL-return-submit", action: "submit", expectedVersion: 1 }), /exceeds unconsumed supplier material/i);
+  assert.equal(await store.getStockBalanceMicros("demo", "RAW", "Supplier"), 12 * Q);
+  await createAndSubmit(kernel, { doctype: "Stock Entry", name: "POOL-FG-ISSUE",
+    document: { company: "Demo", posting_at: NOW, purpose: "Material Issue",
+      items: [{ row_id: "FG-ISSUE", item_code: "FG", qty: "1", source_warehouse: "Finished" }] } });
+  await assert.rejects(mutate(kernel, { doctype: "Subcontracting Receipt", name: "POOL-SCR", commandId: "POOL-cancel-consumed",
+    action: "cancel", expectedVersion: 2, document: {} }), /Insufficient stock/i);
+  assert.equal((await store.getDocument("demo", "Subcontracting Receipt", "POOL-SCR")).docstatus, 1);
+  store.setPeriodLock("Demo", "2026-10-02");
+  await assert.rejects(mutate(kernel, { doctype: "Subcontracting Receipt", name: "POOL-SCR", commandId: "POOL-cancel-locked",
+    action: "cancel", expectedVersion: 2, document: {}, actor: { user_id: "clerk", roles: ["Stock User"] } }), /Posting date.*locked/i);
+  assert.equal((await store.getDocument("demo", "Subcontracting Receipt", "POOL-SCR")).docstatus, 1);
+});
+
+test("commit rejects competing subcontract supply, return and receipt plans against pooled stock", async () => {
+  const { makeCommand } = await import("../dist/packages/test-harness/src/index.js");
+  const { store, kernel } = setup();
+  await submitBom(kernel); await submitPo(kernel, "4"); await submitOrder(kernel);
+  for (const warehouse of ["Raw", "Supplier"]) {
+    await createAndSubmit(kernel, { doctype: "Stock Entry", name: `RACE-POOL-${warehouse}`,
+      document: { company: "Demo", posting_at: "2026-10-02T08:00:00.000Z", purpose: "Material Receipt",
+        items: [{ row_id: "OPEN", item_code: "RAW", qty: "10", valuation_rate: "10", target_warehouse: warehouse }] } });
+  }
+  const prepare = async (doctype, name, document) => {
+    await mutate(kernel, { doctype, name, document, commandId: `${name}-create`, action: "create", expectedVersion: null });
+    return kernel.prepare(await makeCommand({ doctype, name, document, commandId: `${name}-submit`, action: "submit", expectedVersion: 1 }), store);
+  };
+  const supplyData = (qty, returned = false) => ({ company: "Demo", posting_at: NOW, purpose: "Material Transfer",
+    subcontracting_order: "SCO-1", subcontracting_material_return: returned,
+    items: [{ row_id: "RAW", bom_row_id: "RAW-1", item_code: "RAW", qty: String(qty) }] });
+  const supplyA = await prepare("Stock Entry", "RACE-SUPPLY-A", supplyData(3));
+  const supplyB = await prepare("Stock Entry", "RACE-SUPPLY-B", supplyData(3));
+  await store.execute(supplyA);
+  await assert.rejects(store.execute(supplyB), /material entitlement changed/i);
+  assert.equal((await store.getDocument("demo", "Stock Entry", "RACE-SUPPLY-B")).docstatus, 0);
+  await transfer(kernel, "RACE-SUPPLY-REST", 1);
+  const returnA = await prepare("Stock Entry", "RACE-RETURN-A", supplyData(3, true));
+  const returnB = await prepare("Stock Entry", "RACE-RETURN-B", supplyData(3, true));
+  await store.execute(returnA);
+  await assert.rejects(store.execute(returnB), /material entitlement changed/i);
+  await mutate(kernel, { commandId: "RACE-return-cancel", doctype: "Stock Entry", name: "RACE-RETURN-A",
+    action: "cancel", expectedVersion: 2, document: {} });
+  const receiptData = { subcontracting_order: "SCO-1", posting_at: NOW, received_qty: "1.5",
+    stock_account: "Stock", stock_received_but_not_billed: "SRBNB" };
+  const receiptA = await prepare("Subcontracting Receipt", "RACE-RECEIPT-A", receiptData);
+  const receiptB = await prepare("Subcontracting Receipt", "RACE-RECEIPT-B", receiptData);
+  const staleReturn = await prepare("Stock Entry", "RACE-RETURN-AFTER-RECEIPT", supplyData(2, true));
+  await store.execute(receiptA);
+  const before = store.snapshot();
+  await assert.rejects(store.execute(staleReturn), /material entitlement changed/i);
+  assert.deepEqual(store.snapshot(), before);
+  await assert.rejects(store.execute(receiptB), /material entitlement changed/i);
+  assert.deepEqual(store.snapshot(), before);
 });

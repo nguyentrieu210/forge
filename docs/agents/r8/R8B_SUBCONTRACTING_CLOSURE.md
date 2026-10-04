@@ -73,7 +73,7 @@ Pinned ERPNext v16.20 remains broader:
 - Quality / Job Card subcontract seams;
 - landed-cost integration;
 - future SLE/GLE repost;
-- return lifecycle;
+- finished-goods return/rejection and broader return lifecycle;
 - full runtime differential coverage.
 
 R8-B therefore removes the **absence-of-authority GAP**, but does not convert the lane into a parity claim.
@@ -81,3 +81,62 @@ R8-B therefore removes the **absence-of-authority GAP**, but does not convert th
 ## Next closure lane
 
 **Landed Cost Voucher**: turn the existing deterministic allocation preview into an authoritative, reversible stock-value application tied to submitted Purchase Receipt rows, with Stock/GL reconciliation and an explicit boundary for downstream historical COGS propagation.
+
+## R8 final material-return closure (2026-10-04)
+
+Supplier leftovers now return through canonical `Stock Entry / Material Transfer` with
+`subcontracting_order` and `subcontracting_material_return=true`. The controller binds
+supplier warehouse as source and the frozen BOM-row source warehouse as target; client
+warehouse fields cannot redirect the return. The same stock valuation/tracking authority
+posts both legs, with no additional stock ledger or service/AP effect.
+
+Each BOM row now tracks net sent quantity (active supply minus active returns). Returns
+cannot exceed that row's unconsumed material, even when the supplier warehouse contains
+stock belonging to other work. Returning leftovers permits replacement supply within the
+frozen BOM ceiling. Supply cancellation cannot strand active returns or consumption;
+return cancellation is blocked when replacement supply would exceed the requirement.
+
+Receipt submit and cancel invoke the shared batch/length reservation guard. Receipt
+cancellation also checks the posting-period lock, preserving the existing System Manager
+exception. Canonical stock commit guards prevent reversing finished stock already issued.
+This does not add ERPNext-style automatic order material reservations or process-loss rules.
+
+Local validation on the final material-return candidate:
+
+- full server TypeScript compilation passed;
+- four subcontracting lifecycle tests passed (including pooled supplier stock, returned
+  material replenishment, dependent cancellation, downstream finished-stock consumption,
+  and locked-period cancellation);
+- four existing outbound reservation guard tests passed;
+- migration `0163_subcontracting_material_return.sql` applied twice in SQLite without a
+  duplicate metadata field or revision drift;
+- `git diff --check` passed.
+
+Status remains **PARTIAL**. Process loss, secondary outputs, accepted/rejected finished
+quantities, automatic material reservation lifecycle, quality seams, landed-cost attachment,
+and broad historical repost remain outside this closure. These checks prove the bounded
+transaction lifecycle above, not ERPNext runtime parity or a production deployment.
+
+## Commit-time entitlement revalidation
+
+Migration `0165_subcontracting_commit_entitlement.sql` adds read-only projections and
+D1 document-write triggers. At commit they check net sent-minus-returned material and
+consumption for each order/BOM row, finished receipt and service ceilings, PO service-line
+capacity, and frozen supplier/company/item/warehouse source bindings. Cancelling a source
+order or PO cannot orphan active subcontract execution. Insert, update and delete paths
+are scoped to affected orders and tenants.
+
+The in-memory transactional adapter checks the corresponding projected document state
+inside its database mutex. Prepared plans that lose a cross-aggregate race roll back before
+publishing document, stock or procurement changes. Tests use pooled warehouse stock so
+physical availability cannot accidentally hide a per-order entitlement defect.
+
+Validation: full TypeScript build; five subcontract lifecycle tests plus four reservation
+guard tests; `test-subcontracting-commit-entitlement.py` exercises two SQLite connections
+with separately prepared competing supply, return and receipt writes, stale cancelled
+sources, snapshot tampering, replacement-supply cancellation and valid reversals. The
+migration also applies twice. `verify-sql.py` and `git diff --check` pass.
+
+This establishes commit-time entitlement safety for the frozen R8 subcontracting model.
+It does not establish proportional rounding parity, automatic reservations, process loss,
+quality/rejection or historical valuation repost parity with ERPNext.

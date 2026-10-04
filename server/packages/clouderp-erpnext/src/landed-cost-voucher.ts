@@ -16,6 +16,7 @@ import type { ControllerContext, DocumentController } from "../../document-kerne
 import { nextDocStatus } from "../../document-kernel/src/index.js";
 import { reverseGl, reverseStock } from "../../ledger/src/index.js";
 import { fromScaledInt, toScaledInt } from "../../money/src/index.js";
+import { valueIssue, replayValuation } from "../../clouderp-stock/src/valuation.js";
 import { domainEvent } from "../../outbox/src/index.js";
 
 export interface LandedCostVoucherReceiptRef extends JsonObject {
@@ -37,6 +38,8 @@ export interface LandedCostVoucherAllocation extends JsonObject {
   remaining_qty_micros: number;
   inventory_cost_minor: number;
   consumed_cost_minor: number;
+  history_until: string;
+  chronological_reposts: Array<{ posting_at: string; difference_minor: number; consumer: string; voucher_type: string; voucher_no: string; voucher_revision: number; row_id: string }>;
   history_row_count: number;
   history_qty_micros: number;
   history_value_minor: number;
@@ -108,8 +111,8 @@ export class LandedCostVoucherController implements DocumentController<LandedCos
     if (context.command.action === "submit") {
       assertNotFuture(postingAt, context.now);
       await assertUnlocked(context, allocationPlan.company, postingAt);
-      await assertMaster(context, "Account", account);
-      if (repostDifferenceAccount) await assertMaster(context, "Account", repostDifferenceAccount);
+      await assertPostingAccount(context, account, allocationPlan.company);
+      if (repostDifferenceAccount) await assertPostingAccount(context, repostDifferenceAccount, allocationPlan.company);
     }
 
     const receiptByName = new Map(receipts.map((receipt) => [receipt.name, receipt]));
@@ -128,6 +131,7 @@ export class LandedCostVoucherController implements DocumentController<LandedCos
     for (const [index, allocation] of allocationPlan.allocations.entries()) {
       const receipt = receiptByName.get(allocation.purchase_receipt)!;
       const stockAccount = requiredText(receipt.data.stock_account, `Purchase Receipt ${receipt.name} stock_account`);
+      if (context.command.action === "submit") await assertPostingAccount(context, stockAccount, allocationPlan.company);
       const sourceRows = (stockByReceipt.get(receipt.name) ?? []).filter((line) =>
         line.source_row_id === allocation.row_id && line.actual_qty_micros > 0);
       if (sourceRows.length === 0) {
@@ -137,6 +141,9 @@ export class LandedCostVoucherController implements DocumentController<LandedCos
       }
       if (sourceRows.some((line) => line.item_code !== allocation.item_code || line.warehouse !== allocation.warehouse)) {
         throw errors.reference(`Purchase Receipt ${receipt.name} row ${allocation.row_id} stock identity is inconsistent`);
+      }
+      if (context.command.action === "submit" && sourceRows.some((line) => line.batch_no || line.serial_no)) {
+        throw errors.reference("Landed Cost batch/serial propagation requires a dimension-aware repost and is not supported");
       }
       const sourceValue = sourceRows.reduce((sum, line) => safeAdd(sum, line.stock_value_difference_minor), 0);
       if (safeAdd(sourceValue, allocation.allocated_cost_minor) < 0) {
@@ -148,12 +155,6 @@ export class LandedCostVoucherController implements DocumentController<LandedCos
         allocation.item_code,
         allocation.warehouse,
       );
-      if (context.command.action === "submit"
-        && history.some((line) => line.posting_at > postingAt && line.actual_qty_micros < 0)) {
-        throw errors.reference(
-          `Landed Cost for ${receipt.name} row ${allocation.row_id} is backdated before existing downstream stock consumption; chronological repost remains required`,
-        );
-      }
 
       const historyThroughPosting = history.filter((line) => line.posting_at <= postingAt);
       const sourceQty = sourceRows.reduce((sum, line) => safeAdd(sum, line.actual_qty_micros), 0);
@@ -183,6 +184,54 @@ export class LandedCostVoucherController implements DocumentController<LandedCos
         );
       }
 
+      if (context.command.action === "submit") {
+        const item = await context.reader.getMasterRecordData(context.command.tenant_id, "Item", allocation.item_code);
+        if (String(item?.valuation_method ?? "FIFO").trim().toLowerCase() !== "fifo") {
+          throw errors.reference("Landed Cost receipt-row allocation currently supports FIFO items only");
+        }
+      }
+      const chronologicalReposts: Array<{ posting_at: string; difference_minor: number; consumer: string; voucher_type: string; voucher_no: string; voucher_revision: number; row_id: string }> = [];
+      if (context.command.action === "submit" && inventoryCost !== 0) {
+        const adjustment: StockLedgerEntry = {
+          line_key: "PLANNED-LCV", item_code: allocation.item_code, warehouse: allocation.warehouse,
+          actual_qty_micros: 0, valuation_rate_minor: 0, stock_value_difference_minor: inventoryCost,
+          qty_scale: 6, currency_scale: scale, currency: allocationPlan.currency, posting_at: postingAt,
+          valuation_target_voucher_type: "Purchase Receipt", valuation_target_voucher_no: receipt.name,
+          valuation_target_voucher_revision: receipt.version, valuation_target_row_id: allocation.row_id,
+        };
+        const updated = replayValuation([...historyThroughPosting, adjustment], "FIFO", scale);
+        if (updated.layers.some((layer) => layer.value_minor < 0)) {
+          throw errors.validation("Landed Cost cumulative adjustments would make an open FIFO layer negative");
+        }
+        for (let i = 0; i < history.length; i++) {
+          const line = history[i]!;
+          if (line.posting_at <= postingAt || line.actual_qty_micros >= 0) continue;
+          const prefix = history.slice(0, i);
+          const oldValue = valueIssue(prefix, -line.actual_qty_micros, "FIFO", scale).stock_value_difference_minor;
+          const newValue = valueIssue([...prefix, adjustment], -line.actual_qty_micros, "FIFO", scale).stock_value_difference_minor;
+          const difference = safeAdd(newValue, -oldValue);
+          if (difference === 0) continue;
+          await assertSupportedHistoricalConsumers(context, allocation.item_code, [line]);
+          await assertUnlocked(context, allocationPlan.company, line.posting_at);
+          if (!repostDifferenceAccount) throw errors.reference("repost_difference_account is required for chronological COGS correction");
+          chronologicalReposts.push({ posting_at: line.posting_at, difference_minor: difference,
+            consumer: `${line.source_voucher_type}:${line.source_voucher_no}:${line.line_key}`,
+            voucher_type: requiredText(line.source_voucher_type, "consumer voucher type"),
+            voucher_no: requiredText(line.source_voucher_no, "consumer voucher no"),
+            voucher_revision: line.source_voucher_revision ?? 0, row_id: line.source_row_id ?? line.line_key });
+        }
+        const before = replayValuation(history, "FIFO", scale);
+        const after = replayValuation([...history, adjustment], "FIFO", scale);
+        const ledgerChange = chronologicalReposts.reduce((sum, row) => safeAdd(sum, row.difference_minor), inventoryCost);
+        if (after.layers.some((layer) => layer.value_minor < 0) || safeAdd(after.value_minor, -before.value_minor) !== ledgerChange) {
+          throw errors.ledger("Chronological Landed Cost ledger and FIFO replay do not reconcile");
+        }
+      }
+
+      if (chronologicalReposts.length > 0 && allocationPlan.allocations.filter((other) =>
+        other.item_code === allocation.item_code && other.warehouse === allocation.warehouse).length > 1) {
+        throw errors.reference("Chronological Landed Cost requires one source allocation per item and warehouse to preserve sequential rounding");
+      }
       allocations.push({
         row_id: `ALLOC-${index + 1}`,
         purchase_receipt: receipt.name,
@@ -197,9 +246,11 @@ export class LandedCostVoucherController implements DocumentController<LandedCos
         remaining_qty_micros: position.remaining_qty_micros,
         inventory_cost_minor: inventoryCost,
         consumed_cost_minor: consumedCost,
-        history_row_count: historyThroughPosting.length,
-        history_qty_micros: historyThroughPosting.reduce((sum, line) => safeAdd(sum, line.actual_qty_micros), 0),
-        history_value_minor: historyThroughPosting.reduce((sum, line) => safeAdd(sum, line.stock_value_difference_minor), 0),
+        history_until: "9999-12-31T23:59:59.999Z",
+        chronological_reposts: chronologicalReposts,
+        history_row_count: history.length,
+        history_qty_micros: history.reduce((sum, line) => safeAdd(sum, line.actual_qty_micros), 0),
+        history_value_minor: history.reduce((sum, line) => safeAdd(sum, line.stock_value_difference_minor), 0),
       });
     }
 
@@ -277,6 +328,24 @@ export class LandedCostVoucherController implements DocumentController<LandedCos
           posting_at: data.posting_at,
           remarks: `Historical landed-cost COGS/expense correction for ${allocation.purchase_receipt} row ${allocation.purchase_receipt_row_id}`,
         });
+      }
+
+      for (const [index, repost] of (allocation.chronological_reposts ?? []).entries()) {
+        const difference = repost.difference_minor;
+        stock.push({
+          line_key: `LCV-REPOST-${allocation.row_id}-${index + 1}`, source_row_id: allocation.row_id,
+          valuation_target_voucher_type: repost.voucher_type, valuation_target_voucher_no: repost.voucher_no,
+          valuation_target_voucher_revision: repost.voucher_revision, valuation_target_row_id: repost.row_id,
+          item_code: allocation.item_code, warehouse: allocation.warehouse, actual_qty_micros: 0,
+          valuation_rate_minor: 0, stock_value_difference_minor: difference,
+          qty_scale: 6, currency_scale: scale, currency, posting_at: repost.posting_at,
+        });
+        gl.push({ line_key: `CHRONO-STOCK-${allocation.row_id}-${index + 1}`, account: allocation.stock_account,
+          debit_minor: difference > 0 ? difference : 0, credit_minor: difference < 0 ? -difference : 0,
+          currency, currency_scale: scale, posting_at: repost.posting_at, remarks: `Chronological stock correction for ${repost.consumer}` });
+        gl.push({ line_key: `CHRONO-COGS-${allocation.row_id}-${index + 1}`, account: requiredText(data.repost_difference_account, "repost_difference_account"),
+          debit_minor: difference < 0 ? -difference : 0, credit_minor: difference > 0 ? difference : 0,
+          currency, currency_scale: scale, posting_at: repost.posting_at, remarks: `Chronological COGS correction for ${repost.consumer}` });
       }
 
       gl.push({
@@ -429,6 +498,15 @@ async function assertNoDownstreamConsumptionAfterVoucher(
     const history = await context.reader.getStockLedgerHistory(
       context.command.tenant_id, allocation.item_code, allocation.warehouse,
     );
+    if ((allocation.chronological_reposts ?? []).length > 0) {
+      const external = history.filter((line) => !(line.source_voucher_type === "Landed Cost Voucher" && line.source_voucher_no === existing.name));
+      if (external.length !== allocation.history_row_count
+        || external.reduce((sum, line) => safeAdd(sum, line.actual_qty_micros), 0) !== allocation.history_qty_micros
+        || external.reduce((sum, line) => safeAdd(sum, line.stock_value_difference_minor), 0) !== allocation.history_value_minor) {
+        throw errors.reference("Chronological Landed Cost cannot cancel after additional stock mutations; repost is required");
+      }
+      continue;
+    }
     const index = history.findIndex((line) =>
       line.source_voucher_type === "Landed Cost Voucher"
       && line.source_voucher_no === existing.name
@@ -466,10 +544,23 @@ async function requireSubmitted<T extends JsonObject>(
   return document;
 }
 
-async function assertMaster(context: ControllerContext<LandedCostVoucherData>, type: string, name: string): Promise<void> {
-  if (!await context.reader.hasMasterRecord(context.command.tenant_id, type, name)) {
-    throw errors.reference(`${type} ${name} does not exist or is disabled`);
+async function assertPostingAccount(
+  context: ControllerContext<LandedCostVoucherData>, name: string, company: string,
+): Promise<void> {
+  // An edited/cancelled canonical Account overrides legacy master data of the same name.
+  const document = await context.reader.getDocument<JsonObject>(context.command.tenant_id, "Account", name);
+  const account = document?.data ?? await context.reader.getMasterRecordData(context.command.tenant_id, "Account", name);
+  if (!account || document?.docstatus === 2 || checked(account.disabled)) {
+    throw errors.reference(`Account ${name} does not exist or is disabled`);
   }
+  if (checked(account.is_group)) throw errors.reference(`Account ${name} must be a posting account`);
+  const ownerCompany = optionalText(account.company);
+  if (ownerCompany && ownerCompany !== company) throw errors.reference(`Account ${name} belongs to another company`);
+}
+
+function checked(value: unknown): boolean {
+  return value === true || value === 1 || value === "1"
+    || (typeof value === "string" && value.trim().toLowerCase() === "true");
 }
 
 async function assertUnlocked(context: ControllerContext<LandedCostVoucherData>, company: string, postingAt: string): Promise<void> {

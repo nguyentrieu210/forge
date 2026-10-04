@@ -8,9 +8,9 @@ Forge now has a first-class Period Closing Voucher backed by a reusable canonica
 aggregate. This removes the previous Finance dependency that forced year-end close,
 Budget-vs-Actual and period-end revaluation consumers to invent their own GL scans.
 
-The overall Accounting / GL Period Close flow remains **PARTIAL** because full period-end
-FX revaluation, exact Budget-vs-Actual consumption and multi-company
-consolidation/elimination remain open.
+The overall Accounting / GL Period Close flow remains **PARTIAL**. Budget commitment
+actualization and historical revision checks now exist; foreign non-party FX revaluation,
+consolidation/elimination and pinned runtime/large-ledger depth remain open.
 
 ## Shared GL aggregate authority
 
@@ -104,3 +104,17 @@ move:
 - period-end Exchange Rate Revaluation;
 - Finance Budget vs Actual;
 - multi-company consolidation/elimination.
+
+## Chronological lifecycle — 2026-10-04
+
+Migration 0164 and matching controller/memory checks reject a close when earlier P&L
+remains nonzero. They also reject cancellation of an earlier close while a later active
+close exists in the same company and overlapping branch scope. Later closes must be
+reversed first. Tests cover sequential years, exact reversal, independent branches and
+source changes between planning and commit. No automatic prior-year repair is invented.
+
+Migration 0166 additionally enforces source lock/fingerprint on direct submitted
+inserts and rejects malformed source dates. Memory uses active accounts for the source
+fingerprint while preserving historical inactive-account/date/residual safety; historical
+and source accumulations use exact integers. Matching memory and SQLite regressions
+prove zero-net disabled history is accepted and nonzero disabled P&L is rejected.

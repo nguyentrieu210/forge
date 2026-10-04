@@ -80,6 +80,8 @@ db.execute(
 db.executescript((root / "migrations/tenant/0153_finance_budget_transaction_control.sql").read_text(encoding="utf-8"))
 db.executescript((root / "migrations/tenant/0157_finance_budget_commitment_actualization.sql").read_text(encoding="utf-8"))
 db.executescript((root / "migrations/tenant/0158_finance_budget_fiscal_distribution.sql").read_text(encoding="utf-8"))
+db.executescript((root / "migrations/tenant/0159_finance_budget_revision_distribution_revalidation.sql").read_text(encoding="utf-8"))
+db.executescript((root / "migrations/tenant/0160_finance_budget_revision_event_checkpoints.sql").read_text(encoding="utf-8"))
 
 
 def insert_doc(doctype, name, payload, docstatus=1):
@@ -393,6 +395,51 @@ expect_rejected("FINANCE_BUDGET_TRANSACTION_EXCEEDED", lambda: insert_doc(
         "source_doctype": "Purchase Order", "source_name": "PO-FISCAL-COM",
     }
 ))
+
+# Negative submitted INSERT catches a temporary reserve hidden by month-end release.
+account("656")
+budget("BUD-TEMP", "656", 1200, fiscal_distribution_enabled=True,
+       distribution_frequency="Monthly", distribute_equally=True,
+       distribution_weight_total=12, budget_distribution=rows)
+ensure_voucher("Purchase Order", "PO-TEMP")
+for name, date, kind in (("COM-TEMP", "2026-01-10", "Reserve"), ("REL-TEMP", "2026-01-20", "Release")):
+    insert_doc("Finance Budget Commitment", name, {
+        "budget": "BUD-TEMP", "posting_date": date, "commitment_type": kind,
+        "amount_minor": 100, "source_doctype": "Purchase Order", "source_name": "PO-TEMP",
+    })
+db.commit()
+expect_rejected("FINANCE_BUDGET_REVISION_DISTRIBUTION_EXCEEDED", lambda: insert_doc(
+    "Finance Budget Revision", "REV-TEMP", {
+        "budget": "BUD-TEMP", "posting_date": "2026-01-15", "delta_amount_minor": -120,
+    }))
+assert db.execute("SELECT COUNT(*) FROM documents WHERE name='REV-TEMP'").fetchone()[0] == 0
+insert_doc("Finance Budget Revision", "REV-TEMP-LATER", {
+    "budget": "BUD-TEMP", "posting_date": "2026-01-21", "delta_amount_minor": -120,
+})
+db.commit()
+
+# Draft submission and cancellation cannot hide actuals behind a later GL reversal.
+account("657")
+budget("BUD-TEMP-GL", "657", 1200, fiscal_distribution_enabled=True,
+       distribution_frequency="Monthly", distribute_equally=True,
+       distribution_weight_total=12, budget_distribution=rows)
+insert_doc("Finance Budget Revision", "REV-TEMP-INCREASE", {
+    "budget": "BUD-TEMP-GL", "posting_date": "2026-01-01", "delta_amount_minor": 1200,
+})
+ensure_voucher("Journal Entry", "JE-TEMP-DEBIT")
+insert_gl("Journal Entry", "JE-TEMP-DEBIT", "L1", "657", 150, 0, posting_at="2026-01-10T12:00:00Z")
+ensure_voucher("Journal Entry", "JE-TEMP-REVERSE")
+insert_gl("Journal Entry", "JE-TEMP-REVERSE", "L1", "657", 0, 150, posting_at="2026-01-20T12:00:00Z")
+insert_doc("Finance Budget Revision", "REV-TEMP-DRAFT", {
+    "budget": "BUD-TEMP-GL", "posting_date": "2026-01-15", "delta_amount_minor": -1200,
+}, docstatus=0)
+db.commit()
+expect_rejected("FINANCE_BUDGET_REVISION_DISTRIBUTION_EXCEEDED", lambda: db.execute(
+    "UPDATE documents SET docstatus=1 WHERE doctype='Finance Budget Revision' AND name='REV-TEMP-DRAFT'"))
+assert db.execute("SELECT docstatus FROM documents WHERE name='REV-TEMP-DRAFT'").fetchone()[0] == 0
+expect_rejected("FINANCE_BUDGET_REVISION_DISTRIBUTION_EXCEEDED", lambda: db.execute(
+    "UPDATE documents SET docstatus=2 WHERE doctype='Finance Budget Revision' AND name='REV-TEMP-INCREASE'"))
+assert db.execute("SELECT docstatus FROM documents WHERE name='REV-TEMP-INCREASE'").fetchone()[0] == 1
 
 assert db.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
 print("FINANCE_BUDGET_TRANSACTION_CONTROL_PASS")

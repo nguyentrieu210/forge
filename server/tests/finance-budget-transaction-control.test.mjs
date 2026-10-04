@@ -454,3 +454,52 @@ test("cancelling positive distributed budget revision revalidates historical che
     /FINANCE_BUDGET_REVISION_DISTRIBUTION_EXCEEDED/,
   );
 });
+
+function seedMonthlyRevisionBudget(store, name, account) {
+  seedBudget(store, name, account, 1200, { scope: {
+    fiscal_distribution_enabled: true,
+    distribution_frequency: "Monthly",
+    distribute_equally: true,
+    distribution_weight_total: 12,
+    budget_distribution: Array.from({ length: 12 }, (_, index) => ({
+      start_date: `2026-${String(index + 1).padStart(2, "0")}-01`,
+      end_date: new Date(Date.UTC(2026, index + 1, 0)).toISOString().slice(0, 10),
+      allocation_weight: 1,
+    })),
+  } });
+}
+
+test("revision cannot hide an intra-month reserve overrun behind a later release", async () => {
+  const store = new InMemoryMutationStore();
+  seedMonthlyRevisionBudget(store, "BUD-TEMP", "656");
+  store.seedDocument("Purchase Order", "PO-DIST", "demo", { company: "Kairo" }, 1);
+  await store.execute(commitmentPlan("COM-TEMP", "BUD-TEMP", 100, { postingDate: "2026-01-10" }));
+  await store.execute(commitmentPlan("REL-TEMP", "BUD-TEMP", 100, {
+    postingDate: "2026-01-20", commitmentType: "Release",
+  }));
+  // The proposed revision starts after the reserve, so its own date is absent
+  // from persisted checkpoints. Jan 19 represents that interval for D1 as well.
+  await assert.rejects(store.execute(revisionPlan("REV-TEMP", "BUD-TEMP", -120)),
+    /FINANCE_BUDGET_REVISION_DISTRIBUTION_EXCEEDED/);
+  assert.equal(await store.getDocument("demo", "Finance Budget Revision", "REV-TEMP"), null);
+  // No retrospective effect on an interval that ended before the revision.
+  await store.execute(revisionPlan("REV-TEMP-LATER", "BUD-TEMP", -120, { postingDate: "2026-01-21" }));
+});
+
+test("negative revision submit and positive revision cancel retain state on an intra-month GL overrun", async () => {
+  const store = new InMemoryMutationStore();
+  seedMonthlyRevisionBudget(store, "BUD-TEMP-GL", "657");
+  await store.execute(revisionPlan("REV-TEMP-INCREASE", "BUD-TEMP-GL", 1200, { postingDate: "2026-01-01" }));
+  await store.execute(glPlan("JE-TEMP-DEBIT", "657", 150, { postingAt: "2026-01-10T12:00:00Z" }));
+  await store.execute(glPlan("JE-TEMP-REVERSE", "657", 0, { creditMinor: 150, postingAt: "2026-01-20T12:00:00Z" }));
+  const draft = revisionPlan("REV-TEMP-DRAFT", "BUD-TEMP-GL", -1200, { docstatus: 0 });
+  await store.execute(draft);
+  await assert.rejects(store.execute(revisionPlan("REV-TEMP-DRAFT", "BUD-TEMP-GL", -1200, {
+    action: "submit", expectedVersion: 1, version: 2,
+  })), /FINANCE_BUDGET_REVISION_DISTRIBUTION_EXCEEDED/);
+  assert.equal((await store.getDocument("demo", "Finance Budget Revision", "REV-TEMP-DRAFT")).docstatus, 0);
+  await assert.rejects(store.execute(revisionPlan("REV-TEMP-INCREASE", "BUD-TEMP-GL", 1200, {
+    postingDate: "2026-01-01", action: "cancel", expectedVersion: 1, version: 2, docstatus: 2,
+  })), /FINANCE_BUDGET_REVISION_DISTRIBUTION_EXCEEDED/);
+  assert.equal((await store.getDocument("demo", "Finance Budget Revision", "REV-TEMP-INCREASE")).docstatus, 1);
+});

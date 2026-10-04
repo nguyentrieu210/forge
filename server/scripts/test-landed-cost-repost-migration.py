@@ -67,6 +67,7 @@ db.execute(
 
 db.executescript((root / "migrations/tenant/0142_landed_cost_valuation_identity.sql").read_text(encoding="utf-8"))
 
+db.executescript((root / "migrations/tenant/0161_landed_cost_chronological_fingerprint.sql").read_text(encoding="utf-8"))
 
 def insert_sle(voucher_type, voucher_no, revision, line_key, qty, value, posting_at):
     db.execute(
@@ -138,4 +139,44 @@ else:
     raise AssertionError("stale Landed Cost history fingerprint must reject submit")
 
 assert db.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+# A chronological plan must include stock entries after its own posting time.
+data = payload(3, 400_000, 400)
+data["posting_at"] = "2026-10-02T08:15:00.000Z"
+data["allocations"][0]["history_until"] = "9999-12-31T23:59:59.999Z"
+insert_lcv("LCV-FUTURE-RACE", data)
+db.commit()
+insert_sle("Stock Entry", "LATER-RACE", 2, "SRC-LATER", -100_000, -100, "2026-10-02T08:55:00.000Z")
+db.commit()
+try:
+    db.execute("UPDATE documents SET docstatus=1 WHERE name='LCV-FUTURE-RACE'")
+except sqlite3.IntegrityError as error:
+    assert "history changed" in str(error)
+    db.rollback()
+else:
+    raise AssertionError("later stock mutation must invalidate chronological plan")
+# Chronological cancel excludes its own rows and checks the unchanged external history.
+data = payload(4, 300_000, 300)
+data["allocations"][0]["history_until"] = "9999-12-31T23:59:59.999Z"
+data["allocations"][0]["chronological_reposts"] = [{"difference_minor": -250}]
+insert_lcv("LCV-CANCEL", data)
+db.execute("UPDATE documents SET docstatus=1 WHERE name='LCV-CANCEL'")
+insert_sle("Landed Cost Voucher", "LCV-CANCEL", 2, "LCV-ALLOC-1", 0, 500, "2026-10-02T08:15:00.000Z")
+db.execute("UPDATE documents SET docstatus=2 WHERE name='LCV-CANCEL'")
+db.commit()
+# A new external mutation makes the otherwise identical cancel plan stale.
+data = payload(5, 300_000, 800)
+data["allocations"][0]["history_until"] = "9999-12-31T23:59:59.999Z"
+data["allocations"][0]["chronological_reposts"] = [{"difference_minor": -250}]
+insert_lcv("LCV-CANCEL-RACE", data)
+db.execute("UPDATE documents SET docstatus=1 WHERE name='LCV-CANCEL-RACE'")
+db.commit()
+insert_sle("Stock Entry", "CANCEL-RACE", 2, "SRC-CANCEL", -100_000, -100, "2026-10-02T08:56:00.000Z")
+db.commit()
+try:
+    db.execute("UPDATE documents SET docstatus=2 WHERE name='LCV-CANCEL-RACE'")
+except sqlite3.IntegrityError as error:
+    assert "history changed" in str(error)
+    db.rollback()
+else:
+    raise AssertionError("later stock mutation must invalidate chronological cancel")
 print("LANDED_COST_REPOST_MIGRATION_PASS")

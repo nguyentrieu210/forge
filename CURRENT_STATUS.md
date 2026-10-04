@@ -50,3 +50,17 @@ Checkpoint source không phải bằng chứng production deployment. Mọi prod
 ## R7 certified source checkpoint — 2026-10-02
 
 PR #994 on `codex/r7-frappe-platform-closure` has completed the pinned Frappe v16.19.0 platform denominator. Certified implementation head `ce64f77f8c2a1991a6d88ced76592d44aecd23d5` passed R7 GitHub Actions run `36984495200`: executable `r7:frappe:certify`, changed-authority TypeScript guard, runtime safety regression and Workerd Frappe facade regression. Canonical matrix: **12 SEMANTIC_PARITY / 15 INTENTIONAL_DIFFERENCE / 0 GAP / 1 OUT_OF_SCOPE / 0 UNRESOLVED**. R7-A may claim `FRAPPE_PLATFORM_CLOSED` for this pinned source/runtime contract. Production deploy/migration/provider/customer-data mutation remains separately authorized.
+
+## R8-B source checkpoint — 2026-10-04
+
+PR #996 remains open for business closure. The converged source adds historical budget
+revision interval checks, chronological direct FIFO landed-cost corrections, prior/future
+period-close lifecycle and insertion guards, atomic subcontract entitlement and leftover
+returns, and explicit manufacturing operation-cost capitalization. Foreign non-party FX
+balances fail closed until canonical dual-currency evidence exists.
+
+Verification: server build, 279 Node tests, focused SQLite race/authority scripts, complete
+136-migration tenant replay, R8 benchmark invariant and R7 certification all pass locally.
+R8 business certification remains blocked: 11 modules + 18 flows are PARTIAL, with zero
+UNRESOLVED. Source verification does not claim pinned ERPNext runtime parity or production
+deployment. Existing R8-A benchmark identity and denominator are preserved.

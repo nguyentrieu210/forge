@@ -630,6 +630,8 @@ export class InMemoryMutationStore implements MutationStore {
     this.assertBankReconciliationInvariants(plan);
     this.assertFinanceBudgetInvariants(plan);
     this.assertExchangeRateRevaluationInvariants(plan);
+    this.assertSubcontractingEntitlementInvariants(plan);
+    this.assertPeriodCloseChronology(plan);
     this.assertAmendChain(command);
   }
 
@@ -893,7 +895,9 @@ export class InMemoryMutationStore implements MutationStore {
   }
   private assertStockInvariants<T extends JsonObject>(plan: MutationPlan<T>): void {
     if (plan.command.aggregate.doctype === "Landed Cost Voucher"
-      && plan.command.action === "submit"
+      && (plan.command.action === "submit" || (plan.command.action === "cancel"
+        && Array.isArray(plan.document.data.allocations) && plan.document.data.allocations.some((raw) =>
+          raw && typeof raw === "object" && !Array.isArray(raw) && Array.isArray(raw.chronological_reposts) && raw.chronological_reposts.length > 0)))
       && Array.isArray(plan.document.data.allocations)) {
       const postingAt = String(plan.document.data.posting_at ?? "");
       for (const raw of plan.document.data.allocations) {
@@ -904,7 +908,9 @@ export class InMemoryMutationStore implements MutationStore {
         const history = this.stockEntries.filter((line) =>
           line.item_code === itemCode
           && line.warehouse === warehouse
-          && line.posting_at <= postingAt);
+          && !(plan.command.action === "cancel" && line.source_voucher_type === "Landed Cost Voucher"
+            && line.source_voucher_no === plan.command.aggregate.name)
+          && line.posting_at <= String(allocation.history_until ?? postingAt));
         const rowCount = history.length;
         const qty = history.reduce((sum, line) => sum + line.actual_qty_micros, 0);
         const value = history.reduce((sum, line) => sum + line.stock_value_difference_minor, 0);
@@ -1139,6 +1145,189 @@ export class InMemoryMutationStore implements MutationStore {
     }
   }
 
+  private assertPeriodCloseChronology<T extends JsonObject>(plan: MutationPlan<T>): void {
+    const document = plan.document;
+    if (document.doctype !== "Period Closing Voucher") return;
+    const data = document.data;
+    const branch = typeof data.branch === "string" ? data.branch : "";
+    if (document.docstatus === 2 && [...this.documents.values()].some((close) =>
+      close.tenant_id === document.tenant_id && close.doctype === document.doctype
+      && close.name !== document.name && close.docstatus === 1
+      && close.data.company === data.company
+      && String(close.data.period_end_date ?? "") > String(data.period_end_date ?? "")
+      && (!branch || !close.data.branch || close.data.branch === branch))) {
+      throw errors.lifecycle("PERIOD_CLOSE_FUTURE_CLOSE_EXISTS");
+    }
+    if (document.docstatus !== 1) return;
+    const lockDate = this.periodLocks.get(`${document.tenant_id}:${String(data.company ?? "")}`);
+    if (!lockDate || lockDate < String(data.period_end_date ?? "")) {
+      throw errors.lifecycle("PERIOD_CLOSE_REQUIRES_LOCK");
+    }
+    let sourceRows = 0;
+    let sourceDebit = 0n;
+    let sourceCredit = 0n;
+    const prior = new Map<string, bigint>();
+    const inactive = new Map<string, bigint>();
+    for (const entry of this.voucherGlEntries) {
+      if (entry.tenant_id !== document.tenant_id) continue;
+      const source = this.documents.get(this.docKey(entry.tenant_id, entry.voucher_type, entry.voucher_no));
+      if (!source || source.data.company !== data.company) continue;
+      const sourceBranch = source.data.branch || entry.line.accounting_dimensions?.branch || "";
+      if (branch && sourceBranch !== branch) continue;
+      const accountDocument = this.documents.get(this.docKey(document.tenant_id, "Account", entry.line.account));
+      const account = accountDocument?.data ?? this.masterRecords.get(`${document.tenant_id}:Account:${entry.line.account}`);
+      if (!account || !["Income", "Expense"].includes(String(account.root_type))
+        || account.is_group === true || account.is_group === 1 || account.is_group === "1"
+        || String(account.is_group ?? "").trim().toLowerCase() === "true") continue;
+      if (account.company && account.company !== data.company) continue;
+      const master = this.masterRecords.get(`${document.tenant_id}:Account:${entry.line.account}`);
+      const activeAccount = accountDocument && accountDocument.docstatus !== 2
+        ? (accountDocument.data.disabled === true || accountDocument.data.disabled === 1
+          || accountDocument.data.disabled === "1" ? null : accountDocument.data)
+        : master;
+      const active = Boolean(activeAccount);
+      const fingerprintAccount = active && activeAccount?.company === data.company;
+      const key = `${entry.line.account}:${entry.line.currency}:${entry.line.currency_scale}`;
+      const debit = BigInt(entry.line.debit_minor);
+      const credit = BigInt(entry.line.credit_minor);
+      const postingDate = entry.line.posting_at.slice(0, 10);
+      const parsedDate = Date.parse(entry.line.posting_at);
+      if (!Number.isFinite(parsedDate) || new Date(parsedDate).toISOString().slice(0, 10) !== postingDate) {
+        throw errors.lifecycle("PERIOD_CLOSE_INVALID_SOURCE_DATE");
+      }
+      if (postingDate < String(data.period_start_date ?? "")) {
+        prior.set(key, (prior.get(key) ?? 0n) + debit - credit);
+      } else if (postingDate <= String(data.period_end_date ?? "")) {
+        // Historical rows still participate in date/residual validation. Only
+        // active accounts contribute to the planner's source fingerprint (D1
+        // finance_active_accounts); zero-net disabled history is valid.
+        if (fingerprintAccount) {
+          sourceRows += 1;
+          sourceDebit += debit;
+          sourceCredit += credit;
+        } else if (!active) {
+          inactive.set(key, (inactive.get(key) ?? 0n) + debit - credit);
+        }
+      }
+    }
+    if ([...prior.values()].some((balance) => balance !== 0n)) {
+      throw errors.lifecycle("PERIOD_CLOSE_PRIOR_PNL_BALANCE");
+    }
+    if ([...inactive.values()].some((balance) => balance !== 0n)) {
+      throw errors.lifecycle("PERIOD_CLOSE_INACTIVE_PNL_BALANCE");
+    }
+    if (!Number.isSafeInteger(data.source_debit_minor) || !Number.isSafeInteger(data.source_credit_minor)
+      || sourceRows !== data.source_gl_row_count
+      || sourceDebit !== BigInt(Number(data.source_debit_minor))
+      || sourceCredit !== BigInt(Number(data.source_credit_minor))) {
+      throw errors.lifecycle("PERIOD_CLOSE_SOURCE_CHANGED");
+    }
+  }
+
+  private assertSubcontractingEntitlementInvariants<T extends JsonObject>(plan: MutationPlan<T>): void {
+    const kind = plan.document.doctype;
+    if (!["Stock Entry", "Subcontracting Receipt", "Subcontracting Order", "Purchase Order"].includes(kind)) return;
+    const tenant = plan.command.tenant_id;
+    const current = this.documents.get(this.docKey(tenant, kind, plan.document.name));
+    const affected = new Set<string>();
+    for (const document of [current, plan.document]) {
+      if (!document) continue;
+      if (document.doctype === "Subcontracting Order") affected.add(document.name);
+      const reference = document.data.subcontracting_order;
+      if (typeof reference === "string" && reference) affected.add(reference);
+    }
+    const documents = [...this.documents.values()].filter((document) => document.tenant_id === tenant
+      && !(document.doctype === kind && document.name === plan.document.name));
+    documents.push(plan.document);
+    if (kind === "Purchase Order") {
+      for (const document of documents) {
+        if (document.doctype === "Subcontracting Order" && document.docstatus === 1
+          && document.data.purchase_order === plan.document.name) affected.add(document.name);
+      }
+    }
+    if (!affected.size) return;
+    const fail = (): never => { throw errors.reference("Subcontracting source snapshot or material entitlement changed; retry mutation"); };
+    const rows = (data: JsonObject, field: string): JsonObject[] => {
+      const value = data[field];
+      if (!Array.isArray(value)) return fail();
+      return value.map((row) => row && typeof row === "object" && !Array.isArray(row) ? row as JsonObject : fail());
+    };
+    const integer = (value: unknown, positive = false): number => {
+      if (typeof value !== "number" || !Number.isSafeInteger(value) || value < (positive ? 1 : 0)) return fail();
+      return value;
+    };
+    const add = (left: number, right: number): number => {
+      const result = left + right;
+      if (!Number.isSafeInteger(result)) return fail();
+      return result;
+    };
+    const active = documents.filter((document) => document.docstatus === 1);
+    for (const orderName of affected) {
+      const order = active.find((document) => document.doctype === "Subcontracting Order" && document.name === orderName);
+      const execution = active.filter((document) => ["Stock Entry", "Subcontracting Receipt"].includes(document.doctype)
+        && document.data.subcontracting_order === orderName);
+      if (!order) { if (execution.length) fail(); continue; }
+      const data = order.data;
+      const po = active.find((document) => document.doctype === "Purchase Order" && document.name === data.purchase_order);
+      if (!po || ![true, 1, "1", "true"].includes(po.data.is_subcontracted as boolean | number | string)) fail();
+      for (const field of ["company", "supplier", "currency"]) if (data[field] !== po!.data[field]) fail();
+      const quantity = integer(data.qty_micros, true);
+      const service = integer(data.service_amount_minor);
+      const poRow = rows(po!.data, "items").find((row) => row.row_id === data.purchase_order_row_id && row.item_code === data.service_item);
+      if (!poRow) fail();
+      const ordered = active.filter((document) => document.doctype === "Subcontracting Order"
+        && document.data.purchase_order === data.purchase_order && document.data.purchase_order_row_id === data.purchase_order_row_id)
+        .reduce((total, document) => add(total, integer(document.data.qty_micros, true)), 0);
+      if (ordered > integer(poRow!.qty_micros, true)) fail();
+      const materials = new Map<string, { item: string; source: string; required: number; sent: number; consumed: number }>();
+      for (const row of rows(data, "supplied_items")) {
+        if (typeof row.bom_row_id !== "string" || !row.bom_row_id || materials.has(row.bom_row_id)
+          || typeof row.item_code !== "string" || !row.item_code || typeof row.source_warehouse !== "string" || !row.source_warehouse) fail();
+        materials.set(row.bom_row_id as string, { item: row.item_code as string, source: row.source_warehouse as string,
+          required: integer(row.required_qty_micros, true), sent: 0, consumed: 0 });
+      }
+      if (!materials.size) fail();
+      let received = 0;
+      let serviceUsed = 0;
+      for (const document of execution) {
+        const executionData = document.data;
+        if (document.doctype === "Stock Entry") {
+          if (executionData.company !== data.company || executionData.purpose !== "Material Transfer") fail();
+          const returned = executionData.subcontracting_material_return ?? false;
+          if (![true, false, 0, 1].includes(returned as boolean | number)) fail();
+          const items = rows(executionData, "items");
+          if (!items.length) fail();
+          for (const row of items) {
+            const material = materials.get(String(row.bom_row_id ?? ""));
+            if (!material || row.item_code !== material.item
+              || row.source_warehouse !== (returned ? data.supplier_warehouse : material.source)
+              || row.target_warehouse !== (returned ? material.source : data.supplier_warehouse)) fail();
+            material!.sent = add(material!.sent, (returned ? -1 : 1) * integer(row.qty_micros, true));
+          }
+        } else {
+          for (const field of ["company", "supplier", "currency", "purchase_order", "purchase_order_row_id", "service_item",
+            "production_item", "supplier_warehouse", "target_warehouse"]) if (executionData[field] !== data[field]) fail();
+          received = add(received, integer(executionData.received_qty_micros, true));
+          serviceUsed = add(serviceUsed, integer(executionData.service_cost_minor));
+          const supplied = rows(executionData, "supplied_items");
+          const seen = new Set<string>();
+          if (supplied.length !== materials.size) fail();
+          for (const row of supplied) {
+            const key = String(row.bom_row_id ?? "");
+            const material = materials.get(key);
+            if (!material || row.item_code !== material.item || seen.has(key)) fail();
+            seen.add(key);
+            material!.consumed = add(material!.consumed, integer(row.consumed_qty_micros));
+          }
+        }
+      }
+      if (received > quantity || serviceUsed > service) fail();
+      for (const material of materials.values()) {
+        if (material.sent < 0 || material.sent > material.required || material.consumed > material.sent) fail();
+      }
+    }
+  }
+
   private assertExchangeRateRevaluationInvariants<T extends JsonObject>(plan: MutationPlan<T>): void {
     if (plan.command.aggregate.doctype !== "Exchange Rate Revaluation" || plan.command.action !== "submit") return;
     const data = plan.document.data;
@@ -1182,6 +1371,32 @@ export class InMemoryMutationStore implements MutationStore {
       && document.data.posting_at.slice(0, 10) === postingDate
     );
     if (duplicate) throw errors.lifecycle("FINANCE_FX_DUPLICATE_DATE");
+
+    // Recheck unsupported non-party foreign balances inside the mutation mutex;
+    // a backdated GL row or Account currency change after planning must not turn
+    // an AR/AP-only revaluation into a silently incomplete company close.
+    const foreignNonPartyBalances = new Map<string, bigint>();
+    for (const stored of this.voucherGlEntries) {
+      if (stored.tenant_id !== tenantId || stored.line.posting_at.slice(0, 10) > postingDate) continue;
+      const source = this.documents.get(this.docKey(tenantId, stored.voucher_type, stored.voucher_no));
+      if (!source || source.data.company !== company) continue;
+      const accountDocument = this.documents.get(this.docKey(tenantId, "Account", stored.line.account));
+      const account = accountDocument
+        ? accountDocument.data
+        : this.masterRecords.get(`${tenantId}:Account:${stored.line.account}`);
+      if (!account) continue;
+      const accountCurrency = String(account.account_currency ?? "").trim() || String(account.currency ?? "").trim();
+      const accountType = String(account.account_type ?? "").trim();
+      const rootType = String(account.root_type ?? "").trim();
+      if (!accountCurrency || accountCurrency === companyCurrency
+        || accountType === "Receivable" || accountType === "Payable"
+        || !(rootType === "Asset" || rootType === "Liability" || accountType === "Bank" || accountType === "Cash")) continue;
+      const key = `${stored.line.account}\u0000${stored.line.currency}\u0000${stored.line.currency_scale}`;
+      foreignNonPartyBalances.set(key, (foreignNonPartyBalances.get(key) ?? 0n) + BigInt(stored.line.debit_minor) - BigInt(stored.line.credit_minor));
+    }
+    if ([...foreignNonPartyBalances.values()].some((balance) => balance !== 0n)) {
+      throw errors.lifecycle("FINANCE_FX_NON_PARTY_DUAL_CURRENCY_REQUIRED");
+    }
 
     const grouped = new Map<string, {
       account_type: string; party_type: string; party: string; account: string;
@@ -1254,7 +1469,7 @@ export class InMemoryMutationStore implements MutationStore {
 
   private assertFinanceBudgetInvariants<T extends JsonObject>(plan: MutationPlan<T>): void {
     if (plan.document.doctype === "Finance Budget Revision"
-      && (plan.command.action === "submit" || plan.command.action === "cancel")) {
+      && (plan.document.docstatus === 1 || plan.command.action === "cancel")) {
       this.assertFinanceBudgetRevisionPlan(plan);
     }
     if (plan.document.doctype === "Finance Budget Commitment" && plan.document.docstatus === 1) {
@@ -1388,12 +1603,33 @@ export class InMemoryMutationStore implements MutationStore {
     if (!company || !account || !startDate || !endDate) return;
 
     const rows = Array.isArray(budget.data.budget_distribution) ? budget.data.budget_distribution : [];
-    const checkpoints = [...new Set(rows
-      .filter((raw): raw is JsonObject => Boolean(raw && typeof raw === "object" && !Array.isArray(raw)))
-      .map((row) => typeof row.end_date === "string" ? row.end_date : "")
-      .filter((date) => date && date >= revisionDate && date <= endDate))]
-      .sort();
-    if (checkpoints.length === 0) checkpoints.push(endDate);
+    // Usage and caps change on ledger/commitment/revision dates. Period ends alone
+    // lose temporary overruns hidden by later releases or reversals. The day before
+    // each change also represents the interval containing a newly backdated revision.
+    const dates = new Set<string>([revisionDate, endDate]);
+    const addCheckpoint = (date: string): void => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+      dates.add(date);
+      const prior = new Date(`${date}T00:00:00Z`);
+      prior.setUTCDate(prior.getUTCDate() - 1);
+      dates.add(prior.toISOString().slice(0, 10));
+    };
+    for (const raw of rows) {
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
+      addCheckpoint(String(raw.start_date ?? ""));
+      addCheckpoint(String(raw.end_date ?? ""));
+    }
+    for (const document of this.documents.values()) {
+      if (document.tenant_id === tenantId && document.docstatus === 1
+        && (document.doctype === "Finance Budget Commitment" || document.doctype === "Finance Budget Revision")
+        && document.data.budget === budgetName) addCheckpoint(String(document.data.posting_date ?? ""));
+    }
+    for (const entry of this.voucherGlEntries) {
+      if (entry.tenant_id === tenantId && entry.line.account === account) {
+        addCheckpoint(entry.line.posting_at.slice(0, 10));
+      }
+    }
+    const checkpoints = [...dates].filter((date) => date >= revisionDate && date >= startDate && date <= endDate).sort();
 
     const accountDocument = this.documents.get(this.docKey(tenantId, "Account", account));
     const accountMaster = this.masterRecords.get(`${tenantId}:Account:${account}`);

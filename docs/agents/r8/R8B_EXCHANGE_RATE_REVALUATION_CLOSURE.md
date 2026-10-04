@@ -57,3 +57,50 @@ test-adapter parity defect where equal voucher names in different tenants could 
 This slice closes **foreign AR/AP period-end revaluation**, not every ERPNext monetary-account
 case. Foreign bank/cash and other non-party balance-sheet accounts, ERPNext-exact runtime
 differential fixtures, and broader multi-company consolidation/elimination remain open.
+
+## Non-party account boundary (0162)
+
+The Company revaluation now fails closed with
+`FINANCE_FX_NON_PARTY_DUAL_CURRENCY_REQUIRED` when the canonical as-of GL has a
+non-zero balance for a configured foreign non-party balance-sheet account. This
+includes Bank/Cash account types and conservatively covers other Asset/Liability accounts except
+Receivable/Payable. Both `account_currency` and the existing `currency` alias are
+recognized. Domestic accounts and zero net balances do not block the existing
+AR/AP path. Future movements, other companies and other tenants are excluded.
+Disabling or cancelling an Account does not erase its historical currency metadata
+or its outstanding GL balance; the commit guard still rejects those balances.
+The broad Asset/Liability check is conservative: monetary versus nonmonetary
+classification is not yet evidenced for every Account type, so it may refuse a
+foreign nonmonetary account rather than silently claiming full coverage.
+
+The controller uses `getGlAccountBalances` from the beginning of history through
+the revaluation date. Migration
+`0162_exchange_rate_revaluation_non_party_safety.sql` rechecks the same canonical
+GL and current Account configuration in both INSERT and UPDATE submit paths.
+The in-memory store rechecks under its mutation mutex. This prevents a backdated
+bank posting or currency configuration change after planning from being silently
+ignored by an otherwise valid AR/AP revaluation.
+
+This is a safety boundary, **not bank/cash revaluation completion**. The precise
+missing prerequisite is immutable foreign account units alongside company-currency
+debit/credit in canonical GL, populated by every bank/cash/Journal Entry producer
+and preserved in exact reversal. Evidence:
+
+- `GeneralLedgerEntry` currently carries one `currency` and one pair of
+  `debit_minor`/`credit_minor`, with no independent account-currency amounts.
+- `FinancePaymentEntryController.normalize` requires `received_amount` equal to
+  the company-currency conversion of `paid_amount`; its `BANK` GL row is in
+  company currency. An invoice's or payment's transaction currency therefore
+  does not prove the bank's foreign-unit balance.
+- Bank Transaction statement evidence is not accounting authority and cannot
+  supply the missing balance by replacing canonical GL.
+
+Remaining work must add that canonical dual-currency contract before calculating
+foreign non-party unrealized FX. Zero company-currency net balance does not prove
+zero foreign units; this change only guards the evidenced non-zero GL case.
+The capability remains PARTIAL and broader business closure remains false.
+
+Validation adds controller and in-memory regressions for bank/cash/liability
+rejection, domestic/AR/AP exclusions, backdated source drift, account config drift,
+exact compensating rows, large-integer cancellation precision and date/tenant/company scope. The existing SQLite
+migration regression now covers 0162 INSERT/UPDATE guards and the same scope cases.
