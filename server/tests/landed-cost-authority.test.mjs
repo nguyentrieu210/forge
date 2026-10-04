@@ -303,6 +303,89 @@ test("Late Landed Cost treats already-posted Delivery Note consumption as expens
   assert.equal(gl.find(row => row.line_key.startsWith("REPOST-"))?.debit_minor, 250);
 });
 
+test("Backdated Landed Cost carries FIFO value through an unconsumed future Material Transfer", async () => {
+  const { store, kernel } = setup();
+  store.seedMaster("Warehouse", "Transit", "demo", { company: "Demo", is_group: 0, disabled: 0 });
+  await submitPo(kernel, "PO-LCV-TRANSFER", "1");
+  await submitReceipt(kernel, "PR-LCV-TRANSFER", "PO-LCV-TRANSFER", "ROW", "10", "2026-10-02T08:00:00.000Z");
+  await createAndSubmit(kernel, {
+    doctype: "Stock Entry",
+    name: "TRANSFER-AFTER-LCV",
+    document: {
+      company: "Demo",
+      posting_at: "2026-10-02T08:30:00.000Z",
+      purpose: "Material Transfer",
+      items: [{
+        row_id: "TRANSFER-ROW",
+        item_code: "ITEM-1",
+        qty: "0.5",
+        source_warehouse: "Stores",
+        target_warehouse: "Transit",
+      }],
+    },
+  });
+
+  await submitLcv(kernel, "LCV-TRANSFER", "PR-LCV-TRANSFER", "2026-10-02T08:15:00.000Z");
+  const lcv = await store.getDocument("demo", "Landed Cost Voucher", "LCV-TRANSFER");
+  const repost = lcv.data.allocations[0].chronological_reposts[0];
+  assert.equal(repost.kind, "transfer");
+  assert.equal(repost.difference_minor, -250);
+  assert.equal(repost.target_warehouse, "Transit");
+  assert.equal(lcv.data.allocations[0].propagation_fingerprints.length, 1);
+
+  assert.equal((await store.getTrackedStockState("demo", "ITEM-1", "Stores")).stock_value_minor, 750);
+  assert.equal((await store.getTrackedStockState("demo", "ITEM-1", "Transit")).stock_value_minor, 750);
+  const lcvStock = await store.getVoucherStockEntries("demo", "Landed Cost Voucher", "LCV-TRANSFER", 2);
+  assert.equal(lcvStock.filter(row => row.warehouse === "Stores").reduce((sum, row) => sum + row.stock_value_difference_minor, 0), 250);
+  assert.equal(lcvStock.filter(row => row.warehouse === "Transit").reduce((sum, row) => sum + row.stock_value_difference_minor, 0), 250);
+  const lcvGl = await store.getVoucherGlEntries("demo", "Landed Cost Voucher", "LCV-TRANSFER", 2);
+  assert.equal(lcvGl.some(row => row.line_key.startsWith("CHRONO-COGS-")), false);
+  assert.equal(lcvGl.reduce((sum, row) => sum + row.debit_minor - row.credit_minor, 0), 0);
+
+  await mutate(kernel, {
+    commandId: "LCV-TRANSFER-cancel",
+    doctype: "Landed Cost Voucher",
+    name: "LCV-TRANSFER",
+    action: "cancel",
+    expectedVersion: 2,
+    document: {},
+  });
+  assert.equal((await store.getTrackedStockState("demo", "ITEM-1", "Stores")).stock_value_minor, 500);
+  assert.equal((await store.getTrackedStockState("demo", "ITEM-1", "Transit")).stock_value_minor, 500);
+});
+
+test("Backdated Landed Cost still fails closed when a transferred FIFO layer is consumed again", async () => {
+  const { store, kernel } = setup();
+  store.seedMaster("Warehouse", "Transit", "demo", { company: "Demo", is_group: 0, disabled: 0 });
+  await submitPo(kernel, "PO-LCV-TRANSFER-CONSUMED", "1");
+  await submitReceipt(kernel, "PR-LCV-TRANSFER-CONSUMED", "PO-LCV-TRANSFER-CONSUMED", "ROW", "10", "2026-10-02T08:00:00.000Z");
+  await createAndSubmit(kernel, {
+    doctype: "Stock Entry",
+    name: "TRANSFER-CONSUMED",
+    document: {
+      company: "Demo",
+      posting_at: "2026-10-02T08:30:00.000Z",
+      purpose: "Material Transfer",
+      items: [{ row_id: "TRANSFER-ROW", item_code: "ITEM-1", qty: "0.5", source_warehouse: "Stores", target_warehouse: "Transit" }],
+    },
+  });
+  await createAndSubmit(kernel, {
+    doctype: "Stock Entry",
+    name: "ISSUE-FROM-TRANSIT",
+    document: {
+      company: "Demo",
+      posting_at: "2026-10-02T08:40:00.000Z",
+      purpose: "Material Issue",
+      items: [{ row_id: "TRANSIT-ISSUE", item_code: "ITEM-1", qty: "0.5", source_warehouse: "Transit" }],
+    },
+  });
+  await assert.rejects(
+    submitLcv(kernel, "LCV-TRANSFER-CONSUMED", "PR-LCV-TRANSFER-CONSUMED", "2026-10-02T08:15:00.000Z", "COGS Repost"),
+    /destination layer has downstream consumption/i,
+  );
+  assert.equal((await store.getDocument("demo", "Landed Cost Voucher", "LCV-TRANSFER-CONSUMED")).docstatus, 0);
+});
+
 test("Stock Entry transfer keeps one stable source-row identity across both warehouses", async () => {
   const { store, kernel } = setup();
   store.seedMaster("Warehouse", "Transit", "demo", { company: "Demo", is_group: 0, disabled: 0 });

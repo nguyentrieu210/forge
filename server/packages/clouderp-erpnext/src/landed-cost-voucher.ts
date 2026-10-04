@@ -24,6 +24,31 @@ export interface LandedCostVoucherReceiptRef extends JsonObject {
   purchase_receipt: string;
 }
 
+interface StockHistoryFingerprint extends JsonObject {
+  item_code: string;
+  warehouse: string;
+  history_until: string;
+  history_row_count: number;
+  history_qty_micros: number;
+  history_value_minor: number;
+}
+
+interface ChronologicalRepost extends JsonObject {
+  posting_at: string;
+  difference_minor: number;
+  consumer: string;
+  voucher_type: string;
+  voucher_no: string;
+  voucher_revision: number;
+  row_id: string;
+  kind?: "expense" | "transfer";
+  target_warehouse?: string;
+  target_voucher_type?: string;
+  target_voucher_no?: string;
+  target_voucher_revision?: number;
+  target_row_id?: string;
+}
+
 export interface LandedCostVoucherAllocation extends JsonObject {
   row_id: string;
   purchase_receipt: string;
@@ -39,7 +64,8 @@ export interface LandedCostVoucherAllocation extends JsonObject {
   inventory_cost_minor: number;
   consumed_cost_minor: number;
   history_until: string;
-  chronological_reposts: Array<{ posting_at: string; difference_minor: number; consumer: string; voucher_type: string; voucher_no: string; voucher_revision: number; row_id: string }>;
+  chronological_reposts: ChronologicalRepost[];
+  propagation_fingerprints?: StockHistoryFingerprint[];
   history_row_count: number;
   history_qty_micros: number;
   history_value_minor: number;
@@ -160,6 +186,7 @@ export class LandedCostVoucherController implements DocumentController<LandedCos
       const sourceQty = sourceRows.reduce((sum, line) => safeAdd(sum, line.actual_qty_micros), 0);
       const position = fifoSourcePosition(
         historyThroughPosting,
+        "Purchase Receipt",
         receipt.name,
         receipt.version,
         allocation.row_id,
@@ -190,7 +217,8 @@ export class LandedCostVoucherController implements DocumentController<LandedCos
           throw errors.reference("Landed Cost receipt-row allocation currently supports FIFO items only");
         }
       }
-      const chronologicalReposts: Array<{ posting_at: string; difference_minor: number; consumer: string; voucher_type: string; voucher_no: string; voucher_revision: number; row_id: string }> = [];
+      const chronologicalReposts: ChronologicalRepost[] = [];
+      const propagationFingerprints: StockHistoryFingerprint[] = [];
       if (context.command.action === "submit" && inventoryCost !== 0) {
         const adjustment: StockLedgerEntry = {
           line_key: "PLANNED-LCV", item_code: allocation.item_code, warehouse: allocation.warehouse,
@@ -211,14 +239,42 @@ export class LandedCostVoucherController implements DocumentController<LandedCos
           const newValue = valueIssue([...prefix, adjustment], -line.actual_qty_micros, "FIFO", scale).stock_value_difference_minor;
           const difference = safeAdd(newValue, -oldValue);
           if (difference === 0) continue;
-          await assertSupportedHistoricalConsumers(context, allocation.item_code, [line]);
+          const consumerPlan = await planChronologicalConsumer(
+            context,
+            allocation.item_code,
+            line,
+            difference,
+            scale,
+            allocationPlan.currency,
+          );
           await assertUnlocked(context, allocationPlan.company, line.posting_at);
-          if (!repostDifferenceAccount) throw errors.reference("repost_difference_account is required for chronological COGS correction");
-          chronologicalReposts.push({ posting_at: line.posting_at, difference_minor: difference,
+          if (consumerPlan.kind === "expense" && !repostDifferenceAccount) {
+            throw errors.reference("repost_difference_account is required for chronological COGS correction");
+          }
+          chronologicalReposts.push({
+            posting_at: line.posting_at,
+            difference_minor: difference,
             consumer: `${line.source_voucher_type}:${line.source_voucher_no}:${line.line_key}`,
             voucher_type: requiredText(line.source_voucher_type, "consumer voucher type"),
             voucher_no: requiredText(line.source_voucher_no, "consumer voucher no"),
-            voucher_revision: line.source_voucher_revision ?? 0, row_id: line.source_row_id ?? line.line_key });
+            voucher_revision: line.source_voucher_revision ?? 0,
+            row_id: line.source_row_id ?? line.line_key,
+            kind: consumerPlan.kind,
+            ...(consumerPlan.target ? {
+              target_warehouse: consumerPlan.target.warehouse,
+              target_voucher_type: consumerPlan.target.voucher_type,
+              target_voucher_no: consumerPlan.target.voucher_no,
+              target_voucher_revision: consumerPlan.target.voucher_revision,
+              target_row_id: consumerPlan.target.row_id,
+            } : {}),
+          });
+          if (consumerPlan.fingerprint) {
+            const key = `${consumerPlan.fingerprint.item_code}\u0000${consumerPlan.fingerprint.warehouse}`;
+            if (!propagationFingerprints.some((fingerprint) =>
+              `${fingerprint.item_code}\u0000${fingerprint.warehouse}` === key)) {
+              propagationFingerprints.push(consumerPlan.fingerprint);
+            }
+          }
         }
         const before = replayValuation(history, "FIFO", scale);
         const after = replayValuation([...history, adjustment], "FIFO", scale);
@@ -248,6 +304,7 @@ export class LandedCostVoucherController implements DocumentController<LandedCos
         consumed_cost_minor: consumedCost,
         history_until: "9999-12-31T23:59:59.999Z",
         chronological_reposts: chronologicalReposts,
+        propagation_fingerprints: propagationFingerprints,
         history_row_count: history.length,
         history_qty_micros: history.reduce((sum, line) => safeAdd(sum, line.actual_qty_micros), 0),
         history_value_minor: history.reduce((sum, line) => safeAdd(sum, line.stock_value_difference_minor), 0),
@@ -340,6 +397,26 @@ export class LandedCostVoucherController implements DocumentController<LandedCos
           valuation_rate_minor: 0, stock_value_difference_minor: difference,
           qty_scale: 6, currency_scale: scale, currency, posting_at: repost.posting_at,
         });
+        if (repost.kind === "transfer") {
+          stock.push({
+            line_key: `LCV-TRANSFER-IN-${allocation.row_id}-${index + 1}`,
+            source_row_id: allocation.row_id,
+            valuation_target_voucher_type: requiredText(repost.target_voucher_type, "transfer target voucher type"),
+            valuation_target_voucher_no: requiredText(repost.target_voucher_no, "transfer target voucher no"),
+            valuation_target_voucher_revision: repost.target_voucher_revision ?? 0,
+            valuation_target_row_id: requiredText(repost.target_row_id, "transfer target row"),
+            item_code: allocation.item_code,
+            warehouse: requiredText(repost.target_warehouse, "transfer target warehouse"),
+            actual_qty_micros: 0,
+            valuation_rate_minor: 0,
+            stock_value_difference_minor: -difference,
+            qty_scale: 6,
+            currency_scale: scale,
+            currency,
+            posting_at: repost.posting_at,
+          });
+          continue;
+        }
         gl.push({ line_key: `CHRONO-STOCK-${allocation.row_id}-${index + 1}`, account: allocation.stock_account,
           debit_minor: difference > 0 ? difference : 0, credit_minor: difference < 0 ? -difference : 0,
           currency, currency_scale: scale, posting_at: repost.posting_at, remarks: `Chronological stock correction for ${repost.consumer}` });
@@ -408,8 +485,9 @@ interface FifoSourcePosition {
 
 function fifoSourcePosition(
   history: StockLedgerEntry[],
-  receiptName: string,
-  receiptRevision: number,
+  voucherType: string,
+  voucherName: string,
+  voucherRevision: number,
   rowId: string,
 ): FifoSourcePosition {
   const layers: Array<{ qty_micros: number; target: boolean }> = [];
@@ -418,9 +496,9 @@ function fifoSourcePosition(
     if (line.actual_qty_micros > 0) {
       layers.push({
         qty_micros: line.actual_qty_micros,
-        target: line.source_voucher_type === "Purchase Receipt"
-          && line.source_voucher_no === receiptName
-          && line.source_voucher_revision === receiptRevision
+        target: line.source_voucher_type === voucherType
+          && line.source_voucher_no === voucherName
+          && line.source_voucher_revision === voucherRevision
           && line.source_row_id === rowId,
       });
       continue;
@@ -443,6 +521,115 @@ function fifoSourcePosition(
     remaining_qty_micros: layers.filter((layer) => layer.target)
       .reduce((sum, layer) => safeAdd(sum, layer.qty_micros), 0),
     consumed_by: consumedBy,
+  };
+}
+
+async function planChronologicalConsumer(
+  context: ControllerContext<LandedCostVoucherData>,
+  itemCode: string,
+  line: StockLedgerEntry,
+  difference: number,
+  currencyScale: number,
+  currency: string,
+): Promise<{
+  kind: "expense" | "transfer";
+  target?: { warehouse: string; voucher_type: string; voucher_no: string; voucher_revision: number; row_id: string };
+  fingerprint?: StockHistoryFingerprint;
+}> {
+  if (line.source_voucher_type !== "Stock Entry" || !line.source_voucher_no) {
+    await assertSupportedHistoricalConsumers(context, itemCode, [line]);
+    return { kind: "expense" };
+  }
+
+  const source = await context.reader.getDocument<JsonObject>(
+    context.command.tenant_id,
+    "Stock Entry",
+    line.source_voucher_no,
+  );
+  if (!source || source.docstatus !== 1 || source.data.purpose !== "Material Transfer") {
+    await assertSupportedHistoricalConsumers(context, itemCode, [line]);
+    return { kind: "expense" };
+  }
+
+  const rowId = requiredText(line.source_row_id, "Material Transfer source row identity");
+  const revision = line.source_voucher_revision ?? 0;
+  if (revision <= 0) throw errors.reference("Material Transfer source revision is required for Landed Cost propagation");
+  const voucherRows = await context.reader.getVoucherStockEntries(
+    context.command.tenant_id,
+    "Stock Entry",
+    line.source_voucher_no,
+    revision,
+  );
+  const targets = voucherRows.filter((row) =>
+    row.item_code === itemCode
+    && row.source_row_id === rowId
+    && row.actual_qty_micros > 0
+    && row.warehouse !== line.warehouse);
+  if (targets.length !== 1) {
+    throw errors.reference(
+      `Material Transfer ${line.source_voucher_no} row ${rowId} must have exactly one destination stock row for Landed Cost propagation`,
+    );
+  }
+  const target = targets[0]!;
+  if (target.batch_no || target.serial_no) {
+    throw errors.reference("Material Transfer Landed Cost propagation does not yet support batch/serial destination layers");
+  }
+
+  const targetHistory = await context.reader.getStockLedgerHistory(
+    context.command.tenant_id,
+    itemCode,
+    target.warehouse,
+  );
+  const targetPosition = fifoSourcePosition(
+    targetHistory,
+    "Stock Entry",
+    line.source_voucher_no,
+    revision,
+    rowId,
+  );
+  if (targetPosition.remaining_qty_micros !== target.actual_qty_micros) {
+    throw errors.reference(
+      `Material Transfer ${line.source_voucher_no} destination layer has downstream consumption; recursive Landed Cost propagation is required`,
+    );
+  }
+  const targetAdjustment: StockLedgerEntry = {
+    line_key: "PLANNED-LCV-TRANSFER-IN",
+    item_code: itemCode,
+    warehouse: target.warehouse,
+    actual_qty_micros: 0,
+    valuation_rate_minor: 0,
+    stock_value_difference_minor: -difference,
+    qty_scale: 6,
+    currency_scale: currencyScale,
+    currency,
+    posting_at: line.posting_at,
+    valuation_target_voucher_type: "Stock Entry",
+    valuation_target_voucher_no: line.source_voucher_no,
+    valuation_target_voucher_revision: revision,
+    valuation_target_row_id: rowId,
+  };
+  const after = replayValuation([...targetHistory, targetAdjustment], "FIFO", currencyScale);
+  if (after.layers.some((layer) => layer.value_minor < 0)) {
+    throw errors.validation("Landed Cost transfer propagation would make a destination FIFO layer negative");
+  }
+
+  return {
+    kind: "transfer",
+    target: {
+      warehouse: target.warehouse,
+      voucher_type: "Stock Entry",
+      voucher_no: line.source_voucher_no,
+      voucher_revision: revision,
+      row_id: rowId,
+    },
+    fingerprint: {
+      item_code: itemCode,
+      warehouse: target.warehouse,
+      history_until: "9999-12-31T23:59:59.999Z",
+      history_row_count: targetHistory.length,
+      history_qty_micros: targetHistory.reduce((sum, row) => safeAdd(sum, row.actual_qty_micros), 0),
+      history_value_minor: targetHistory.reduce((sum, row) => safeAdd(sum, row.stock_value_difference_minor), 0),
+    },
   };
 }
 

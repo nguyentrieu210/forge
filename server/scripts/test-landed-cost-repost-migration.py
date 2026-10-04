@@ -69,7 +69,9 @@ db.executescript((root / "migrations/tenant/0142_landed_cost_valuation_identity.
 
 db.executescript((root / "migrations/tenant/0161_landed_cost_chronological_fingerprint.sql").read_text(encoding="utf-8"))
 
-def insert_sle(voucher_type, voucher_no, revision, line_key, qty, value, posting_at):
+db.executescript((root / "migrations/tenant/0167_landed_cost_transfer_propagation_fingerprint.sql").read_text(encoding="utf-8"))
+
+def insert_sle(voucher_type, voucher_no, revision, line_key, qty, value, posting_at, warehouse="Stores", source_row_id=None):
     db.execute(
         """INSERT INTO stock_ledger_entries(
           tenant_id,voucher_type,voucher_no,voucher_revision,line_key,source_row_id,
@@ -78,8 +80,8 @@ def insert_sle(voucher_type, voucher_no, revision, line_key, qty, value, posting
         ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0)""",
         (
             "demo", voucher_type, voucher_no, revision, line_key,
-            "PR-ROW" if voucher_type == "Purchase Receipt" else "ISSUE-ROW",
-            "ITEM-1", "Stores", qty, 1000, value, 6, 2, "USD", posting_at,
+            source_row_id or ("PR-ROW" if voucher_type == "Purchase Receipt" else "ISSUE-ROW"),
+            "ITEM-1", warehouse, qty, 1000, value, 6, 2, "USD", posting_at,
         ),
     )
 
@@ -137,6 +139,36 @@ except sqlite3.IntegrityError as error:
     db.rollback()
 else:
     raise AssertionError("stale Landed Cost history fingerprint must reject submit")
+
+# Propagated destination history is guarded independently from the receipt warehouse.
+insert_sle("Stock Entry", "TRANSFER-1", 2, "TGT-ROW", 500_000, 500, "2026-10-02T08:30:00.000Z", warehouse="Transit", source_row_id="TRANSFER-ROW")
+source_count, source_qty, source_value = db.execute(
+    "SELECT COUNT(*),COALESCE(SUM(actual_qty_micros),0),COALESCE(SUM(stock_value_difference_minor),0) FROM stock_ledger_entries WHERE tenant_id='demo' AND item_code='ITEM-1' AND warehouse='Stores'"
+).fetchone()
+target_count, target_qty, target_value = db.execute(
+    "SELECT COUNT(*),COALESCE(SUM(actual_qty_micros),0),COALESCE(SUM(stock_value_difference_minor),0) FROM stock_ledger_entries WHERE tenant_id='demo' AND item_code='ITEM-1' AND warehouse='Transit'"
+).fetchone()
+data = payload(source_count, source_qty, source_value)
+data["allocations"][0]["history_until"] = "9999-12-31T23:59:59.999Z"
+data["allocations"][0]["propagation_fingerprints"] = [{
+    "item_code": "ITEM-1",
+    "warehouse": "Transit",
+    "history_until": "9999-12-31T23:59:59.999Z",
+    "history_row_count": target_count,
+    "history_qty_micros": target_qty,
+    "history_value_minor": target_value,
+}]
+insert_lcv("LCV-TARGET-RACE", data)
+db.commit()
+insert_sle("Stock Entry", "TARGET-RACE", 2, "SRC-TARGET-RACE", -100_000, -100, "2026-10-02T08:50:00.000Z", warehouse="Transit")
+db.commit()
+try:
+    db.execute("UPDATE documents SET docstatus=1 WHERE name='LCV-TARGET-RACE'")
+except sqlite3.IntegrityError as error:
+    assert "propagated stock history changed" in str(error), str(error)
+    db.rollback()
+else:
+    raise AssertionError("destination stock mutation must invalidate Landed Cost propagation plan")
 
 assert db.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
 # A chronological plan must include stock entries after its own posting time.

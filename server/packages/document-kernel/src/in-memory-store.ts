@@ -919,6 +919,27 @@ export class InMemoryMutationStore implements MutationStore {
           || value !== Number(allocation.history_value_minor)) {
           throw errors.reference("Landed Cost stock history changed after planning; retry submit");
         }
+        const propagationFingerprints = Array.isArray(allocation.propagation_fingerprints)
+          ? allocation.propagation_fingerprints
+          : [];
+        for (const rawFingerprint of propagationFingerprints) {
+          if (!rawFingerprint || typeof rawFingerprint !== "object" || Array.isArray(rawFingerprint)) continue;
+          const fingerprint = rawFingerprint as JsonObject;
+          const propagatedHistory = this.stockEntries.filter((line) =>
+            line.item_code === String(fingerprint.item_code ?? "")
+            && line.warehouse === String(fingerprint.warehouse ?? "")
+            && !(plan.command.action === "cancel" && line.source_voucher_type === "Landed Cost Voucher"
+              && line.source_voucher_no === plan.command.aggregate.name)
+            && line.posting_at <= String(fingerprint.history_until ?? postingAt));
+          const propagatedRows = propagatedHistory.length;
+          const propagatedQty = propagatedHistory.reduce((sum, line) => sum + line.actual_qty_micros, 0);
+          const propagatedValue = propagatedHistory.reduce((sum, line) => sum + line.stock_value_difference_minor, 0);
+          if (propagatedRows !== Number(fingerprint.history_row_count)
+            || propagatedQty !== Number(fingerprint.history_qty_micros)
+            || propagatedValue !== Number(fingerprint.history_value_minor)) {
+            throw errors.reference("Landed Cost propagated stock history changed after planning; retry submit");
+          }
+        }
       }
     }
 
