@@ -7,6 +7,7 @@ import type {
   CalibrationRecordData, CapaData, ManufacturingDowntimeData, ManufacturingRoutingData,
   NonConformanceReportData, ProductionPlanData, QualityPlanData, RootCauseAnalysisData,
   VersionedBomData, WorkOrderData, WorkstationCapacityCalendarData,
+  createProjectedMrpAvailabilityResolver,
 } from "../../../packages/clouderp-erpnext/src/index.js";
 import { D1DocumentAccessStore, D1MetadataStore, MetadataPermissionService } from "../../../packages/frappe-model/src/index.js";
 import { isManufacturingBomBulkApiPath, isManufacturingBomBulkFrappePath, routeManufacturingBomBulkApi } from "./manufacturing-bom-bulk-api.js";
@@ -85,11 +86,23 @@ export async function routeManufacturingOperationalRequest(input: ManufacturingO
     });
   }
   if (route === "mrp") {
+    const projectedResolvers = new Map<string, ReturnType<typeof createProjectedMrpAvailabilityResolver>>();
+    const now = new Date().toISOString();
     return routeManufacturingMrpApi(request, url, {
       tenantId, actor, permissions, traceId,
       loadProductionPlan: (name) => documents.getDocument<ProductionPlanData>(tenantId, "Production Plan", name),
       listBomDocuments: () => documents.listDocumentsByDoctype<VersionedBomData>(tenantId, "Bill of Materials"),
       listMaterialRequests: () => documents.listDocumentsByDoctype<JsonObject>(tenantId, "Material Request"),
+      getStockBalanceMicros: (itemCode, warehouse) =>
+        documents.getStockBalanceMicros(tenantId, itemCode, warehouse),
+      getProjectedAvailability: (company, itemCode, warehouse, throughDate) => {
+        let resolve = projectedResolvers.get(company);
+        if (!resolve) {
+          resolve = createProjectedMrpAvailabilityResolver({ tenantId, company, now, reader: documents });
+          projectedResolvers.set(company, resolve);
+        }
+        return resolve(itemCode, warehouse, throughDate);
+      },
       createCanonicalMaterialRequest: (document) => input.createDocument("Material Request", document),
     });
   }
