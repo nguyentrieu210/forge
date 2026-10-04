@@ -1,6 +1,6 @@
 # NEXT TASKS
 
-Ngày cập nhật: **2026-08-16**.
+Ngày cập nhật: **2026-10-04**.
 
 Đây là active queue ngắn. Lịch sử implementation/convergence nằm trong Git/PR và retained evidence; không kéo các board/prompt/handoff cũ trở lại làm live plan.
 
@@ -60,22 +60,16 @@ Follow-on work must consume the certified R7 contract rather than reopen it impl
 3. Any proposed change to an R7 `INTENTIONAL_DIFFERENCE` must be an explicit architecture/product decision with new evidence.
 4. Production deploy/migration/provider/customer-data mutation still requires separate authorization and release evidence.
 
-## R8-B — still open after 2026-10-04 hardening
+## Post-R8 product backlog
 
-Do not merge or claim BUSINESS_CLOSED while `--certify` fails. Implement and verify:
+R8 is no longer an active program. Do not reopen its branch merely to chase a blanket
+"ERPNext parity" score.
 
-1. Full downstream landed-cost transfer/manufacturing/delivery/non-FIFO propagation.
-2. Canonical dual-currency monetary GL, bank/cash FX revaluation and consolidation.
-3. Manufacturing WIP/variance/rework policy, phantom/substitute/alternate BOM and ATP.
-4. Broader subcontracting process-loss/secondary/quality/rejected-good-return and supplier-credit lifecycle.
-5. Pinned ERPNext runtime differential and remaining assets/projects/support/commerce/regional
-   module depth from the existing R8 matrix; automatic inactive-account residual handling and large-ledger checks.
+Residual business-depth work is tracked in GitHub issue **#997** and the canonical
+`docs/agents/r8/R8_BUSINESS_DEPTH_MATRIX.json`. Prioritize only what a real Forge product
+needs: recursive stock valuation/repost, dual-currency bank/cash finance, WIP/variance/ATP,
+deeper subcontracting, or the remaining Assets/Projects/Quality/Support/Commerce/Regional
+rows.
 
-Budget historical revision intervals, chronological close cancellation, direct FIFO issue
-correction and atomic supplier leftover-return entitlement now have executable evidence.
-
-The latest bounded extensions cover terminal consumption after one future FIFO transfer,
-explicit rejected-stock segregation, explicit nested BOM planning, inactive-account planning
-and zero-net foreign-activity rejection. Recursive/shared stock propagation, full alternate
-BOM lifecycle and bank/cash dual-currency revaluation remain acceptance gaps. The O2C status
-projection consumes five frozen fixtures, not a full current 115-case differential replay.
+A PARTIAL row is not debt that may be hidden by renaming it. Close it only with executable
+evidence or an explicit reviewed product-scope decision.
