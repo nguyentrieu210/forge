@@ -10,8 +10,9 @@ cost where part or all of the targeted FIFO receipt layer was already consumed b
 `Stock Entry / Material Issue` or submitted `Delivery Note` transactions.
 
 This is still **PARTIAL**, not ERPNext parity. Backdated terminal FIFO Material Issues and
-Delivery Notes now receive chronological immutable Stock/COGS corrections. Transfers,
-manufacturing/WIP, batch/serial and non-FIFO propagation remain fail-closed. Exact current
+Delivery Notes receive chronological immutable Stock/COGS corrections, and a future one-hop
+Material Transfer can carry the valuation delta into an unconsumed destination FIFO layer.
+Recursive transfers, manufacturing/WIP, batch/serial and non-FIFO propagation remain fail-closed. Exact current
 contract: `server/docs/spec/r8-landed-cost-chronological-closure.md`.
 
 ## Closed in this lane
@@ -33,8 +34,13 @@ contract: `server/docs/spec/r8-landed-cost-chronological-closure.md`.
 - A fully consumed FIFO source is supported without inventing inventory: it posts no Stock
   Ledger adjustment and sends the full amount to the repost difference account.
 - Historical terminal repost accepts submitted `Stock Entry / Material Issue` and submitted
-  `Delivery Note` consumers. Transfers, manufacturing/WIP and other value-propagating chains
-  still fail closed because their changed value must continue into another inventory layer.
+  `Delivery Note` consumers.
+- A future `Stock Entry / Material Transfer` can carry the source correction into its exact
+  destination row when that destination FIFO layer is still fully open. The move creates no
+  COGS entry: value leaves one warehouse and enters the other. Source and destination histories
+  are both frozen and checked again at commit/cancel.
+- A transfer before the LCV posting time, an already-consumed destination layer, recursive
+  transfer chains and manufacturing/WIP still fail closed.
 - A voucher before later terminal FIFO Material Issues or Delivery Notes replays each issue prefix and posts
   only the incremental valuation difference. Reserved corrections identify the original
   issue revision/row; replay avoids double application and valuation audit reconciles them.
@@ -84,6 +90,7 @@ The in-memory store performs the same check before commit, preserving adapter pa
 - `server/packages/document-kernel/src/d1-store.ts`
 - `server/packages/document-kernel/src/in-memory-store.ts`
 - `server/migrations/tenant/0142_landed_cost_valuation_identity.sql`
+- `server/migrations/tenant/0167_landed_cost_transfer_propagation_fingerprint.sql`
 - `server/tests/landed-cost-authority.test.mjs`
 - `server/scripts/test-landed-cost-repost-migration.py`
 - R8-B workflow run **37178274784** on exact delivery-repost implementation commit
@@ -106,6 +113,8 @@ The focused evidence proves:
 7. A stock mutation between planning and commit is rejected by the D1 fingerprint guard.
 8. Purchase Receipt cancellation remains blocked behind an active LCV dependency.
 9. Exact LCV cancellation restores the committed stock/GL effect without recomputation.
+10. A future one-hop Material Transfer carries the FIFO value delta into the exact destination row,
+    creates no COGS, and rejects stale source or destination history.
 
 ## Remaining boundary
 
@@ -113,12 +122,12 @@ The next Landed Cost depth step is **full chronological valuation repost** acros
 stock-value propagation. Remaining cases include:
 
 - broader issue/cancellation chains and rollback after subsequent stock mutations;
-- warehouse transfers where changed value must propagate to the destination layer;
+- recursive warehouse transfers, transfers before the LCV posting time, and destination layers already consumed again;
 - manufacturing/WIP and finished-goods valuation propagation;
 - Moving Average historical replay;
 - wider ERPNext-exact runtime differential fixtures.
 
-Forge supports past and future terminal FIFO Material Issue and Delivery Note cost corrections without
+Forge supports past/future terminal FIFO Material Issue and Delivery Note corrections plus one-hop future transfer value carry without
 rewriting other documents. Chronological cancellation requires unchanged external history,
 including immutable rows from a later voucher subsequently cancelled. Migration 0161
 checks the complete history horizon on submit and chronological cancel.
