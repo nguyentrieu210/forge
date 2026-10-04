@@ -1,6 +1,6 @@
 # CURRENT STATUS
 
-Ngày cập nhật: **2026-08-16**.
+Ngày cập nhật: **2026-10-04**.
 
 File này chỉ giữ checkpoint đã xác minh gần nhất. GitHub là nguồn sự thật cho exact `main`, PR, workflow run và merge; nếu SHA dưới đây không còn là HEAD thì phải resolve lại GitHub trước khi làm việc.
 
@@ -51,32 +51,21 @@ Checkpoint source không phải bằng chứng production deployment. Mọi prod
 
 PR #994 on `codex/r7-frappe-platform-closure` has completed the pinned Frappe v16.19.0 platform denominator. Certified implementation head `ce64f77f8c2a1991a6d88ced76592d44aecd23d5` passed R7 GitHub Actions run `36984495200`: executable `r7:frappe:certify`, changed-authority TypeScript guard, runtime safety regression and Workerd Frappe facade regression. Canonical matrix: **12 SEMANTIC_PARITY / 15 INTENTIONAL_DIFFERENCE / 0 GAP / 1 OUT_OF_SCOPE / 0 UNRESOLVED**. R7-A may claim `FRAPPE_PLATFORM_CLOSED` for this pinned source/runtime contract. Production deploy/migration/provider/customer-data mutation remains separately authorized.
 
-## R8-B source checkpoint — 2026-10-04
+## R8 closed source round — 2026-10-04
 
-PR #996 remains open for business closure. The converged source adds historical budget
-revision interval checks, chronological direct FIFO landed-cost corrections, prior/future
-period-close lifecycle and insertion guards, atomic subcontract entitlement and leftover
-returns, and explicit manufacturing operation-cost capitalization. Foreign non-party FX
-balances fail closed until canonical dual-currency evidence exists.
+R8 has finished its bounded ERPNext v16.20.0 business-depth benchmark and hardening round.
+The benchmark covers **109/109 artifacts, 11/11 module rows and 18/18 end-to-end flow rows**
+with **0 UNRESOLVED**. R8-B adds tested hardening across budget/period close, customer
+credit/refund/FX settlement, PO-row authority, FIFO Landed Cost propagation, manufacturing
+operation cost, subcontracting supply/receipt/returns/rejected stock and explicit subassembly
+BOM planning.
 
-Verification: server build, 279 Node tests, focused SQLite race/authority scripts, complete
-136-migration tenant replay, R8 benchmark invariant and R7 certification all pass locally.
-R8 business certification remains blocked: 11 modules + 18 flows are PARTIAL, with zero
-UNRESOLVED. Source verification does not claim pinned ERPNext runtime parity or production
-deployment. Existing R8-A benchmark identity and denominator are preserved.
+Final pre-merge verification on R8-B head after the metadata fix:
+GitHub Actions R7 run **37197424827** = success and R8-B run **37197424823** = success.
+Migration 0168 now emits `read_only: true` rather than numeric `1`, preserving the strict
+Frappe metadata contract and fixing the four Workerd facade DELETE/app-uninstall regressions.
 
-## R8-B continued convergence — 2026-10-04
-
-The new source checkpoint extends FIFO transfer value carry through later terminal
-Material Issues/Delivery Notes, separates rejected subcontract finished goods under an
-explicit full-service policy, and supports root-scoped explicit subassembly BOM planning.
-Period-close planning retains inactive metadata; cancelled Account documents cannot revive
-stale imported masters, including textual checkbox flags. FX revaluation rejects non-party
-foreign activity even when company-currency net is zero until independent foreign units exist.
-
-Local verification of the converged tree: full server build, 336 Node regressions across
-47 suites, 11 SQLite authority/race scripts, and all 140 tenant migrations pass. R8 audit
-completion and R7 certification pass; R8 certification remains blocked by 29 PARTIAL rows.
-Five frozen ERPNext fixture status/progress projections are now read by the live O2C test,
-with committed-snapshot byte pin and source-lock checks. This does not replay all 115 fixtures
-or establish monetary/runtime parity. No production deployment or migration was performed.
+This closes the **R8 program round**, not full ERPNext parity. The matrix still truthfully
+contains **29 PARTIAL** rows, so `R8_BUSINESS_CLOSED = false`. Residual capability work is
+tracked in GitHub issue **#997** instead of keeping R8 open indefinitely. No production
+deployment, migration, provider mutation or customer-data mutation was performed.
