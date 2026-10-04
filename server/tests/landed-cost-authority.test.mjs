@@ -90,6 +90,20 @@ async function issueStock(kernel, name, postingAt = "2026-10-02T08:30:00.000Z") 
   });
 }
 
+async function deliverStock(kernel, name, postingAt = "2026-10-02T08:30:00.000Z") {
+  return createAndSubmit(kernel, {
+    doctype: "Delivery Note",
+    name,
+    document: {
+      company: "Demo",
+      currency: "USD",
+      posting_at: postingAt,
+      issue_purpose: "Xuất mẫu",
+      items: [{ row_id: "DELIVERY-1", item_code: "ITEM-1", warehouse: "Stores", qty: "0.5", rate: "10" }],
+    },
+  });
+}
+
 test("Landed Cost targets the exact Purchase Receipt row instead of smearing FIFO layers", async () => {
   const { store, kernel } = setup();
   await submitPo(kernel, "PO-1", "2");
@@ -254,6 +268,39 @@ test("Backdated Landed Cost chronologically reposts direct FIFO issues without d
   assert.equal(gl.reduce((sum, row) => sum + row.debit_minor - row.credit_minor, 0), 0);
   await issueStock(kernel, "ISSUE-REMAINING", "2026-10-02T08:45:00.000Z");
   assert.equal((await store.getTrackedStockState("demo", "ITEM-1", "Stores")).stock_value_minor, 0);
+});
+
+test("Backdated Landed Cost chronologically reposts Delivery Note FIFO consumption", async () => {
+  const { store, kernel } = setup();
+  await submitPo(kernel, "PO-DELIVERY-CHRONO", "1");
+  await submitReceipt(kernel, "PR-DELIVERY-CHRONO", "PO-DELIVERY-CHRONO", "ROW", "10", "2026-10-02T08:00:00.000Z");
+  await deliverStock(kernel, "DN-AFTER-BACKDATED-LCV", "2026-10-02T08:30:00.000Z");
+  await submitLcv(kernel, "LCV-DELIVERY-CHRONO", "PR-DELIVERY-CHRONO", "2026-10-02T08:15:00.000Z", "COGS Repost");
+
+  const lcv = await store.getDocument("demo", "Landed Cost Voucher", "LCV-DELIVERY-CHRONO");
+  assert.equal(lcv.data.allocations[0].chronological_reposts[0].voucher_type, "Delivery Note");
+  assert.equal(lcv.data.allocations[0].chronological_reposts[0].difference_minor, -250);
+  const history = await store.getStockLedgerHistory("demo", "ITEM-1", "Stores");
+  assert.equal(auditOutgoingValuation(history, "FIFO").mismatch_count, 0);
+  assert.equal((await store.getTrackedStockState("demo", "ITEM-1", "Stores")).stock_value_minor, 750);
+  const gl = await store.getVoucherGlEntries("demo", "Landed Cost Voucher", "LCV-DELIVERY-CHRONO", 2);
+  assert.equal(gl.find(row => row.line_key.startsWith("CHRONO-COGS-"))?.debit_minor, 250);
+});
+
+test("Late Landed Cost treats already-posted Delivery Note consumption as expense rather than inventory", async () => {
+  const { store, kernel } = setup();
+  await submitPo(kernel, "PO-DELIVERY-PAST", "1");
+  await submitReceipt(kernel, "PR-DELIVERY-PAST", "PO-DELIVERY-PAST", "ROW", "10", "2026-10-02T08:00:00.000Z");
+  await deliverStock(kernel, "DN-BEFORE-LCV", "2026-10-02T08:20:00.000Z");
+  await submitLcv(kernel, "LCV-DELIVERY-PAST", "PR-DELIVERY-PAST", "2026-10-02T08:45:00.000Z", "COGS Repost");
+
+  const lcv = await store.getDocument("demo", "Landed Cost Voucher", "LCV-DELIVERY-PAST");
+  assert.equal(lcv.data.allocations[0].remaining_qty_micros, 500_000);
+  assert.equal(lcv.data.allocations[0].inventory_cost_minor, 250);
+  assert.equal(lcv.data.allocations[0].consumed_cost_minor, 250);
+  assert.equal((await store.getTrackedStockState("demo", "ITEM-1", "Stores")).stock_value_minor, 750);
+  const gl = await store.getVoucherGlEntries("demo", "Landed Cost Voucher", "LCV-DELIVERY-PAST", 2);
+  assert.equal(gl.find(row => row.line_key.startsWith("REPOST-"))?.debit_minor, 250);
 });
 
 test("Landed Cost exact cancellation is blocked after downstream stock consumption", async () => {
