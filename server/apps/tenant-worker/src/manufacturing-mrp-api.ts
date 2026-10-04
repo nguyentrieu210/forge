@@ -32,6 +32,7 @@ export interface ManufacturingMrpApiContext {
   listMaterialRequests(): Promise<Array<CanonicalDocument<JsonObject>>>;
   getStockBalanceMicros?: (itemCode: string, warehouse: string) => Promise<number>;
   getProjectedAvailability?: (
+    company: string,
     itemCode: string,
     warehouse: string,
     throughDate: string,
