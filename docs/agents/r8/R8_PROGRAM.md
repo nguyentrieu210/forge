@@ -1,6 +1,6 @@
 # R8-A — ERPNext v16 Business-Depth Benchmark
 
-Status: ACTIVE ON BRANCH  
+Status: CLOSED — BENCHMARK + BOUNDED HARDENING ROUND  
 Base Forge commit: `b702376ff8b2d4dfe0a53dc2759b71e9df3c99ab`  
 Pinned upstream: ERPNext `v16.20.0` @ `ff46d20b259a2d65a7ded959df9f9a42991a3562`
 
@@ -102,3 +102,16 @@ Existing committed O2C oracle evidence may be reused only after checking whether
 `R8_BUSINESS_CLOSED` is a stronger future gate and additionally requires `PARTIAL = 0` and `GAP = 0`.
 
 R8-A should aim first for a truthful benchmark, not fabricate closure.
+
+## Final closure — 2026-10-04
+
+The R8 round is closed as a **benchmark plus bounded hardening program**.
+
+- `R8_BENCHMARK_COMPLETE = true`: 109/109 pinned ERPNext artifacts are covered, all 11 module rows and 18 flow rows are resolved, and `UNRESOLVED = 0`.
+- R8-B implemented and regression-tested high-value Finance, O2C/P2P, stock, manufacturing and subcontracting hardening recorded in the R8-B evidence files.
+- The final R8-B head preserves the already certified R7 platform behavior; the cross-program Frappe facade regression is green again after correcting migration 0168 to emit a JSON boolean for `read_only`.
+- `R8_BUSINESS_CLOSED = false` remains a truthful compatibility indicator because 29 module/flow rows are still `PARTIAL`. R8 closure does **not** mean full ERPNext parity.
+- Remaining PARTIAL work has moved to GitHub issue #997 and may only leave PARTIAL through implementation/evidence or an explicit reviewed product-scope decision.
+- No production deploy, production migration, provider mutation or customer-data mutation is included in this closure.
+
+Closing the round means the benchmark and selected hardening are no longer kept as an open branch program. It does not erase or relabel the measured gaps.
