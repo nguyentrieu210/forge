@@ -3,8 +3,12 @@ import { errors, jsonResponse, readJson, sha256Hex } from "../../../packages/cor
 import {
   explodeProductionPlanMrp,
   materialRequestDraftsFromMrp,
+  materialRequestDraftsFromProjectedMrp,
   netMrpAgainstOnHand,
+  netMrpAgainstProjectedAvailability,
   type MrpExplosionResult,
+  type MrpProjectedAvailabilityInput,
+  type MrpProjectedNettingResult,
   type ProductionPlanData,
   type VersionedBomData,
 } from "../../../packages/clouderp-erpnext/src/index.js";
@@ -27,6 +31,11 @@ export interface ManufacturingMrpApiContext {
   listBomDocuments(): Promise<Array<CanonicalDocument<VersionedBomData>>>;
   listMaterialRequests(): Promise<Array<CanonicalDocument<JsonObject>>>;
   getStockBalanceMicros?: (itemCode: string, warehouse: string) => Promise<number>;
+  getProjectedAvailability?: (
+    itemCode: string,
+    warehouse: string,
+    throughDate: string,
+  ) => Promise<MrpProjectedAvailabilityInput>;
   createCanonicalMaterialRequest(document: JsonObject): Promise<Response>;
 }
 
@@ -72,15 +81,29 @@ export async function routeManufacturingMrpApi(
   await assertUsedBomsReadable(result, boms, context);
 
   if (url.pathname === PREVIEW_PATH) {
-    const useOnHand = body.net_on_hand === true || body.net_on_hand === 1 || body.net_on_hand === "1";
+    const useOnHand = truthy(body.net_on_hand);
+    const useProjected = truthy(body.net_projected_mrp);
+    if (useOnHand && useProjected) {
+      throw errors.validation("Choose either net_on_hand or net_projected_mrp, not both");
+    }
     if (useOnHand && typeof context.getStockBalanceMicros !== "function") {
       throw errors.database("MRP on-hand preview requires the canonical stock-balance planning dependency");
+    }
+    if (useProjected && typeof context.getProjectedAvailability !== "function") {
+      throw errors.database("Projected MRP preview requires canonical stock/procurement/manufacturing/reservation dependencies");
     }
     const onHandNetting = useOnHand
       ? await netMrpAgainstOnHand(result, context.getStockBalanceMicros!)
       : undefined;
+    const projectedNetting = useProjected
+      ? await netMrpAgainstProjectedAvailability(result, context.getProjectedAvailability!)
+      : undefined;
     return jsonResponse(
-      { message: onHandNetting ? { ...result, on_hand_netting: onHandNetting } : result },
+      {
+        message: projectedNetting
+          ? { ...result, projected_netting: projectedNetting }
+          : onHandNetting ? { ...result, on_hand_netting: onHandNetting } : result,
+      },
       200,
       { "cache-control": "private, no-store", "x-cloudforge-trace-id": context.traceId },
     );
@@ -94,20 +117,36 @@ export async function routeManufacturingMrpApi(
   await context.permissions.assert({ actor: context.actor, tenantId: context.tenantId, doctype: MATERIAL_REQUEST, action: "create" });
   await context.permissions.assert({ actor: context.actor, tenantId: context.tenantId, doctype: MATERIAL_REQUEST, action: "read" });
 
-  // Conversion deliberately stays GROSS until WS04 exposes a reservation/open-supply
-  // projected-availability contract. The optional on-hand preview above is not ATP and
-  // therefore must never silently reduce a purchasing or manufacturing commitment.
-  const drafts = materialRequestDraftsFromMrp(result, context.actor.user_id);
+  const useProjected = truthy(body.net_projected_mrp);
+  if (useProjected && typeof context.getProjectedAvailability !== "function") {
+    throw errors.database("Projected MRP conversion requires canonical stock/procurement/manufacturing/reservation dependencies");
+  }
+  const projected = useProjected
+    ? await netMrpAgainstProjectedAvailability(result, context.getProjectedAvailability!)
+    : undefined;
+  const drafts = projected
+    ? materialRequestDraftsFromProjectedMrp(projected, context.actor.user_id)
+    : materialRequestDraftsFromMrp(result, context.actor.user_id);
   const draft = drafts.find((candidate) => candidate.material_request_type === requestType);
   if (!draft) {
     return jsonResponse(
-      { message: { schema_version: 1, production_plan: productionPlanName, material_request_type: requestType, created: false, replayed: false, reason: "NO_REQUIREMENTS" } },
+      {
+        message: {
+          schema_version: 1,
+          production_plan: productionPlanName,
+          material_request_type: requestType,
+          netting_mode: projected?.netting_mode ?? result.netting_mode,
+          created: false,
+          replayed: false,
+          reason: "NO_REQUIREMENTS",
+        },
+      },
       200,
       { "cache-control": "private, no-store", "x-cloudforge-trace-id": context.traceId },
     );
   }
 
-  const fingerprint = await mrpRequestFingerprint(result, requestType);
+  const fingerprint = await mrpRequestFingerprint(result, requestType, projected);
   draft.mrp_fingerprint = fingerprint;
   const prior = (await context.listMaterialRequests()).filter((document) =>
     document.data.mrp_source_doctype === PRODUCTION_PLAN
@@ -129,7 +168,7 @@ export async function routeManufacturingMrpApi(
     const existing = readablePrior[0]!;
     if (existing.data.mrp_fingerprint === fingerprint) {
       return jsonResponse(
-        { message: requestResult(existing.name, requestType, fingerprint, true, false, existing.docstatus) },
+        { message: requestResult(existing.name, requestType, fingerprint, true, false, existing.docstatus, projected?.netting_mode ?? result.netting_mode) },
         200,
         { "cache-control": "private, no-store", "x-cloudforge-trace-id": context.traceId },
       );
@@ -145,7 +184,7 @@ export async function routeManufacturingMrpApi(
   const docstatus = safeInteger(created.docstatus);
   const bookmark = createdResponse.headers.get("x-d1-bookmark");
   return jsonResponse(
-    { message: requestResult(name, requestType, fingerprint, false, true, docstatus) },
+    { message: requestResult(name, requestType, fingerprint, false, true, docstatus, projected?.netting_mode ?? result.netting_mode) },
     200,
     {
       "cache-control": "private, no-store",
@@ -180,26 +219,64 @@ async function assertUsedBomsReadable(
   }
 }
 
-async function mrpRequestFingerprint(result: MrpExplosionResult, type: string): Promise<string> {
-  const rows = (type === "Purchase" ? result.purchase_requirements : result.manufacture_requirements).map((row) => ({
-    item_code: row.item_code,
-    warehouse: row.warehouse ?? "",
-    schedule_date: row.schedule_date ?? "",
-    gross_qty_micros: row.gross_qty_micros,
-  }));
+async function mrpRequestFingerprint(
+  result: MrpExplosionResult,
+  type: string,
+  projected?: MrpProjectedNettingResult,
+): Promise<string> {
+  const rows = projected
+    ? (type === "Purchase" ? projected.purchase_requirements : projected.manufacture_requirements).map((row) => ({
+        item_code: row.item_code,
+        warehouse: row.warehouse ?? "",
+        schedule_date: row.schedule_date ?? "",
+        gross_qty_micros: row.gross_qty_micros,
+        on_hand_qty_micros: row.on_hand_qty_micros,
+        open_purchase_qty_micros: row.open_purchase_qty_micros,
+        open_manufacture_qty_micros: row.open_manufacture_qty_micros,
+        reserved_qty_micros: row.reserved_qty_micros,
+        safety_stock_qty_micros: row.safety_stock_qty_micros,
+        allocated_projected_micros: row.allocated_projected_micros,
+        net_requirement_micros: row.net_requirement_micros,
+        availability_complete: row.availability_complete,
+      }))
+    : (type === "Purchase" ? result.purchase_requirements : result.manufacture_requirements).map((row) => ({
+        item_code: row.item_code,
+        warehouse: row.warehouse ?? "",
+        schedule_date: row.schedule_date ?? "",
+        gross_qty_micros: row.gross_qty_micros,
+      }));
   return sha256Hex(JSON.stringify({
     schema_version: 1,
     company: result.company,
     production_plan: result.production_plan,
     planning_date: result.planning_date,
     material_request_type: type,
-    netting_mode: result.netting_mode,
+    netting_mode: projected?.netting_mode ?? result.netting_mode,
     rows,
   }));
 }
 
-function requestResult(name: string, type: string, fingerprint: string, replayed: boolean, created: boolean, docstatus: number): JsonObject {
-  return { schema_version: 1, doctype: MATERIAL_REQUEST, name, material_request_type: type, fingerprint, replayed, created, docstatus, draft: docstatus === 0 };
+function requestResult(
+  name: string,
+  type: string,
+  fingerprint: string,
+  replayed: boolean,
+  created: boolean,
+  docstatus: number,
+  nettingMode: string,
+): JsonObject {
+  return {
+    schema_version: 1,
+    doctype: MATERIAL_REQUEST,
+    name,
+    material_request_type: type,
+    netting_mode: nettingMode,
+    fingerprint,
+    replayed,
+    created,
+    docstatus,
+    draft: docstatus === 0,
+  };
 }
 
 function unwrapArgs(body: JsonObject): JsonObject {
@@ -219,4 +296,5 @@ async function responseJson(response: Response): Promise<JsonObject> {
 function requiredText(value: unknown, field: string): string { const normalized = optionalText(value); if (!normalized) throw errors.validation(`${field} is required`); return normalized; }
 function optionalText(value: unknown): string | undefined { if (typeof value !== "string" && typeof value !== "number") return undefined; const normalized = String(value).trim(); return normalized || undefined; }
 function safeInteger(value: unknown): number { const parsed = typeof value === "number" ? value : Number(value); return Number.isSafeInteger(parsed) ? parsed : 0; }
+function truthy(value: unknown): boolean { return value === true || value === 1 || value === "1"; }
 function isObject(value: unknown): value is JsonObject { return value !== null && typeof value === "object" && !Array.isArray(value); }
