@@ -303,6 +303,36 @@ test("Late Landed Cost treats already-posted Delivery Note consumption as expens
   assert.equal(gl.find(row => row.line_key.startsWith("REPOST-"))?.debit_minor, 250);
 });
 
+test("Stock Entry transfer keeps one stable source-row identity across both warehouses", async () => {
+  const { store, kernel } = setup();
+  store.seedMaster("Warehouse", "Transit", "demo", { company: "Demo", is_group: 0, disabled: 0 });
+  await submitPo(kernel, "PO-TRANSFER-ID", "1");
+  await submitReceipt(kernel, "PR-TRANSFER-ID", "PO-TRANSFER-ID", "ROW", "10", "2026-10-02T08:00:00.000Z");
+  await createAndSubmit(kernel, {
+    doctype: "Stock Entry",
+    name: "TRANSFER-ID",
+    document: {
+      company: "Demo",
+      posting_at: "2026-10-02T08:30:00.000Z",
+      purpose: "Material Transfer",
+      items: [{
+        row_id: "TRANSFER-ROW",
+        item_code: "ITEM-1",
+        qty: "0.5",
+        source_warehouse: "Stores",
+        target_warehouse: "Transit",
+      }],
+    },
+  });
+
+  const rows = await store.getVoucherStockEntries("demo", "Stock Entry", "TRANSFER-ID", 2);
+  const transferRows = rows.filter(row => row.item_code === "ITEM-1");
+  assert.equal(transferRows.length, 2);
+  assert.ok(transferRows.every(row => row.source_row_id === "TRANSFER-ROW"));
+  assert.deepEqual(new Set(transferRows.map(row => row.warehouse)), new Set(["Stores", "Transit"]));
+  assert.equal(transferRows.reduce((sum, row) => sum + row.stock_value_difference_minor, 0), 0);
+});
+
 test("Landed Cost exact cancellation is blocked after downstream stock consumption", async () => {
   const { store, kernel } = setup();
   await submitPo(kernel, "PO-3", "1");

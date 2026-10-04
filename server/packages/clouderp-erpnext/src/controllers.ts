@@ -422,7 +422,7 @@ export class AdvancedStockEntryController extends BaseController<StockEntryData>
       const value=Math.abs(item.stock_value_difference_minor??multiplyScaled(fromScaledInt(qty,6),6,fromScaledInt(rate,data.currency_scale??2),data.currency_scale??2,data.currency_scale??2));
       const weight=item.weight_micros===undefined?{}:{weightMicros:item.weight_micros};
       if(item.source_warehouse){
-        const out=await buildTrackedStockLines(context as unknown as ControllerContext<JsonObject>,{itemCode:item.item_code,warehouse:item.source_warehouse,qtyMicros:qty,...weight,direction:"Outward",postingAt:data.posting_at,currency:data.currency??"USD",currencyScale:data.currency_scale??2,valuationRateMinor:rate,stockValueMinor:value,lineKey:`SRC-${item.row_id||index+1}`,...(item.serial_and_batch_bundle?{bundleName:item.serial_and_batch_bundle}:{})});
+        const out=await buildTrackedStockLines(context as unknown as ControllerContext<JsonObject>,{itemCode:item.item_code,warehouse:item.source_warehouse,qtyMicros:qty,...weight,direction:"Outward",postingAt:data.posting_at,currency:data.currency??"USD",currencyScale:data.currency_scale??2,valuationRateMinor:rate,stockValueMinor:value,lineKey:`SRC-${item.row_id||index+1}`,sourceRowId:item.row_id||`ROW-${index+1}`,...(item.serial_and_batch_bundle?{bundleName:item.serial_and_batch_bundle}:{})});
         stock.push(...out.stock);
         usages.push(...out.usages);
         consumedValue=addMinor([consumedValue,out.stockValueMinor]);
@@ -432,7 +432,7 @@ export class AdvancedStockEntryController extends BaseController<StockEntryData>
           const sourceLines=stock.filter(line=>line.line_key.startsWith(`SRC-${item.row_id||index+1}-`));
           stock.push(...sourceLines.map(line=>({...line,line_key:line.line_key.replace("SRC-","TGT-"),warehouse:item.target_warehouse!,actual_qty_micros:-line.actual_qty_micros,...(line.actual_weight_micros===undefined?{}:{actual_weight_micros:-line.actual_weight_micros}),stock_value_difference_minor:-line.stock_value_difference_minor,allow_negative_stock:false})));
         }else{
-          const incoming=await buildTrackedStockLines(context as unknown as ControllerContext<JsonObject>,{itemCode:item.item_code,warehouse:item.target_warehouse,qtyMicros:qty,...weight,direction:"Inward",postingAt:data.posting_at,currency:data.currency??"USD",currencyScale:data.currency_scale??2,valuationRateMinor:rate,stockValueMinor:value,lineKey:`TGT-${item.row_id||index+1}`,...(item.serial_and_batch_bundle?{bundleName:item.serial_and_batch_bundle}:{})});
+          const incoming=await buildTrackedStockLines(context as unknown as ControllerContext<JsonObject>,{itemCode:item.item_code,warehouse:item.target_warehouse,qtyMicros:qty,...weight,direction:"Inward",postingAt:data.posting_at,currency:data.currency??"USD",currencyScale:data.currency_scale??2,valuationRateMinor:rate,stockValueMinor:value,lineKey:`TGT-${item.row_id||index+1}`,sourceRowId:item.row_id||`ROW-${index+1}`,...(item.serial_and_batch_bundle?{bundleName:item.serial_and_batch_bundle}:{})});
           stock.push(...incoming.stock);
           usages.push(...incoming.usages);
         }
@@ -445,7 +445,7 @@ export class AdvancedStockEntryController extends BaseController<StockEntryData>
       const operating=divideRounded((wo.data.operating_cost_minor??0)*qty,wo.data.qty_micros??qty);
       const value=addMinor([consumedValue,operating]);
       const rate=divideRounded(value*1_000_000,qty);
-      const incoming=await buildTrackedStockLines(context as unknown as ControllerContext<JsonObject>,{itemCode:data.finished_good_item,warehouse:data.target_warehouse,qtyMicros:qty,direction:"Inward",postingAt:data.posting_at,currency:data.currency??"USD",currencyScale:data.currency_scale??2,valuationRateMinor:rate,stockValueMinor:value,lineKey:"FINISHED",...(data.finished_good_bundle?{bundleName:data.finished_good_bundle}:{})});
+      const incoming=await buildTrackedStockLines(context as unknown as ControllerContext<JsonObject>,{itemCode:data.finished_good_item,warehouse:data.target_warehouse,qtyMicros:qty,direction:"Inward",postingAt:data.posting_at,currency:data.currency??"USD",currencyScale:data.currency_scale??2,valuationRateMinor:rate,stockValueMinor:value,lineKey:"FINISHED",sourceRowId:"FINISHED",...(data.finished_good_bundle?{bundleName:data.finished_good_bundle}:{})});
       stock.push(...incoming.stock);
       usages.push(...incoming.usages);
       manufacturing.push({line_key:"MANUFACTURE",work_order:data.work_order,kind:"Manufacture",item_code:data.finished_good_item,qty_micros:qty,posting_at:data.posting_at});
