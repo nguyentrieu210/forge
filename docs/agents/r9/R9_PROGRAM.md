@@ -15,12 +15,13 @@ OCC/idempotency and append-only correction evidence.
 
 ## Priority lanes
 
-1. **R9-01 Projected inventory / ATP for MRP**
+1. **R9-01 Projected inventory / ATP for MRP — IMPLEMENTED, FINAL CI PENDING**
    - on-hand + dated open Purchase Order supply + dated open Work Order supply;
    - subtract active reservations;
    - keep safety stock explicit;
    - allocate projected availability once in need-date order;
-   - only after that contract is proven may automatic Material Request conversion reduce demand.
+   - opt-in Material Request conversion now reduces demand only through the proven projected contract.
+   - evidence: `docs/agents/r9/R9_01_PROJECTED_MRP.md`.
 
 2. **R9-02 Manufacturing WIP and variance**
    - WIP value while production is in progress;
