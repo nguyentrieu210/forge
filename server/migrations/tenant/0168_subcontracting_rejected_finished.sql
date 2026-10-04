@@ -21,7 +21,7 @@ SET metadata_json=json_insert(metadata_json,'$.fields[#]',json('{"fieldname":"re
 WHERE doctype='Subcontracting Receipt' AND json_valid(metadata_json)
   AND NOT EXISTS(SELECT 1 FROM json_each(metadata_json,'$.fields') WHERE json_extract(value,'$.fieldname')='rejected_good_bundle');
 UPDATE doctype_definitions
-SET metadata_json=json_insert(metadata_json,'$.fields[#]',json('{"fieldname":"accepted_qty","label":"Accepted Quantity","fieldtype":"Float","read_only":1}')),
+SET metadata_json=json_insert(metadata_json,'$.fields[#]',json('{"fieldname":"accepted_qty","label":"Accepted Quantity","fieldtype":"Float","read_only":true}')),
     revision=revision+1, modified_by='migration-0168', modified_at='2026-10-04T09:00:00.000Z'
 WHERE doctype='Subcontracting Receipt' AND json_valid(metadata_json)
   AND NOT EXISTS(SELECT 1 FROM json_each(metadata_json,'$.fields') WHERE json_extract(value,'$.fieldname')='accepted_qty');
