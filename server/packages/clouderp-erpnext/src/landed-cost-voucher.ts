@@ -457,9 +457,25 @@ async function assertSupportedHistoricalConsumers(
     throw errors.reference("Historical Landed Cost repost currently supports FIFO items only");
   }
   for (const line of consumers) {
-    if (line.source_voucher_type !== "Stock Entry" || !line.source_voucher_no) {
+    if (!line.source_voucher_no) {
+      throw errors.reference("Historical Landed Cost repost consumer has no source voucher identity");
+    }
+    if (line.source_voucher_type === "Delivery Note") {
+      const delivery = await context.reader.getDocument<JsonObject>(
+        context.command.tenant_id,
+        "Delivery Note",
+        line.source_voucher_no,
+      );
+      if (!delivery || delivery.docstatus !== 1) {
+        throw errors.reference(
+          `Historical Landed Cost repost cannot expense cancelled or missing Delivery Note ${line.source_voucher_no}`,
+        );
+      }
+      continue;
+    }
+    if (line.source_voucher_type !== "Stock Entry") {
       throw errors.reference(
-        "Historical Landed Cost repost currently supports direct Stock Entry Material Issue consumption only",
+        `Historical Landed Cost repost cannot expense ${line.source_voucher_type} ${line.source_voucher_no}; transfer/manufacturing chains still require chronological repost`,
       );
     }
     const source = await context.reader.getDocument<JsonObject>(
